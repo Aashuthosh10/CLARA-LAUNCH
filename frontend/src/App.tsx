@@ -9,7 +9,7 @@ import LanguageSelect from './components/LanguageSelect';
 import ChatScreen from './components/ChatScreen';
 import type { ChatMessage } from './types/chat';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/clara';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
 /** "browser" = Web Speech API only (default for dev); "backend" = send mic_start, use backend recording. */
 const VOICE_INPUT_MODE = (import.meta.env.VITE_VOICE_INPUT_MODE || 'browser').toLowerCase() === 'backend' ? 'backend' : 'browser';
 const BACKEND_URL = (() => {
@@ -17,7 +17,7 @@ const BACKEND_URL = (() => {
     const u = new URL(WS_URL.replace(/^ws/, 'http'));
     return `${u.origin}`;
   } catch {
-    return 'http://localhost:8000';
+    return 'http://localhost:6969';
   }
 })();
 
