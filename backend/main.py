@@ -29,11 +29,42 @@ from config import (
     LANGUAGE_NAME_TO_CODE_KEY,
 )
 from greetings import GREETINGS
+from db import log_db_status
 from rag import get_relevant_context, get_rag_document_count
+from answer_generation import (
+    INTENT_COLLEGE_OVERVIEW,
+    detect_intent,
+    build_overview_context,
+    build_normal_context,
+    generate_reply,
+)
 from core.audio_pipeline import record_audio
 from stt import wav_to_transcript
 
 logger = logging.getLogger(__name__)
+
+# Safe payload shape: frontend expects messages (list), isProcessing (bool), isSpeaking (bool); error and audioBase64 optional.
+def _safe_payload(
+    messages: list | None = None,
+    is_processing: bool = False,
+    is_speaking: bool = False,
+    error: str | None = None,
+    audio_base64: str | None = None,
+    **extra,
+) -> dict:
+    """Build payload that always has messages, isProcessing, isSpeaking. Never change shape."""
+    payload = {
+        "messages": list(messages) if messages is not None else [],
+        "isProcessing": bool(is_processing),
+        "isSpeaking": bool(is_speaking),
+    }
+    if error is not None:
+        payload["error"] = error
+    if audio_base64 is not None:
+        payload["audioBase64"] = audio_base64
+    for k, v in extra.items():
+        payload[k] = v
+    return payload
 
 
 def tts_to_base64(text: str, language_code: str) -> str | None:
@@ -93,72 +124,66 @@ def tts_to_base64(text: str, language_code: str) -> str | None:
             
         return base64.b64encode(data).decode("utf-8")
     except Exception as e:
-        logger.exception("TTS failed: %s", e)
+        logger.error("TTS failed: %s", e, exc_info=True)
         return None
 
 
 async def process_user_text_and_reply(session: dict, text: str, websocket: WebSocket) -> None:
-    """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
+    """Shared flow: RAG context, Groq reply, TTS (or digitalBook for overview), send state 5 payload. Assumes text is non-empty. Never raises."""
+    messages = session.get("messages") or []
     try:
-        await websocket.send_json({"state": 5, "payload": {"isProcessing": True}})
+        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=messages, is_processing=True)})
     except Exception as e:
         logger.warning("Could not send isProcessing: %s", e)
         return
     lang = session.get("language") or "English"
-    lang_code = session.get("language_code") or TARGET_LANGUAGE_CODES["en"]
+    lang_code = session.get("language_code") or TARGET_LANGUAGE_CODES.get("en", "en-IN")
     try:
-        context = get_relevant_context(text, top_k=RAG_TOP_K)
-        if context.strip():
-            logger.info("RAG context: ok (%d chars)", len(context))
+        intent = detect_intent(text)
+        if intent == INTENT_COLLEGE_OVERVIEW:
+            context = build_overview_context()
         else:
-            logger.info("RAG context: empty")
+            context = build_normal_context(text)
         if context.strip():
-            system_prompt = (
-                f"You are CLARA, a friendly campus assistant. "
-                f"Use ONLY the following college information when it is relevant to the user's question. "
-                f"Do not invent or assume college-specific facts; only use what is in the College information below. "
-                f"If the answer is not in the context, say you don't have that information. "
-                f"Reply only in {lang}. Be concise and helpful.\n\nCollege information:\n{context}"
-            )
+            logger.info("Intent=%s context_size=%d chars", intent, len(context))
         else:
-            system_prompt = (
-                f"You are CLARA, a friendly campus assistant. "
-                f"For questions about the college or campus, say you don't have that information if you're unsure. "
-                f"Reply only in {lang}. Be concise and helpful."
-            )
-        reply_text = None
+            logger.warning("RAG context empty for query")
+
+        reply_result = None
         try:
             if GROQ_API_KEY:
                 from groq import Groq
                 client = Groq(api_key=GROQ_API_KEY)
-                
-                # Build conversation history for LLM context
-                messages = [{"role": "system", "content": system_prompt}]
-                for m in session.get("messages", []):
-                    role = "assistant" if m.get("role") == "clara" else "user"
-                    messages.append({"role": role, "content": m.get("text", "")})
-                messages.append({"role": "user", "content": text})
-
-                completion = client.chat.completions.create(
-                    model=RAG_MODEL,
-                    messages=messages,
+                reply_result = generate_reply(
+                    intent, text, context, lang, messages, client, RAG_MODEL,
+                    tts_callback=tts_to_base64 if intent == INTENT_COLLEGE_OVERVIEW else None,
+                    language_code=lang_code if intent == INTENT_COLLEGE_OVERVIEW else None,
                 )
-                reply_text = (completion.choices[0].message.content or "").strip()
             else:
-                reply_text = "I'm sorry, the assistant is not configured."
+                reply_result = "I'm sorry, the assistant is not configured."
         except Exception as e:
-            logger.exception("Groq failed: %s", e)
+            logger.error("LLM/Groq failed: %s", e, exc_info=True)
             err_str = str(e).lower()
             status = getattr(e, "status_code", None) or getattr(e, "code", None)
             if status == 404 or "404" in err_str or ("model" in err_str and "not found" in err_str):
-                logger.warning(
-                    "Groq model not found (404 or invalid RAG_MODEL). "
-                    "Check .env RAG_MODEL matches a current model at https://console.groq.com/docs/models"
-                )
-            reply_text = None
+                logger.warning("Groq model not found (404). Check RAG_MODEL in .env")
+            reply_result = None
+
+        if intent == INTENT_COLLEGE_OVERVIEW and isinstance(reply_result, dict) and "digitalBook" in reply_result:
+            user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
+            session["messages"] = messages + [user_msg]
+            payload = _safe_payload(
+                messages=session["messages"],
+                is_processing=False,
+                is_speaking=False,
+            )
+            payload["digitalBook"] = reply_result["digitalBook"]
+            await websocket.send_json({"state": 5, "payload": payload})
+            return
+        reply_text = reply_result if isinstance(reply_result, str) else None
         if not reply_text or not reply_text.strip():
             if context.strip():
-                logger.info("Using RAG fallback reply (Groq unavailable or empty)")
+                logger.info("Using RAG fallback reply (LLM unavailable or empty)")
                 intro = "Based on our college information: "
                 max_fallback_chars = 600
                 trimmed = context.strip()
@@ -166,34 +191,34 @@ async def process_user_text_and_reply(session: dict, text: str, websocket: WebSo
                     trimmed = trimmed[: max_fallback_chars - 3].rsplit(maxsplit=1)[0] + "..."
                 reply_text = intro + trimmed
             else:
-                reply_text = (
-                    "I'm sorry, I couldn't reach the assistant right now. "
-                    "Please check your Groq API key in .env and try again."
-                )
+                reply_text = "I'm sorry, I couldn't process your request right now."
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
-        session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
-        audio_b64 = tts_to_base64(reply_text, lang_code)
-        payload = {
-            "messages": session["messages"],
-            "isProcessing": False,
-            "isSpeaking": bool(audio_b64),
-        }
-        if audio_b64:
-            payload["audioBase64"] = audio_b64
-        else:
-            payload["isSpeaking"] = False
+        session["messages"] = messages + [user_msg, assistant_msg]
+        audio_b64 = None
+        try:
+            audio_b64 = tts_to_base64(reply_text, lang_code)
+        except Exception as e:
+            logger.warning("TTS in process_user_text_and_reply: %s", e)
+        payload = _safe_payload(
+            messages=session["messages"],
+            is_processing=False,
+            is_speaking=bool(audio_b64),
+            audio_base64=audio_b64,
+        )
+        if not audio_b64:
             payload["error"] = "Reply is shown but could not be read aloud."
         await websocket.send_json({"state": 5, "payload": payload})
     except Exception as e:
-        logger.exception("process_user_text_and_reply failed: %s", e)
+        logger.error("process_user_text_and_reply failed: %s", e, exc_info=True)
         try:
             await websocket.send_json({
                 "state": 5,
-                "payload": {
-                    "error": "Something went wrong. Please try again.",
-                    "isProcessing": False,
-                },
+                "payload": _safe_payload(
+                    messages=session.get("messages", []),
+                    is_processing=False,
+                    error="Something went wrong. Please try again.",
+                ),
             })
         except Exception:
             pass
@@ -201,17 +226,18 @@ async def process_user_text_and_reply(session: dict, text: str, websocket: WebSo
 
 @asynccontextmanager
 async def lifespan(app: object):
-    """Startup: log RAG document count. Shutdown: nothing."""
+    """Startup: health check logging (DB, model, port, RAG config). Do not stop server if DB fails."""
+    logger.info("Environment loaded; port=%s", PORT)
+    logger.info("RAG config: model=%s top_k=%s", RAG_MODEL, RAG_TOP_K)
     try:
+        log_db_status()
         n = get_rag_document_count()
         if n == 0:
-            logger.warning(
-                "RAG: college_knowledge table is empty. Run: python -m backend.ingest_college_knowledge_pg"
-            )
+            logger.warning("RAG: college_knowledge table is empty. Run: python -m backend.ingest_college_knowledge_pg")
         else:
             logger.info("RAG: college_knowledge has %s documents.", n)
     except Exception as e:
-        logger.warning("RAG: could not check database: %s", e)
+        logger.warning("RAG: could not check database: %s. Running in LLM-only fallback mode.", e)
     yield
 
 
@@ -260,121 +286,164 @@ async def websocket_clara(websocket: WebSocket):
             try:
                 msg = json.loads(data) if data else {}
                 action = msg.get("action") or msg.get("event")
+                msgs = session.get("messages") or []
                 if action == "wake":
                     await websocket.send_json({"state": 3, "payload": None})
                 elif action == "language_selected":
-                    language = msg.get("language")
-                    if language in VALID_LANGUAGES:
-                        session["language"] = language
-                        code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
-                        session["language_code"] = TARGET_LANGUAGE_CODES[code_key]
-                        try:
-                            greeting_text = GREETINGS.get(language, GREETINGS["English"])
-                            audio_b64 = tts_to_base64(greeting_text, session["language_code"])
-                            if audio_b64:
-                                session["cached_greeting_audio"] = audio_b64
-                                greeting_msg = {"id": "greeting", "role": "clara", "text": greeting_text}
-                                session["cached_greeting_message"] = greeting_msg
-                                # Persist greeting in session messages
-                                if not session.get("messages"):
-                                    session["messages"] = [greeting_msg]
-                        except Exception as e:
-                            logger.exception("Preload greeting TTS failed: %s", e)
-                    await websocket.send_json({"state": 5, "payload": None})  # Chat after language
+                    try:
+                        language = msg.get("language")
+                        if language in VALID_LANGUAGES:
+                            session["language"] = language
+                            code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
+                            session["language_code"] = TARGET_LANGUAGE_CODES.get(code_key, "en-IN")
+                            try:
+                                greeting_text = GREETINGS.get(language, GREETINGS["English"])
+                                audio_b64 = tts_to_base64(greeting_text, session["language_code"])
+                                if audio_b64:
+                                    session["cached_greeting_audio"] = audio_b64
+                                    greeting_msg = {"id": "greeting", "role": "clara", "text": greeting_text}
+                                    session["cached_greeting_message"] = greeting_msg
+                                    if not session.get("messages"):
+                                        session["messages"] = [greeting_msg]
+                            except Exception as e:
+                                logger.warning("Preload greeting TTS failed: %s", e)
+                        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=msgs, is_processing=False, is_speaking=False)})
+                    except Exception as e:
+                        logger.error("language_selected failed: %s", e, exc_info=True)
+                        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=msgs, is_processing=False, error="Something went wrong. Please try again.")})
                 elif action == "conversation_started":
-                    lang = session.get("language") or "English"
-                    greeting_text = GREETINGS.get(lang, GREETINGS["English"])
-                    greeting_message = {"id": "greeting", "role": "clara", "text": greeting_text}
-                    audio_b64 = session.get("cached_greeting_audio")
-                    if audio_b64 and session.get("cached_greeting_message"):
-                        payload = {
-                            "messages": [session["cached_greeting_message"]],
-                            "isSpeaking": True,
-                            "audioBase64": audio_b64,
-                        }
-                        session["cached_greeting_audio"] = None
-                        session["cached_greeting_message"] = None
-                        await websocket.send_json({"state": 5, "payload": payload})
-                    else:
-                        lang_code = session.get("language_code") or TARGET_LANGUAGE_CODES["en"]
-                        audio_b64 = tts_to_base64(greeting_text, lang_code)
-                        if not session.get("messages"):
-                            session["messages"] = [greeting_message]
-                        payload = {
-                            "messages": session["messages"],
-                            "isSpeaking": bool(audio_b64),
-                        }
-                        if audio_b64:
-                            payload["audioBase64"] = audio_b64
+                    try:
+                        lang = session.get("language") or "English"
+                        greeting_text = GREETINGS.get(lang, GREETINGS["English"])
+                        greeting_message = {"id": "greeting", "role": "clara", "text": greeting_text}
+                        audio_b64 = session.get("cached_greeting_audio")
+                        if audio_b64 and session.get("cached_greeting_message"):
+                            payload = _safe_payload(
+                                messages=[session["cached_greeting_message"]],
+                                is_speaking=True,
+                                audio_base64=audio_b64,
+                            )
+                            session["cached_greeting_audio"] = None
+                            session["cached_greeting_message"] = None
                         else:
-                            payload["isSpeaking"] = False
-                            payload["error"] = "Could not generate greeting audio."
+                            lang_code = session.get("language_code") or TARGET_LANGUAGE_CODES.get("en", "en-IN")
+                            try:
+                                audio_b64 = tts_to_base64(greeting_text, lang_code)
+                            except Exception as e:
+                                logger.warning("Greeting TTS failed: %s", e)
+                                audio_b64 = None
+                            if not session.get("messages"):
+                                session["messages"] = [greeting_message]
+                            payload = _safe_payload(
+                                messages=session["messages"],
+                                is_speaking=bool(audio_b64),
+                                audio_base64=audio_b64,
+                            )
+                            if not audio_b64:
+                                payload["error"] = "Could not generate greeting audio."
                         await websocket.send_json({"state": 5, "payload": payload})
+                    except Exception as e:
+                        logger.error("conversation_started failed: %s", e, exc_info=True)
+                        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=msgs, is_processing=False, error="Something went wrong. Please try again.")})
                 elif action == "user_message":
-                    text = (msg.get("text") or "").strip()
+                    text = (msg.get("text") or "").strip() if msg.get("text") is not None else ""
                     if not text:
                         await websocket.send_json({
                             "state": 5,
-                            "payload": {"error": "Missing text", "isProcessing": False},
+                            "payload": _safe_payload(messages=msgs, is_processing=False, error="Please provide a valid query."),
                         })
                     else:
                         await process_user_text_and_reply(session, text, websocket)
-                elif action in ("toggle_mic", "mic_start"):
-                    await websocket.send_json({"state": 5, "payload": {"isProcessing": True}})
-                    wav_bytes = None
+                elif action == "diary_tts":
                     try:
-                        wav_bytes = await asyncio.to_thread(record_audio)
-                    except Exception as e:
-                        logger.exception("Backend recording failed: %s", e)
-                    if not wav_bytes:
+                        text = (msg.get("text") or "").strip() if msg.get("text") is not None else ""
+                        lang_code = session.get("language_code") or TARGET_LANGUAGE_CODES.get("en", "en-IN")
+                        audio_b64 = tts_to_base64(text, lang_code) if text else None
                         await websocket.send_json({
                             "state": 5,
-                            "payload": {
-                                "error": "No speech heard.",
-                                "errorCode": "MIC_CAPTURE_FAILED",
-                                "isProcessing": False,
-                            },
+                            "payload": _safe_payload(
+                                messages=session.get("messages", []),
+                                is_processing=False,
+                                is_speaking=bool(audio_b64),
+                                audio_base64=audio_b64,
+                            ),
                         })
-                    else:
+                    except Exception as e:
+                        logger.warning("diary_tts failed: %s", e)
+                        await websocket.send_json({
+                            "state": 5,
+                            "payload": _safe_payload(
+                                messages=session.get("messages", []),
+                                is_processing=False,
+                                is_speaking=False,
+                                audio_base64=None,
+                                error="TTS unavailable for this page.",
+                            ),
+                        })
+                elif action in ("toggle_mic", "mic_start"):
+                    try:
+                        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=msgs, is_processing=True)})
+                        wav_bytes = None
                         try:
-                            transcript = wav_to_transcript(wav_bytes)
+                            wav_bytes = await asyncio.to_thread(record_audio)
                         except Exception as e:
-                            logger.exception("Sarvam STT failed: %s", e)
+                            logger.error("Backend recording failed: %s", e, exc_info=True)
+                        if not wav_bytes:
                             await websocket.send_json({
                                 "state": 5,
-                                "payload": {
-                                    "error": "Speech recognition failed. Please try again.",
-                                    "errorCode": "STT_FAILED",
-                                    "isProcessing": False,
-                                },
+                                "payload": _safe_payload(messages=msgs, is_processing=False, error="No speech heard.", errorCode="MIC_CAPTURE_FAILED"),
                             })
                         else:
-                            if not (transcript or "").strip():
-                                logger.warning("STT returned empty for %d-byte WAV; check backend STT logs and mic device.", len(wav_bytes))
+                            try:
+                                transcript = wav_to_transcript(wav_bytes)
+                            except Exception as e:
+                                logger.error("Sarvam STT failed: %s", e, exc_info=True)
                                 await websocket.send_json({
                                     "state": 5,
-                                    "payload": {
-                                        "error": "No speech detected.",
-                                        "errorCode": "NO_SPEECH_DETECTED",
-                                        "isProcessing": False,
-                                    },
+                                    "payload": _safe_payload(messages=msgs, is_processing=False, error="Speech recognition failed. Please try again.", errorCode="STT_FAILED"),
                                 })
                             else:
-                                await process_user_text_and_reply(session, transcript.strip(), websocket)
+                                if not (transcript or "").strip():
+                                    logger.warning("STT returned empty for %d-byte WAV", len(wav_bytes))
+                                    await websocket.send_json({
+                                        "state": 5,
+                                        "payload": _safe_payload(messages=msgs, is_processing=False, error="No speech detected.", errorCode="NO_SPEECH_DETECTED"),
+                                    })
+                                else:
+                                    await process_user_text_and_reply(session, transcript.strip(), websocket)
+                    except Exception as e:
+                        logger.error("mic_start/toggle_mic failed: %s", e, exc_info=True)
+                        await websocket.send_json({"state": 5, "payload": _safe_payload(messages=session.get("messages", []), is_processing=False, error="Something went wrong. Please try again.")})
                 elif action in ("mic_stop", "mic_cancel"):
-                    # No-op for now; cancel would require a shared flag checked inside record_audio
-                    await websocket.send_json({"state": 5, "payload": {"isProcessing": False}})
+                    await websocket.send_json({"state": 5, "payload": _safe_payload(messages=msgs, is_processing=False)})
                 elif action == "menu_select":
-                    await websocket.send_json({"state": 5, "payload": msg})
+                    p = dict(msg) if isinstance(msg, dict) else {}
+                    p.setdefault("messages", msgs)
+                    p.setdefault("isProcessing", False)
+                    p.setdefault("isSpeaking", False)
+                    await websocket.send_json({"state": 5, "payload": p})
                 else:
-                    await websocket.send_json({"state": 5, "payload": msg})
+                    p = dict(msg) if isinstance(msg, dict) else {}
+                    p.setdefault("messages", msgs)
+                    p.setdefault("isProcessing", False)
+                    p.setdefault("isSpeaking", False)
+                    await websocket.send_json({"state": 5, "payload": p})
             except Exception as ex:
-                logger.exception("WebSocket message handling error: %s", ex)
-                await websocket.send_json({"state": 0, "payload": None})
+                logger.error("WebSocket message handling error: %s", ex, exc_info=True)
+                try:
+                    await websocket.send_json({
+                        "state": 5,
+                        "payload": _safe_payload(messages=session.get("messages", []), is_processing=False, error="Something went wrong. Please try again."),
+                    })
+                except Exception:
+                    pass
     except Exception as e:
-        logger.exception("WebSocket error: %s", e)
+        logger.error("WebSocket error: %s", e, exc_info=True)
         try:
-            await websocket.send_json({"state": -1, "payload": {"error": str(e)}})
+            await websocket.send_json({
+                "state": 5,
+                "payload": _safe_payload(messages=[], is_processing=False, error="Something went wrong. Please try again."),
+            })
         except Exception:
             pass
     finally:

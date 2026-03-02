@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -25,41 +25,13 @@ import { useMessageAnimation } from '../hooks/useAnimeAnimations';
 import { getMessageIntent, isAboutCollegeIntent } from '../utils/intentClassifier';
 import DigitalBook from './chat/DigitalBook';
 
-const COLLEGE_BOOK_DATA: any[] = [
-  {
-    layout: 'cover',
-    title: "Sai Vidya Institute of Technology",
-    subtitle: "Established 2008",
-    content: null
-  },
-  {
-    layout: 'editorial',
-    title: "SVIT Overview",
-    content: (
-      <p>Sai Vidya Institute of Technology (SVIT) is a premier engineering institution committed to providing quality technical education. Founded with a vision to nurture innovation and excellence, SVIT has become a hub for aspiring engineers.</p>
-    ),
-    image: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=1000"
-  },
-  {
-    title: "Our Heritage",
-    content: (
-      <p>Established by a group of eminent academicians and industrialists, the institute carries a legacy of academic rigor and character building. Our history is rooted in the belief that education should empower individuals to solve global challenges.</p>
-    )
-  },
-  {
-    title: "Campus Life",
-    content: (
-      <p>The campus is spread across a lush green environment, providing a perfect atmosphere for learning. From state-of-the-art laboratories to vibrant cultural festivals, SVIT offers a holistic development experience.</p>
-    ),
-    image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=1000"
-  },
-  {
-    title: "Visions & Goals",
-    content: (
-      <p>Our vision is to be a globally recognized center of excellence in technical education. We aim to produce technically competent and ethically strong professionals who contribute to the sustainable development of society.</p>
-    )
-  }
-];
+/** Cover page only; content pages come from LLM overview reply. */
+const BOOK_COVER = {
+  layout: 'cover' as const,
+  title: 'Sai Vidya Institute of Technology',
+  subtitle: 'Established 2008',
+  content: null as React.ReactNode,
+};
 
 const GREETING_TTS_DURATION_MS = 4500;
 
@@ -73,6 +45,8 @@ interface ChatScreenProps {
   onBack: () => void;
   onOrbTap: () => void;
   sendMessage: (msg: object) => void;
+  /** When true, always show only the chat panel (header + message list + orb), e.g. when embedded in 30% column. */
+  forcePanelView?: boolean;
 }
 
 export default function ChatScreen({
@@ -85,6 +59,7 @@ export default function ChatScreen({
   onBack,
   onOrbTap,
   sendMessage,
+  forcePanelView = false,
 }: ChatScreenProps) {
   const { t, language } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -94,6 +69,61 @@ export default function ChatScreen({
   const [isSplit, setIsSplit] = useState(false);
   const [isAboutCollege, setIsAboutCollege] = useState(false);
   const userRequestedListeningRef = useRef(false);
+
+  // Open Digital Book as soon as user asks about college (no wait for LLM reply) to avoid load latency and block overview TTS from playing in chat.
+  const { overviewSessionId, overviewReplyId } = (() => {
+    const list = payloadMessages ?? [];
+    if (list.length < 1) return { overviewSessionId: null as string | null, overviewReplyId: null as string | null };
+    const last = list[list.length - 1];
+    const lastText = typeof (last as any)?.text === 'string' ? (last as any).text : '';
+    if ((last as any)?.role === 'user' && isAboutCollegeIntent(lastText))
+      return { overviewSessionId: (last as any).id ?? null, overviewReplyId: null };
+    if (list.length >= 2) {
+      const prev = list[list.length - 2];
+      const prevText = typeof (prev as any)?.text === 'string' ? (prev as any).text : '';
+      if ((last as any)?.role === 'clara' && (prev as any)?.role === 'user' && isAboutCollegeIntent(prevText))
+        return { overviewSessionId: (prev as any).id ?? null, overviewReplyId: (last as any).id ?? null };
+    }
+    return { overviewSessionId: null, overviewReplyId: null };
+  })();
+
+  // Digital Book content: injected copy in current language (display + TTS). Same content in all 6 languages.
+  const overviewBookPages = useMemo(
+    () => [
+      BOOK_COVER,
+      { title: t('bookPage1Title'), content: <p className="premium-page-body-p">{t('bookPage1Content')}</p> as React.ReactNode },
+      { title: t('bookPage2Title'), content: <p className="premium-page-body-p">{t('bookPage2Content')}</p> as React.ReactNode },
+      { title: t('bookPage3Title'), content: <p className="premium-page-body-p">{t('bookPage3Content')}</p> as React.ReactNode },
+      { title: t('bookPage4Title'), content: <p className="premium-page-body-p">{t('bookPage4Content')}</p> as React.ReactNode },
+      { title: t('bookPage5Title'), content: <p className="premium-page-body-p">{t('bookPage5Content')}</p> as React.ReactNode },
+    ],
+    [t, language]
+  );
+  const overviewPageTexts = useMemo(
+    () => ['', t('bookPage1Content'), t('bookPage2Content'), t('bookPage3Content'), t('bookPage4Content'), t('bookPage5Content')],
+    [t, language]
+  );
+
+  const [completedOverviewId, setCompletedOverviewId] = useState<string | null>(null);
+  const [isDigitalBookMinimized, setIsDigitalBookMinimized] = useState(false);
+  const [userClosedDigitalBook, setUserClosedDigitalBook] = useState(false);
+  const isDigitalBookFlow = Boolean(overviewSessionId && overviewSessionId !== completedOverviewId);
+  const completedDigitalBookRef = useRef<any>(null);
+
+  // Allow showing the book again when a new digital book or new overview session arrives.
+  useEffect(() => {
+    const db = (payload as any)?.digitalBook;
+    if (db && db !== completedDigitalBookRef.current) {
+      setUserClosedDigitalBook(false);
+      setIsDigitalBookMinimized(false);
+    }
+  }, [(payload as any)?.digitalBook]);
+  useEffect(() => {
+    if (overviewSessionId && overviewSessionId !== completedOverviewId) {
+      setUserClosedDigitalBook(false);
+      setIsDigitalBookMinimized(false);
+    }
+  }, [overviewSessionId, completedOverviewId]);
   const lastPlayedAudioRef = useRef<string | null>(null);
   const isPlayingRef = useRef(false);
   const hasStartedRef = useRef(false);
@@ -157,6 +187,7 @@ export default function ChatScreen({
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
 
   useEffect(() => {
+    if (isDigitalBookFlow) return;
     const audioBase64 = payload?.audioBase64;
     if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current || isPlayingRef.current) return;
     lastPlayedAudioRef.current = audioBase64;
@@ -181,7 +212,7 @@ export default function ChatScreen({
       isPlayingRef.current = false;
       setIsPlayingBackendAudio(false);
     }
-  }, [payload?.audioBase64]);
+  }, [payload?.audioBase64, isDigitalBookFlow]);
 
   useEffect(() => {
     if (isPlayingBackendAudio) {
@@ -199,14 +230,13 @@ export default function ChatScreen({
     if (hasStartedRef.current) setOrbState('idle');
   }, [propIsListening, isProcessing, isPlayingBackendAudio]);
 
+  // Greeting comes only from backend (greetings.py). Request it when chat screen mounts.
   useEffect(() => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
     setOrbState('idle');
-    setTimeout(() => {
-      setMessages((prev) => (prev.length === 0 ? [{ id: 'greet-1', role: 'clara', text: t('welcome_message') }] : prev));
-    }, 500);
-  }, [t]);
+    sendMessage({ action: 'conversation_started' });
+  }, [sendMessage]);
 
   useEffect(() => {
     if (payloadMessages.length > 0) {
@@ -253,9 +283,9 @@ export default function ChatScreen({
     }
   };
 
-  // Render the large centered text for Fullscreen mode
+  // Render the large centered text for Fullscreen mode (overview reply is shown only in the book, not here)
   const renderFullscreenContent = () => {
-    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'clara');
+    const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'clara' && m.id !== overviewReplyId);
     return (
       <motion.div
         key="fullscreen"
@@ -322,7 +352,7 @@ export default function ChatScreen({
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="w-full h-full"
             >
-              <DigitalBook pages={COLLEGE_BOOK_DATA} />
+              <DigitalBook pages={overviewBookPages} />
             </motion.div>
           ) : null}
         </section>
@@ -339,16 +369,18 @@ export default function ChatScreen({
           </header>
 
           <div ref={scrollRef} className="chat-messages-scroll no-scrollbar">
-            {messages.map((msg) => (
-              <div key={msg.id}>
-                {isSystemMessage(msg) && <SystemBubble message={msg} />}
-                {msg.role === 'user' && <UserBubble message={msg} />}
-                {isTextMessage(msg) && <ClaraBubble message={msg} />}
-                {isCardMessage(msg) && <CardMessage message={msg} />}
-                {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
-                {isImageCardMessage(msg) && <ImageCard message={msg} />}
-              </div>
-            ))}
+            {messages
+              .filter((msg) => msg.id !== overviewReplyId)
+              .map((msg) => (
+                <div key={msg.id}>
+                  {isSystemMessage(msg) && <SystemBubble message={msg} />}
+                  {msg.role === 'user' && <UserBubble message={msg} />}
+                  {isTextMessage(msg) && <ClaraBubble message={msg} />}
+                  {isCardMessage(msg) && <CardMessage message={msg} />}
+                  {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
+                  {isImageCardMessage(msg) && <ImageCard message={msg} />}
+                </div>
+              ))}
 
             {isProcessing && (
               <div className="clara-typing-container">
@@ -374,6 +406,152 @@ export default function ChatScreen({
       </motion.div>
     );
   };
+
+  // Digital Book from backend (one payload with pages + all audio): no diary_tts, no chat, instant playback.
+  const digitalBook = (payload as any)?.digitalBook;
+  const showBackendDigitalBook = digitalBook && digitalBook !== completedDigitalBookRef.current;
+  const showLegacyDigitalBook = isDigitalBookFlow;
+
+  // Shared fullscreen card layout: header (Close, Minimize) and either fullscreen book or 70:30 book | chat.
+  if ((showBackendDigitalBook || showLegacyDigitalBook) && !userClosedDigitalBook) {
+    const handleCloseBook = () => {
+      if (showBackendDigitalBook) completedDigitalBookRef.current = digitalBook;
+      if (showLegacyDigitalBook) setCompletedOverviewId(overviewSessionId);
+      setUserClosedDigitalBook(true);
+      setIsDigitalBookMinimized(false);
+    };
+    const bookContent = showBackendDigitalBook ? (
+      <DigitalBook
+        pages={digitalBook.pages}
+        onComplete={handleCloseBook}
+      />
+    ) : (
+      <DigitalBook
+        pages={overviewBookPages}
+        pageTexts={overviewPageTexts}
+        sendMessage={sendMessage}
+        payload={payload}
+        onComplete={handleCloseBook}
+        skipFirstAudio
+      />
+    );
+    const headerBar = (
+      <header className="flex-shrink-0 flex items-center justify-end gap-2 pr-4 pt-3 pb-2 bg-stone-900/80 border-b border-white/10 z-10">
+        <button
+          type="button"
+          onClick={() => setIsDigitalBookMinimized((v) => !v)}
+          className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+          aria-label={isDigitalBookMinimized ? 'Expand' : 'Minimize'}
+        >
+          {isDigitalBookMinimized ? 'Expand' : 'Minimize'}
+        </button>
+        <button
+          type="button"
+          onClick={handleCloseBook}
+          className="p-2 rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/15 transition-colors"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </header>
+    );
+    if (!isDigitalBookMinimized) {
+      return (
+        <div className="chat-screen-container flex flex-col h-full bg-stone-950">
+          {headerBar}
+          <div className="flex-1 min-h-0">
+            {bookContent}
+          </div>
+          <BackgroundParticles />
+        </div>
+      );
+    }
+    return (
+      <div className="chat-screen-container flex flex-row h-full w-full bg-stone-950">
+        <div className="w-[70%] h-full flex flex-col border-r border-white/10 flex-shrink-0 bg-stone-950">
+          {headerBar}
+          <div className="flex-1 min-h-0">
+            {bookContent}
+          </div>
+        </div>
+        <div className="w-[30%] h-full min-w-0 flex flex-col flex-shrink-0 overflow-hidden">
+          <header className="chat-header-minimal flex-shrink-0">
+            <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60" aria-label="Back">
+              <ArrowLeft size={24} />
+            </button>
+            <h1 className="kiosk-header-title">CLARA</h1>
+          </header>
+          <div ref={scrollRef} className="chat-messages-scroll no-scrollbar flex-1 min-h-0 overflow-y-auto">
+            {(messages ?? []).map((msg) => (
+              <div key={msg.id}>
+                {isSystemMessage(msg) && <SystemBubble message={msg} />}
+                {msg.role === 'user' && <UserBubble message={msg} />}
+                {isTextMessage(msg) && <ClaraBubble message={msg} />}
+                {isCardMessage(msg) && <CardMessage message={msg} />}
+                {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
+                {isImageCardMessage(msg) && <ImageCard message={msg} />}
+              </div>
+            ))}
+            {isProcessing && (
+              <div className="clara-typing-container">
+                <div className="typing-dot" />
+                <div className="typing-dot" />
+                <div className="typing-dot" />
+              </div>
+            )}
+          </div>
+          <motion.div layoutId="voice-orb-wrapper" className="orb-container-split flex-shrink-0">
+            <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
+          </motion.div>
+        </div>
+        <BackgroundParticles />
+      </div>
+    );
+  }
+
+  // Embedded panel only (e.g. 30% column when department cards minimized): show chat list + orb.
+  if (forcePanelView) {
+    return (
+      <div className="chat-screen-container flex flex-col h-full min-h-0">
+        <header className="chat-header-minimal flex-shrink-0">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60"
+            aria-label="Back"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="kiosk-header-title">CLARA</h1>
+        </header>
+        <div ref={scrollRef} className="chat-messages-scroll no-scrollbar flex-1 min-h-0 overflow-y-auto">
+          {(messages ?? []).map((msg) => (
+            <div key={msg.id}>
+              {isSystemMessage(msg) && <SystemBubble message={msg} />}
+              {msg.role === 'user' && <UserBubble message={msg} />}
+              {isTextMessage(msg) && <ClaraBubble message={msg} />}
+              {isCardMessage(msg) && <CardMessage message={msg} />}
+              {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
+              {isImageCardMessage(msg) && <ImageCard message={msg} />}
+            </div>
+          ))}
+          {isProcessing && (
+            <div className="clara-typing-container">
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+            </div>
+          )}
+        </div>
+        <motion.div layoutId="voice-orb-wrapper" className="orb-container-split flex-shrink-0">
+          <VoiceOrb
+            state={orbState}
+            amplitude={voiceAnalyser.amplitude}
+            onTap={handleOrbTap}
+          />
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-screen-container">

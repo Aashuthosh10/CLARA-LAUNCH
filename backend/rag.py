@@ -6,7 +6,7 @@ from typing import List
 
 from config import RAG_MAX_TOKENS, RAG_TOP_K
 
-from db import get_document_count, get_similar_contents
+from db import get_document_count, get_similar_contents, is_db_available
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +57,20 @@ def get_relevant_context(
     if not (query or query.strip()):
         return ""
     query = query.strip()
+    if not is_db_available():
+        logger.warning("RAG: DB unavailable, returning empty context")
+        return ""
     try:
         query_embedding = generate_embedding(query)
         contents = get_similar_contents(query_embedding, top_k)
         if not contents:
-            logger.debug("RAG: no documents returned for query (table may be empty or no matches)")
+            logger.warning("RAG: context empty (no documents for query)")
             return ""
         combined = "\n\n".join(contents)
-        return _trim_to_tokens(combined, max_tokens)
+        out = _trim_to_tokens(combined, max_tokens)
+        if out:
+            logger.info("RAG: context_size=%d chars", len(out))
+        return out
     except Exception as e:
         logger.warning("RAG retrieval failed: %s", e, exc_info=True)
         return ""
