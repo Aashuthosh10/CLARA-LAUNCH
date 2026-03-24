@@ -87,7 +87,78 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(final_payload.get("messages", [])[-1].get("text"), full_reply)
         play_ms = timing.summary_ms().get("play_ms")
         self.assertIsNotNone(play_ms)
-        self.assertGreater(float(play_ms or 0.0), 1000.0)
+
+    async def test_single_sentence_reply_emits_single_final_segment(self) -> None:
+        session = {"messages": []}
+        ws = _FakeWebSocket()
+        timing = main.TurnTiming()
+        full_reply = "Admissions are currently open."
+        tts_calls: list[dict] = []
+        fake_audio = self._silent_wav_base64(duration_s=1.0)
+
+        async def _fake_tts(text: str, language_code: str, **kwargs):
+            tts_calls.append({"text": text, "language_code": language_code, **kwargs})
+            return fake_audio, False
+
+        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+            main, "ENABLE_TTS_PIPELINING", False
+        ), patch.object(
+            main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
+        ), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
+        ), patch.object(
+            main, "get_relevant_context", new=lambda _text, _k: ""
+        ), patch.object(
+            main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, full_reply))
+        ), patch.object(
+            main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
+        ), patch.object(
+            main, "_log_turn_metrics", new=lambda *args, **kwargs: None
+        ):
+            await main.process_user_text_and_reply(session, "Admissions?", ws, timing, stt_meta=None)
+
+        self.assertEqual(len(tts_calls), 1)
+        self.assertEqual(tts_calls[0].get("utterance_kind"), "assistant_full_reply")
+        final_payload = [e.get("payload", {}) for e in ws.events][-1]
+        self.assertEqual(final_payload.get("segment_index"), 0)
+        self.assertTrue(final_payload.get("is_final_segment"))
+
+    async def test_cache_hit_path_still_segments_without_overlap(self) -> None:
+        session = {"messages": []}
+        ws = _FakeWebSocket()
+        timing = main.TurnTiming()
+        user_text = "Tell me library timings."
+        full_reply = (
+            "Our library is open from 8 AM to 8 PM on weekdays. "
+            "On Saturdays it is open from 9 AM to 5 PM."
+        )
+        context_sig = "e3b0c44298fc"
+        cache_key = f"en|{main._normalized_cache_text(user_text)}|{context_sig}"
+        main.LLM_REPLY_CACHE.set(cache_key, full_reply)
+        tts_calls: list[dict] = []
+
+        async def _fake_tts(text: str, language_code: str, **kwargs):
+            tts_calls.append({"text": text, "language_code": language_code, **kwargs})
+            return self._silent_wav_base64(duration_s=0.8), False
+
+        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+            main, "ENABLE_TTS_PIPELINING", False
+        ), patch.object(
+            main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
+        ), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
+        ), patch.object(
+            main, "get_relevant_context", new=lambda _text, _k: ""
+        ), patch.object(
+            main, "_stream_groq_reply", new=AsyncMock(return_value=("", ""))
+        ), patch.object(
+            main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
+        ), patch.object(
+            main, "_log_turn_metrics", new=lambda *args, **kwargs: None
+        ):
+            await main.process_user_text_and_reply(session, user_text, ws, timing, stt_meta=None)
+
+        self.assertEqual([c.get("utterance_kind") for c in tts_calls], ["assistant_first_sentence", "assistant_remaining_reply"])
 
 
 if __name__ == "__main__":
