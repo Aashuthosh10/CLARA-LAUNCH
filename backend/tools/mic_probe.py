@@ -4,21 +4,21 @@ import os
 import sys
 from pathlib import Path
 
-# Allow importing backend config and core when run from repo root or backend/
-_BACKEND = Path(__file__).resolve().parent.parent
-if str(_BACKEND) not in sys.path:
-    sys.path.insert(0, str(_BACKEND))
+# Allow importing backend config and core when run from repo root or scripts.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 import numpy as np
 import sounddevice as sd
 
-from config import (
+from backend.config.settings import (
     AUDIO_INPUT_DEVICE_NAME,
     AUDIO_INPUT_DEVICE_INDEX,
     AUDIO_SAMPLE_RATE,
     AUDIO_CHANNELS,
 )
-from core.audio_pipeline import _resolve_input_device
+from backend.core.audio_pipeline import _resolve_input_device
 
 
 def main() -> None:

@@ -1,4 +1,4 @@
-# Start CLARA backend. Run from project root (clara_deployment-1).
+# Start CLARA backend. Run from project root.
 # Frees the backend port if in use, then starts backend so the frontend can connect.
 
 $ErrorActionPreference = "Stop"
@@ -30,7 +30,7 @@ if (-not (Test-Path $venvPython)) {
     # Try one more location (root .venv)
     $venvPython = Join-Path $ScriptDir ".venv\Scripts\python.exe"
     if (-not (Test-Path $venvPython)) {
-        Write-Error "Virtual env not found. Run: python -m venv backend\.venv && .\backend\.venv\Scripts\pip install -r backend\requirements.txt"
+        Write-Error "Virtual env not found. Run: python -m venv backend\.venv && .\backend\.venv\Scripts\pip install -r backend\requirements\requirements.txt"
     }
 }
 

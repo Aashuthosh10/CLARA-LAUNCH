@@ -15,8 +15,6 @@ export interface VoiceAnalyserResult {
   smoothedRms: number;
   smoothedFrequency: number;
   error: string | null;
-  /** Ref updated every frame with current frequency bin data (only when enabled). For waveform visualizer. */
-  frequencyDataRef: React.MutableRefObject<Uint8Array>;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -24,6 +22,7 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 export function useVoiceFrequencyAnalyser(enabled: boolean) {
+  const frequencyDataRef = useRef<Uint8Array>(new Uint8Array(FREQUENCY_BIN_COUNT));
   const [result, setResult] = useState<VoiceAnalyserResult>({
     rms: 0,
     frequencyIntensity: 0,
@@ -40,7 +39,6 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
   const smoothedFreqRef = useRef(0);
   const silenceStartRef = useRef<number | null>(null);
   const enabledAtRef = useRef<number>(0);
-  const frequencyDataRef = useRef<Uint8Array>(new Uint8Array(FREQUENCY_BIN_COUNT));
 
   const updateResult = useCallback(
     (rms: number, freq: number, isSilent: boolean) => {

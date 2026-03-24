@@ -5,7 +5,7 @@ import threading
 import time
 from typing import Any, List, Optional
 
-from config import (
+from backend.config.settings import (
     POSTGRES_DB,
     POSTGRES_HOST,
     POSTGRES_PASSWORD,

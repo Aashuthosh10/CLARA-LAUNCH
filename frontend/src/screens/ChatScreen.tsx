@@ -13,17 +13,17 @@ import {
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import ClaraBubble from './chat/ClaraBubble';
-import UserBubble from './chat/UserBubble';
-import SystemBubble from './chat/SystemBubble';
-import CardMessage from './chat/CardMessage';
-import CollegeDiaryCard from './chat/CollegeDiaryCard';
-import ImageCard from './chat/ImageCard';
-import VoiceOrb from './VoiceOrb';
-import BackgroundParticles from './BackgroundParticles';
+import ClaraBubble from '../components/chat/ClaraBubble';
+import UserBubble from '../components/chat/UserBubble';
+import SystemBubble from '../components/chat/SystemBubble';
+import CardMessage from '../components/chat/CardMessage';
+import CollegeDiaryCard from '../components/chat/CollegeDiaryCard';
+import ImageCard from '../components/chat/ImageCard';
+import VoiceOrb from '../components/VoiceOrb';
+import BackgroundParticles from '../components/BackgroundParticles';
 import { useMessageAnimation } from '../hooks/useAnimeAnimations';
-import { getMessageIntent, isAboutCollegeIntent } from '../utils/intentClassifier';
-import DigitalBook from './chat/DigitalBook';
+import { getMessageIntent, isAboutCollegeIntent } from '../lib/intentClassifier';
+import DigitalBook from '../components/chat/DigitalBook';
 
 /** Cover page only; content pages come from LLM overview reply. */
 const BOOK_COVER = {
@@ -38,10 +38,20 @@ const GREETING_TTS_DURATION_MS = 4500;
 interface ChatScreenProps {
   messages: ChatMessage[];
   isListening?: boolean;
+  isSpeaking?: boolean;
   isProcessing?: boolean;
   isConnected?: boolean;
   voiceInputMode?: 'browser' | 'backend';
-  payload?: { audioBase64?: string; error?: string } | null;
+  payload?: {
+    audioBase64?: string;
+    error?: string;
+    errorCode?: string;
+    hint?: string;
+    type?: string;
+    language?: string;
+    confidence?: number;
+    turn_id?: string;
+  } | null;
   onBack: () => void;
   onOrbTap: () => void;
   sendMessage: (msg: object) => void;
@@ -52,6 +62,7 @@ interface ChatScreenProps {
 export default function ChatScreen({
   messages: payloadMessages,
   isListening: propIsListening = false,
+  isSpeaking: _isSpeaking = false,
   isProcessing = false,
   isConnected = true,
   voiceInputMode = 'browser',
@@ -125,8 +136,92 @@ export default function ChatScreen({
     }
   }, [overviewSessionId, completedOverviewId]);
   const lastPlayedAudioRef = useRef<string | null>(null);
+  const pendingAudioRef = useRef<{ audioBase64: string; turnId?: string | null } | null>(null);
   const isPlayingRef = useRef(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const hasStartedRef = useRef(false);
+
+  const stopCurrentAudio = useCallback(() => {
+    const current = currentAudioRef.current;
+    if (!current) return;
+    current.pause();
+    current.src = '';
+    currentAudioRef.current = null;
+  }, []);
+
+  const base64ToBytes = useCallback((raw: string): Uint8Array => {
+    const normalized = raw.startsWith('data:') ? (raw.split(',')[1] || '') : raw;
+    const binary = atob(normalized);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }, []);
+
+  const detectAudioMime = useCallback((bytes: Uint8Array): string => {
+    if (bytes.length >= 12) {
+      const b0 = bytes[0];
+      const b1 = bytes[1];
+      const b2 = bytes[2];
+      const b3 = bytes[3];
+      if (b0 === 0x52 && b1 === 0x49 && b2 === 0x46 && b3 === 0x46) return 'audio/wav'; // RIFF
+      if (b0 === 0x49 && b1 === 0x44 && b2 === 0x33) return 'audio/mpeg'; // ID3
+      if (b0 === 0xff && (b1 & 0xe0) === 0xe0) return 'audio/mpeg'; // MP3 frame sync
+      if (
+        bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
+      ) return 'audio/mp4'; // ftyp
+    }
+    return 'application/octet-stream';
+  }, []);
+
+  const playAudioBase64 = useCallback((audioBase64: string, turnId?: string | null) => {
+    if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current) return;
+    lastPlayedAudioRef.current = audioBase64;
+    isPlayingRef.current = true;
+    setIsPlayingBackendAudio(true);
+    stopCurrentAudio();
+    const startedAt = Date.now();
+    if (import.meta.env.DEV) {
+      console.info(
+        '[CLARA_TTS_PLAYBACK_START]',
+        JSON.stringify({ turn_id: turnId ?? null, ts_ms: startedAt, b64_len: audioBase64.length })
+      );
+    }
+    try {
+      const bytes = base64ToBytes(audioBase64);
+      const mime = detectAudioMime(bytes);
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
+      const onEnd = () => {
+        URL.revokeObjectURL(url);
+        isPlayingRef.current = false;
+        setIsPlayingBackendAudio(false);
+        currentAudioRef.current = null;
+        if (import.meta.env.DEV) {
+          console.info(
+            '[CLARA_TTS_PLAYBACK_END]',
+            JSON.stringify({
+              turn_id: turnId ?? null,
+              ts_ms: Date.now(),
+              elapsed_ms: Date.now() - startedAt,
+            })
+          );
+        }
+        const pending = pendingAudioRef.current;
+        pendingAudioRef.current = null;
+        if (pending && pending.audioBase64 !== lastPlayedAudioRef.current) {
+          playAudioBase64(pending.audioBase64, pending.turnId);
+        }
+      };
+      audio.addEventListener('ended', onEnd);
+      audio.addEventListener('error', onEnd);
+      audio.play().catch(() => onEnd());
+    } catch {
+      isPlayingRef.current = false;
+      setIsPlayingBackendAudio(false);
+    }
+  }, [base64ToBytes, detectAudioMime, stopCurrentAudio]);
 
   // Trigger layout split/fullscreen based on user intent category
   useEffect(() => {
@@ -189,30 +284,15 @@ export default function ChatScreen({
   useEffect(() => {
     if (isDigitalBookFlow) return;
     const audioBase64 = payload?.audioBase64;
-    if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current || isPlayingRef.current) return;
-    lastPlayedAudioRef.current = audioBase64;
-    isPlayingRef.current = true;
-    setIsPlayingBackendAudio(true);
-    try {
-      const binary = atob(audioBase64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      const onEnd = () => {
-        URL.revokeObjectURL(url);
-        isPlayingRef.current = false;
-        setIsPlayingBackendAudio(false);
-      };
-      audio.addEventListener('ended', onEnd);
-      audio.addEventListener('error', onEnd);
-      audio.play().catch(() => onEnd());
-    } catch {
-      isPlayingRef.current = false;
-      setIsPlayingBackendAudio(false);
+    if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current) return;
+    if (isPlayingRef.current) {
+      pendingAudioRef.current = { audioBase64, turnId: payload?.turn_id ?? null };
+      return;
     }
-  }, [payload?.audioBase64, isDigitalBookFlow]);
+    playAudioBase64(audioBase64, payload?.turn_id ?? null);
+  }, [payload?.audioBase64, payload?.turn_id, isDigitalBookFlow, playAudioBase64]);
+
+  useEffect(() => () => stopCurrentAudio(), [stopCurrentAudio]);
 
   useEffect(() => {
     if (isPlayingBackendAudio) {
@@ -261,6 +341,24 @@ export default function ChatScreen({
       setMessages(cleanMessages);
     }
   }, [payloadMessages]);
+
+  useEffect(() => {
+    if (payload?.type !== 'language_auto_detected' || !payload.language) return;
+    const confidence = typeof payload.confidence === 'number' ? ` (${Math.round(payload.confidence * 100)}%)` : '';
+    addSystemMessage(`Auto language detected: ${payload.language}${confidence}`);
+  }, [payload?.type, payload?.language, payload?.confidence, addSystemMessage]);
+
+  const lastErrorTurnIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const err = payload?.error;
+    if (!err) return;
+    const turnId = payload?.turn_id ?? '';
+    if (lastErrorTurnIdRef.current === turnId) return;
+    lastErrorTurnIdRef.current = turnId;
+    const hint = payload?.hint;
+    const msg = hint ? `${err} ${hint}` : err;
+    addSystemMessage(msg);
+  }, [payload?.error, payload?.hint, payload?.turn_id, addSystemMessage]);
 
   useEffect(() => {
     const el = scrollRef.current;

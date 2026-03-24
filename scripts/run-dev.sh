@@ -18,7 +18,7 @@ fi
 if [ ! -d .venv ]; then
   echo "Creating virtualenv..."
   python3 -m venv .venv
-  .venv/bin/pip install -q -r backend/requirements.txt
+  .venv/bin/pip install -q -r backend/requirements/requirements.txt
 fi
 if [ ! -d frontend/node_modules ]; then
   echo "Installing frontend dependencies..."

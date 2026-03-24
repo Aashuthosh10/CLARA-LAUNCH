@@ -1,5 +1,5 @@
 -- Run once after first docker compose up.
--- Example: PGPASSWORD=yourpass psql -h 127.0.0.1 -U clara_user -d clara_db -f backend/scripts/init_pgvector.sql
+-- Example: PGPASSWORD=yourpass psql -h 127.0.0.1 -U clara_user -d clara_db -f scripts/db/init_pgvector.sql
 
 CREATE EXTENSION IF NOT EXISTS vector;
 

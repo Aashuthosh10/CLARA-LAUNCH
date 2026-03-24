@@ -18,8 +18,8 @@ DIGITAL_BOOK_SECTION_TITLES = [
 DIGITAL_BOOK_COVER_TITLE = "Cover"
 DIGITAL_BOOK_COVER_TEXT = "Sai Vidya Institute of Technology\nEstablished 2008"
 
-from config import RAG_MAX_TOKENS, RAG_TOP_K
-from rag import get_relevant_context
+from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
+from backend.core.rag import get_relevant_context
 
 logger = logging.getLogger(__name__)
 

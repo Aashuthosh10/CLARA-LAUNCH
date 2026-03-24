@@ -97,7 +97,7 @@ clara-deploy-frontend/             # repo root
 - **Backend intents:** `COURSE_MENU` (generic “courses/departments” query → reply "COURSE_MENU"), `DEPARTMENT_OVERVIEW` (specific department → 5-section reply, translated). Priority: department > course menu > college overview > normal.
 - **Course menu:** Fullscreen `CourseMenuComponent`; groups from `cardContent.ts` (all 6 languages). Click department → send "X department overview" → backend → department cards.
 - **Department cards:** `CardStackComponent` in same viewport as digital book; 5 cards (cover + 4 content); TTS via `diary_tts`; Close/Minimize in top-right; minimize → 70% cards, 30% chat + orb.
-- **Card content:** `frontend/src/content/cardContent.ts` — `getCardContent(language)` for institution name, menu groups, department card titles, copy (all 6 languages).
+- **Card content:** `frontend/src/lib/cardContent.ts` — `getCardContent(language)` for institution name, menu groups, department card titles, copy (all 6 languages).
 
 ---
 
@@ -114,17 +114,18 @@ clara-deploy-frontend/             # repo root
 | Change | Where |
 |--------|--------|
 | Kiosk states / routing / overlays | `frontend/src/App.tsx` |
-| Chat vs book, book Close/Minimize, 70:30 | `frontend/src/components/ChatScreen.tsx` |
+| Chat vs book, book Close/Minimize, 70:30 | `frontend/src/screens/ChatScreen.tsx` |
 | Book UI, TTS timing, cover/page logic | `frontend/src/components/chat/DigitalBook.tsx` |
 | Department cards, TTS, fade | `frontend/src/components/chat/CardStackComponent.tsx` |
-| Course menu list, copy | `frontend/src/components/chat/CourseMenuComponent.tsx`, `frontend/src/content/cardContent.ts` |
-| Card copy (all 6 languages) | `frontend/src/content/cardContent.ts` |
+| Course menu list, copy | `frontend/src/components/chat/CourseMenuComponent.tsx`, `frontend/src/lib/cardContent.ts` |
+| Card copy (all 6 languages) | `frontend/src/lib/cardContent.ts` |
 | Book copy (legacy, all languages) | `frontend/src/context/LanguageContext.tsx` |
-| Intent (about college, etc.) | `frontend/src/utils/intentClassifier.ts` |
+| Intent (about college, etc.) | `frontend/src/lib/intentClassifier.ts` |
 | WS URL, env | `frontend/.env`, `App.tsx` (WS_URL) |
-| API keys, DB, RAG config | `backend/config.py`, `backend/main.py` |
+| API keys, DB, RAG config | `backend/config/settings.py`, `backend/app/main.py` |
 | Intents, overview/department prompts | `backend/answer_generation.py` |
 
 ---
 
 *Baseline set: Digital Book + Department/Course flow with Close/Minimize on fullscreen cards, 70:30 minimize (chat + orb in 30%), cardContent.ts for all 6 languages, intents COURSE_MENU and DEPARTMENT_OVERVIEW.*
+

@@ -4,12 +4,12 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useLanguage } from './context/LanguageContext';
 
 // Components
-import SleepScreen from './components/SleepScreen';
-import LanguageSelect from './components/LanguageSelect';
-import ChatScreen from './components/ChatScreen';
+import SleepScreen from './screens/SleepScreen';
+import LanguageSelect from './screens/LanguageSelect';
+import ChatScreen from './screens/ChatScreen';
 import CourseMenuComponent from './components/chat/CourseMenuComponent';
 import CardStackComponent from './components/chat/CardStackComponent';
-import { getCardContent } from './content/cardContent';
+import { getCardContent } from './lib/cardContent';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
 /** "browser" = Web Speech API only (default for dev); "backend" = send mic_start, use backend recording. */
@@ -27,6 +27,7 @@ export default function App() {
   const { language } = useLanguage();
   const cardContent = getCardContent(language);
   const { state, payload, isConnected, setManualState, sendMessage, retryConnect, showOfflineBanner } = useWebSocket(WS_URL);
+  const timings = payload?.debug?.timings_ms as { ttft_ms?: number; ttfs_ms?: number; total_ms?: number } | undefined;
   const [urlOverrideState, setUrlOverrideState] = React.useState<number | null>(null);
   const [overlay, setOverlay] = React.useState<'none' | 'course_menu' | 'dept_wait'>('none');
   const [pendingDept, setPendingDept] = React.useState<string | null>(null);
@@ -229,7 +230,7 @@ export default function App() {
               onSelect={(language) => {
                 sendMessage({ action: 'language_selected', language });
                 setUrlOverrideState(null);
-                setManualState(5); // Transition to chat (voice) — post-language flow
+                setManualState(5); // Transition to chat (voice) post-language flow
               }}
               onHome={() => setEffectiveState(0)}
             />
@@ -363,7 +364,7 @@ export default function App() {
               <span className="text-amber-200/80">or refresh the page.</span>
             </div>
             <div className="text-amber-200/80 text-xs mt-1">
-              Start backend from project root: <code className="bg-black/20 px-1 rounded">.\start-backend.ps1</code> or <code className="bg-black/20 px-1 rounded">.\.venv\Scripts\python backend\main.py</code>. Check <a href={`${BACKEND_URL}/health`} target="_blank" rel="noopener noreferrer" className="underline">/health</a>. If you changed frontend/.env.local, restart the frontend (npm run dev).
+              Start backend from project root: <code className="bg-black/20 px-1 rounded">.\scripts\start-backend.ps1</code> or <code className="bg-black/20 px-1 rounded">.\.venv\Scripts\python backend\main.py</code>. Check <a href={`${BACKEND_URL}/health`} target="_blank" rel="noopener noreferrer" className="underline">/health</a>. If you changed frontend/.env.local, restart the frontend (npm run dev).
             </div>
           </div>
         )}
@@ -381,10 +382,11 @@ export default function App() {
         <div className="absolute inset-0 border-[24px] border-black/20 pointer-events-none z-50 rounded-[40px]" />
 
         {/* Debug Indicator (Hidden in production) */}
-        {process.env.NODE_ENV === 'development' && (
+        {import.meta.env.DEV && (
           <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[8px] text-stone-800 uppercase tracking-widest">
             <span className="pointer-events-none">
               Kiosk Mode Active • State: {effectiveState} • WS: {isConnected ? 'Connected' : 'Disconnected'}
+              {timings ? ` • TTFT: ${Math.round(timings?.ttft_ms ?? 0)}ms • TTFS: ${Math.round(timings?.ttfs_ms ?? 0)}ms • Total: ${Math.round(timings?.total_ms ?? 0)}ms` : ''}
             </span>
           </div>
         )}

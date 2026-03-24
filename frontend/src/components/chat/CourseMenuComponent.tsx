@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { getCardContent } from '../../content/cardContent';
+import { getCardContent } from '../../lib/cardContent';
 
 export default function CourseMenuComponent({
   onSelect,
@@ -65,4 +65,3 @@ export default function CourseMenuComponent({
     </div>
   );
 }
-

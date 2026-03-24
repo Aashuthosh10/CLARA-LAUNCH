@@ -4,14 +4,18 @@ import logging
 import threading
 from typing import List
 
-from config import RAG_MAX_TOKENS, RAG_TOP_K
-
-from db import get_document_count, get_similar_contents, is_db_available
+from backend.clients.database import get_document_count, get_similar_contents, is_db_available
+from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 
 logger = logging.getLogger(__name__)
 
 _embedding_model = None
-_embedding_lock = threading.Lock()
+_model_init_lock = threading.Lock()
+# SentenceTransformer.encode() is not thread-safe for a shared model instance.
+# Keep encode calls serialized unless we move to multiple model workers.
+_encode_lock = threading.Lock()
+_tiktoken_encoding = None
+_tiktoken_lock = threading.Lock()
 
 EMBEDDING_MODEL_NAME = "BAAI/bge-base-en"
 EMBEDDING_DIM = 768
@@ -20,11 +24,21 @@ EMBEDDING_DIM = 768
 def _get_embedding_model():
     """Lazy-load the sentence-transformers model once. Thread-safe."""
     global _embedding_model
-    with _embedding_lock:
+    with _model_init_lock:
         if _embedding_model is None:
             from sentence_transformers import SentenceTransformer
             _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
         return _embedding_model
+
+
+def _get_tiktoken_encoding():
+    """Lazy-load cl100k_base tokenizer once. Thread-safe."""
+    global _tiktoken_encoding
+    with _tiktoken_lock:
+        if _tiktoken_encoding is None:
+            import tiktoken
+            _tiktoken_encoding = tiktoken.get_encoding("cl100k_base")
+        return _tiktoken_encoding
 
 
 def generate_embedding(text: str) -> List[float]:
@@ -35,7 +49,7 @@ def generate_embedding(text: str) -> List[float]:
     if not text or not text.strip():
         raise ValueError("empty text")
     model = _get_embedding_model()
-    with _embedding_lock:
+    with _encode_lock:
         vec = model.encode(text.strip(), normalize_embeddings=True)
     return vec.tolist()
 
@@ -54,7 +68,7 @@ def get_relevant_context(
     Retrieve top-k most relevant chunks from PostgreSQL for the query.
     Returns concatenated chunk text, trimmed to max_tokens. Empty string on error or empty table.
     """
-    if not (query or query.strip()):
+    if not isinstance(query, str) or not query.strip():
         return ""
     query = query.strip()
     if not is_db_available():
@@ -76,13 +90,28 @@ def get_relevant_context(
         return ""
 
 
+def warmup_rag() -> bool:
+    """
+    Best-effort warmup to avoid first-turn timeout:
+    1) load embedding model
+    2) run one tiny embedding pass
+    Returns True on success, False otherwise.
+    """
+    try:
+        generate_embedding("warmup")
+        logger.info("RAG warmup completed (embedding model ready).")
+        return True
+    except Exception as e:
+        logger.warning("RAG warmup failed: %s", e, exc_info=True)
+        return False
+
+
 def _trim_to_tokens(text: str, max_tokens: int) -> str:
     """Trim text to at most max_tokens using tiktoken (cl100k_base)."""
     if max_tokens <= 0 or not text:
         return text
     try:
-        import tiktoken
-        enc = tiktoken.get_encoding("cl100k_base")
+        enc = _get_tiktoken_encoding()
         tokens = enc.encode(text)
         if len(tokens) <= max_tokens:
             return text

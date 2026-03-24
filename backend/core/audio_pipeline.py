@@ -2,18 +2,22 @@
 import io
 import logging
 import struct
+import time
 from typing import Optional
 
 import numpy as np
 import sounddevice as sd
 import webrtcvad
 
-from config import (
+from backend.config.settings import (
     AUDIO_CHANNELS,
+    AUDIO_MAX_UTTERANCE_MS,
     AUDIO_SAMPLE_RATE,
     AUDIO_SILENCE_STOP_MS,
     AUDIO_SPEECH_TIMEOUT_MS,
     AUDIO_VAD_FRAME_MS,
+    AUDIO_VAD_AGGRESSIVENESS,
+    AUDIO_PREROLL_BUFFER_MS,
     AUDIO_INPUT_DEVICE_NAME,
     AUDIO_INPUT_DEVICE_INDEX,
     AUDIO_RECORD_MODE,
@@ -54,6 +58,34 @@ def _resolve_input_device() -> int:
     return default_in
 
 
+def get_input_device_info() -> tuple[int, str]:
+    """Return (device_index, device_name) for logging."""
+    device_id = _resolve_input_device()
+    devices = sd.query_devices()
+    dev = devices[device_id] if device_id < len(devices) else {}
+    return device_id, dev.get("name", "?")
+
+
+def validate_audio_devices() -> tuple[bool, str]:
+    """
+    Validate configured audio input (and optionally output) devices exist.
+    Returns (ok, message). If not ok, message describes the issue.
+    """
+    try:
+        devices = sd.query_devices()
+        if not devices:
+            return False, "No audio devices found on this system."
+        dev_idx, dev_name = get_input_device_info()
+        if dev_idx >= len(devices):
+            return False, f"Audio input device index {dev_idx} out of range."
+        dev = devices[dev_idx]
+        if dev.get("max_input_channels", 0) < 1:
+            return False, f"Device {dev_name} (index {dev_idx}) has no input channels."
+        return True, f"Audio input OK: {dev_name} (index {dev_idx})"
+    except Exception as e:
+        return False, f"Audio device validation failed: {e}"
+
+
 def _frame_to_mono(frame: np.ndarray, channels: int) -> bytes:
     """Convert (samples, channels) int16 to mono bytes."""
     if channels <= 1:
@@ -70,8 +102,10 @@ def _compute_rms(mono_bytes: bytes) -> float:
     return float(np.sqrt(np.mean(arr.astype(np.float64) ** 2)) / 32768.0)
 
 
-def _record_fixed_duration(device_id: int, devices: list, channels: int) -> Optional[bytes]:
-    """Record exactly AUDIO_FIXED_RECORD_SECONDS; return WAV bytes or None if silent."""
+def _record_fixed_duration(
+    device_id: int, devices: list, channels: int
+) -> tuple[Optional[bytes], Optional[str], dict]:
+    """Record exactly AUDIO_FIXED_RECORD_SECONDS. Returns (wav_bytes, error_code, meta)."""
     duration_s = max(0.5, min(30.0, AUDIO_FIXED_RECORD_SECONDS))
     samples_total = int(AUDIO_SAMPLE_RATE * duration_s) * channels
     rec = sd.rec(samples_total, samplerate=AUDIO_SAMPLE_RATE, channels=channels, dtype="int16", device=device_id)
@@ -82,11 +116,13 @@ def _record_fixed_duration(device_id: int, devices: list, channels: int) -> Opti
         mono_arr = rec.squeeze()
     mono_bytes = mono_arr.tobytes()
     rms = _compute_rms(mono_bytes)
+    peak = float(np.abs(np.frombuffer(mono_bytes, dtype=np.int16)).max() / 32768.0) if len(mono_bytes) >= 2 else 0.0
+    meta = {"duration_ms": duration_s * 1000, "rms": rms, "peak": peak}
     logger.info("Fixed record: %.2f s, RMS=%.6f", duration_s, rms)
     if rms < AUDIO_SILENT_RMS_THRESHOLD:
         logger.warning("MIC_SILENT: RMS %.6f below threshold %.6f", rms, AUDIO_SILENT_RMS_THRESHOLD)
-        return None
-    return _build_wav_from_mono_bytes(mono_bytes)
+        return None, "MIC_SILENT", meta
+    return _build_wav_from_mono_bytes(mono_bytes), None, meta
 
 
 def _build_wav_from_mono_bytes(mono: bytes) -> bytes:
@@ -105,12 +141,15 @@ def _build_wav_from_mono_bytes(mono: bytes) -> bytes:
     return buf.getvalue()
 
 
-def record_audio() -> Optional[bytes]:
+def record_audio() -> tuple[Optional[bytes], Optional[str], dict]:
     """
     Record from configured input. Mode "fixed": record N seconds; mode "vad": VAD start/stop.
-    Returns WAV bytes (16 kHz mono int16) or None on timeout/error/silent.
+    Returns (wav_bytes, error_code, meta). Success: (bytes, None, meta). Failure: (None, code, meta).
+    Error codes: MIC_SILENT, VAD_TIMEOUT, RECORD_ERROR.
     Intended to be run in asyncio.to_thread() so the event loop is not blocked.
     """
+    start_ms = time.perf_counter() * 1000.0
+    empty_meta: dict = {}
     try:
         device_id = _resolve_input_device()
         devices = sd.query_devices()
@@ -121,17 +160,34 @@ def record_audio() -> Optional[bytes]:
         logger.info("record_audio: device_id=%s name=%s channels=%s mode=%s", device_id, dev_name, channels, AUDIO_RECORD_MODE)
 
         if AUDIO_RECORD_MODE == "fixed":
-            return _record_fixed_duration(device_id, devices, channels)
+            wav, err, meta = _record_fixed_duration(device_id, devices, channels)
+            meta["duration_ms"] = (time.perf_counter() * 1000.0 - start_ms)
+            return wav, err, meta
 
-        # VAD mode
-        vad = webrtcvad.Vad(2)  # aggressiveness 0–3
+        # VAD mode: 16kHz mono int16, 20ms frames, bytes = .tobytes()
+        agg = max(0, min(3, AUDIO_VAD_AGGRESSIVENESS))
+        vad = webrtcvad.Vad(agg)
         silence_frames_to_stop = (AUDIO_SILENCE_STOP_MS + _VAD_FRAME_MS - 1) // _VAD_FRAME_MS
         speech_timeout_frames = max(1, (AUDIO_SPEECH_TIMEOUT_MS + _VAD_FRAME_MS - 1) // _VAD_FRAME_MS)
+        max_utterance_frames = max(1, (AUDIO_MAX_UTTERANCE_MS + _VAD_FRAME_MS - 1) // _VAD_FRAME_MS)
+        preroll_frames = max(0, (AUDIO_PREROLL_BUFFER_MS + _VAD_FRAME_MS - 1) // _VAD_FRAME_MS)
         block_size = (AUDIO_SAMPLE_RATE * _VAD_FRAME_MS) // 1000
         accumulated: list[bytes] = []
+        preroll: list[bytes] = []
         consecutive_silence = 0
         speech_started = False
         frames_without_speech = 0
+        speech_frames = 0
+
+        def _finalize_wav(chunks: list[bytes]) -> Optional[bytes]:
+            if not chunks:
+                return None
+            wav = _build_wav_from_chunks(chunks)
+            mono = b"".join(chunks)
+            if len(mono) >= BYTES_PER_FRAME and _compute_rms(mono) < AUDIO_SILENT_RMS_THRESHOLD:
+                logger.warning("MIC_SILENT: VAD segment RMS below threshold")
+                return None
+            return wav
 
         with sd.InputStream(
             device=device_id,
@@ -153,29 +209,39 @@ def record_audio() -> Optional[bytes]:
                         if not speech_started:
                             speech_started = True
                             logger.info("Speech detected start")
+                            accumulated = list(preroll)
                         consecutive_silence = 0
+                        speech_frames += 1
+                        if speech_frames >= max_utterance_frames:
+                            logger.info("Stop condition reached (max utterance %s ms)", AUDIO_MAX_UTTERANCE_MS)
+                            accumulated.append(raw_mono[: off + BYTES_PER_FRAME])
+                            wav = _finalize_wav(accumulated)
+                            meta = {"duration_ms": time.perf_counter() * 1000.0 - start_ms, "rms": _compute_rms(b"".join(accumulated)) if accumulated else 0.0}
+                            return (wav, "MIC_SILENT" if wav is None else None, meta)
                     else:
                         consecutive_silence += 1
                         if speech_started and consecutive_silence >= silence_frames_to_stop:
                             logger.info("Stop condition reached (silence frames %s)", consecutive_silence)
                             accumulated.append(raw_mono[:off])
-                            wav = _build_wav_from_chunks(accumulated)
-                            mono = b"".join(accumulated)
-                            if len(mono) >= BYTES_PER_FRAME and _compute_rms(mono) < AUDIO_SILENT_RMS_THRESHOLD:
-                                logger.warning("MIC_SILENT: VAD segment RMS below threshold")
-                                return None
-                            return wav
+                            wav = _finalize_wav(accumulated)
+                            meta = {"duration_ms": time.perf_counter() * 1000.0 - start_ms, "rms": _compute_rms(b"".join(accumulated)) if accumulated else 0.0}
+                            return (wav, "MIC_SILENT" if wav is None else None, meta)
                 accumulated.append(raw_mono)
                 if not speech_started:
+                    preroll.append(raw_mono)
+                    if len(preroll) > preroll_frames:
+                        preroll.pop(0)
                     frames_without_speech += 1
                     if frames_without_speech >= speech_timeout_frames:
                         logger.warning("No speech detected within timeout (%s ms)", AUDIO_SPEECH_TIMEOUT_MS)
-                        return None
+                        rms = _compute_rms(b"".join(preroll)) if preroll else 0.0
+                        meta = {"duration_ms": time.perf_counter() * 1000.0 - start_ms, "rms": rms}
+                        return None, "VAD_TIMEOUT", meta
                 else:
                     frames_without_speech = 0
     except Exception as e:
         logger.exception("Recording failed: %s", e)
-        return None
+        return None, "RECORD_ERROR", {"duration_ms": time.perf_counter() * 1000.0 - start_ms}
 
 
 def _build_wav_from_chunks(chunks: list[bytes]) -> bytes:
