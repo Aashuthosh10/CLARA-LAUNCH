@@ -4,7 +4,7 @@ import unittest
 import wave
 from unittest.mock import AsyncMock, patch
 
-from backend import main
+from backend.app import main
 
 
 class _FakeWebSocket:
@@ -28,7 +28,7 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             wf.writeframes(pcm)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    async def test_full_reply_is_used_for_tts_not_first_sentence_fragment(self) -> None:
+    async def test_first_sentence_and_remainder_are_non_overlapping(self) -> None:
         session = {"messages": []}
         ws = _FakeWebSocket()
         timing = main.TurnTiming()
@@ -38,13 +38,25 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         )
         first_sentence = "Our library is open from 8 AM to 8 PM on weekdays."
         tts_calls: list[dict] = []
-        fake_audio = self._silent_wav_base64(duration_s=2.2)
+        fake_first_audio = self._silent_wav_base64(duration_s=1.0)
+        fake_remaining_audio = self._silent_wav_base64(duration_s=1.2)
 
         async def _fake_tts(text: str, language_code: str, **kwargs):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
-            return fake_audio, False
+            kind = kwargs.get("utterance_kind")
+            if kind == "assistant_first_sentence":
+                return fake_first_audio, False
+            if kind == "assistant_remaining_reply":
+                return fake_remaining_audio, False
+            return self._silent_wav_base64(duration_s=0.5), False
 
-        with patch.object(main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)), patch.object(
+        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+            main, "ENABLE_TTS_PIPELINING", False
+        ), patch.object(
+            main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
+        ), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
+        ), patch.object(
             main, "get_relevant_context", new=lambda _text, _k: ""
         ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, first_sentence))
@@ -55,21 +67,27 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         ):
             await main.process_user_text_and_reply(session, "What are library timings?", ws, timing, stt_meta=None)
 
-        self.assertEqual(len(tts_calls), 1, "TTS should be called exactly once per reply")
-        self.assertEqual(tts_calls[0]["text"], full_reply)
-        self.assertEqual(tts_calls[0].get("utterance_kind"), "assistant_full_reply")
+        self.assertEqual(len(tts_calls), 2, "TTS should be called for first sentence and remainder only")
+        self.assertEqual(tts_calls[0]["text"], first_sentence)
+        self.assertEqual(tts_calls[0].get("utterance_kind"), "assistant_first_sentence")
+        self.assertEqual(tts_calls[1]["text"], "On Saturdays it is open from 9 AM to 5 PM.")
+        self.assertEqual(tts_calls[1].get("utterance_kind"), "assistant_remaining_reply")
 
         payloads = [e.get("payload", {}) for e in ws.events if isinstance(e, dict)]
-        self.assertFalse(
-            any(p.get("type") == "assistant_first_sentence_audio" for p in payloads),
-            "First-sentence audio payload must not be emitted",
-        )
+        first_payloads = [p for p in payloads if p.get("type") == "assistant_first_sentence_audio"]
+        self.assertEqual(len(first_payloads), 1)
+        self.assertEqual(first_payloads[0].get("audioBase64"), fake_first_audio)
+        self.assertEqual(first_payloads[0].get("utterance_kind"), "assistant_first_sentence")
+        self.assertEqual(first_payloads[0].get("segment_index"), 0)
         final_payload = payloads[-1]
-        self.assertEqual(final_payload.get("audioBase64"), fake_audio)
+        self.assertEqual(final_payload.get("audioBase64"), fake_remaining_audio)
+        self.assertEqual(final_payload.get("utterance_kind"), "assistant_remaining_reply")
+        self.assertEqual(final_payload.get("segment_index"), 1)
+        self.assertTrue(final_payload.get("is_final_segment"))
         self.assertEqual(final_payload.get("messages", [])[-1].get("text"), full_reply)
         play_ms = timing.summary_ms().get("play_ms")
         self.assertIsNotNone(play_ms)
-        self.assertGreater(float(play_ms or 0.0), 2000.0)
+        self.assertGreater(float(play_ms or 0.0), 1000.0)
 
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ from backend.config.settings import (
     ENABLE_ACK_EARCON,
     ENABLE_EARLY_PARTIAL_TEXT,
     ENABLE_LLM_STREAMING,
+    ENABLE_ONCE_ONLY_TTS_SEGMENTS,
     ENABLE_FIRST_SENTENCE_TTS,
     ENABLE_TTS_PIPELINING,
     GROQ_API_KEY,
@@ -551,6 +552,10 @@ async def process_user_text_and_reply(
                 "text": sentence,
                 "audioBase64": first_audio_b64,
                 "isProcessing": True,
+                "turn_id": timing.turn_id,
+                "utterance_kind": "assistant_first_sentence",
+                "segment_index": 0,
+                "is_final_segment": False,
             }
             first_payload.update(_debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": first_payload})
@@ -641,18 +646,43 @@ async def process_user_text_and_reply(
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
         session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
 
-        timing.mark("tts_start")
-        full_audio_b64, tts_cache_hit = await tts_to_base64_cached(
-            reply_text,
-            lang_code,
-            turn_id=timing.turn_id,
-            utterance_kind="assistant_full_reply",
-        )
         if first_sentence_task is not None:
             try:
                 await first_sentence_task
             except Exception:
                 logger.exception("First-sentence TTS task failed")
+
+        tts_text = reply_text
+        utterance_kind = "assistant_full_reply"
+        segment_index = 0
+        is_final_segment = True
+        if (
+            ENABLE_ONCE_ONLY_TTS_SEGMENTS
+            and first_sentence_sent
+            and first_sentence
+            and first_sentence != reply_text
+        ):
+            _, remainder_text = _split_first_sentence(reply_text)
+            remainder_text = remainder_text.strip()
+            if remainder_text:
+                tts_text = remainder_text
+                utterance_kind = "assistant_remaining_reply"
+                segment_index = 1
+            else:
+                tts_text = ""
+                utterance_kind = "assistant_remaining_reply"
+                segment_index = 1
+
+        timing.mark("tts_start")
+        full_audio_b64 = None
+        tts_cache_hit = False
+        if tts_text:
+            full_audio_b64, tts_cache_hit = await tts_to_base64_cached(
+                tts_text,
+                lang_code,
+                turn_id=timing.turn_id,
+                utterance_kind=utterance_kind,
+            )
         timing.mark("tts_end")
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")
@@ -664,8 +694,8 @@ async def process_user_text_and_reply(
         log_voice_tts(
             timing.turn_id,
             tts_ms,
-            len(reply_text),
-            _text_preview(reply_text),
+            len(tts_text),
+            _text_preview(tts_text),
             _audio_bytes_len(full_audio_b64) if full_audio_b64 else 0,
             decoded_duration_ms=_estimate_wav_duration_ms(full_audio_b64) if full_audio_b64 else None,
         )
@@ -677,6 +707,9 @@ async def process_user_text_and_reply(
             "isProcessing": False,
             "isSpeaking": bool(full_audio_b64),
             "turn_id": timing.turn_id,
+            "utterance_kind": utterance_kind,
+            "segment_index": segment_index,
+            "is_final_segment": is_final_segment,
         }
         if full_audio_b64:
             payload["audioBase64"] = full_audio_b64

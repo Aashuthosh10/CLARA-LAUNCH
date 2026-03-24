@@ -116,6 +116,13 @@ ENABLE_FIRST_SENTENCE_TTS = os.getenv("ENABLE_FIRST_SENTENCE_TTS", "true").strip
     "on",
 )
 ENABLE_TTS_PIPELINING = os.getenv("ENABLE_TTS_PIPELINING", "true").strip().lower() in ("1", "true", "yes", "on")
+# When enabled, never speak overlapping text spans in a single assistant turn.
+ENABLE_ONCE_ONLY_TTS_SEGMENTS = os.getenv("ENABLE_ONCE_ONLY_TTS_SEGMENTS", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
 

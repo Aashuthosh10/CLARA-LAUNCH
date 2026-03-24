@@ -51,6 +51,9 @@ interface ChatScreenProps {
     language?: string;
     confidence?: number;
     turn_id?: string;
+    utterance_kind?: string;
+    segment_index?: number;
+    is_final_segment?: boolean;
   } | null;
   onBack: () => void;
   onOrbTap: () => void;
@@ -135,8 +138,8 @@ export default function ChatScreen({
       setIsDigitalBookMinimized(false);
     }
   }, [overviewSessionId, completedOverviewId]);
-  const lastPlayedAudioRef = useRef<string | null>(null);
-  const pendingAudioRef = useRef<{ audioBase64: string; turnId?: string | null } | null>(null);
+  const playedSegmentKeysRef = useRef<Set<string>>(new Set());
+  const pendingAudioRef = useRef<{ audioBase64: string; segmentKey: string; turnId?: string | null } | null>(null);
   const isPlayingRef = useRef(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const hasStartedRef = useRef(false);
@@ -173,9 +176,9 @@ export default function ChatScreen({
     return 'application/octet-stream';
   }, []);
 
-  const playAudioBase64 = useCallback((audioBase64: string, turnId?: string | null) => {
-    if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current) return;
-    lastPlayedAudioRef.current = audioBase64;
+  const playAudioBase64 = useCallback((audioBase64: string, segmentKey: string, turnId?: string | null) => {
+    if (!audioBase64 || playedSegmentKeysRef.current.has(segmentKey)) return;
+    playedSegmentKeysRef.current.add(segmentKey);
     isPlayingRef.current = true;
     setIsPlayingBackendAudio(true);
     stopCurrentAudio();
@@ -210,8 +213,8 @@ export default function ChatScreen({
         }
         const pending = pendingAudioRef.current;
         pendingAudioRef.current = null;
-        if (pending && pending.audioBase64 !== lastPlayedAudioRef.current) {
-          playAudioBase64(pending.audioBase64, pending.turnId);
+        if (pending && !playedSegmentKeysRef.current.has(pending.segmentKey)) {
+          playAudioBase64(pending.audioBase64, pending.segmentKey, pending.turnId);
         }
       };
       audio.addEventListener('ended', onEnd);
@@ -284,13 +287,20 @@ export default function ChatScreen({
   useEffect(() => {
     if (isDigitalBookFlow) return;
     const audioBase64 = payload?.audioBase64;
-    if (!audioBase64 || audioBase64 === lastPlayedAudioRef.current) return;
+    if (!audioBase64) return;
+    const segmentKey = [
+      payload?.turn_id ?? '',
+      payload?.utterance_kind ?? 'assistant_full_reply',
+      String(payload?.segment_index ?? 0),
+      String(payload?.is_final_segment ?? true),
+    ].join('|');
+    if (playedSegmentKeysRef.current.has(segmentKey)) return;
     if (isPlayingRef.current) {
-      pendingAudioRef.current = { audioBase64, turnId: payload?.turn_id ?? null };
+      pendingAudioRef.current = { audioBase64, segmentKey, turnId: payload?.turn_id ?? null };
       return;
     }
-    playAudioBase64(audioBase64, payload?.turn_id ?? null);
-  }, [payload?.audioBase64, payload?.turn_id, isDigitalBookFlow, playAudioBase64]);
+    playAudioBase64(audioBase64, segmentKey, payload?.turn_id ?? null);
+  }, [payload?.audioBase64, payload?.turn_id, payload?.utterance_kind, payload?.segment_index, payload?.is_final_segment, isDigitalBookFlow, playAudioBase64]);
 
   useEffect(() => () => stopCurrentAudio(), [stopCurrentAudio]);
 

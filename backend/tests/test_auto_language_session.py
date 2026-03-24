@@ -1,7 +1,7 @@
-﻿import unittest
+import unittest
 from unittest.mock import AsyncMock, patch
 
-from backend import main
+from backend.app import main
 from backend.services.session_language import set_session_language
 
 
