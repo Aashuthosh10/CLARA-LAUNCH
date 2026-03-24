@@ -237,8 +237,11 @@ export default function ChatScreen({
   useEffect(() => {
     const audioBase64 = payload?.audioBase64;
     if (!audioBase64) return;
+    // Include payload.type so assistant_ack_audio does not share a key with the final TTS
+    // (both omitted utterance_kind previously and defaulted to assistant_full_reply).
     const segmentKey = [
       payload?.turn_id ?? '',
+      payload?.type ?? '',
       payload?.utterance_kind ?? 'assistant_full_reply',
       String(payload?.segment_index ?? 0),
       String(payload?.is_final_segment ?? true),
@@ -249,7 +252,15 @@ export default function ChatScreen({
       return;
     }
     playAudioBase64(audioBase64, segmentKey, payload?.turn_id ?? null);
-  }, [payload?.audioBase64, payload?.turn_id, payload?.utterance_kind, payload?.segment_index, payload?.is_final_segment, playAudioBase64]);
+  }, [
+    payload?.audioBase64,
+    payload?.turn_id,
+    payload?.type,
+    payload?.utterance_kind,
+    payload?.segment_index,
+    payload?.is_final_segment,
+    playAudioBase64,
+  ]);
 
   useEffect(() => () => stopCurrentAudio(), [stopCurrentAudio]);
 

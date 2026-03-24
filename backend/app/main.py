@@ -502,6 +502,7 @@ async def process_user_text_and_reply(
                     timing.marks["play_end"] = timing.marks["play_start"] + est
             ack_payload = {
                 "type": "assistant_ack_audio",
+                "utterance_kind": "ack_earcon",
                 "audioBase64": ack_audio_b64,
                 "isProcessing": True,
                 "turn_id": timing.turn_id,

@@ -2,8 +2,9 @@
 # Frees the backend port if in use, then starts backend so the frontend can connect.
 
 $ErrorActionPreference = "Stop"
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $ScriptDir
+# Script lives in scripts/; project root is one level up.
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+Set-Location $ProjectRoot
 
 # Read PORT from .env (default 6969)
 $port = 6969
@@ -25,10 +26,10 @@ if ($listeners) {
     }
 }
 
-$venvPython = Join-Path $ScriptDir "backend\.venv\Scripts\python.exe"
+$venvPython = Join-Path $ProjectRoot "backend\.venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
     # Try one more location (root .venv)
-    $venvPython = Join-Path $ScriptDir ".venv\Scripts\python.exe"
+    $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
     if (-not (Test-Path $venvPython)) {
         Write-Error "Virtual env not found. Run: python -m venv backend\.venv && .\backend\.venv\Scripts\pip install -r backend\requirements\requirements.txt"
     }
@@ -36,4 +37,5 @@ if (-not (Test-Path $venvPython)) {
 
 Write-Host "Starting backend at http://0.0.0.0:$port ..."
 $env:PORT = $port
-& $venvPython backend\main.py
+# Run as module so `backend` package resolves from project root.
+& $venvPython -m backend.main
