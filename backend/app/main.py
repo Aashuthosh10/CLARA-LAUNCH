@@ -73,6 +73,8 @@ from backend.utils.voice_logger import (
 )
 
 logger = logging.getLogger(__name__)
+_SVIT_KNOWLEDGE_JSON_PATH = _PROJECT_ROOT / "backend" / "data" / "svit_knowledge.json"
+_svit_json_context_cache: str | None = None
 
 # Unified error event schema
 ERROR_RECOVERABLE_HINTS: dict[str, str] = {
@@ -128,6 +130,29 @@ def _normalized_cache_text(text: str) -> str:
 def _text_preview(text: str, limit: int = 80) -> str:
     compact = re.sub(r"\s+", " ", (text or "").strip())
     return compact[:limit]
+
+
+def _load_svit_json_context() -> str:
+    """
+    Load master SVIT knowledge JSON and return minified JSON string for prompt injection.
+    Returns empty string if file is missing/invalid.
+    """
+    global _svit_json_context_cache
+    if _svit_json_context_cache is not None:
+        return _svit_json_context_cache
+    try:
+        if not _SVIT_KNOWLEDGE_JSON_PATH.is_file():
+            logger.warning("Fallback JSON context missing: %s", _SVIT_KNOWLEDGE_JSON_PATH)
+            _svit_json_context_cache = ""
+            return ""
+        raw = _SVIT_KNOWLEDGE_JSON_PATH.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        _svit_json_context_cache = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        return _svit_json_context_cache
+    except Exception as exc:
+        logger.warning("Could not load fallback JSON context: %s", exc)
+        _svit_json_context_cache = ""
+        return ""
 
 
 def _split_first_sentence(text: str) -> tuple[str, str]:
@@ -511,6 +536,10 @@ async def process_user_text_and_reply(
             logger.info("RAG context: ok (%d chars)", len(context))
         else:
             logger.warning("RAG context: empty")
+            json_context = _load_svit_json_context()
+            if json_context:
+                context = json_context
+                logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
         system_prompt = (
             f"You are CLARA, a friendly campus assistant. "
             f"Reply only in {lang_name}. Keep answer under 2 sentences and concise. "
@@ -610,16 +639,7 @@ async def process_user_text_and_reply(
                 first_sentence = ""
 
         if not reply_text:
-            if context.strip():
-                trimmed = context.strip()
-                if len(trimmed) > 280:
-                    trimmed = trimmed[:277].rsplit(maxsplit=1)[0] + "..."
-                reply_text = f"Based on our college information: {trimmed}"
-            else:
-                reply_text = (
-                    "I am having trouble reaching the assistant service right now. "
-                    "Please try again in a moment."
-                )
+            reply_text = "I am having trouble processing that right now, please try again."
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)

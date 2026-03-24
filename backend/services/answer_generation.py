@@ -16,7 +16,7 @@ DIGITAL_BOOK_SECTION_TITLES = [
     "Placement & Career Support",
 ]
 DIGITAL_BOOK_COVER_TITLE = "Cover"
-DIGITAL_BOOK_COVER_TEXT = "Sai Vidya Institute of Technology\nEstablished 2008"
+DIGITAL_BOOK_COVER_TEXT = "Institution Overview"
 
 from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 from backend.core.rag import get_relevant_context
@@ -206,17 +206,14 @@ def detect_intent(text: str) -> str:
 
 
 FALLBACK_MSG = "I'm sorry, I couldn't process your request right now."
-FALLBACK_CONTEXT_PREFIX = "Based on our college information: "
+FALLBACK_CONTEXT_PREFIX = "I am having trouble processing that right now, please try again. "
 FALLBACK_CONTEXT_MAX_CHARS = 600
 
 
 def _fallback_reply(context: str) -> str:
     """Return safe fallback when LLM fails. Never returns None."""
     if context and context.strip():
-        trimmed = context.strip()
-        if len(trimmed) > FALLBACK_CONTEXT_MAX_CHARS:
-            trimmed = trimmed[: FALLBACK_CONTEXT_MAX_CHARS - 3].rsplit(maxsplit=1)[0] + "..."
-        return FALLBACK_CONTEXT_PREFIX + trimmed
+        return FALLBACK_MSG
     return FALLBACK_MSG
 
 

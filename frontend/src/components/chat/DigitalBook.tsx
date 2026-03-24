@@ -321,7 +321,7 @@ function PageContent({ page, pageNumber, isTurning = false }: { page: BookPage; 
                         </div>
                     </div>
                     <div className="editorial-image-side">
-                        {page.image && <img src={page.image} alt="SVIT Overview" />}
+                        {page.image && <img src={page.image} alt="Institution overview" />}
                     </div>
                 </div>
             );

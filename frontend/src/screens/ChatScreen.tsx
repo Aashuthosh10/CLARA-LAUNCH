@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -24,14 +24,6 @@ import BackgroundParticles from '../components/BackgroundParticles';
 import { useMessageAnimation } from '../hooks/useAnimeAnimations';
 import { getMessageIntent, isAboutCollegeIntent } from '../lib/intentClassifier';
 import DigitalBook from '../components/chat/DigitalBook';
-
-/** Cover page only; content pages come from LLM overview reply. */
-const BOOK_COVER = {
-  layout: 'cover' as const,
-  title: 'Sai Vidya Institute of Technology',
-  subtitle: 'Established 2008',
-  content: null as React.ReactNode,
-};
 
 const GREETING_TTS_DURATION_MS = 4500;
 
@@ -84,47 +76,11 @@ export default function ChatScreen({
   const [isAboutCollege, setIsAboutCollege] = useState(false);
   const userRequestedListeningRef = useRef(false);
 
-  // Open Digital Book as soon as user asks about college (no wait for LLM reply) to avoid load latency and block overview TTS from playing in chat.
-  const { overviewSessionId, overviewReplyId } = (() => {
-    const list = payloadMessages ?? [];
-    if (list.length < 1) return { overviewSessionId: null as string | null, overviewReplyId: null as string | null };
-    const last = list[list.length - 1];
-    const lastText = typeof (last as any)?.text === 'string' ? (last as any).text : '';
-    if ((last as any)?.role === 'user' && isAboutCollegeIntent(lastText))
-      return { overviewSessionId: (last as any).id ?? null, overviewReplyId: null };
-    if (list.length >= 2) {
-      const prev = list[list.length - 2];
-      const prevText = typeof (prev as any)?.text === 'string' ? (prev as any).text : '';
-      if ((last as any)?.role === 'clara' && (prev as any)?.role === 'user' && isAboutCollegeIntent(prevText))
-        return { overviewSessionId: (prev as any).id ?? null, overviewReplyId: (last as any).id ?? null };
-    }
-    return { overviewSessionId: null, overviewReplyId: null };
-  })();
-
-  // Digital Book content: injected copy in current language (display + TTS). Same content in all 6 languages.
-  const overviewBookPages = useMemo(
-    () => [
-      BOOK_COVER,
-      { title: t('bookPage1Title'), content: <p className="premium-page-body-p">{t('bookPage1Content')}</p> as React.ReactNode },
-      { title: t('bookPage2Title'), content: <p className="premium-page-body-p">{t('bookPage2Content')}</p> as React.ReactNode },
-      { title: t('bookPage3Title'), content: <p className="premium-page-body-p">{t('bookPage3Content')}</p> as React.ReactNode },
-      { title: t('bookPage4Title'), content: <p className="premium-page-body-p">{t('bookPage4Content')}</p> as React.ReactNode },
-      { title: t('bookPage5Title'), content: <p className="premium-page-body-p">{t('bookPage5Content')}</p> as React.ReactNode },
-    ],
-    [t, language]
-  );
-  const overviewPageTexts = useMemo(
-    () => ['', t('bookPage1Content'), t('bookPage2Content'), t('bookPage3Content'), t('bookPage4Content'), t('bookPage5Content')],
-    [t, language]
-  );
-
-  const [completedOverviewId, setCompletedOverviewId] = useState<string | null>(null);
   const [isDigitalBookMinimized, setIsDigitalBookMinimized] = useState(false);
   const [userClosedDigitalBook, setUserClosedDigitalBook] = useState(false);
-  const isDigitalBookFlow = Boolean(overviewSessionId && overviewSessionId !== completedOverviewId);
   const completedDigitalBookRef = useRef<any>(null);
 
-  // Allow showing the book again when a new digital book or new overview session arrives.
+  // Allow showing the book again when a new backend digital book payload arrives.
   useEffect(() => {
     const db = (payload as any)?.digitalBook;
     if (db && db !== completedDigitalBookRef.current) {
@@ -132,12 +88,6 @@ export default function ChatScreen({
       setIsDigitalBookMinimized(false);
     }
   }, [(payload as any)?.digitalBook]);
-  useEffect(() => {
-    if (overviewSessionId && overviewSessionId !== completedOverviewId) {
-      setUserClosedDigitalBook(false);
-      setIsDigitalBookMinimized(false);
-    }
-  }, [overviewSessionId, completedOverviewId]);
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
   const pendingAudioRef = useRef<{ audioBase64: string; segmentKey: string; turnId?: string | null } | null>(null);
   const isPlayingRef = useRef(false);
@@ -285,7 +235,6 @@ export default function ChatScreen({
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
 
   useEffect(() => {
-    if (isDigitalBookFlow) return;
     const audioBase64 = payload?.audioBase64;
     if (!audioBase64) return;
     const segmentKey = [
@@ -300,7 +249,7 @@ export default function ChatScreen({
       return;
     }
     playAudioBase64(audioBase64, segmentKey, payload?.turn_id ?? null);
-  }, [payload?.audioBase64, payload?.turn_id, payload?.utterance_kind, payload?.segment_index, payload?.is_final_segment, isDigitalBookFlow, playAudioBase64]);
+  }, [payload?.audioBase64, payload?.turn_id, payload?.utterance_kind, payload?.segment_index, payload?.is_final_segment, playAudioBase64]);
 
   useEffect(() => () => stopCurrentAudio(), [stopCurrentAudio]);
 
@@ -393,7 +342,7 @@ export default function ChatScreen({
 
   // Render the large centered text for Fullscreen mode (overview reply is shown only in the book, not here)
   const renderFullscreenContent = () => {
-    const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'clara' && m.id !== overviewReplyId);
+    const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'clara');
     return (
       <motion.div
         key="fullscreen"
@@ -452,18 +401,7 @@ export default function ChatScreen({
         transition={{ duration: 0.5 }}
         className="chat-layout-wrapper"
       >
-        <section className="kiosk-visual-side" style={{ width: '70%', height: '100%', position: 'relative' }}>
-          {isAboutCollege ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-              animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="w-full h-full"
-            >
-              <DigitalBook pages={overviewBookPages} />
-            </motion.div>
-          ) : null}
-        </section>
+        <section className="kiosk-visual-side" style={{ width: '70%', height: '100%', position: 'relative' }} />
 
         <aside className="kiosk-interaction-panel" style={{ width: '30%' }}>
           <header className="chat-header-minimal">
@@ -477,9 +415,7 @@ export default function ChatScreen({
           </header>
 
           <div ref={scrollRef} className="chat-messages-scroll no-scrollbar">
-            {messages
-              .filter((msg) => msg.id !== overviewReplyId)
-              .map((msg) => (
+            {messages.map((msg) => (
                 <div key={msg.id}>
                   {isSystemMessage(msg) && <SystemBubble message={msg} />}
                   {msg.role === 'user' && <UserBubble message={msg} />}
@@ -518,29 +454,17 @@ export default function ChatScreen({
   // Digital Book from backend (one payload with pages + all audio): no diary_tts, no chat, instant playback.
   const digitalBook = (payload as any)?.digitalBook;
   const showBackendDigitalBook = digitalBook && digitalBook !== completedDigitalBookRef.current;
-  const showLegacyDigitalBook = isDigitalBookFlow;
-
   // Shared fullscreen card layout: header (Close, Minimize) and either fullscreen book or 70:30 book | chat.
-  if ((showBackendDigitalBook || showLegacyDigitalBook) && !userClosedDigitalBook) {
+  if (showBackendDigitalBook && !userClosedDigitalBook) {
     const handleCloseBook = () => {
       if (showBackendDigitalBook) completedDigitalBookRef.current = digitalBook;
-      if (showLegacyDigitalBook) setCompletedOverviewId(overviewSessionId);
       setUserClosedDigitalBook(true);
       setIsDigitalBookMinimized(false);
     };
-    const bookContent = showBackendDigitalBook ? (
+    const bookContent = (
       <DigitalBook
         pages={digitalBook.pages}
         onComplete={handleCloseBook}
-      />
-    ) : (
-      <DigitalBook
-        pages={overviewBookPages}
-        pageTexts={overviewPageTexts}
-        sendMessage={sendMessage}
-        payload={payload}
-        onComplete={handleCloseBook}
-        skipFirstAudio
       />
     );
     const headerBar = (

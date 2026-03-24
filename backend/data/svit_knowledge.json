@@ -1,0 +1,283 @@
+{
+  "institution_overview": {
+    "full_name": "Sai Vidya Institute of Technology (SVIT) [cite: 8]",
+    "location": "Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064 [cite: 9]",
+    "established": "2008 [cite: 10]",
+    "founded_by": "Sri Sai Vidya Vikas Shikshana Samithi (Group of eminent academicians) [cite: 11]",
+    "campus_area": "12 acres [cite: 12]",
+    "total_students": "1,511+ [cite: 13]",
+    "total_faculty": "94+ [cite: 14]",
+    "tagline": "\"Learn to Lead\" [cite: 15]",
+    "motto": "\"Empowering Engineers of Tomorrow with Cutting-Edge Education, Industry-Driven Curriculum, and Top Placements\" [cite: 16]",
+    "affiliations_and_approvals": {
+      "university": "Visvesvaraya Technological University (VTU), Belagavi [cite: 18]",
+      "technical_approval": "All India Council for Technical Education (AICTE), New Delhi [cite: 18]",
+      "government_recognition": "Government of Karnataka [cite: 19]",
+      "accreditation": "NAAC Grade A [cite: 20]",
+      "nba_accreditation": "Available for select departments (ECE) [cite: 21]"
+    },
+    "infrastructure": [
+      "Modern infrastructure with advanced laboratories [cite: 23]",
+      "Well-equipped libraries and extensive learning resources [cite: 24]",
+      "State-of-the-art computer centers [cite: 25]",
+      "Makers Space Lab for innovation and prototyping [cite: 26]",
+      "Active student clubs and cultural facilities [cite: 27]",
+      "Co-curricular event spaces [cite: 28]",
+      "Industry collaboration centers [cite: 29]",
+      "Research centers and centers of excellence [cite: 30]"
+    ]
+  },
+  "leadership_and_governance": {
+    "visionary_leadership": "Founder/Chancellor: Prof. M. R. Holla - Distinguished academician and administrator with 50+ years of academic and administrative experience [cite: 33]",
+    "principal": "Dr. Manjunath TN [cite: 42]",
+    "vice_principal": "Dr Lakshminarayanachari K [cite: 44]",
+    "deans": [
+      "Dr Y Jayasimha - Dean Academics [cite: 46, 47]",
+      "Prof R C Shanmukhaswamy - Dean Administration [cite: 48]",
+      "Dr A M Padma Reddy - Dean Student Affairs [cite: 49]",
+      "Dr Shantha Kumar B Patil - Associate Dean R&D [cite: 50]"
+    ],
+    "core_leadership_team": [
+      "Dr. Y. Jayasimha - Eminent Electronics Professor, Dean (Academics) & Founder Trustee [cite: 35]",
+      "Prof. R. C. Shanmukha Swamy - Eminent Electrical Professor [cite: 36]",
+      "Dr. A. M. Padma Reddy - Eminent Computer Science Professor [cite: 37]",
+      "Sri R. Srinivas Raju - Practicing Civil Engineer [cite: 38]",
+      "Sri M. K. Manohar - Renowned Chartered Accountant [cite: 39]",
+      "Late Sri Narayana Raju - Renowned Academic Administrator [cite: 40]"
+    ]
+  },
+  "vision_mission_values": {
+    "vision": "\"Contribute dedicated, skilled, and intelligent engineers and business administrators to architect a strong India and a globally progressive world.\" [cite: 86]",
+    "mission": [
+      "1. Provide quality education and skill-based training to produce dedicated engineers and managers [cite: 88]",
+      "2. Promote research, innovation, and ethical practices by creating a supportive learning environment [cite: 89]",
+      "3. Undertake collaborative projects with academia and industry that transform young minds into socially responsible and globally competent professionals [cite: 90]",
+      "4. Enhance personality traits and leadership skills that foster entrepreneurship among students [cite: 91]"
+    ],
+    "core_values": [
+      "Ethics in Engineering - Promoting ethical practices and responsible development [cite: 98]",
+      "Quality & Excellence - Commitment to academic and operational excellence [cite: 99]",
+      "Research & Innovation - Fostering a culture of continuous research and innovation [cite: 100]"
+    ]
+  },
+  "undergraduate_programs": [
+    {
+      "department": "Computer Science & Engineering (CSE) [cite: 111]",
+      "hod": "Dr. Shashikumar D R [cite: 52]",
+      "intake": "180 [cite: 103]",
+      "duration": "4 Years [cite: 115]",
+      "focus": "Cloud Computing, Software Development, AI, Deep Learning, Distributed Systems [cite: 116]",
+      "staff_count": 29,
+      "key_staff": [
+        "Dr. Manjunath TN (Principal & Professor) [cite: 120]",
+        "Dr. Shashikumar D R (Professor & HOD) [cite: 120]"
+      ]
+    },
+    {
+      "department": "CSE (Artificial Intelligence & Machine Learning) [cite: 124]",
+      "hod": "Dr. T G Manjunatha [cite: 55]",
+      "intake": "120 [cite: 104]",
+      "duration": "4 Years [cite: 130]",
+      "special_achievement": "2021 batch students secured FOUR university ranks at VTU level [cite: 131]",
+      "features": [
+        "NEP-2020 compliant cutting-edge curriculum [cite: 133]",
+        "Advanced AI, ML, and Deep Learning concepts [cite: 134]",
+        "Stipend-based internships through MOUS [cite: 137]"
+      ],
+      "staff_count": 19,
+      "key_staff": [
+        "Dr. T G Manjunatha (Professor & HOD) [cite: 129]"
+      ]
+    },
+    {
+      "department": "CSE (Data Science) [cite: 143]",
+      "hod": "Dr. Nagashree N [cite: 64]",
+      "intake": "120 [cite: 105]",
+      "duration": "4 Years [cite: 153]",
+      "program_start": "2021-22 [cite: 153]",
+      "special_achievement": "2021 batch students secured THREE university ranks at VTU level [cite: 155]",
+      "staff_count": 17,
+      "key_staff": [
+        "Dr. Padma Reddy A.M (Dean-Student Affairs & Professor) [cite: 162]",
+        "Dr. Nagashree N (Associate Professor & HOD) [cite: 162]"
+      ]
+    },
+    {
+      "department": "CSE (Cyber Security) [cite: 106]",
+      "intake": "60 [cite: 106]"
+    },
+    {
+      "department": "CSE (Business Systems) [cite: 107]",
+      "intake": "60 [cite: 107]"
+    },
+    {
+      "department": "Information Science & Engineering (ISE) [cite: 164]",
+      "hod": "Dr. Vrinda Shetty [cite: 58]",
+      "intake": "120 [cite: 173]",
+      "duration": "4 Years [cite: 174]",
+      "program_start": "2008-09 [cite: 174]",
+      "staff_count": 18,
+      "key_staff": [
+        "Dr. Vrinda Shetty (Professor & HOD) [cite: 183]"
+      ]
+    },
+    {
+      "department": "Electronics & Communication Engineering (ECE) [cite: 186]",
+      "hod": "Dr. Venkatesha M [cite: 61]",
+      "intake": "120 [cite: 198]",
+      "duration": "4 Years [cite: 198]",
+      "program_start": "2008-09 [cite: 199]",
+      "accreditation": "VTU affiliated, NBA accredited [cite: 199]",
+      "expertise_areas": [
+        "VLSI Design [cite: 202]",
+        "Embedded Systems [cite: 203]",
+        "Photonics [cite: 204]",
+        "Signal Processing [cite: 205]",
+        "Communication Systems [cite: 206]",
+        "High-Speed Networks [cite: 207]"
+      ],
+      "staff_count": 24,
+      "key_staff": [
+        "Dr. Jayasimha.Y (Dean-Academics & Professor) [cite: 214]",
+        "Prof. Shanmukha Swamy R.C (Dean-Administration & Professor) [cite: 214]",
+        "Dr. Venkatesha M (Professor & HOD) [cite: 214]"
+      ]
+    },
+    {
+      "department": "Civil Engineering [cite: 217]",
+      "hod": "Dr. Ananthayya M B [cite: 67]",
+      "intake": "60 [cite: 224]",
+      "duration": "4 Years [cite: 224]",
+      "program_start": "2010 [cite: 225]",
+      "focus_areas": [
+        "Structural Engineering [cite: 226]",
+        "Geotechnical Engineering [cite: 226]",
+        "Transportation Systems [cite: 226]",
+        "Water Resource Management [cite: 226]"
+      ],
+      "staff_count": 6,
+      "key_staff": [
+        "Dr. Ananthayya M B (Professor & HOD) [cite: 233]"
+      ]
+    },
+    {
+      "department": "Mechanical Engineering [cite: 238]",
+      "hod": "Dr. Raghavendra S [cite: 70]",
+      "intake": "30 [cite: 246]",
+      "duration": "4 Years [cite: 246]",
+      "program_start": "2010 [cite: 247]",
+      "staff_count": 8,
+      "key_staff": [
+        "Dr. Raghavendra S (Professor & HOD) [cite: 255]"
+      ]
+    }
+  ],
+  "postgraduate_programs": {
+    "department": "Master of Business Administration (MBA) [cite: 263]",
+    "hod": "Dr. Jogish.D [cite: 73]",
+    "intake": "120 [cite: 277]",
+    "duration": "2 Years (4 Semesters) [cite: 277]",
+    "program_start": "2009 [cite: 278]",
+    "specializations_offered": [
+      "Finance [cite: 282]",
+      "Marketing [cite: 283]",
+      "Human Resource Management [cite: 284]",
+      "Business Analytics [cite: 285]"
+    ],
+    "staff_count": 10,
+    "key_staff": [
+      "Dr. Jogish D (Professor & HOD) [cite: 296]",
+      "Dr. Naveen G (Associate Professor) [cite: 297]"
+    ]
+  },
+  "basic_science_departments": [
+    {
+      "department": "Mathematics [cite: 303]",
+      "hod": "Dr. Arun Kumar R [cite: 76]",
+      "staff_count": 9,
+      "key_staff": [
+        "Dr. Lakshminarayanachari K (Professor & Vice Principal) [cite: 311]",
+        "Dr. Arun Kumar R (Professor & HOD) [cite: 311]"
+      ]
+    },
+    {
+      "department": "Physics [cite: 317]",
+      "hod": "Dr. Shankar P [cite: 79]",
+      "staff_count": 5,
+      "key_staff": [
+        "Dr. Shankar P (Associate Professor & HOD) [cite: 325]"
+      ]
+    },
+    {
+      "department": "Chemistry [cite: 327]",
+      "hod": "Dr. Bhagya NP [cite: 82]",
+      "staff_count": 5,
+      "key_staff": [
+        "Dr. Bhagya N P (HOD) [cite: 328]"
+      ]
+    }
+  ],
+  "admission_and_eligibility": {
+    "be_programs": {
+      "qualification": "10+2 with 45% aggregate [cite: 344]",
+      "compulsory_subjects": "Physics and Mathematics [cite: 345]",
+      "optional_subjects": "Chemistry, Biotechnology, Biology, Computer Science, or Electronics [cite: 346]",
+      "requirements_general": "45% aggregate marks [cite: 348]",
+      "requirements_reserved": "SC/ST/Category-1/OBC: 40% aggregate marks (with relaxation) [cite: 349]",
+      "entrance_exams": [
+        "KCET [cite: 351]",
+        "COMEDK [cite: 352]",
+        "Management Quota [cite: 353]"
+      ]
+    },
+    "mba_programs": {
+      "qualification": "Graduation with minimum 50% aggregate [cite: 287]",
+      "entrance_exams": [
+        "CAT [cite: 355]",
+        "MAT [cite: 356]",
+        "XAT [cite: 357]",
+        "CMAT [cite: 358]",
+        "KMAT [cite: 359]",
+        "PGCET [cite: 360]"
+      ],
+      "expected_cutoff": "55-65 percentile (General) [cite: 289]"
+    }
+  },
+  "fees_structure": {
+    "management_quota_engineering_annual": {
+      "CSE": "₹3,25,000 [cite: 365]",
+      "CSE (AI & ML)": "₹3,25,000 [cite: 365]",
+      "CSE (Cyber Security)": "₹3,25,000 [cite: 365]",
+      "CSE(Data Science)": "₹3,00,000 [cite: 365]",
+      "CS(Business System)": "₹2,75,000 [cite: 365]",
+      "ECE": "₹2,50,000 [cite: 365]",
+      "Civil Engineering": "₹1,25,000 [cite: 365]",
+      "Mechanical Engineering": "₹1,25,000 [cite: 365]"
+    },
+    "mba_fees_annual": {
+      "General MBA": "₹1,55,000-3,10,000 (Total for 2 years) [cite: 383]",
+      "Specializations (Finance, HR, IT, Marketing)": "₹1,40,000 (Total for 2 years) [cite: 383]"
+    },
+    "scholarships": [
+      "SSP - Post-Metric Scholarship for SC/ST Students [cite: 398]",
+      "Fee Reimbursement for SC/ST Students [cite: 399]",
+      "Fee Concession for Category I, II, and III Students [cite: 400]",
+      "National Scholarship Portal (NSP) - Minority Religion Scholarship [cite: 401]",
+      "Defence Scholarship [cite: 402]"
+    ]
+  },
+  "placements_and_career_support": {
+    "objectives": [
+      "1. Provide 100% placement assistance and professional career support [cite: 408]",
+      "2. Train students in communication, aptitude, technical knowledge, and interview preparation [cite: 409]",
+      "3. Build strong industry-institution partnerships for internships and campus placements [cite: 410]"
+    ],
+    "training_programs": [
+      "1. Aptitude & Logical Reasoning Training [cite: 413]",
+      "2. Weekly Mock Aptitude & Technical Assessments [cite: 414]",
+      "3. Soft Skills & Communication Skills [cite: 415]",
+      "4. Technical Skill Development Workshops (Core, IT, Emerging Technologies) [cite: 416]",
+      "5. Mock Interviews & Group Discussions [cite: 417]"
+    ]
+  }
+}

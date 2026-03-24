@@ -25,7 +25,7 @@ export interface CardContentLang {
 /** Card content for all six languages. Edit values to change what appears in the UI. */
 export const CARD_CONTENT: Record<Language, CardContentLang> = {
   English: {
-    INSTITUTION_NAME: 'Sai Vidya Institute of Technology',
+    INSTITUTION_NAME: 'Institution',
     COURSE_MENU_GROUPS: [
       { title: 'Engineering', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'Postgraduate', items: ['MBA'] },
@@ -46,10 +46,10 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'Preparing',
       fallbackTitle: 'Department Overview',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: 'Established 2008' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
   Kannada: {
-    INSTITUTION_NAME: 'ಸಾಯಿ ವಿದ್ಯಾ ಇನ್ಸ್ಟಿಟ್ಯೂಟ್ ಆಫ್ ಟೆಕ್ನಾಲಜಿ',
+    INSTITUTION_NAME: 'ಸಂಸ್ಥೆ',
     COURSE_MENU_GROUPS: [
       { title: 'ಎಂಜಿನಿಯರಿಂಗ್', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'ಸ್ನಾತಕೋತ್ತರ', items: ['MBA'] },
@@ -70,10 +70,10 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'ತಯಾರಿ',
       fallbackTitle: 'ವಿಭಾಗ ಅವಲೋಕನ',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: '೨೦೦೮ರಲ್ಲಿ ಸ್ಥಾಪಿಸಲಾಯಿತು' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
   Hindi: {
-    INSTITUTION_NAME: 'साई विद्या इंस्टीट्यूट ऑफ टेक्नोलॉजी',
+    INSTITUTION_NAME: 'संस्थान',
     COURSE_MENU_GROUPS: [
       { title: 'इंजीनियरिंग', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'स्नातकोत्तर', items: ['MBA'] },
@@ -94,10 +94,10 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'तैयारी',
       fallbackTitle: 'विभाग अवलोकन',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: '2008 में स्थापित' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
   Tamil: {
-    INSTITUTION_NAME: 'சாய் வித்யா இன்ஸ்டிடியூட் ஆஃப் டெக்னாலஜி',
+    INSTITUTION_NAME: 'நிறுவனம்',
     COURSE_MENU_GROUPS: [
       { title: 'பொறியியல்', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'பட்டமேற்படிப்பு', items: ['MBA'] },
@@ -118,10 +118,10 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'தயாரிப்பு',
       fallbackTitle: 'துறை கண்ணோட்டம்',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: '2008 இல் நிறுவப்பட்டது' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
   Telugu: {
-    INSTITUTION_NAME: 'సాయి విద్యా ఇన్స్టిట్యూట్ ఆఫ్ టెక్నాలజీ',
+    INSTITUTION_NAME: 'సంస్థ',
     COURSE_MENU_GROUPS: [
       { title: 'ఇంజనీరింగ్', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'పోస్ట్ గ్రాడ్యుయేట్', items: ['MBA'] },
@@ -142,10 +142,10 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'సిద్ధం చేస్తోంది',
       fallbackTitle: 'విభాగ అవలోకనం',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: '2008లో స్థాపించబడింది' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
   Malayalam: {
-    INSTITUTION_NAME: 'സായി വിദ്യ ഇൻസ്റ്റിറ്റ്യൂട്ട് ഓഫ് ടെക്നോളജി',
+    INSTITUTION_NAME: 'സ്ഥാപനം',
     COURSE_MENU_GROUPS: [
       { title: 'എഞ്ചിനീയറിംഗ്', items: ['CSE', 'CSE (AI & ML)', 'CSE (Data Science)', 'ISE', 'ECE', 'Civil', 'Mechanical'] },
       { title: 'പോസ്റ്റ് ഗ്രാജുവേറ്റ്', items: ['MBA'] },
@@ -166,7 +166,7 @@ export const CARD_CONTENT: Record<Language, CardContentLang> = {
       label: 'തയ്യാറാക്കുന്നു',
       fallbackTitle: 'ഡിപ്പാർട്ട്മെന്റ് അവലോകനം',
     },
-    COLLEGE_OVERVIEW: { coverSubtitle: '2008-ൽ സ്ഥാപിതമായി' },
+    COLLEGE_OVERVIEW: { coverSubtitle: '' },
   },
 };
 

@@ -3,6 +3,8 @@
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
+DROP TABLE IF EXISTS college_knowledge;
+
 CREATE TABLE IF NOT EXISTS college_knowledge (
     id UUID PRIMARY KEY,
     content TEXT NOT NULL,
