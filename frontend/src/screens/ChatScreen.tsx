@@ -11,6 +11,7 @@ import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import VoiceOrb from '../components/VoiceOrb';
 import WordByWordText from '../components/chat/WordByWordText';
+import DigitalBook from '../components/chat/DigitalBook';
 import ThreeDVisual from '../components/chat/cards/ThreeDVisual';
 import { 
   COLLEGE_OVERVIEW_DATA, 
@@ -19,6 +20,24 @@ import {
   TRUSTEES_INFO_DATA 
 } from '../lib/cardData';
 import { detectOverviewType } from '../lib/intentClassifier';
+
+// ─── College DigitalBook pages built from card data ───
+const COLLEGE_BOOK_PAGES = [
+  {
+    title: 'Sai Vidya Institute of Technology',
+    subtitle: 'COLLEGE OVERVIEW',
+    layout: 'cover' as const,
+  },
+  ...COLLEGE_OVERVIEW_DATA.map((card) => ({
+    title: card.title,
+    text: card.content,
+    layout: 'default' as const,
+  })),
+];
+const COLLEGE_BOOK_PAGE_TEXTS = [
+  '', // cover — no TTS
+  ...COLLEGE_OVERVIEW_DATA.map((card) => card.content),
+];
 
 interface ChatScreenProps {
   messages: ChatMessage[];
@@ -48,6 +67,7 @@ export default function ChatScreen({
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Layout Management State
+  const [showDigitalBook, setShowDigitalBook] = useState(false);
   const [layoutMode, setLayoutMode] = useState<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
   const [activeCards, setActiveCards] = useState<any[] | null>(null);
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
@@ -128,9 +148,15 @@ export default function ChatScreen({
     const audioBase64 = payload?.audioBase64;
     const turnId = payload?.turn_id || `msg-${Date.now()}`;
 
+    // ─── COLLEGE intent from backend → DigitalBook, NOT card stack ───
+    if (cardTrigger === 'college') {
+        setShowDigitalBook(true);
+        setSuppressedTurnId(turnId);
+        return; // DigitalBook handles its own TTS via diary_tts
+    }
+
     if (cardTrigger) {
-        let data = cardTrigger === 'college' ? COLLEGE_OVERVIEW_DATA 
-                  : cardTrigger === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
+        let data = cardTrigger === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
                   : cardTrigger === 'hod' ? HOD_INFO_DATA 
                   : TRUSTEES_INFO_DATA;
         setLayoutMode('SPLIT_CARDS');
@@ -142,14 +168,21 @@ export default function ChatScreen({
     }
   }, [payload, handleAudioPlayback]);
 
-  // Fallback Detection
+  // Fallback Detection from CLARA reply text
   useEffect(() => {
     const lastMsg = payloadMessages[payloadMessages.length - 1];
     if (lastMsg && isTextMessage(lastMsg) && lastMsg.role === 'clara' && layoutMode === 'FULL_TEXT' && !payload?.showCard) {
       const type = detectOverviewType(lastMsg.text);
+
+      // ─── COLLEGE intent → DigitalBook exclusively ───
+      if (type === 'college') {
+        setShowDigitalBook(true);
+        setSuppressedTurnId(lastMsg.id);
+        return; // short-circuit — no card stack
+      }
+
       if (type) {
-        let data = type === 'college' ? COLLEGE_OVERVIEW_DATA 
-                  : type === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
+        let data = type === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
                   : type === 'hod' ? HOD_INFO_DATA 
                   : TRUSTEES_INFO_DATA;
         setLayoutMode('SPLIT_CARDS');
@@ -159,6 +192,13 @@ export default function ChatScreen({
       }
     }
   }, [payloadMessages, layoutMode, payload?.showCard]);
+
+  // Close DigitalBook handler
+  const handleBookComplete = useCallback(() => {
+    setShowDigitalBook(false);
+    setLayoutMode('FULL_TEXT');
+    setSuppressedTurnId(null);
+  }, []);
 
   // Orb State
   useEffect(() => {
@@ -196,17 +236,39 @@ export default function ChatScreen({
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [filteredMessages]);
 
+  if (showDigitalBook) {
+    return (
+      <div className="light-chat-container" data-testid="chat-screen">
+        <div className="cinematic-overlay" />
+        <motion.div
+          key="digital-book"
+          className="w-full h-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <DigitalBook
+            pages={COLLEGE_BOOK_PAGES}
+            pageTexts={COLLEGE_BOOK_PAGE_TEXTS}
+            sendMessage={sendMessage}
+            payload={payload}
+            onComplete={handleBookComplete}
+            skipFirstAudio
+          />
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="light-chat-container">
+    <div className="light-chat-container" data-testid="chat-screen">
       <div className="cinematic-overlay" />
       <LayoutGroup>
         <AnimatePresence mode="wait">
+          {/* ─── FULL TEXT MODE ─── */}
           {layoutMode === 'FULL_TEXT' ? (
             <motion.div key="full-text" layoutId="main" className="full-text-layout">
-              <div className="status-text-top flex items-center gap-2">
-                <Sparkles size={16} className="text-violet-500" />
-                <span>CLARA UNIFIED KIOSK</span>
-              </div>
+              {/* Clean top — no debug labels */}
               <div className="flex-1 flex items-center justify-center w-full px-10">
                 {lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
                   <WordByWordText text={lastAssistantMsg.text} isSpeaking={isPlayingBackendAudio && !suppressedTurnId} />
@@ -214,13 +276,15 @@ export default function ChatScreen({
               </div>
               <motion.div layoutId="orb" className="orb-float-bottom relative">
                 {showUnmuteHint && (
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white px-4 py-2 rounded-full text-xs flex items-center gap-2">
+                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg">
                     <Volume2 size={14} /> Tap to Unmute
                   </div>
                 )}
                 <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
               </motion.div>
             </motion.div>
+
+          /* ─── SPLIT CARDS MODE (dept/hod/trustees only — NOT college) ─── */
           ) : (
             <motion.div key="split" layoutId="main" className="split-cards-layout">
               <div className="visual-stage-70 flex flex-col items-center">
@@ -231,11 +295,11 @@ export default function ChatScreen({
                         <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
                         <p className="card-body">{activeCards[currentCardIdx].content}</p>
                       </div>
-                      <div className="w-[50%] h-[40%] self-end bg-slate-50/50 rounded-3xl overflow-hidden mt-6 shadow-sm border border-black/5">
+                      <div className="w-[50%] h-[40%] self-end bg-slate-50 rounded-3xl overflow-hidden mt-6 border border-slate-200 shadow-sm">
                         <ThreeDVisual type={activeCards[currentCardIdx].type} />
                       </div>
                       <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
-                        <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-gray-100'}`} />
+                        <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
                       ))}</div>
                     </motion.div>
                   )}

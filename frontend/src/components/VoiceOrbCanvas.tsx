@@ -45,6 +45,13 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
     const velocities = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
 
+    // Dark palette for light-bg visibility
+    const palette = [
+      new THREE.Color(0x1e293b), // slate-800 — base (60%)
+      new THREE.Color(0x3b82f6), // blue-500  — secondary (30%)
+      new THREE.Color(0x9333ea), // violet-500 — accent (10%)
+    ];
+
     for (let i = 0; i < particleCount; i++) {
       // Spherical distribution
       const r = 0.8 * Math.pow(Math.random(), 0.5);
@@ -60,33 +67,37 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
       velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
       velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
 
-      // Initial grayscale
-      colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = 0.8;
+      // Assign from dark palette
+      const roll = Math.random();
+      const c = roll < 0.6 ? palette[0] : roll < 0.9 ? palette[1] : palette[2];
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.025,
+      size: 0.035,
       vertexColors: true,
       transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.85,
+      blending: THREE.NormalBlending, // NormalBlending — additive washes out on light bg
     });
 
     const particles = new THREE.Points(geometry, material);
     particlesRef.current = particles;
     scene.add(particles);
 
-    // Inner Glow Light
-    const glowLight = new THREE.PointLight(0xffffff, 1, 5);
+    // Inner Glow Light — blue-tinted for light bg
+    const glowLight = new THREE.PointLight(0x3b82f6, 0.8, 5);
     glowLightRef.current = glowLight;
     scene.add(glowLight);
 
     let rafId: number;
     const targetColor = new THREE.Color();
-    const currentColor = new THREE.Color(0xdddddd); // Start white/gray
+    const currentColor = new THREE.Color(0x334155); // Start dark slate
     let lastTime = Date.now() * 0.001;
 
     const renderLoop = () => {
@@ -99,14 +110,13 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
       const isHighEnergy = state === 'listening' || state === 'speaking';
       const activeAmplitude = amplitude > 0.01 ? amplitude : 0;
 
-      // 1. Color State Management (Smooth transitions 200-300ms)
+      // 1. Color State Management — dark palette for light bg
       if (isHighEnergy) {
-        // Cyan/Teal gradient feel
-        targetColor.setHex(0x00f2ff);
+        targetColor.setHex(0x3b82f6); // blue-500: vivid on light
       } else if (state === 'processing') {
-        targetColor.setHex(0xffffff);
+        targetColor.setHex(0x6366f1); // indigo-500: processing pulse
       } else {
-        targetColor.setHex(0xcccccc); // Neutral Bright Grayscale
+        targetColor.setHex(0x334155); // slate-700: dark idle
       }
       // Faster lerp for reactivity (~0.1 per frame at 60fps is ~160ms)
       currentColor.lerp(targetColor, isHighEnergy ? 0.15 : 0.05);
@@ -192,8 +202,11 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
       style={{
         width: 200,
         height: 200,
+        filter: 'drop-shadow(0 0 12px rgba(59,130,246,0.25)) drop-shadow(0 0 24px rgba(147,51,234,0.15))',
       }}
     >
+      {/* Dark contrast halo — separation from light bg */}
+      <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(0,0,0,0.06)_0%,transparent_70%)] pointer-events-none" />
       {/* Soft atmospheric glow base - updated directly in raf for performance */}
       <div
         ref={shadowRef}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft } from 'lucide-react';
 
 /** Long fallback so we only advance when TTS actually finishes; avoids page turning before audio plays. */
 const READ_ALOUD_FALLBACK_MS = 15000;
@@ -198,6 +199,17 @@ export default function DigitalBook({ pages, pageTexts, sendMessage, payload, on
 
     return (
         <div className="premium-book-viewport">
+            {/* Top Right Navigation Control */}
+            <div className="absolute top-6 right-6 z-50">
+                <button
+                    onClick={() => onComplete?.()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md border border-slate-200 text-slate-800 shadow-sm hover:shadow-md hover:bg-white hover:scale-105 transition-all duration-300 ease-out"
+                >
+                    <ArrowLeft size={16} />
+                    <span className="text-sm font-medium">Back to Chat</span>
+                </button>
+            </div>
+
             <div className="premium-book-container">
                 <div className="premium-book-ambient-shadow" />
 

@@ -84,45 +84,44 @@ export default function App() {
         );
       default:
         return (
-          <div className="w-full h-full flex items-center justify-center bg-white">
-            <div className="text-center p-10 border border-black/5 rounded-3xl">
-              <h1 className="text-2xl font-bold mb-4">State {effectiveState}</h1>
-              <button onClick={() => setManualState(0)} className="px-6 py-2 bg-black text-white rounded-full">Return Home</button>
+          <motion.div
+            key="fallback"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full h-full flex items-center justify-center"
+          >
+            <div className="glass p-12 rounded-3xl text-center">
+              <h2 className="text-3xl font-display italic mb-4 text-white">State {effectiveState}</h2>
+              <p className="text-stone-400 tracking-widest uppercase text-sm">
+                This interface is currently under development.
+              </p>
+              <button
+                onClick={() => setManualState(0)}
+                className="mt-8 px-8 py-4 border border-white/10 rounded-full hover:bg-white/5 transition-colors text-white"
+              >
+                Return to Sleep
+              </button>
             </div>
-          </div>
+          </motion.div>
         );
     }
   };
 
   return (
-    <div className="relative w-full h-full bg-[#FAFAFA] overflow-hidden font-sans">
-      {/* Dynamic Background Accents */}
-      <div className="absolute inset-0 warm-glow-light pointer-events-none z-0" />
-      
+    <div className="relative w-screen h-screen bg-black overflow-hidden font-sans">
       {/* Offline Banner */}
       {showOfflineBanner && (
-        <div className="absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/10 border-b border-amber-500/20 text-amber-800 text-xs text-center backdrop-blur-md">
+        <div className="absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs text-center backdrop-blur-md">
           System connectivity issues. <button onClick={retryConnect} className="underline font-bold">Retry Connection</button>
         </div>
       )}
 
-      {/* Main Content Stage */}
+      {/* Main Content — Full Screen, No Wrapper */}
       <main className="relative z-10 w-full h-full">
         <AnimatePresence mode="wait">
           {renderState()}
         </AnimatePresence>
       </main>
-
-      {/* Premium Kiosk Frame */}
-      <div className="absolute inset-0 border-[24px] border-white/40 pointer-events-none z-50 rounded-[48px] shadow-inner" />
-      <div className="absolute inset-0 border-[1px] border-black/5 pointer-events-none z-50 rounded-[48px]" />
-
-      {/* Dev Metadata */}
-      {import.meta.env.DEV && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/50 backdrop-blur-lg border border-black/5 rounded-full text-[10px] text-gray-400 uppercase tracking-tighter z-50">
-          Clara Kiosk Engine • State {effectiveState} • {isConnected ? 'Online' : 'Offline'}
-        </div>
-      )}
     </div>
   );
 }
