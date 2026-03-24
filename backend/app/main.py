@@ -62,6 +62,7 @@ from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
 from backend.services.greetings import GREETINGS
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
+from backend.services.answer_generation import detect_intent, INTENT_COLLEGE_OVERVIEW, INTENT_DEPARTMENT_OVERVIEW
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
 from backend.utils.voice_logger import (
@@ -541,11 +542,26 @@ async def process_user_text_and_reply(
             if json_context:
                 context = json_context
                 logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
-        system_prompt = (
-            f"You are CLARA, a friendly campus assistant. "
-            f"Reply only in {lang_name}. Keep answer under 2 sentences and concise. "
-            f"If unsure about college facts, say you do not have that information."
-        )
+        # Enhanced Prompting for Overview Intrusion/Cards
+        intent = detect_intent(text)
+        if intent == INTENT_COLLEGE_OVERVIEW:
+            system_prompt = (
+                f"You are CLARA. Provide a magnificent, polished 5-sentence overview of SVIT (Sai Vidya Institute of Technology). "
+                f"Speak in {lang_name}. Each sentence should correspond to one of these themes: 1) Presence/Establishment (2008), 2) Ranking/Quality (VTU/NAAC), 3) Diverse Departments, 4) Campus Infrastructure, 5) Placement Success. "
+                f"Be professional and inspiring. Do not use bullets or numbers."
+            )
+        elif intent == INTENT_DEPARTMENT_OVERVIEW:
+            system_prompt = (
+                f"You are CLARA. Provide a focused 5-sentence overview of the department. "
+                f"Speak in {lang_name}. Cover: 1) Department Vision, 2) Core Curriculum/Labs, 3) Faculty Leadership, 4) Research projects, 5) Career opportunities. "
+                f"Do not use bullets or numbers."
+            )
+        else:
+            system_prompt = (
+                f"You are CLARA, a friendly campus assistant. "
+                f"Reply only in {lang_name}. Keep answer under 2 sentences and concise."
+            )
+
         if context.strip():
             system_prompt += (
                 " Use only the college information below when relevant. "
@@ -665,6 +681,17 @@ async def process_user_text_and_reply(
 
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
+        
+        # Detect intent and mark as isCardData if overview
+        intent = detect_intent(text)
+        show_card = None
+        if intent == INTENT_COLLEGE_OVERVIEW:
+            show_card = "college"
+            assistant_msg["isCardData"] = True
+        elif intent == INTENT_DEPARTMENT_OVERVIEW:
+            show_card = "dept"
+            assistant_msg["isCardData"] = True
+            
         session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
 
         if first_sentence_task is not None:
@@ -731,6 +758,7 @@ async def process_user_text_and_reply(
             "utterance_kind": utterance_kind,
             "segment_index": segment_index,
             "is_final_segment": is_final_segment,
+            "showCard": show_card
         }
         if full_audio_b64:
             payload["audioBase64"] = full_audio_b64
@@ -907,6 +935,7 @@ async def websocket_clara(websocket: WebSocket):
                         "messages": [session["cached_greeting_message"]],
                         "isSpeaking": True,
                         "audioBase64": audio_b64,
+                        "turn_id": "greeting_selected"
                     }
                     session["cached_greeting_audio"] = None
                     session["cached_greeting_message"] = None
@@ -925,6 +954,7 @@ async def websocket_clara(websocket: WebSocket):
                     }
                     if audio_b64:
                         payload["audioBase64"] = audio_b64
+                        payload["turn_id"] = "greeting_started"
                     else:
                         payload["error"] = "Could not generate greeting audio."
                     await websocket.send_json({"state": 5, "payload": payload})

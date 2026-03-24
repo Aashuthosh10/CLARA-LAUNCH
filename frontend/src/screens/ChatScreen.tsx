@@ -1,31 +1,24 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
+import { Sparkles, Volume2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import {
   type ChatMessage,
   type OrbState,
   isTextMessage,
-  isSystemMessage,
-  isCardMessage,
-  isCollegeBriefMessage,
-  isImageCardMessage,
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import ClaraBubble from '../components/chat/ClaraBubble';
-import UserBubble from '../components/chat/UserBubble';
-import SystemBubble from '../components/chat/SystemBubble';
-import CardMessage from '../components/chat/CardMessage';
-import CollegeDiaryCard from '../components/chat/CollegeDiaryCard';
-import ImageCard from '../components/chat/ImageCard';
 import VoiceOrb from '../components/VoiceOrb';
-import BackgroundParticles from '../components/BackgroundParticles';
-import { useMessageAnimation } from '../hooks/useAnimeAnimations';
-import { getMessageIntent, isAboutCollegeIntent } from '../lib/intentClassifier';
-import DigitalBook from '../components/chat/DigitalBook';
-
-const GREETING_TTS_DURATION_MS = 4500;
+import WordByWordText from '../components/chat/WordByWordText';
+import ThreeDVisual from '../components/chat/cards/ThreeDVisual';
+import { 
+  COLLEGE_OVERVIEW_DATA, 
+  DEPARTMENT_OVERVIEW_DATA, 
+  HOD_INFO_DATA, 
+  TRUSTEES_INFO_DATA 
+} from '../lib/cardData';
+import { detectOverviewType } from '../lib/intentClassifier';
 
 interface ChatScreenProps {
   messages: ChatMessage[];
@@ -34,30 +27,15 @@ interface ChatScreenProps {
   isProcessing?: boolean;
   isConnected?: boolean;
   voiceInputMode?: 'browser' | 'backend';
-  payload?: {
-    audioBase64?: string;
-    error?: string;
-    errorCode?: string;
-    hint?: string;
-    type?: string;
-    language?: string;
-    confidence?: number;
-    turn_id?: string;
-    utterance_kind?: string;
-    segment_index?: number;
-    is_final_segment?: boolean;
-  } | null;
+  payload?: any | null;
   onBack: () => void;
   onOrbTap: () => void;
   sendMessage: (msg: object) => void;
-  /** When true, always show only the chat panel (header + message list + orb), e.g. when embedded in 30% column. */
-  forcePanelView?: boolean;
 }
 
 export default function ChatScreen({
   messages: payloadMessages,
   isListening: propIsListening = false,
-  isSpeaking: _isSpeaking = false,
   isProcessing = false,
   isConnected = true,
   voiceInputMode = 'browser',
@@ -65,573 +43,219 @@ export default function ChatScreen({
   onBack,
   onOrbTap,
   sendMessage,
-  forcePanelView = false,
 }: ChatScreenProps) {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => []);
+  
+  // Layout Management State
+  const [layoutMode, setLayoutMode] = useState<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
+  const [activeCards, setActiveCards] = useState<any[] | null>(null);
+  const [currentCardIdx, setCurrentCardIdx] = useState(0);
+  const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
+  
+  // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
-  const [isSplit, setIsSplit] = useState(false);
-  const [isAboutCollege, setIsAboutCollege] = useState(false);
-  const userRequestedListeningRef = useRef(false);
-
-  const [isDigitalBookMinimized, setIsDigitalBookMinimized] = useState(false);
-  const [userClosedDigitalBook, setUserClosedDigitalBook] = useState(false);
-  const completedDigitalBookRef = useRef<any>(null);
-
-  // Allow showing the book again when a new backend digital book payload arrives.
-  useEffect(() => {
-    const db = (payload as any)?.digitalBook;
-    if (db && db !== completedDigitalBookRef.current) {
-      setUserClosedDigitalBook(false);
-      setIsDigitalBookMinimized(false);
-    }
-  }, [(payload as any)?.digitalBook]);
-  const playedSegmentKeysRef = useRef<Set<string>>(new Set());
-  const pendingAudioRef = useRef<{ audioBase64: string; segmentKey: string; turnId?: string | null } | null>(null);
-  const isPlayingRef = useRef(false);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const hasStartedRef = useRef(false);
 
-  const stopCurrentAudio = useCallback(() => {
-    const current = currentAudioRef.current;
-    if (!current) return;
-    current.pause();
-    current.src = '';
-    currentAudioRef.current = null;
-  }, []);
+  // Audio Playback Ref
+  const playedSegmentKeysRef = useRef<Set<string>>(new Set());
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const base64ToBytes = useCallback((raw: string): Uint8Array => {
-    const normalized = raw.startsWith('data:') ? (raw.split(',')[1] || '') : raw;
-    const binary = atob(normalized);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  }, []);
-
-  const detectAudioMime = useCallback((bytes: Uint8Array): string => {
-    if (bytes.length >= 12) {
-      const b0 = bytes[0];
-      const b1 = bytes[1];
-      const b2 = bytes[2];
-      const b3 = bytes[3];
-      if (b0 === 0x52 && b1 === 0x49 && b2 === 0x46 && b3 === 0x46) return 'audio/wav'; // RIFF
-      if (b0 === 0x49 && b1 === 0x44 && b2 === 0x33) return 'audio/mpeg'; // ID3
-      if (b0 === 0xff && (b1 & 0xe0) === 0xe0) return 'audio/mpeg'; // MP3 frame sync
-      if (
-        bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
-      ) return 'audio/mp4'; // ftyp
-    }
-    return 'application/octet-stream';
-  }, []);
-
-  const playAudioBase64 = useCallback((audioBase64: string, segmentKey: string, turnId?: string | null) => {
-    if (!audioBase64 || playedSegmentKeysRef.current.has(segmentKey)) return;
-    playedSegmentKeysRef.current.add(segmentKey);
-    isPlayingRef.current = true;
-    setIsPlayingBackendAudio(true);
-    stopCurrentAudio();
-    const startedAt = Date.now();
-    if (import.meta.env.DEV) {
-      console.info(
-        '[CLARA_TTS_PLAYBACK_START]',
-        JSON.stringify({ turn_id: turnId ?? null, ts_ms: startedAt, b64_len: audioBase64.length })
-      );
-    }
-    try {
-      const bytes = base64ToBytes(audioBase64);
-      const mime = detectAudioMime(bytes);
-      const blob = new Blob([bytes], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      currentAudioRef.current = audio;
-      const onEnd = () => {
-        URL.revokeObjectURL(url);
-        isPlayingRef.current = false;
-        setIsPlayingBackendAudio(false);
-        currentAudioRef.current = null;
-        if (import.meta.env.DEV) {
-          console.info(
-            '[CLARA_TTS_PLAYBACK_END]',
-            JSON.stringify({
-              turn_id: turnId ?? null,
-              ts_ms: Date.now(),
-              elapsed_ms: Date.now() - startedAt,
-            })
-          );
-        }
-        const pending = pendingAudioRef.current;
-        pendingAudioRef.current = null;
-        if (pending && !playedSegmentKeysRef.current.has(pending.segmentKey)) {
-          playAudioBase64(pending.audioBase64, pending.segmentKey, pending.turnId);
-        }
-      };
-      audio.addEventListener('ended', onEnd);
-      audio.addEventListener('error', onEnd);
-      audio.play().catch(() => onEnd());
-    } catch {
-      isPlayingRef.current = false;
-      setIsPlayingBackendAudio(false);
-    }
-  }, [base64ToBytes, detectAudioMime, stopCurrentAudio]);
-
-  // Trigger layout split/fullscreen based on user intent category
-  useEffect(() => {
-    if (messages.length === 0) {
-      setIsSplit(false);
-      setIsAboutCollege(false);
-      return;
-    }
-
-    // Find the last message from the user
-    const userMessages = messages.filter(m => m.role === 'user');
-    if (userMessages.length === 0) {
-      // If there are messages but no user messages (e.g. only welcome), stay in fullscreen
-      setIsSplit(false);
-      setIsAboutCollege(false);
-      return;
-    }
-
-    const lastUserMsg = userMessages[userMessages.length - 1];
-    const userText = lastUserMsg.text || '';
-
-    // Robust Intent Detection
-    const isAbout = isAboutCollegeIntent(userText);
-    const intent = getMessageIntent(userText);
-
-    // We split if it's generally informational OR specifically about the college
-    const shouldSplit = intent === 'informational' || isAbout;
-
-    console.log(`[Intent Detection] Text: "${userText}" | Split: ${shouldSplit} | AboutCollege: ${isAbout}`);
-
-    // Update Split State
-    if (isSplit !== shouldSplit) {
-      setIsSplit(shouldSplit);
-    }
-
-    // Update "About College" specifically (triggers Digital Book)
-    if (isAboutCollege !== isAbout) {
-      setIsAboutCollege(isAbout);
-    }
-  }, [messages, isSplit, isAboutCollege]);
-
-  const addSystemMessage = useCallback((text: string) => {
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === 'system' && last.text === text) return prev;
-      const sys: ChatMessage = { id: `sys-${Date.now()}`, role: 'system', text };
-      return [...prev, sys];
-    });
-  }, []);
-
+  // Intent Classifier & Speech Hooks
+  const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
   const { startListening: startSpeechRecognition } = useSpeechRecognition(
     sendMessage,
     language,
-    (_, message) => addSystemMessage(message),
-    () => addSystemMessage("I didn't catch that. Please try again.")
+    () => {},
+    () => {}
   );
 
-  const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
-
-  useEffect(() => {
-    const audioBase64 = payload?.audioBase64;
-    if (!audioBase64) return;
-    // Include payload.type so assistant_ack_audio does not share a key with the final TTS
-    // (both omitted utterance_kind previously and defaulted to assistant_full_reply).
-    const segmentKey = [
-      payload?.turn_id ?? '',
-      payload?.type ?? '',
-      payload?.utterance_kind ?? 'assistant_full_reply',
-      String(payload?.segment_index ?? 0),
-      String(payload?.is_final_segment ?? true),
-    ].join('|');
+  // Sync Card Progression with Backend Audio Duration
+  const handleAudioPlayback = useCallback((audioBase64: string, turnId: string, isOverview: boolean, cardsToSync: any[] | null) => {
+    const segmentKey = `${turnId}|audio`;
     if (playedSegmentKeysRef.current.has(segmentKey)) return;
-    if (isPlayingRef.current) {
-      pendingAudioRef.current = { audioBase64, segmentKey, turnId: payload?.turn_id ?? null };
-      return;
+    playedSegmentKeysRef.current.add(segmentKey);
+
+    if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
     }
-    playAudioBase64(audioBase64, segmentKey, payload?.turn_id ?? null);
-  }, [
-    payload?.audioBase64,
-    payload?.turn_id,
-    payload?.type,
-    payload?.utterance_kind,
-    payload?.segment_index,
-    payload?.is_final_segment,
-    playAudioBase64,
-  ]);
 
-  useEffect(() => () => stopCurrentAudio(), [stopCurrentAudio]);
+    const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+    currentAudioRef.current = audio;
+    setIsPlayingBackendAudio(true);
 
-  useEffect(() => {
-    if (isPlayingBackendAudio) {
-      setOrbState('speaking');
-      return;
-    }
-    if (isProcessing) {
-      setOrbState('processing');
-      return;
-    }
-    if (propIsListening) {
-      setOrbState('listening');
-      return;
-    }
-    if (hasStartedRef.current) setOrbState('idle');
-  }, [propIsListening, isProcessing, isPlayingBackendAudio]);
+    const startSync = (duration: number) => {
+        if (!isOverview || !cardsToSync) return;
+        const totalDurationMs = duration * 1000;
+        const intervalTime = totalDurationMs / cardsToSync.length;
+        let idx = 0;
+        setCurrentCardIdx(0);
+        const interval = setInterval(() => {
+            idx++;
+            if (idx < cardsToSync.length) setCurrentCardIdx(idx);
+            else clearInterval(interval);
+        }, intervalTime);
+    };
 
-  // Greeting comes only from backend (greetings.py). Request it when chat screen mounts.
-  useEffect(() => {
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-    setOrbState('idle');
-    sendMessage({ action: 'conversation_started' });
-  }, [sendMessage]);
+    audio.onloadedmetadata = () => startSync(audio.duration);
+    setTimeout(() => { if (isOverview && audio.duration) startSync(audio.duration); }, 1000);
 
-  useEffect(() => {
-    if (payloadMessages.length > 0) {
-      // De-duplicate consecutive identical messages from the same sender
-      const cleanMessages = payloadMessages.filter((msg, index, array) => {
-        if (index === 0) return true;
-        const prev = array[index - 1];
-
-        // Check if messages have text content
-        const currentText = 'text' in msg ? msg.text : '';
-        const prevText = 'text' in prev ? prev.text : '';
-        const currentRole = 'role' in msg ? msg.role : '';
-        const prevRole = 'role' in prev ? prev.role : '';
-
-        // If consecutive messages have exact same role and same text, it's likely a duplication
-        if (currentRole && prevRole && currentRole === prevRole && currentText === prevText && currentText.trim() !== '') {
-          return false;
+    audio.onended = () => {
+        setIsPlayingBackendAudio(false);
+        if (isOverview) {
+            setTimeout(() => {
+                setLayoutMode('FULL_TEXT');
+                setActiveCards(null);
+                setSuppressedTurnId(null);
+                setCurrentCardIdx(0);
+            }, 1000);
         }
-        return true;
-      });
+    };
 
-      setMessages(cleanMessages);
+    audio.play().catch(err => {
+        setIsPlayingBackendAudio(false);
+        setShowUnmuteHint(true);
+    });
+  }, []);
+
+  // Sync from payload
+  useEffect(() => {
+    if (!payload) return;
+    const cardTrigger = payload?.showCard;
+    const audioBase64 = payload?.audioBase64;
+    const turnId = payload?.turn_id || `msg-${Date.now()}`;
+
+    if (cardTrigger) {
+        let data = cardTrigger === 'college' ? COLLEGE_OVERVIEW_DATA 
+                  : cardTrigger === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
+                  : cardTrigger === 'hod' ? HOD_INFO_DATA 
+                  : TRUSTEES_INFO_DATA;
+        setLayoutMode('SPLIT_CARDS');
+        setActiveCards(data);
+        setSuppressedTurnId(turnId);
+        if (audioBase64) handleAudioPlayback(audioBase64, turnId, true, data);
+    } else if (audioBase64) {
+        handleAudioPlayback(audioBase64, turnId, false, null);
     }
-  }, [payloadMessages]);
+  }, [payload, handleAudioPlayback]);
 
+  // Fallback Detection
   useEffect(() => {
-    if (payload?.type !== 'language_auto_detected' || !payload.language) return;
-    const confidence = typeof payload.confidence === 'number' ? ` (${Math.round(payload.confidence * 100)}%)` : '';
-    addSystemMessage(`Auto language detected: ${payload.language}${confidence}`);
-  }, [payload?.type, payload?.language, payload?.confidence, addSystemMessage]);
-
-  const lastErrorTurnIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const err = payload?.error;
-    if (!err) return;
-    const turnId = payload?.turn_id ?? '';
-    if (lastErrorTurnIdRef.current === turnId) return;
-    lastErrorTurnIdRef.current = turnId;
-    const hint = payload?.hint;
-    const msg = hint ? `${err} ${hint}` : err;
-    addSystemMessage(msg);
-  }, [payload?.error, payload?.hint, payload?.turn_id, addSystemMessage]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages]);
-
-  const handleOrbTap = () => {
-    if (!isConnected) {
-      addSystemMessage('Waiting for backend connection...');
-      return;
-    }
-    if (orbState === 'idle') {
-      userRequestedListeningRef.current = true;
-      if (voiceInputMode === 'backend') {
-        onOrbTap();
-      } else {
-        startSpeechRecognition();
+    const lastMsg = payloadMessages[payloadMessages.length - 1];
+    if (lastMsg && isTextMessage(lastMsg) && lastMsg.role === 'clara' && layoutMode === 'FULL_TEXT' && !payload?.showCard) {
+      const type = detectOverviewType(lastMsg.text);
+      if (type) {
+        let data = type === 'college' ? COLLEGE_OVERVIEW_DATA 
+                  : type === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
+                  : type === 'hod' ? HOD_INFO_DATA 
+                  : TRUSTEES_INFO_DATA;
+        setLayoutMode('SPLIT_CARDS');
+        setActiveCards(data);
+        setCurrentCardIdx(0);
+        setSuppressedTurnId(lastMsg.id);
       }
     }
+  }, [payloadMessages, layoutMode, payload?.showCard]);
+
+  // Orb State
+  useEffect(() => {
+    if (isPlayingBackendAudio) setOrbState('speaking');
+    else if (isProcessing) setOrbState('processing');
+    else if (propIsListening) setOrbState('listening');
+    else setOrbState('idle');
+  }, [propIsListening, isProcessing, isPlayingBackendAudio]);
+
+  useEffect(() => {
+    if (!hasStartedRef.current) {
+      hasStartedRef.current = true;
+      sendMessage({ action: 'conversation_started' });
+    }
+  }, [sendMessage]);
+
+  const handleOrbTap = () => {
+    setShowUnmuteHint(false);
+    if (orbState === 'idle') {
+      if (voiceInputMode === 'backend') onOrbTap();
+      else startSpeechRecognition();
+    }
   };
 
-  // Render the large centered text for Fullscreen mode (overview reply is shown only in the book, not here)
-  const renderFullscreenContent = () => {
-    const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'clara');
-    return (
-      <motion.div
-        key="fullscreen"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
-        className="fullscreen-content"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="status-text-top"
-        >
-          CLARA is listening...
-        </motion.div>
+  const filteredMessages = useMemo(() => {
+    return payloadMessages.filter(m => {
+       const isHidden = (m as any).isHidden || (m as any).isCardData;
+       return !isHidden && (m.id !== suppressedTurnId);
+    });
+  }, [payloadMessages, suppressedTurnId]);
 
-        <div className="flex-1 flex items-center justify-center w-full">
-          {lastAssistantMsg && (
-            <motion.div
-              key={lastAssistantMsg.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="huge-reply-text"
-            >
-              {lastAssistantMsg.text}
+  const lastAssistantMsg = [...payloadMessages].reverse().find(m => isTextMessage(m) && m.role === 'clara' && !(m as any).isCardData);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [filteredMessages]);
+
+  return (
+    <div className="light-chat-container">
+      <div className="cinematic-overlay" />
+      <LayoutGroup>
+        <AnimatePresence mode="wait">
+          {layoutMode === 'FULL_TEXT' ? (
+            <motion.div key="full-text" layoutId="main" className="full-text-layout">
+              <div className="status-text-top flex items-center gap-2">
+                <Sparkles size={16} className="text-violet-500" />
+                <span>CLARA UNIFIED KIOSK</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center w-full px-10">
+                {lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
+                  <WordByWordText text={lastAssistantMsg.text} isSpeaking={isPlayingBackendAudio && !suppressedTurnId} />
+                )}
+              </div>
+              <motion.div layoutId="orb" className="orb-float-bottom relative">
+                {showUnmuteHint && (
+                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white px-4 py-2 rounded-full text-xs flex items-center gap-2">
+                    <Volume2 size={14} /> Tap to Unmute
+                  </div>
+                )}
+                <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div key="split" layoutId="main" className="split-cards-layout">
+              <div className="visual-stage-70 flex flex-col items-center">
+                <AnimatePresence mode="wait">
+                  {activeCards && activeCards[currentCardIdx] && (
+                    <motion.div key={currentCardIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="cinematic-card">
+                      <div className="flex-1">
+                        <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
+                        <p className="card-body">{activeCards[currentCardIdx].content}</p>
+                      </div>
+                      <div className="w-[50%] h-[40%] self-end bg-slate-50/50 rounded-3xl overflow-hidden mt-6 shadow-sm border border-black/5">
+                        <ThreeDVisual type={activeCards[currentCardIdx].type} />
+                      </div>
+                      <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
+                        <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-gray-100'}`} />
+                      ))}</div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <motion.aside className="interaction-panel-30">
+                <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
+                <div ref={scrollRef} className="panel-messages no-scrollbar">
+                  {filteredMessages.map((m, i) => isTextMessage(m) && (
+                    <div key={m.id || i} className={m.role === 'user' ? 'bubble-user' : 'bubble-clara'}>{m.text}</div>
+                  ))}
+                </div>
+                <div className="orb-float-panel">
+                  <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
+                </div>
+              </motion.aside>
             </motion.div>
           )}
-        </div>
-
-        {/* Orb at bottom center in Fullscreen */}
-        <motion.div
-          layoutId="voice-orb-wrapper"
-          className="orb-container-fullscreen"
-        >
-          <VoiceOrb
-            state={orbState}
-            amplitude={voiceAnalyser.amplitude}
-            onTap={handleOrbTap}
-          />
-        </motion.div>
-      </motion.div>
-    );
-  };
-
-  // Render the 70/30 Split logic
-  const renderSplitContent = () => {
-    return (
-      <motion.div
-        key="split"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
-        className="chat-layout-wrapper"
-      >
-        <section className="kiosk-visual-side" style={{ width: '70%', height: '100%', position: 'relative' }} />
-
-        <aside className="kiosk-interaction-panel" style={{ width: '30%' }}>
-          <header className="chat-header-minimal">
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <h1 className="kiosk-header-title">CLARA</h1>
-          </header>
-
-          <div ref={scrollRef} className="chat-messages-scroll no-scrollbar">
-            {messages.map((msg) => (
-                <div key={msg.id}>
-                  {isSystemMessage(msg) && <SystemBubble message={msg} />}
-                  {msg.role === 'user' && <UserBubble message={msg} />}
-                  {isTextMessage(msg) && <ClaraBubble message={msg} />}
-                  {isCardMessage(msg) && <CardMessage message={msg} />}
-                  {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
-                  {isImageCardMessage(msg) && <ImageCard message={msg} />}
-                </div>
-              ))}
-
-            {isProcessing && (
-              <div className="clara-typing-container">
-                <div className="typing-dot" />
-                <div className="typing-dot" />
-                <div className="typing-dot" />
-              </div>
-            )}
-          </div>
-
-          {/* Orb anchored at bottom of Chat Panel in Split */}
-          <motion.div
-            layoutId="voice-orb-wrapper"
-            className="orb-container-split"
-          >
-            <VoiceOrb
-              state={orbState}
-              amplitude={voiceAnalyser.amplitude}
-              onTap={handleOrbTap}
-            />
-          </motion.div>
-        </aside>
-      </motion.div>
-    );
-  };
-
-  // Digital Book from backend (one payload with pages + all audio): no diary_tts, no chat, instant playback.
-  const digitalBook = (payload as any)?.digitalBook;
-  const showBackendDigitalBook = digitalBook && digitalBook !== completedDigitalBookRef.current;
-  // Shared fullscreen card layout: header (Close, Minimize) and either fullscreen book or 70:30 book | chat.
-  if (showBackendDigitalBook && !userClosedDigitalBook) {
-    const handleCloseBook = () => {
-      if (showBackendDigitalBook) completedDigitalBookRef.current = digitalBook;
-      setUserClosedDigitalBook(true);
-      setIsDigitalBookMinimized(false);
-    };
-    const bookContent = (
-      <DigitalBook
-        pages={digitalBook.pages}
-        onComplete={handleCloseBook}
-      />
-    );
-    const headerBar = (
-      <header className="flex-shrink-0 flex items-center justify-end gap-2 pr-4 pt-3 pb-2 bg-stone-900/80 border-b border-white/10 z-10">
-        <button
-          type="button"
-          onClick={() => setIsDigitalBookMinimized((v) => !v)}
-          className="px-4 py-2 rounded-xl border border-white/20 bg-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
-          aria-label={isDigitalBookMinimized ? 'Expand' : 'Minimize'}
-        >
-          {isDigitalBookMinimized ? 'Expand' : 'Minimize'}
-        </button>
-        <button
-          type="button"
-          onClick={handleCloseBook}
-          className="p-2 rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/15 transition-colors"
-          aria-label="Close"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      </header>
-    );
-    if (!isDigitalBookMinimized) {
-      return (
-        <div className="chat-screen-container flex flex-col h-full bg-stone-950">
-          {headerBar}
-          <div className="flex-1 min-h-0">
-            {bookContent}
-          </div>
-          <BackgroundParticles />
-        </div>
-      );
-    }
-    return (
-      <div className="chat-screen-container flex flex-row h-full w-full bg-stone-950">
-        <div className="w-[70%] h-full flex flex-col border-r border-white/10 flex-shrink-0 bg-stone-950">
-          {headerBar}
-          <div className="flex-1 min-h-0">
-            {bookContent}
-          </div>
-        </div>
-        <div className="w-[30%] h-full min-w-0 flex flex-col flex-shrink-0 overflow-hidden">
-          <header className="chat-header-minimal flex-shrink-0">
-            <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60" aria-label="Back">
-              <ArrowLeft size={24} />
-            </button>
-            <h1 className="kiosk-header-title">CLARA</h1>
-          </header>
-          <div ref={scrollRef} className="chat-messages-scroll no-scrollbar flex-1 min-h-0 overflow-y-auto">
-            {(messages ?? []).map((msg) => (
-              <div key={msg.id}>
-                {isSystemMessage(msg) && <SystemBubble message={msg} />}
-                {msg.role === 'user' && <UserBubble message={msg} />}
-                {isTextMessage(msg) && <ClaraBubble message={msg} />}
-                {isCardMessage(msg) && <CardMessage message={msg} />}
-                {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
-                {isImageCardMessage(msg) && <ImageCard message={msg} />}
-              </div>
-            ))}
-            {isProcessing && (
-              <div className="clara-typing-container">
-                <div className="typing-dot" />
-                <div className="typing-dot" />
-                <div className="typing-dot" />
-              </div>
-            )}
-          </div>
-          <motion.div layoutId="voice-orb-wrapper" className="orb-container-split flex-shrink-0">
-            <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
-          </motion.div>
-        </div>
-        <BackgroundParticles />
-      </div>
-    );
-  }
-
-  // Embedded panel only (e.g. 30% column when department cards minimized): show chat list + orb.
-  if (forcePanelView) {
-    return (
-      <div className="chat-screen-container flex flex-col h-full min-h-0">
-        <header className="chat-header-minimal flex-shrink-0">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60"
-            aria-label="Back"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h1 className="kiosk-header-title">CLARA</h1>
-        </header>
-        <div ref={scrollRef} className="chat-messages-scroll no-scrollbar flex-1 min-h-0 overflow-y-auto">
-          {(messages ?? []).map((msg) => (
-            <div key={msg.id}>
-              {isSystemMessage(msg) && <SystemBubble message={msg} />}
-              {msg.role === 'user' && <UserBubble message={msg} />}
-              {isTextMessage(msg) && <ClaraBubble message={msg} />}
-              {isCardMessage(msg) && <CardMessage message={msg} />}
-              {isCollegeBriefMessage(msg) && <CollegeDiaryCard message={msg} />}
-              {isImageCardMessage(msg) && <ImageCard message={msg} />}
-            </div>
-          ))}
-          {isProcessing && (
-            <div className="clara-typing-container">
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-            </div>
-          )}
-        </div>
-        <motion.div layoutId="voice-orb-wrapper" className="orb-container-split flex-shrink-0">
-          <VoiceOrb
-            state={orbState}
-            amplitude={voiceAnalyser.amplitude}
-            onTap={handleOrbTap}
-          />
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="chat-screen-container">
-      <AnimatePresence mode="wait">
-        {isSplit ? renderSplitContent() : renderFullscreenContent()}
-      </AnimatePresence>
-
-      <BackgroundParticles />
-    </div>
-  );
-}
-
-function MessageWrapper({ msg, propIsListening, t }: { msg: ChatMessage; propIsListening: boolean; t: any }) {
-  const role = ('role' in msg) ? (msg as any).role : 'clara';
-  const itemRef = useMessageAnimation(role === 'user' ? 'user' : 'clara');
-
-  return (
-    <div ref={itemRef} className={`opacity-0 ${role === 'user' ? 'kiosk-msg-user' : 'kiosk-msg-clara'}`}>
-      {isSystemMessage(msg) ? (
-        <SystemBubble message={msg} />
-      ) : isCollegeBriefMessage(msg) ? (
-        <CollegeDiaryCard message={msg} />
-      ) : isImageCardMessage(msg) ? (
-        <ImageCard message={msg} />
-      ) : isCardMessage(msg) ? (
-        <CardMessage
-          message={msg}
-          listeningLabel={propIsListening ? t('listening') : undefined}
-        />
-      ) : isTextMessage(msg) ? (
-        <>
-          <span className="kiosk-msg-label">{role === 'clara' ? 'CLARA' : 'Guest'}</span>
-          <div className="kiosk-msg-text">
-            {msg.text}
-          </div>
-        </>
-      ) : null}
+        </AnimatePresence>
+      </LayoutGroup>
     </div>
   );
 }
