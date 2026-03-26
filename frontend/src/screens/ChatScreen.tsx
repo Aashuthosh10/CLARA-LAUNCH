@@ -78,7 +78,18 @@ export default function ChatScreen({
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
   const [currentAudioDuration, setCurrentAudioDuration] = useState<number>(0);
+  const [isSplitView, setIsSplitView] = useState(false);
   
+  // Permanent Split Trigger
+  useEffect(() => {
+    if (!isSplitView) {
+      const hasInteraction = payloadMessages.some(m => isTextMessage(m) && m.role === 'user') || activeCards !== null;
+      if (hasInteraction) {
+        setIsSplitView(true);
+      }
+    }
+  }, [payloadMessages, activeCards, isSplitView]);
+
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
@@ -300,38 +311,50 @@ export default function ChatScreen({
     <div className="light-chat-container" data-testid="chat-screen">
       <div className="cinematic-overlay" />
       <LayoutGroup>
-        <AnimatePresence mode="wait">
-          {/* ─── FULL TEXT MODE ─── */}
-          {layoutMode === 'FULL_TEXT' ? (
-            <motion.div key="full-text" layoutId="main" className="full-text-layout">
-              {/* Clean top — no debug labels */}
-              <div className="flex-1 flex items-center justify-center w-full px-10">
-                {lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
-                  <AnimatedAiMessage 
-                    text={lastAssistantMsg.text} 
-                    animate={true}
-                    audioDuration={currentAudioDuration}
-                    className="word-by-word-text" 
-                  />
+        <div className="w-full h-full flex relative overflow-hidden">
+          
+          {/* ─── LEFT PANEL (Main Stage) ─── */}
+          <motion.div
+            layout
+            initial={false}
+            animate={{ width: isSplitView ? '70%' : '100%' }}
+            transition={{ duration: 0.8, ease: [0.77, 0, 0.175, 1] }}
+            className="h-full flex flex-col items-center justify-center relative flex-shrink-0"
+          >
+            {layoutMode === 'FULL_TEXT' || !activeCards ? (
+              <>
+                <div className="flex-1 flex items-center justify-center w-full px-10">
+                  {lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
+                    <AnimatedAiMessage 
+                      text={lastAssistantMsg.text} 
+                      animate={true}
+                      audioDuration={currentAudioDuration}
+                      className="word-by-word-text" 
+                    />
+                  )}
+                </div>
+                {!isSplitView && (
+                  <motion.div layoutId="orb" className="orb-float-bottom relative">
+                    {showUnmuteHint && (
+                      <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg">
+                        <Volume2 size={14} /> Tap to Unmute
+                      </div>
+                    )}
+                    <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
+                  </motion.div>
                 )}
-              </div>
-              <motion.div layoutId="orb" className="orb-float-bottom relative">
-                {showUnmuteHint && (
-                  <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg">
-                    <Volume2 size={14} /> Tap to Unmute
-                  </div>
-                )}
-                <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
-              </motion.div>
-            </motion.div>
-
-          /* ─── SPLIT CARDS MODE (dept/hod/trustees only — NOT college) ─── */
-          ) : (
-            <motion.div key="split" layoutId="main" className="split-cards-layout">
-              <div className="visual-stage-70 flex flex-col items-center">
+              </>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-12">
                 <AnimatePresence mode="wait">
                   {activeCards && activeCards[currentCardIdx] && (
-                    <motion.div key={currentCardIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="cinematic-card">
+                    <motion.div 
+                      key={currentCardIdx} 
+                      initial={{ opacity: 0, x: 20 }} 
+                      animate={{ opacity: 1, x: 0 }} 
+                      exit={{ opacity: 0, x: -20 }} 
+                      className="cinematic-card w-full h-full"
+                    >
                       <div className="flex-1">
                         <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
                         <p className="card-body">{activeCards[currentCardIdx].content}</p>
@@ -339,14 +362,27 @@ export default function ChatScreen({
                       <div className="w-[50%] h-[40%] self-end bg-slate-50 rounded-3xl overflow-hidden mt-6 border border-slate-200 shadow-sm">
                         <ThreeDVisual type={activeCards[currentCardIdx].type} />
                       </div>
-                      <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
-                        <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
-                      ))}</div>
+                      <div className="mt-auto flex gap-4 pt-8">
+                        {activeCards.map((_, i) => (
+                          <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
+                        ))}
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
-              <motion.aside className="interaction-panel-30">
+            )}
+          </motion.div>
+
+          {/* ─── RIGHT PANEL (Assistant Panel) ─── */}
+          <AnimatePresence>
+            {isSplitView && (
+              <motion.aside
+                initial={{ width: '0%', opacity: 0, x: 40 }}
+                animate={{ width: '30%', opacity: 1, x: 0 }}
+                transition={{ delay: 0.1, duration: 0.7, ease: [0.77, 0, 0.175, 1] }}
+                className="interaction-panel-30 h-full flex flex-col flex-shrink-0"
+              >
                 <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
                   {filteredMessages.map((m, i) => isTextMessage(m) && (
@@ -361,13 +397,18 @@ export default function ChatScreen({
                         />
                   ))}
                 </div>
-                <div className="orb-float-panel">
+                <motion.div layoutId="orb" className="orb-float-panel relative">
+                  {showUnmuteHint && (
+                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg z-50">
+                      <Volume2 size={14} /> Tap to Unmute
+                    </div>
+                  )}
                   <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
-                </div>
+                </motion.div>
               </motion.aside>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       </LayoutGroup>
     </div>
   );
