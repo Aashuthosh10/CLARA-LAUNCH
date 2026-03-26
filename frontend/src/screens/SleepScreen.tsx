@@ -119,7 +119,7 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(117,140,255,0.14)_0%,rgba(134,87,255,0.10)_35%,rgba(0,0,0,0)_72%)]" />
 
         <div
-          className="relative mx-auto flex w-full max-w-5xl flex-col items-center text-center"
+          className="relative mx-auto flex w-full max-w-5xl flex-col items-center text-center [filter:drop-shadow(0_0_15px_rgba(59,130,246,0.3))]"
           style={{ fontFamily: "'Playfair Display', 'Times New Roman', serif" }}
         >
           <p className="text-5xl md:text-6xl font-medium leading-[1.1] tracking-normal text-white whitespace-nowrap">

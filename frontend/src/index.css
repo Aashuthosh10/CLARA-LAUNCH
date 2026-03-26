@@ -35,8 +35,21 @@
 }
 
 @layer components {
+  .arctic-gradient {
+    @apply bg-gradient-to-br from-[#F7FBFD] via-[#EEF5F9] to-[#D6E6EF];
+  }
+
   .glass {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+    @apply bg-white/60 backdrop-blur-lg border border-white/40 shadow-[0_10px_30px_rgba(0,0,0,0.08)];
+  }
+
+  /* Global motion interactions */
+  .interactive-card {
+    @apply transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-xl active:scale-[0.98];
+  }
+
+  .interactive-button {
+    @apply transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-md active:scale-[0.98];
   }
 
   .warm-glow {

@@ -47,9 +47,9 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
 
     // Dark palette for light-bg visibility
     const palette = [
-      new THREE.Color(0x1e293b), // slate-800 — base (60%)
-      new THREE.Color(0x3b82f6), // blue-500  — secondary (30%)
-      new THREE.Color(0x9333ea), // violet-500 — accent (10%)
+      new THREE.Color(0x1e293b), // slate-800
+      new THREE.Color(0x334155), // slate-700
+      new THREE.Color(0x475569), // slate-600
     ];
 
     for (let i = 0; i < particleCount; i++) {
@@ -110,13 +110,13 @@ export default function VoiceOrbCanvas({ state, amplitude, onTap }: VoiceOrbCanv
       const isHighEnergy = state === 'listening' || state === 'speaking';
       const activeAmplitude = amplitude > 0.01 ? amplitude : 0;
 
-      // 1. Color State Management — dark palette for light bg
-      if (isHighEnergy) {
-        targetColor.setHex(0x3b82f6); // blue-500: vivid on light
+      // 1. Color State Management — blue/violet inner glow
+      if (state === 'listening' || state === 'speaking') {
+        targetColor.setHex(0x3b82f6); // blue-500
       } else if (state === 'processing') {
-        targetColor.setHex(0x6366f1); // indigo-500: processing pulse
+        targetColor.setHex(0x9333ea); // violet-500
       } else {
-        targetColor.setHex(0x334155); // slate-700: dark idle
+        targetColor.setHex(0x94a3b8); // slate-400 idle glow
       }
       // Faster lerp for reactivity (~0.1 per frame at 60fps is ~160ms)
       currentColor.lerp(targetColor, isHighEnergy ? 0.15 : 0.05);

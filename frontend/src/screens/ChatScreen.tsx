@@ -10,7 +10,7 @@ import {
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import VoiceOrb from '../components/VoiceOrb';
-import WordByWordText from '../components/chat/WordByWordText';
+import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import DigitalBook from '../components/chat/DigitalBook';
 import ThreeDVisual from '../components/chat/cards/ThreeDVisual';
 import { 
@@ -65,6 +65,11 @@ export default function ChatScreen({
 }: ChatScreenProps) {
   const { language } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const latestMessagesRef = useRef<ChatMessage[]>(payloadMessages);
+  
+  useEffect(() => {
+    latestMessagesRef.current = payloadMessages;
+  }, [payloadMessages]);
   
   // Layout Management State
   const [showDigitalBook, setShowDigitalBook] = useState(false);
@@ -72,6 +77,7 @@ export default function ChatScreen({
   const [activeCards, setActiveCards] = useState<any[] | null>(null);
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
+  const [currentAudioDuration, setCurrentAudioDuration] = useState<number>(0);
   
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
@@ -120,8 +126,16 @@ export default function ChatScreen({
         }, intervalTime);
     };
 
-    audio.onloadedmetadata = () => startSync(audio.duration);
-    setTimeout(() => { if (isOverview && audio.duration) startSync(audio.duration); }, 1000);
+    audio.onloadedmetadata = () => {
+        setCurrentAudioDuration(audio.duration);
+        startSync(audio.duration);
+    };
+    setTimeout(() => { 
+        if (isOverview && audio.duration) {
+            setCurrentAudioDuration(audio.duration);
+            startSync(audio.duration); 
+        }
+    }, 1000);
 
     audio.onended = () => {
         setIsPlayingBackendAudio(false);
@@ -161,10 +175,32 @@ export default function ChatScreen({
                   : TRUSTEES_INFO_DATA;
         setLayoutMode('SPLIT_CARDS');
         setActiveCards(data);
-        setSuppressedTurnId(turnId);
         if (audioBase64) handleAudioPlayback(audioBase64, turnId, true, data);
     } else if (audioBase64) {
-        handleAudioPlayback(audioBase64, turnId, false, null);
+        // Evaluate fallback detection synchronously to ensure proper audio sync mode
+        const msgs = latestMessagesRef.current;
+        const lastMsg = msgs[msgs.length - 1];
+        let type = null;
+        if (lastMsg && isTextMessage(lastMsg) && lastMsg.role === 'clara' && !payload?.showCard) {
+            type = detectOverviewType(lastMsg.text);
+        }
+
+        if (type === 'college') {
+            setShowDigitalBook(true);
+            setSuppressedTurnId(lastMsg?.id || turnId);
+            // College handles own audio logic mostly, but we don't trigger sync
+        } else if (type) {
+            let data = type === 'dept' ? DEPARTMENT_OVERVIEW_DATA.CSE 
+                      : type === 'hod' ? HOD_INFO_DATA 
+                      : TRUSTEES_INFO_DATA;
+            setLayoutMode('SPLIT_CARDS');
+            setActiveCards(data);
+            setCurrentCardIdx(0);
+            setSuppressedTurnId(lastMsg?.id || turnId);
+            handleAudioPlayback(audioBase64, turnId, true, data);
+        } else {
+            handleAudioPlayback(audioBase64, turnId, false, null);
+        }
     }
   }, [payload, handleAudioPlayback]);
 
@@ -271,7 +307,12 @@ export default function ChatScreen({
               {/* Clean top — no debug labels */}
               <div className="flex-1 flex items-center justify-center w-full px-10">
                 {lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
-                  <WordByWordText text={lastAssistantMsg.text} isSpeaking={isPlayingBackendAudio && !suppressedTurnId} />
+                  <AnimatedAiMessage 
+                    text={lastAssistantMsg.text} 
+                    animate={true}
+                    audioDuration={currentAudioDuration}
+                    className="word-by-word-text" 
+                  />
                 )}
               </div>
               <motion.div layoutId="orb" className="orb-float-bottom relative">
@@ -309,7 +350,15 @@ export default function ChatScreen({
                 <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
                   {filteredMessages.map((m, i) => isTextMessage(m) && (
-                    <div key={m.id || i} className={m.role === 'user' ? 'bubble-user' : 'bubble-clara'}>{m.text}</div>
+                    m.role === 'user' 
+                      ? <div key={m.id || i} className="bubble-user">{m.text}</div>
+                      : <AnimatedAiMessage 
+                          key={m.id || i} 
+                          text={m.text} 
+                          animate={i === filteredMessages.length - 1}
+                          audioDuration={i === filteredMessages.length - 1 ? currentAudioDuration : 0}
+                          className="bubble-clara" 
+                        />
                   ))}
                 </div>
                 <div className="orb-float-panel">

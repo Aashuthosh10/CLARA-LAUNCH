@@ -54,14 +54,14 @@ export default function LanguageSelect({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-12 bg-black"
+      className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center p-12 arctic-gradient"
     >
-      {/* Background Slideshow (Consistent with Sleep Screen) */}
+      {/* Background Slideshow (Faded for light theme) */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.6 }} /* Slightly dimmer for readability */
+          animate={{ opacity: 0.15 }} /* Very subtle for light theme */
           exit={{ opacity: 0 }}
           transition={{ duration: 2, ease: 'easeInOut' }}
           className="absolute inset-0 z-0"
@@ -74,10 +74,9 @@ export default function LanguageSelect({
         </motion.div>
       </AnimatePresence>
 
-      {/* Cinematic Overlay */}
+      {/* Subtle Light Overlay Instead of Dark Cinematic */}
       <div className="absolute inset-0 z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
-        <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+        <div className="absolute inset-0 bg-white/40" />
       </div>
 
       {/* Home Button - Top Right */}
@@ -88,9 +87,9 @@ export default function LanguageSelect({
         whileHover={{ scale: 1.03, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
         whileTap={{ scale: 0.97 }}
         onClick={onHome}
-        className="absolute top-12 right-12 z-30 flex items-center justify-center w-16 h-16 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/10 shadow-lg transition-colors group"
+        className="absolute top-12 right-12 z-30 flex items-center justify-center w-16 h-16 rounded-2xl glass interactive-button group"
       >
-        <Home className="w-6 h-6 text-white/70 group-hover:text-white transition-colors" />
+        <Home className="w-6 h-6 text-slate-600 group-hover:text-slate-900 transition-colors" />
       </motion.button>
 
       {/* Content Layer */}
@@ -99,8 +98,8 @@ export default function LanguageSelect({
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="text-5xl font-bold text-white/90 mb-20 tracking-wide text-center"
-          style={{ fontFamily: "'Times New Roman', serif" }}
+          className="text-5xl font-bold text-slate-900 mb-20 tracking-wide text-center"
+          style={{ fontFamily: "'Playfair Display', serif" }}
         >
           {t('selectLanguage')}
         </motion.h2>
@@ -131,19 +130,19 @@ export default function LanguageSelect({
                 disabled={isAnySelected}
                 className={`
                   relative overflow-hidden rounded-3xl flex flex-col items-center justify-center py-14 px-10
-                  backdrop-blur-2xl bg-white/[0.08] border transition-all duration-300
-                  ${isSelected ? 'brightness-110' : 'hover:bg-white/[0.12]'}
+                  glass interactive-card transition-all duration-300
+                  ${isSelected ? 'ring-2 ring-[#7FA6B8]/50 shadow-lg scale-105' : 'hover:bg-white/70'}
                 `}
               >
-                <span className="text-4xl font-bold text-white mb-3">
+                <span className="text-4xl justify-center items-center font-bold text-slate-900 mb-3" style={{ display: 'flex' }}>
                   {lang.label}
                 </span>
-                <span className="text-sm tracking-[0.2em] uppercase font-medium text-white/50">
+                <span className="text-sm tracking-[0.2em] uppercase font-medium text-slate-500">
                   {lang.name}
                 </span>
 
                 {/* Subtle refined accent */}
-                <div className="absolute top-6 right-6 w-1.5 h-1.5 rounded-full bg-white/10" />
+                <div className="absolute top-6 right-6 w-1.5 h-1.5 rounded-full bg-[#7FA6B8]/40" />
               </motion.button>
             );
           })}
@@ -151,9 +150,9 @@ export default function LanguageSelect({
 
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.6 }}
+          animate={{ opacity: 0.8 }}
           transition={{ delay: 1, duration: 1.5 }}
-          className="mt-24 text-white/40 text-sm tracking-[0.5em] uppercase font-light"
+          className="mt-24 text-slate-500 text-sm tracking-[0.5em] uppercase font-medium"
         >
           Touch to begin your experience
         </motion.div>
