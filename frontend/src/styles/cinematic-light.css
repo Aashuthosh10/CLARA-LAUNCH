@@ -23,12 +23,13 @@
 
 /* ─── FULL_TEXT Mode ─── */
 .full-text-layout {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0;
   z-index: 10;
   background: transparent;
@@ -36,19 +37,114 @@
 
 .full-text-message-stage {
   width: 100%;
+  max-width: 80rem;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0 auto;
+  padding: 0 3rem 200px;
+}
+
+.full-text-message-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.full-text-safe-zone {
+  max-height: 65vh;
+}
+
+.course-menu-overlay {
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: clamp(1.2rem, 2.6vw, 2.6rem) clamp(1.5rem, 6vw, 5.5rem) clamp(12rem, 24vh, 18rem);
 }
 
-.full-text-message-wrapper {
-  width: min(1400px, 100%);
-  max-height: 100%;
-  display: flex;
-  justify-content: center;
+.course-menu-shell {
+  width: min(1200px, 96%);
+  padding: 1.6rem 1.4rem 1.2rem;
+  border-radius: 1.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+.course-menu-header {
+  margin-bottom: 1rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.course-menu-eyebrow {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.course-menu-title {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.2rem, 2.6vw, 1.9rem);
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.course-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.course-menu-tile {
+  min-height: 82px;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  text-align: left;
+  padding: 0.9rem 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.course-menu-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.course-menu-tile-title {
+  display: block;
+  color: #1e293b;
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+
+.course-menu-tile-subtitle {
+  display: block;
+  margin-top: 0.15rem;
+  color: #475569;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.department-stage-card .department-stage-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(139, 92, 246, 0.34);
+  background: rgba(139, 92, 246, 0.1);
+  color: #6d28d9;
+  font-size: 0.76rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .word-by-word-text {
@@ -65,7 +161,13 @@
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  will-change: font-size, line-height;
+}
+
+.full-text-readable {
+  font-size: clamp(2rem, 5.5vw, 4.5rem);
+  line-height: 1.18;
+  letter-spacing: 0.002em;
+  max-width: 100%;
 }
 
 .word-by-word-text::-webkit-scrollbar {
@@ -270,9 +372,11 @@
 /* ─── Orb Positioning ─── */
 .orb-float-bottom {
   position: absolute;
-  bottom: 8%;
+  bottom: 2.5rem;
   left: 50%;
   transform: translateX(-50%);
+  width: 150px;
+  height: 150px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -310,4 +414,16 @@
   0% { opacity: 0.25; }
   50% { opacity: 0.6; }
   100% { opacity: 1; }
+}
+
+@media (max-width: 1280px) {
+  .course-menu-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 880px) {
+  .course-menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

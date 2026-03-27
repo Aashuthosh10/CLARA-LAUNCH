@@ -22,6 +22,18 @@ from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 from backend.core.rag import get_relevant_context
 
 logger = logging.getLogger(__name__)
+MULTI_ENTITY_RULE = (
+    "If the user asks multiple distinct questions or about multiple distinct entities in a single sentence "
+    "(for example, two different departments), you MUST provide a complete answer for ALL of them "
+    "based strictly on the provided context."
+)
+CONCISE_VOICE_RULE = (
+    "You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. "
+    "CRITICAL: Your responses MUST be extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
+    "Do NOT output long lists, bullet points, or markdown formatting. "
+    "If the user asks for fees or specific details, extract ONLY the exact number/fact from the context and deliver it immediately. "
+    "Tone: Warm, direct, and highly impactful."
+)
 
 INTENT_COLLEGE_OVERVIEW = "COLLEGE_OVERVIEW"
 INTENT_COURSE_MENU = "COURSE_MENU"
@@ -30,6 +42,16 @@ INTENT_HOD_PROFILE = "HOD_PROFILE"
 INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
+COURSE_MENU_OPTIONS = ["CSE", "ECE", "Civil", "Mechanical", "MBA", "Basic Sciences"]
+
+COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
+    "English": "Here are the departments available at our college. Please select one.",
+    "Kannada": "ನಮ್ಮ ಕಾಲೇಜಿನಲ್ಲಿ ಲಭ್ಯವಿರುವ ವಿಭಾಗಗಳು ಇಲ್ಲಿವೆ. ದಯವಿಟ್ಟು ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "Hindi": "हमारे कॉलेज में उपलब्ध विभाग यहां हैं। कृपया एक चुनें।",
+    "Tamil": "எங்கள் கல்லூரியில் உள்ள துறைகள் இங்கே உள்ளன. தயவுசெய்து ஒன்றைத் தேர்வு செய்யுங்கள்.",
+    "Telugu": "మా కాలేజీలో అందుబాటులో ఉన్న విభాగాలు ఇవి. దయచేసి ఒకదాన్ని ఎంచుకోండి.",
+    "Malayalam": "ഞങ്ങളുടെ കോളേജിലെ ലഭ്യമായ വിഭാഗങ്ങൾ ഇതാ. ദയവായി ഒന്ന് തിരഞ്ഞെടുക്കൂ.",
+}
 
 SUPPORTED_LANGUAGES = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
 UNAVAILABLE_REPLY_BY_LANGUAGE: dict[str, str] = {
@@ -66,6 +88,17 @@ OFF_TOPIC_REPLY_BY_LANGUAGE: dict[str, str] = {
         "കൂടുതൽ മാർഗനിർദേശത്തിന് ദയവായി അഡ്മിഷൻ ബ്ലോക്ക് ടീമിനെ സമീപിക്കുക."
     ),
 }
+
+
+def _assert_language_parity(mapping: dict[str, Any], mapping_name: str) -> None:
+    missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
+    if missing:
+        raise RuntimeError(f"{mapping_name} missing translations: {', '.join(missing)}")
+
+
+_assert_language_parity(COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE, "COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE")
+_assert_language_parity(UNAVAILABLE_REPLY_BY_LANGUAGE, "UNAVAILABLE_REPLY_BY_LANGUAGE")
+_assert_language_parity(OFF_TOPIC_REPLY_BY_LANGUAGE, "OFF_TOPIC_REPLY_BY_LANGUAGE")
 
 COLLEGE_RELATED_NORMAL_QUERY_KEYWORDS = [
     "admission",
@@ -423,6 +456,7 @@ DEPARTMENT_SYNONYMS: dict[str, list[str]] = {
     "Civil": ["civil", "civil engineering"],
     "Mechanical": ["mechanical", "mechanical engineering", "mech"],
     "MBA": ["mba", "management", "business administration"],
+    "Basic Sciences": ["basic sciences", "basic science", "science departments", "science department"],
     "Mathematics": ["mathematics", "maths", "math"],
     "Physics": ["physics"],
     "Chemistry": ["chemistry"],
@@ -712,6 +746,21 @@ def is_college_related_query(text: str | None) -> bool:
     return _matches_any_phrase(normalized, COLLEGE_RELATED_NORMAL_QUERY_KEYWORDS)
 
 
+def get_course_menu_options() -> list[str]:
+    return list(COURSE_MENU_OPTIONS)
+
+
+def get_course_menu_spoken_prompt(language: str | None) -> str:
+    if not language:
+        return COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE["English"]
+    return COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE.get(language, COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE["English"])
+
+
+def detect_department_name(text: str | None) -> str | None:
+    normalized = _normalize_text(text)
+    return _detect_department(normalized)
+
+
 def _detect_department(normalized: str) -> str | None:
     if not normalized:
         return None
@@ -850,37 +899,23 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
     ctx = (context or "").strip()
     if intent == INTENT_COLLEGE_OVERVIEW:
         prefix = (
-            "You are CLARA, a professional campus assistant. "
-            "You MUST respond using EXACTLY six numbered sections in this order: "
-            "1) About the Institution 2) Academic Programs 3) Quality & Infrastructure "
-            "4) Achievements & Recognition 5) Placement & Career Support 6) Closing Assurance. "
-            "Rules: Use exactly the numbering format shown above. Do not change the order. Do not skip numbers. "
-            "Do not merge sections. Each section must contain 1–2 short sentences. Maximum 12 sentences total. "
-            "Plain text only. No markdown. No bullets. No emojis. No extra introduction. No extra closing lines. "
-            "Parent-focused tone. Use only verified college information from the context. "
-            "If information is missing, explicitly state 'Information not available.'"
+            CONCISE_VOICE_RULE
+            + " "
+            "Give a short college overview in 2-3 sentences using only verified context. "
+            "Plain text only. No markdown. No bullets. No emojis. "
+            "If information is missing, explicitly state 'Information not available.' "
+            + MULTI_ENTITY_RULE
         )
         return f"{prefix}\n\nCollege information:\n{ctx}" if ctx else prefix
     if intent == INTENT_DEPARTMENT_OVERVIEW:
         prefix = (
-            "You are CLARA, a professional campus assistant.\n\n"
-            "You MUST respond using EXACTLY five numbered sections:\n\n"
-            "1) Department Overview\n"
-            "2) Academic Strength & Curriculum\n"
-            "3) Leadership & Faculty\n"
-            "4) Research & Infrastructure\n"
-            "5) Career Support & Vision\n\n"
-            "Rules:\n"
-            "Strict numbering\n"
-            "No extra introduction\n"
-            "No extra closing paragraph\n"
-            "No markdown\n"
-            "No bullets\n"
-            "1–2 short sentences per section. Maximum 2–3 lines per section.\n"
-            "Maximum 10 sentences total\n"
-            "Parent-focused tone\n"
-            "Use only verified department data\n"
-            "If missing, say 'Information not available.'\n\n"
+            CONCISE_VOICE_RULE
+            + "\n\n"
+            "Give a short department snapshot in 2-3 sentences using only verified department data.\n"
+            "No markdown. No bullets.\n"
+            "If missing, say 'Information not available.'\n"
+            + MULTI_ENTITY_RULE
+            + "\n\n"
             "Department information:\n"
         )
         return f"{prefix}{ctx}" if ctx else prefix.rstrip()
@@ -889,11 +924,12 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
     off_topic_reply = get_off_topic_reply(language)
     if ctx:
         return (
-            f"You are CLARA, a warm and professional campus receptionist for SVIT. "
+            f"{CONCISE_VOICE_RULE} "
             f"Reply only in {language}. "
             f"For college-related emotional or opinion questions (for example, 'is this a good college?'), reply with a reassuring, polite tone in one or two short sentences. "
             f"Use ONLY the following college information when it is relevant to the user's question. "
             f"Do not invent or assume college-specific facts; only use what is in the College information below. "
+            f"{MULTI_ENTITY_RULE} "
             f"If the answer is not in the context, reply exactly: '{unavailable_reply}' "
             f"If the question is outside SVIT/college domain, reply exactly: '{off_topic_reply}' "
             f"Default to one short sentence, maximum two short sentences only if truly needed. "
@@ -901,9 +937,10 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
             f"For name/list questions, return just the names in one line.\n\nCollege information:\n{ctx}"
         )
     return (
-        f"You are CLARA, a warm and professional campus receptionist for SVIT. "
+        f"{CONCISE_VOICE_RULE} "
         f"Reply only in {language}. "
         f"For college-related emotional or opinion questions, respond politely in one or two short sentences. "
+        f"{MULTI_ENTITY_RULE} "
         f"For questions about the college or campus, if details are unavailable reply exactly: '{unavailable_reply}' "
         f"For non-college topics, reply exactly: '{off_topic_reply}' "
         f"Default to one short sentence, maximum two short sentences only if needed."

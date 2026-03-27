@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
 import { Sparkles, Volume2 } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
@@ -12,6 +12,8 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import VoiceOrb from '../components/VoiceOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import ThreeDVisual from '../components/chat/cards/ThreeDVisual';
+import CourseMenuComponent from '../components/chat/CourseMenuComponent';
+import DepartmentCardStage, { type DepartmentStageCard } from '../components/chat/DepartmentCardStage';
 import { getCardsForTrigger } from '../lib/cardData';
 
 const THINKING_TAGLINES: Record<Language, string[]> = {
@@ -72,7 +74,7 @@ const THINKING_EMOJIS = ['🤔', '🧠', '✨', '⚡', '💡'];
 const SPLIT_IDLE_TIMEOUT_MS = 30_000;
 const CARD_AUDIO_START_DELAY_MS = 450;
 const FULL_TEXT_AUDIO_START_DELAY_MS = 140;
-const MIN_FULL_TEXT_AUTO_SCALE = 0.7;
+const DEFAULT_COURSE_MENU_OPTIONS = ['CSE', 'ECE', 'Civil', 'Mechanical', 'MBA', 'Basic Sciences'];
 
 type PendingAudio = {
   audioBase64: string;
@@ -80,6 +82,57 @@ type PendingAudio = {
   isOverview: boolean;
   cardsToSync: any[] | null;
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
+};
+
+const DEPARTMENT_PLACEHOLDER_CARDS: Record<string, DepartmentStageCard[]> = {
+  CSE: [
+    { title: 'Department Snapshot', content: 'CSE offers strong foundations in software, AI, and cloud systems with modern labs.' },
+    { title: 'Leadership', content: 'HOD: Dr. Shashikumar D R. Faculty guide project-based learning and coding practice.' },
+    { title: 'Intake & Outcomes', content: 'Intake: 180. Students are prepared for placements, internships, and higher studies.' },
+  ],
+  ECE: [
+    { title: 'Department Snapshot', content: 'ECE focuses on communication systems, embedded design, and signal processing.' },
+    { title: 'Leadership', content: 'HOD: Dr. Venkatesha M. Faculty support hardware-software integrated learning.' },
+    { title: 'Intake & Outcomes', content: 'Intake: 120. Students build core electronics and industry-ready practical skills.' },
+  ],
+  Civil: [
+    { title: 'Department Snapshot', content: 'Civil covers structural, geotechnical, transportation, and water resources tracks.' },
+    { title: 'Leadership', content: 'HOD: Dr. Ananthayya M B. Field-oriented learning is emphasized with practical labs.' },
+    { title: 'Intake & Outcomes', content: 'Intake: 60. Students gain skills for sustainable infrastructure and planning roles.' },
+  ],
+  Mechanical: [
+    { title: 'Department Snapshot', content: 'Mechanical emphasizes manufacturing, design, thermal systems, and applied mechanics.' },
+    { title: 'Leadership', content: 'HOD: Dr. Raghavendra S. The team drives practical skill-building and project execution.' },
+    { title: 'Intake & Outcomes', content: 'Intake: 30. Students are trained for core engineering and production environments.' },
+  ],
+  MBA: [
+    { title: 'Department Snapshot', content: 'MBA provides management training in finance, marketing, HR, and analytics.' },
+    { title: 'Leadership', content: 'HOD: Dr. Jogish D. Faculty blend academic rigor with industry perspective.' },
+    { title: 'Intake & Outcomes', content: 'Intake: 120. Students are prepared for leadership, business operations, and strategy.' },
+  ],
+  'Basic Sciences': [
+    { title: 'Department Snapshot', content: 'Basic Sciences strengthens foundations in Mathematics, Physics, and Chemistry.' },
+    { title: 'Academic Support', content: 'Faculty focus on conceptual clarity, problem-solving, and applied lab understanding.' },
+    { title: 'Student Outcomes', content: 'Students build strong analytical fundamentals that support all engineering branches.' },
+  ],
+};
+
+const getDepartmentPlaceholderCards = (departmentId: string): DepartmentStageCard[] => {
+  return DEPARTMENT_PLACEHOLDER_CARDS[departmentId] ?? [
+    { title: `${departmentId} Overview`, content: `${departmentId} department details are being expanded. Core highlights are available on request.` },
+    { title: 'Leadership', content: `The ${departmentId} department is guided by experienced faculty and student-focused mentoring.` },
+    { title: 'Intake & Outcomes', content: `${departmentId} offers practical and career-focused learning with project-oriented training.` },
+  ];
+};
+
+const normalizeDepartmentMenuKey = (departmentId: string): string => {
+  const value = (departmentId || '').toLowerCase();
+  if (value.includes('ece')) return 'ECE';
+  if (value.includes('civil')) return 'Civil';
+  if (value.includes('mechanical')) return 'Mechanical';
+  if (value.includes('mba') || value.includes('management')) return 'MBA';
+  if (value.includes('basic')) return 'Basic Sciences';
+  return 'CSE';
 };
 
 interface ChatScreenProps {
@@ -108,8 +161,6 @@ export default function ChatScreen({
 }: ChatScreenProps) {
   const { language } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fullTextStageRef = useRef<HTMLDivElement>(null);
-  const fullTextMessageRef = useRef<HTMLDivElement>(null);
   const [displayMessages, setDisplayMessages] = useState<ChatMessage[]>(payloadMessages);
   
   // Layout Management State
@@ -118,6 +169,8 @@ export default function ChatScreen({
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
   const [currentAudioDuration, setCurrentAudioDuration] = useState<number>(0);
+  const [courseMenuOptions, setCourseMenuOptions] = useState<string[]>([]);
+  const [activeDepartmentId, setActiveDepartmentId] = useState<string | null>(null);
   
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
@@ -125,8 +178,9 @@ export default function ChatScreen({
   const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
-  const [fullTextAutoScale, setFullTextAutoScale] = useState(1);
+  const [visuallyFocusedMessage, setVisuallyFocusedMessage] = useState<ChatMessage | null>(null);
   const hasStartedRef = useRef(false);
+  const prevLayoutModeRef = useRef<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
@@ -145,7 +199,17 @@ export default function ChatScreen({
   // Keep chat history stable when backend emits partial payloads without `messages`.
   useEffect(() => {
     if (Array.isArray(payload?.messages)) {
-      setDisplayMessages(payload.messages as ChatMessage[]);
+      const incomingMessages = payload.messages as ChatMessage[];
+      setDisplayMessages(incomingMessages);
+      const isCardTurn = Boolean(payload?.showCard);
+      if (isCardTurn) {
+        setVisuallyFocusedMessage(null);
+      } else if (payload?.isProcessing !== true) {
+        const latestAssistant = [...incomingMessages]
+          .reverse()
+          .find((m: any) => m?.role === 'clara' && typeof m?.text === 'string' && !(m as any)?.isHidden && !(m as any)?.isCardData);
+        setVisuallyFocusedMessage((latestAssistant as ChatMessage) ?? null);
+      }
     }
   }, [payload]);
 
@@ -273,6 +337,10 @@ export default function ChatScreen({
   useEffect(() => {
     if (!payload) return;
     const cardTrigger = payload?.showCard;
+    const departmentId = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
+    const menuOptionsFromPayload = Array.isArray(payload?.options)
+      ? payload.options.filter((x: unknown) => typeof x === 'string')
+      : [];
     const audioBase64 = payload?.audioBase64;
     const turnId = payload?.turn_id ?? 'greeting';
     const type = payload?.type ?? '';
@@ -283,9 +351,58 @@ export default function ChatScreen({
     const audioSig = `${audioBase64?.length ?? 0}:${audioBase64?.slice(0, 24) ?? ''}`;
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
 
+    if (cardTrigger === 'course_menu') {
+      setLayoutMode('FULL_TEXT');
+      setActiveCards(null);
+      setCurrentCardIdx(0);
+      setSuppressedTurnId(null);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions(menuOptionsFromPayload.length ? menuOptionsFromPayload : DEFAULT_COURSE_MENU_OPTIONS);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'FULL_TEXT',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'department_overview') {
+      const resolvedDept = normalizeDepartmentMenuKey(departmentId ?? 'CSE');
+      const deptCards = getDepartmentPlaceholderCards(resolvedDept).map(card => ({
+        ...card,
+        type: 'dept',
+      }));
+      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+      const lastAssistantInPayload = [...payloadMessageList]
+        .reverse()
+        .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
+      const assistantMessageId = lastAssistantInPayload?.id ?? null;
+      setCourseMenuOptions([]);
+      setActiveDepartmentId(resolvedDept);
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(deptCards);
+      setSuppressedTurnId(assistantMessageId ?? turnId);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: true,
+          cardsToSync: deptCards,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
     const cardsForTrigger = resolveCardsFromTrigger(cardTrigger);
 
     if (cardsForTrigger) {
+        setCourseMenuOptions([]);
+        setActiveDepartmentId(null);
         const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
         const lastAssistantInPayload = [...payloadMessageList]
           .reverse()
@@ -310,6 +427,8 @@ export default function ChatScreen({
           setActiveCards(null);
           setCurrentCardIdx(0);
           setSuppressedTurnId(null);
+          setActiveDepartmentId(null);
+          setCourseMenuOptions([]);
         }
         if (audioBase64) {
           setPendingAudio({
@@ -375,11 +494,23 @@ export default function ChatScreen({
 
   const handleOrbTap = () => {
     setShowUnmuteHint(false);
+    setVisuallyFocusedMessage(null);
     if (orbState === 'idle') {
       if (voiceInputMode === 'backend') onOrbTap();
       else startSpeechRecognition();
     }
   };
+
+  const handleCourseMenuSelect = useCallback(
+    (departmentName: string) => {
+      setCourseMenuOptions([]);
+      sendMessage({
+        action: 'user_message',
+        text: `Tell me about the ${departmentName} department`,
+      });
+    },
+    [sendMessage]
+  );
 
   const filteredMessages = useMemo(() => {
     return displayMessages.filter(m => {
@@ -388,94 +519,22 @@ export default function ChatScreen({
     });
   }, [displayMessages, suppressedTurnId]);
 
-  const lastAssistantMsg = [...filteredMessages]
-    .reverse()
-    .find(m => isTextMessage(m) && m.role === 'clara');
-  const fullTextMessageText =
-    lastAssistantMsg && isTextMessage(lastAssistantMsg) ? lastAssistantMsg.text : '';
-  const fullTextMessageClassName = 'word-by-word-text';
-  const baseFullTextMessageStyle = useMemo<React.CSSProperties>(() => {
-    const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-    const compactLength = fullTextMessageText.replace(/\s+/g, '').length;
-    const nonAsciiChars = (fullTextMessageText.match(/[^\u0000-\u00ff]/g) || []).length;
-    const weightedLength = compactLength + Math.floor(nonAsciiChars * 0.58);
-    const wordCount = fullTextMessageText.trim() ? fullTextMessageText.trim().split(/\s+/).length : 0;
-    const isEnglish = language === 'English';
-    const avgCharsPerLine = isEnglish ? 30 : 24;
-    const estimatedLines = wordCount > 0 ? Math.max(1, Math.ceil(weightedLength / avgCharsPerLine)) : 0;
-
-    // Blend character and line pressure so size drops smoothly as content grows.
-    const lengthCurve = clamp((weightedLength - 30) / (isEnglish ? 430 : 370), 0, 1);
-    const lineCurve = clamp((estimatedLines - 2) / 10, 0, 1);
-    const curve = clamp(lengthCurve * 0.62 + lineCurve * 0.58, 0, 1);
-
-    // Smoothly scale typography down as message length grows.
-    const maxFontRem = isEnglish ? 4.0 : 3.75;
-    const minFontRem = isEnglish ? 0.98 : 0.92;
-    const fontSizeRem = maxFontRem - (maxFontRem - minFontRem) * Math.pow(curve, 0.9);
-    const lineHeight = 1.28 + 0.34 * curve;
-    const maxWidthPct = 82 + 16 * curve;
-    const letterSpacingEm = isEnglish
-      ? 0.016 - 0.010 * curve
-      : 0.006 - 0.004 * curve;
-
-    return {
-      fontSize: `${fontSizeRem.toFixed(3)}rem`,
-      lineHeight: Number(lineHeight.toFixed(3)),
-      maxWidth: `${maxWidthPct.toFixed(1)}%`,
-      letterSpacing: `${Math.max(0, letterSpacingEm).toFixed(4)}em`,
-    };
-  }, [fullTextMessageText, language]);
-  const fullTextMessageStyle = useMemo<React.CSSProperties>(() => {
-    const fontRemRaw =
-      typeof baseFullTextMessageStyle.fontSize === 'string'
-        ? Number.parseFloat(baseFullTextMessageStyle.fontSize)
-        : 1;
-    const minReadableRem = language === 'English' ? 0.95 : 0.9;
-    const scaledFontRem = Math.max(fontRemRaw * fullTextAutoScale, minReadableRem);
-    return {
-      ...baseFullTextMessageStyle,
-      fontSize: `${scaledFontRem.toFixed(3)}rem`,
-      transition: 'font-size 220ms ease, line-height 220ms ease, max-width 220ms ease, letter-spacing 220ms ease',
-    };
-  }, [baseFullTextMessageStyle, fullTextAutoScale, language]);
+  const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
+    ? visuallyFocusedMessage
+    : null;
+  const fullTextMessageClassName = 'word-by-word-text full-text-readable';
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
   const thinkingEmoji = THINKING_EMOJIS[thinkingIndex % THINKING_EMOJIS.length];
 
-  useLayoutEffect(() => {
-    if (layoutMode !== 'FULL_TEXT' || isProcessing || !fullTextMessageText.trim()) {
-      setFullTextAutoScale(prev => (prev === 1 ? prev : 1));
-      return;
+  useEffect(() => {
+    const prev = prevLayoutModeRef.current;
+    if (prev === 'SPLIT_CARDS' && layoutMode === 'FULL_TEXT') {
+      setVisuallyFocusedMessage(null);
     }
-    const stageEl = fullTextStageRef.current;
-    const messageEl = fullTextMessageRef.current;
-    if (!stageEl || !messageEl) return;
-
-    const recalcScale = () => {
-      const availableHeight = stageEl.clientHeight * 0.94;
-      const messageHeight = messageEl.scrollHeight;
-      if (!availableHeight || !messageHeight) return;
-      const nextScale = Math.min(1, Math.max(MIN_FULL_TEXT_AUTO_SCALE, availableHeight / messageHeight));
-      setFullTextAutoScale(prev => (Math.abs(prev - nextScale) < 0.015 ? prev : nextScale));
-    };
-
-    let rafA = 0;
-    let rafB = 0;
-    rafA = requestAnimationFrame(() => {
-      recalcScale();
-      rafB = requestAnimationFrame(recalcScale);
-    });
-
-    const onResize = () => recalcScale();
-    window.addEventListener('resize', onResize);
-    return () => {
-      cancelAnimationFrame(rafA);
-      cancelAnimationFrame(rafB);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [layoutMode, isProcessing, fullTextMessageText, baseFullTextMessageStyle]);
+    prevLayoutModeRef.current = layoutMode;
+  }, [layoutMode]);
 
   useEffect(() => {
     if (layoutMode !== 'SPLIT_CARDS') return;
@@ -496,8 +555,10 @@ export default function ChatScreen({
           {layoutMode === 'FULL_TEXT' ? (
             <motion.div key="full-text" layoutId="main" className="full-text-layout">
               {/* Clean top — no debug labels */}
-              <div ref={fullTextStageRef} className="full-text-message-stage">
-                {isProcessing ? (
+              <div className="full-text-message-stage">
+                {courseMenuOptions.length > 0 ? (
+                  <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
+                ) : isProcessing ? (
                   <div className="clara-thinking-stage">
                     <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
                     <div className="clara-thinking-title">{thinkingTitle}</div>
@@ -506,13 +567,12 @@ export default function ChatScreen({
                   </div>
                 ) : (
                   lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
-                    <div ref={fullTextMessageRef} className="full-text-message-wrapper">
+                    <div className="full-text-message-wrapper full-text-safe-zone">
                       <AnimatedAiMessage 
                         text={lastAssistantMsg.text} 
                         animate={true}
                         audioDuration={currentAudioDuration}
                         className={fullTextMessageClassName}
-                        style={fullTextMessageStyle}
                       />
                     </div>
                   )
@@ -532,22 +592,30 @@ export default function ChatScreen({
           ) : (
             <motion.div key="split" layoutId="main" className="split-cards-layout">
               <div className="visual-stage-70 flex flex-col items-center">
-                <AnimatePresence mode="wait">
-                  {activeCards && activeCards[currentCardIdx] && (
-                    <motion.div key={currentCardIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="cinematic-card">
-                      <div className="flex-1">
-                        <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
-                        <p className="card-body">{activeCards[currentCardIdx].content}</p>
-                      </div>
-                      <div className="w-[50%] h-[40%] self-end bg-slate-50 rounded-3xl overflow-hidden mt-6 border border-slate-200 shadow-sm">
-                        <ThreeDVisual type={activeCards[currentCardIdx].type} />
-                      </div>
-                      <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
-                        <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
-                      ))}</div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {activeDepartmentId && activeCards ? (
+                  <DepartmentCardStage
+                    departmentId={activeDepartmentId}
+                    cards={activeCards}
+                    currentCardIdx={currentCardIdx}
+                  />
+                ) : (
+                  <AnimatePresence mode="wait">
+                    {activeCards && activeCards[currentCardIdx] && (
+                      <motion.div key={currentCardIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="cinematic-card">
+                        <div className="flex-1">
+                          <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
+                          <p className="card-body">{activeCards[currentCardIdx].content}</p>
+                        </div>
+                        <div className="w-[50%] h-[40%] self-end bg-slate-50 rounded-3xl overflow-hidden mt-6 border border-slate-200 shadow-sm">
+                          <ThreeDVisual type={activeCards[currentCardIdx].type} />
+                        </div>
+                        <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
+                          <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
+                        ))}</div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
               </div>
               <motion.aside className="interaction-panel-30">
                 <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>

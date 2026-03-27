@@ -60,16 +60,20 @@ from backend.config.settings import (
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
-from backend.services.greetings import GREETINGS
+from backend.services.greetings import get_greeting
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
     INTENT_COLLEGE_OVERVIEW,
+    INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_OVERVIEW,
     INTENT_HOD_PROFILE,
     INTENT_HOD_TRUSTEES_PROFILE,
     INTENT_NORMAL_QUERY,
     INTENT_TRUSTEES_PROFILE,
+    detect_department_name,
     detect_intent,
+    get_course_menu_options,
+    get_course_menu_spoken_prompt,
     get_off_topic_reply,
     get_profile_direct_reply,
     get_unavailable_reply,
@@ -258,9 +262,69 @@ def _debug_payload(timing: TurnTiming) -> dict[str, Any]:
     }
 
 
+def _append_session_history(session: dict[str, Any], role: str, text: str, *, max_turns: int = 4) -> None:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return
+    history = session.setdefault("history", [])
+    history.append({"role": role, "text": cleaned})
+    max_items = max_turns * 2
+    if len(history) > max_items:
+        del history[:-max_items]
+
+
+def _history_for_llm(session: dict[str, Any]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for item in session.get("history", []):
+        role = "assistant" if item.get("role") == "assistant" else "user"
+        text = (item.get("text") or "").strip()
+        if text:
+            out.append({"role": role, "content": text})
+    return out
+
+
+def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
+    """
+    LLM classifier for broad course/department-list questions across mixed languages.
+    Returns True only when the query asks for a broad list/menu of courses or departments.
+    """
+    try:
+        client = get_groq_client()
+        if not client:
+            return False
+        system_prompt = (
+            "You classify user intent for a college kiosk.\n"
+            "Return ONLY one token: BROAD_COURSE_MENU or OTHER.\n"
+            "BROAD_COURSE_MENU means user is asking broad options/list of courses, branches, departments, programs.\n"
+            "Examples: 'What courses are available?', 'list departments', 'courses kya hain', "
+            "'departments batao', 'branches in college', and equivalent mixed-language queries.\n"
+            "If the user asks about one specific department, return OTHER."
+        )
+        user_prompt = f"Language context: {language_name}\nQuery: {text.strip()}"
+        completion = client.chat.completions.create(
+            model=RAG_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.0,
+            top_p=0.3,
+            max_tokens=6,
+        )
+        result = (completion.choices[0].message.content or "").strip().upper()
+        return result.startswith("BROAD_COURSE_MENU")
+    except Exception:
+        return False
+
+
 def _log_turn_metrics(timing: TurnTiming, **extra: Any) -> None:
     payload = timing.structured_log(**extra)
     logger.info(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+
+
+def _normalize_tts_pronunciation(text: str) -> str:
+    # Normalize known brand-name pronunciation for TTS voices.
+    return re.sub(r"\bCLARA\b", "Clara", text or "", flags=re.IGNORECASE)
 
 
 async def tts_to_base64_cached(
@@ -270,13 +334,14 @@ async def tts_to_base64_cached(
     turn_id: str | None = None,
     utterance_kind: str = "reply",
 ) -> tuple[str | None, bool]:
-    key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(text)}"
+    tts_text = _normalize_tts_pronunciation(text)
+    key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(tts_text)}"
     logger.info(
         "TTS_REQUEST turn_id=%s kind=%s text_len=%d preview=%r",
         turn_id or "-",
         utterance_kind,
-        len(text or ""),
-        _text_preview(text),
+        len(tts_text or ""),
+        _text_preview(tts_text),
     )
     cached = TTS_CACHE.get(key)
     if cached:
@@ -303,7 +368,7 @@ async def tts_to_base64_cached(
             return cached, True
 
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
-        audio = await sarvam_tts_to_base64(text, language_code)
+        audio = await sarvam_tts_to_base64(tts_text, language_code)
         if not audio and language_code != "en-IN":
             logger.warning(
                 "TTS primary language failed turn_id=%s kind=%s lang=%s; retrying en-IN",
@@ -311,7 +376,7 @@ async def tts_to_base64_cached(
                 utterance_kind,
                 language_code,
             )
-            audio = await sarvam_tts_to_base64(text, "en-IN")
+            audio = await sarvam_tts_to_base64(tts_text, "en-IN")
         logger.info("TTS_HTTP_END turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         if audio:
             TTS_CACHE.set(key, audio)
@@ -367,7 +432,7 @@ async def maybe_auto_detect_session_language(
         )
 
     _, lang_name, lang_code = resolve_session_language(session)
-    greeting_text = GREETINGS.get(lang_name, GREETINGS["English"])
+    greeting_text = get_greeting(lang_name)
     greeting_audio_b64, _ = await tts_to_base64_cached(
         greeting_text,
         lang_code,
@@ -410,9 +475,7 @@ async def _stream_groq_reply(
         return "", ""
 
     messages = [{"role": "system", "content": system_prompt}]
-    for msg in session.get("messages", []):
-        role = "assistant" if msg.get("role") == "clara" else "user"
-        messages.append({"role": role, "content": msg.get("text", "")})
+    messages.extend(_history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
 
     timing.mark("llm_start")
@@ -483,9 +546,7 @@ async def _complete_groq_reply(
     if not client:
         return "", ""
     messages = [{"role": "system", "content": system_prompt}]
-    for msg in session.get("messages", []):
-        role = "assistant" if msg.get("role") == "clara" else "user"
-        messages.append({"role": role, "content": msg.get("text", "")})
+    messages.extend(_history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
     timing.mark("llm_start")
     completion = await client.chat.completions.create(
@@ -513,6 +574,7 @@ async def process_user_text_and_reply(
     stt_meta: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
+    _append_session_history(session, "user", text, max_turns=4)
     try:
         processing_payload = {"isProcessing": True}
         processing_payload.update(_debug_payload(timing))
@@ -557,6 +619,18 @@ async def process_user_text_and_reply(
 
     try:
         intent = detect_intent(text)
+        is_broad_course_menu = False
+        if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
+            try:
+                is_broad_course_menu = await asyncio.wait_for(
+                    asyncio.to_thread(_llm_detect_broad_course_intent, text, lang_name),
+                    timeout=1.6,
+                )
+            except asyncio.TimeoutError:
+                is_broad_course_menu = False
+            if is_broad_course_menu:
+                intent = INTENT_COURSE_MENU
+        detected_department = detect_department_name(text)
         off_topic_direct_reply: str | None = None
         if intent == INTENT_NORMAL_QUERY and not is_college_related_query(text):
             off_topic_direct_reply = get_off_topic_reply(lang_name)
@@ -594,15 +668,20 @@ async def process_user_text_and_reply(
         off_topic_reply = get_off_topic_reply(lang_name)
         if intent == INTENT_COLLEGE_OVERVIEW:
             system_prompt = (
-                f"You are CLARA. Provide a magnificent, polished 5-sentence overview of SVIT (Sai Vidya Institute of Technology). "
-                f"Speak in {lang_name}. Each sentence should correspond to one of these themes: 1) Presence/Establishment (2008), 2) Ranking/Quality (VTU/NAAC), 3) Diverse Departments, 4) Campus Infrastructure, 5) Placement Success. "
-                f"Be professional and inspiring. Do not use bullets or numbers."
+                f"You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. Reply only in {lang_name}. "
+                "CRITICAL: Keep responses extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
+                "Do NOT output long lists, bullet points, or markdown. "
+                "Tone: Warm, direct, and highly impactful. "
+                "If user asks multiple distinct entities, answer all of them based strictly on context. "
+                "For overview requests, summarize only the highest-impact facts."
             )
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             system_prompt = (
-                f"You are CLARA. Provide a focused 5-sentence overview of the department. "
-                f"Speak in {lang_name}. Cover: 1) Department Vision, 2) Core Curriculum/Labs, 3) Faculty Leadership, 4) Research projects, 5) Career opportunities. "
-                f"Do not use bullets or numbers."
+                f"You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. Reply only in {lang_name}. "
+                "CRITICAL: Keep responses extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
+                "Do NOT output long lists, bullet points, or markdown. "
+                "Tone: Warm, direct, and highly impactful. "
+                "Give only a short department snapshot (leadership + core strength + one outcome) from context."
             )
         elif intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
             system_prompt = (
@@ -613,9 +692,13 @@ async def process_user_text_and_reply(
             system_prompt = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
                 f"Reply only in {lang_name}. "
-                "For college-related emotional or opinion questions, answer in a reassuring and polite tone. "
-                "Default to one short sentence, maximum two only when needed. "
-                "Answer directly with no unnecessary background. "
+                "You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. "
+                "CRITICAL: Your responses MUST be extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
+                "Do NOT output long lists, bullet points, or markdown formatting. "
+                "If the user asks for fees or specific details, extract ONLY the exact number/fact from context and deliver it immediately. "
+                "If the user asks multiple distinct questions or about multiple distinct entities in a single sentence, "
+                "you MUST provide a complete answer for ALL of them based strictly on the provided context. "
+                "Tone: Warm, direct, and highly impactful. "
                 f"If information is unavailable, say exactly: {unavailable_reply}. "
                 f"If the question is not related to SVIT/college topics, say exactly: {off_topic_reply}"
             )
@@ -629,6 +712,8 @@ async def process_user_text_and_reply(
         context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
         cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(text)}|{context_sig}"
         direct_reply = off_topic_direct_reply or get_profile_direct_reply(intent, lang_name)
+        if intent == INTENT_COURSE_MENU:
+            direct_reply = get_course_menu_spoken_prompt(lang_name)
         reply_text = direct_reply or LLM_REPLY_CACHE.get(cache_key)
         first_sentence = ""
 
@@ -728,6 +813,7 @@ async def process_user_text_and_reply(
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)
+        _append_session_history(session, "assistant", reply_text, max_turns=4)
 
         if first_sentence and first_sentence != reply_text:
             logger.info(
@@ -750,19 +836,30 @@ async def process_user_text_and_reply(
 
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
+        if intent in (INTENT_COURSE_MENU, INTENT_DEPARTMENT_OVERVIEW):
+            assistant_msg["isHidden"] = True
         
         # Mark card-driven intents so frontend opens the proper cards.
         show_card = None
+        department_id = None
+        course_menu_options = None
         if intent == INTENT_COLLEGE_OVERVIEW:
             show_card = "college"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
-            show_card = "dept"
+            show_card = "department_overview"
+            department_id = detected_department or "CSE"
         elif intent == INTENT_HOD_PROFILE:
             show_card = "hod"
         elif intent == INTENT_TRUSTEES_PROFILE:
             show_card = "trustees"
         elif intent == INTENT_HOD_TRUSTEES_PROFILE:
             show_card = ["hod", "trustees"]
+        elif intent == INTENT_COURSE_MENU:
+            show_card = "course_menu"
+            course_menu_options = get_course_menu_options()
+            reply_text = get_course_menu_spoken_prompt(lang_name)
+            assistant_msg["text"] = reply_text
+            assistant_msg["isHidden"] = True
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
@@ -855,6 +952,10 @@ async def process_user_text_and_reply(
             "is_final_segment": is_final_segment,
             "showCard": show_card
         }
+        if department_id:
+            payload["departmentId"] = department_id
+        if course_menu_options:
+            payload["options"] = course_menu_options
         if full_audio_b64:
             payload["audioBase64"] = full_audio_b64
 
@@ -995,6 +1096,7 @@ async def websocket_clara(websocket: WebSocket):
         "is_language_auto": None,
         "language_detection": None,
         "messages": [],
+        "history": [],
         "cached_greeting_audio": None,
         "cached_greeting_message": None,
     }
@@ -1018,7 +1120,7 @@ async def websocket_clara(websocket: WebSocket):
                     set_session_language(session, code_key, is_auto=False)
                     session["language_detection"] = None
                     try:
-                        greeting_text = GREETINGS.get(language, GREETINGS["English"])
+                        greeting_text = get_greeting(language)
                         audio_b64, _ = await tts_to_base64_cached(
                             greeting_text,
                             session["language_code"],
@@ -1037,7 +1139,7 @@ async def websocket_clara(websocket: WebSocket):
 
             if action == "conversation_started":
                 _, lang_name, lang_code = resolve_session_language(session)
-                greeting_text = GREETINGS.get(lang_name, GREETINGS["English"])
+                greeting_text = get_greeting(lang_name)
                 greeting_message = {"id": "greeting", "role": "clara", "text": greeting_text}
 
                 audio_b64 = session.get("cached_greeting_audio")

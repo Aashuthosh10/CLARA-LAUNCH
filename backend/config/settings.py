@@ -68,7 +68,7 @@ RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 # Must be a valid Groq chat model id; if API returns 404, set in .env (see https://console.groq.com/docs/models)
 RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
-RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
 
 # PostgreSQL + pgvector (RAG storage)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
@@ -100,6 +100,7 @@ AUDIO_SILENT_RMS_THRESHOLD = float(os.getenv("AUDIO_SILENT_RMS_THRESHOLD", "0.00
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "6969"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+KIOSK_TIMEZONE = os.getenv("KIOSK_TIMEZONE", "Asia/Kolkata").strip() or "Asia/Kolkata"
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
