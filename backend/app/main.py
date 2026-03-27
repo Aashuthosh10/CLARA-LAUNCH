@@ -62,7 +62,19 @@ from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
 from backend.services.greetings import GREETINGS
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
-from backend.services.answer_generation import detect_intent, INTENT_COLLEGE_OVERVIEW, INTENT_DEPARTMENT_OVERVIEW
+from backend.services.answer_generation import (
+    INTENT_COLLEGE_OVERVIEW,
+    INTENT_DEPARTMENT_OVERVIEW,
+    INTENT_HOD_PROFILE,
+    INTENT_HOD_TRUSTEES_PROFILE,
+    INTENT_NORMAL_QUERY,
+    INTENT_TRUSTEES_PROFILE,
+    detect_intent,
+    get_off_topic_reply,
+    get_profile_direct_reply,
+    get_unavailable_reply,
+    is_college_related_query,
+)
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
 from backend.utils.voice_logger import (
@@ -74,8 +86,14 @@ from backend.utils.voice_logger import (
 )
 
 logger = logging.getLogger(__name__)
-_SVIT_KNOWLEDGE_JSON_PATH = _PROJECT_ROOT / "backend" / "data" / "svit_knowledge.json"
-_svit_json_context_cache: str | None = None
+_SVIT_LOCALES_DIR = _PROJECT_ROOT / "backend" / "data" / "locales"
+_svit_json_context_cache: dict[str, str] = {}
+# Reliability-first mode: only emit final TTS segment.
+# This avoids first-sentence pipeline races that can cause silent turns.
+FORCE_FINAL_TTS_ONLY = True
+RAG_WARMUP_TIMEOUT_S = 5.0
+RAG_DOC_COUNT_TIMEOUT_S = 3.0
+AUDIO_DEVICE_VALIDATE_TIMEOUT_S = 3.0
 
 # Unified error event schema
 ERROR_RECOVERABLE_HINTS: dict[str, str] = {
@@ -133,26 +151,33 @@ def _text_preview(text: str, limit: int = 80) -> str:
     return compact[:limit]
 
 
-def _load_svit_json_context() -> str:
+def _load_svit_json_context(language_code_key: str | None) -> str:
     """
-    Load master SVIT knowledge JSON and return minified JSON string for prompt injection.
+    Load locale-specific SVIT knowledge JSON and return minified JSON string for prompt injection.
+    Uses Hindi locale for "hi"; defaults to English locale for all other language keys.
     Returns empty string if file is missing/invalid.
     """
-    global _svit_json_context_cache
-    if _svit_json_context_cache is not None:
-        return _svit_json_context_cache
+    locale = "hi" if (language_code_key or "").strip().lower() == "hi" else "en"
+    if locale in _svit_json_context_cache:
+        return _svit_json_context_cache[locale]
     try:
-        if not _SVIT_KNOWLEDGE_JSON_PATH.is_file():
-            logger.warning("Fallback JSON context missing: %s", _SVIT_KNOWLEDGE_JSON_PATH)
-            _svit_json_context_cache = ""
-            return ""
-        raw = _SVIT_KNOWLEDGE_JSON_PATH.read_text(encoding="utf-8")
+        path = _SVIT_LOCALES_DIR / f"{locale}.json"
+        if not path.is_file():
+            if locale != "en":
+                logger.warning("Fallback JSON locale missing (%s), defaulting to English", path)
+                path = _SVIT_LOCALES_DIR / "en.json"
+            if not path.is_file():
+                logger.warning("Fallback JSON context missing: %s", path)
+                _svit_json_context_cache[locale] = ""
+                return ""
+        raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
-        _svit_json_context_cache = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        return _svit_json_context_cache
+        minified = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        _svit_json_context_cache[locale] = minified
+        return minified
     except Exception as exc:
         logger.warning("Could not load fallback JSON context: %s", exc)
-        _svit_json_context_cache = ""
+        _svit_json_context_cache[locale] = ""
         return ""
 
 
@@ -279,6 +304,14 @@ async def tts_to_base64_cached(
 
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         audio = await sarvam_tts_to_base64(text, language_code)
+        if not audio and language_code != "en-IN":
+            logger.warning(
+                "TTS primary language failed turn_id=%s kind=%s lang=%s; retrying en-IN",
+                turn_id or "-",
+                utterance_kind,
+                language_code,
+            )
+            audio = await sarvam_tts_to_base64(text, "en-IN")
         logger.info("TTS_HTTP_END turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         if audio:
             TTS_CACHE.set(key, audio)
@@ -523,27 +556,42 @@ async def process_user_text_and_reply(
     first_sentence_sent = False
 
     try:
-        timing.mark("rag_start")
-        try:
-            context = await asyncio.wait_for(
-                asyncio.to_thread(get_relevant_context, text, RAG_TOP_K),
-                timeout=RAG_CONTEXT_TIMEOUT_S,
-            )
-        except asyncio.TimeoutError:
-            logger.warning("RAG context timed out after %.2fs; continuing without context", RAG_CONTEXT_TIMEOUT_S)
-            context = ""
-        finally:
-            timing.mark("rag_end")
-        if context.strip():
-            logger.info("RAG context: ok (%d chars)", len(context))
-        else:
-            logger.warning("RAG context: empty")
-            json_context = _load_svit_json_context()
-            if json_context:
-                context = json_context
-                logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
-        # Enhanced Prompting for Overview Intrusion/Cards
         intent = detect_intent(text)
+        off_topic_direct_reply: str | None = None
+        if intent == INTENT_NORMAL_QUERY and not is_college_related_query(text):
+            off_topic_direct_reply = get_off_topic_reply(lang_name)
+        timing.mark("rag_start")
+        if off_topic_direct_reply is not None:
+            # Strict scope guard: do not answer non-college questions.
+            context = ""
+            timing.mark("rag_end")
+        elif intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
+            # Profile/name queries are deterministic and should return instantly.
+            context = ""
+            timing.mark("rag_end")
+        else:
+            try:
+                context = await asyncio.wait_for(
+                    asyncio.to_thread(get_relevant_context, text, RAG_TOP_K, language=lang_key),
+                    timeout=RAG_CONTEXT_TIMEOUT_S,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("RAG context timed out after %.2fs; continuing without context", RAG_CONTEXT_TIMEOUT_S)
+                context = ""
+            finally:
+                timing.mark("rag_end")
+            if context.strip():
+                logger.info("RAG context: ok (%d chars)", len(context))
+            else:
+                logger.warning("RAG context: empty")
+                json_context = _load_svit_json_context(lang_key)
+                if json_context:
+                    context = json_context
+                    logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
+
+        # Intent-driven prompt control
+        unavailable_reply = get_unavailable_reply(lang_name)
+        off_topic_reply = get_off_topic_reply(lang_name)
         if intent == INTENT_COLLEGE_OVERVIEW:
             system_prompt = (
                 f"You are CLARA. Provide a magnificent, polished 5-sentence overview of SVIT (Sai Vidya Institute of Technology). "
@@ -556,10 +604,20 @@ async def process_user_text_and_reply(
                 f"Speak in {lang_name}. Cover: 1) Department Vision, 2) Core Curriculum/Labs, 3) Faculty Leadership, 4) Research projects, 5) Career opportunities. "
                 f"Do not use bullets or numbers."
             )
+        elif intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
+            system_prompt = (
+                f"You are CLARA. Reply only in {lang_name}. "
+                "Give a direct one-line answer with names only. No extra background."
+            )
         else:
             system_prompt = (
-                f"You are CLARA, a friendly campus assistant. "
-                f"Reply only in {lang_name}. Keep answer under 2 sentences and concise."
+                f"You are CLARA, a warm and professional campus receptionist for SVIT. "
+                f"Reply only in {lang_name}. "
+                "For college-related emotional or opinion questions, answer in a reassuring and polite tone. "
+                "Default to one short sentence, maximum two only when needed. "
+                "Answer directly with no unnecessary background. "
+                f"If information is unavailable, say exactly: {unavailable_reply}. "
+                f"If the question is not related to SVIT/college topics, say exactly: {off_topic_reply}"
             )
 
         if context.strip():
@@ -569,8 +627,9 @@ async def process_user_text_and_reply(
             )
 
         context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
-        cache_key = f"{lang_key}|{_normalized_cache_text(text)}|{context_sig}"
-        reply_text = LLM_REPLY_CACHE.get(cache_key)
+        cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(text)}|{context_sig}"
+        direct_reply = off_topic_direct_reply or get_profile_direct_reply(intent, lang_name)
+        reply_text = direct_reply or LLM_REPLY_CACHE.get(cache_key)
         first_sentence = ""
 
         async def _emit_first_sentence_audio(sentence: str) -> None:
@@ -608,12 +667,21 @@ async def process_user_text_and_reply(
 
         def _maybe_start_first_sentence_tts(sentence: str) -> None:
             nonlocal first_sentence_task
+            if FORCE_FINAL_TTS_ONLY:
+                return
             if not ENABLE_TTS_PIPELINING or not ENABLE_FIRST_SENTENCE_TTS:
                 return
             if first_sentence_task is None and sentence and sentence.strip():
                 first_sentence_task = asyncio.create_task(_emit_first_sentence_audio(sentence.strip()))
 
-        if reply_text:
+        if direct_reply:
+            timing.mark("llm_start")
+            timing.mark("llm_first_token")
+            timing.mark("llm_end")
+            first_sentence, _ = _split_first_sentence(reply_text)
+            timing.set_if_missing("first_feedback")
+            _maybe_start_first_sentence_tts(first_sentence)
+        elif reply_text:
             llm_cache_hit = True
             timing.mark("llm_start")
             timing.mark("llm_first_token")
@@ -656,7 +724,7 @@ async def process_user_text_and_reply(
                 first_sentence = ""
 
         if not reply_text:
-            reply_text = "I am having trouble processing that right now, please try again."
+            reply_text = unavailable_reply
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)
@@ -673,6 +741,7 @@ async def process_user_text_and_reply(
 
         if (
             ENABLE_FIRST_SENTENCE_TTS
+            and (not FORCE_FINAL_TTS_ONLY)
             and (not ENABLE_TTS_PIPELINING)
             and first_sentence
             and first_sentence != reply_text
@@ -682,14 +751,20 @@ async def process_user_text_and_reply(
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
         
-        # Detect intent and mark as isCardData if overview
-        intent = detect_intent(text)
+        # Mark card-driven intents so frontend opens the proper cards.
         show_card = None
         if intent == INTENT_COLLEGE_OVERVIEW:
             show_card = "college"
-            assistant_msg["isCardData"] = True
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             show_card = "dept"
+        elif intent == INTENT_HOD_PROFILE:
+            show_card = "hod"
+        elif intent == INTENT_TRUSTEES_PROFILE:
+            show_card = "trustees"
+        elif intent == INTENT_HOD_TRUSTEES_PROFILE:
+            show_card = ["hod", "trustees"]
+
+        if show_card is not None:
             assistant_msg["isCardData"] = True
             
         session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
@@ -704,7 +779,12 @@ async def process_user_text_and_reply(
         utterance_kind = "assistant_full_reply"
         segment_index = 0
         is_final_segment = True
-        if (
+        if first_sentence_sent and first_sentence and first_sentence.strip() == reply_text.strip():
+            # Early first-sentence audio already covered the full reply; skip duplicate final TTS.
+            tts_text = ""
+            utterance_kind = "assistant_first_sentence_only"
+            segment_index = 1
+        elif (
             ENABLE_ONCE_ONLY_TTS_SEGMENTS
             and first_sentence_sent
             and first_sentence
@@ -731,6 +811,21 @@ async def process_user_text_and_reply(
                 turn_id=timing.turn_id,
                 utterance_kind=utterance_kind,
             )
+        # Safety fallback: if segmented/final TTS returned nothing, retry once with full reply text.
+        if not full_audio_b64 and reply_text.strip():
+            fallback_audio_b64, fallback_cache_hit = await tts_to_base64_cached(
+                reply_text,
+                lang_code,
+                turn_id=timing.turn_id,
+                utterance_kind="assistant_full_reply_fallback",
+            )
+            if fallback_audio_b64:
+                full_audio_b64 = fallback_audio_b64
+                tts_cache_hit = tts_cache_hit or fallback_cache_hit
+                utterance_kind = "assistant_full_reply_fallback"
+                segment_index = 0
+                is_final_segment = True
+                tts_text = reply_text
         timing.mark("tts_end")
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")
@@ -796,24 +891,40 @@ async def process_user_text_and_reply(
 async def lifespan(app: object):
     """Startup: log RAG document count, validate audio devices, warm clients. Shutdown: close clients."""
     try:
-        await asyncio.to_thread(warmup_rag)
+        await asyncio.wait_for(
+            asyncio.to_thread(warmup_rag),
+            timeout=RAG_WARMUP_TIMEOUT_S,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("RAG warmup timed out after %.1fs; continuing without warmup", RAG_WARMUP_TIMEOUT_S)
     except Exception as exc:
         logger.warning("RAG warmup exception: %s", exc)
 
     try:
-        n = await asyncio.to_thread(get_rag_document_count)
+        n = await asyncio.wait_for(
+            asyncio.to_thread(get_rag_document_count),
+            timeout=RAG_DOC_COUNT_TIMEOUT_S,
+        )
         if n == 0:
             logger.warning("RAG: college_knowledge table is empty. Run: python -m backend.tools.ingest_college_knowledge_pg")
         else:
             logger.info("RAG: college_knowledge has %s documents.", n)
+    except asyncio.TimeoutError:
+        logger.warning("RAG doc-count check timed out after %.1fs", RAG_DOC_COUNT_TIMEOUT_S)
     except Exception as exc:
         logger.warning("RAG: could not check database: %s", exc)
 
-    audio_ok, audio_msg = await asyncio.to_thread(validate_audio_devices)
-    if not audio_ok:
-        logger.warning("AUDIO: %s Set AUDIO_INPUT_DEVICE_INDEX or AUDIO_INPUT_DEVICE_NAME in .env", audio_msg)
-    else:
-        logger.info("AUDIO: %s", audio_msg)
+    try:
+        audio_ok, audio_msg = await asyncio.wait_for(
+            asyncio.to_thread(validate_audio_devices),
+            timeout=AUDIO_DEVICE_VALIDATE_TIMEOUT_S,
+        )
+        if not audio_ok:
+            logger.warning("AUDIO: %s Set AUDIO_INPUT_DEVICE_INDEX or AUDIO_INPUT_DEVICE_NAME in .env", audio_msg)
+        else:
+            logger.info("AUDIO: %s", audio_msg)
+    except asyncio.TimeoutError:
+        logger.warning("AUDIO validation timed out after %.1fs; continuing", AUDIO_DEVICE_VALIDATE_TIMEOUT_S)
 
     asyncio.create_task(warmup_clients())
     yield

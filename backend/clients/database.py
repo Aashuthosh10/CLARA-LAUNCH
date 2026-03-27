@@ -1,5 +1,6 @@
 """PostgreSQL connection and pooling for RAG (pgvector). Used by rag.py and ingest script."""
 
+import json
 import logging
 import threading
 import time
@@ -160,7 +161,7 @@ def get_document_count() -> int:
         return 0
 
 
-def get_similar_contents(embedding: List[float], top_k: int) -> List[str]:
+def get_similar_contents(embedding: List[float], top_k: int, language: str | None = None) -> List[str]:
     """
     Return top_k content strings from college_knowledge by cosine similarity.
     Returns empty list on any error or if DB unavailable.
@@ -177,10 +178,23 @@ def get_similar_contents(embedding: List[float], top_k: int) -> List[str]:
 
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute(
-            "SELECT content FROM college_knowledge ORDER BY embedding <-> %s LIMIT %s",
-            (Vector(embedding), top_k),
-        )
+        lang = (language or "").strip().lower()
+        if lang in {"en", "hi"}:
+            cur.execute(
+                """
+                SELECT content
+                FROM college_knowledge
+                WHERE metadata->>'language' = %s
+                ORDER BY embedding <-> %s
+                LIMIT %s
+                """,
+                (lang, Vector(embedding), top_k),
+            )
+        else:
+            cur.execute(
+                "SELECT content FROM college_knowledge ORDER BY embedding <-> %s LIMIT %s",
+                (Vector(embedding), top_k),
+            )
         rows = cur.fetchall()
         cur.close()
         return [r[0] for r in rows if r[0] is not None]
@@ -222,7 +236,12 @@ def truncate_college_knowledge() -> bool:
             put_connection(conn)
 
 
-def insert_college_chunk(doc_id: str, content: str, embedding: List[float]) -> bool:
+def insert_college_chunk(
+    doc_id: str,
+    content: str,
+    embedding: List[float],
+    metadata: dict[str, Any] | None = None,
+) -> bool:
     """Insert one row into college_knowledge. Returns True on success, False on error."""
     if not is_db_available():
         return False
@@ -233,9 +252,10 @@ def insert_college_chunk(doc_id: str, content: str, embedding: List[float]) -> b
 
         conn = get_connection()
         cur = conn.cursor()
+        metadata_payload = json.dumps(metadata or {}, ensure_ascii=False)
         cur.execute(
-            "INSERT INTO college_knowledge (id, content, embedding, metadata) VALUES (%s, %s, %s, %s)",
-            (doc_id, content, Vector(embedding), None),
+            "INSERT INTO college_knowledge (id, content, embedding, metadata) VALUES (%s, %s, %s, %s::jsonb)",
+            (doc_id, content, Vector(embedding), metadata_payload),
         )
         conn.commit()
         cur.close()

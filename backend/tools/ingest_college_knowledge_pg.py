@@ -1,5 +1,5 @@
 """
-Ingest backend/data/svit_knowledge.json into PostgreSQL (pgvector):
+Ingest backend/data/locales/*.json into PostgreSQL (pgvector):
 format into descriptive chunks, embed locally, and store.
 
 Usage (from project root): python -m backend.tools.ingest_college_knowledge_pg
@@ -20,7 +20,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from backend.clients.database import get_connection, insert_college_chunk, put_connection
 from backend.core.rag import generate_embedding
 
-SVIT_KNOWLEDGE_JSON_PATH = _PROJECT_ROOT / "backend" / "data" / "svit_knowledge.json"
+LOCALES_DIR = _PROJECT_ROOT / "backend" / "data" / "locales"
 
 
 def _clean_scalar(value: Any) -> str:
@@ -130,11 +130,10 @@ def _build_chunks_from_json(data: dict[str, Any]) -> list[str]:
     return [c for c in chunks if c.strip()]
 
 
-def _reset_college_knowledge_table() -> bool:
-    """Drop and recreate college_knowledge table for a hard reset."""
+def _prepare_and_truncate_college_knowledge_table() -> bool:
+    """Ensure table/index exist, then truncate all rows for a clean re-ingest."""
     stmts = [
         "CREATE EXTENSION IF NOT EXISTS vector",
-        "DROP TABLE IF EXISTS college_knowledge",
         """
         CREATE TABLE IF NOT EXISTS college_knowledge (
             id UUID PRIMARY KEY,
@@ -150,6 +149,7 @@ def _reset_college_knowledge_table() -> bool:
         USING ivfflat (embedding vector_cosine_ops)
         WITH (lists = 100)
         """,
+        "TRUNCATE college_knowledge",
     ]
     conn = None
     try:
@@ -173,44 +173,56 @@ def _reset_college_knowledge_table() -> bool:
 
 
 def main() -> None:
-    path = SVIT_KNOWLEDGE_JSON_PATH
-    if not path.is_file():
-        print(f"Error: Knowledge JSON file not found: {path}")
+    if not LOCALES_DIR.is_dir():
+        print(f"Error: Locales directory not found: {LOCALES_DIR}")
         sys.exit(1)
 
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        print(f"Error: Could not parse JSON file {path}: {e}")
-        sys.exit(1)
-    if not isinstance(data, dict):
-        print("Error: JSON root must be an object.")
+    locale_files = sorted([p for p in LOCALES_DIR.glob("*.json") if p.is_file()])
+    if not locale_files:
+        print(f"Error: No locale JSON files found in {LOCALES_DIR}")
         sys.exit(1)
 
-    chunks = _build_chunks_from_json(data)
-    if not chunks:
-        print("Error: No chunks produced. Check JSON content.")
-        sys.exit(1)
-
-    if not _reset_college_knowledge_table():
-        print("Error: Could not reset college_knowledge table. Check PostgreSQL.")
+    if not _prepare_and_truncate_college_knowledge_table():
+        print("Error: Could not prepare/truncate college_knowledge table. Check PostgreSQL.")
         sys.exit(1)
 
     inserted = 0
-    for chunk in chunks:
-        doc_id = str(uuid.uuid4())
+    inserted_per_locale: dict[str, int] = {}
+    for path in locale_files:
+        locale = path.stem.strip().lower()
         try:
-            embedding = generate_embedding(chunk)
+            data = json.loads(path.read_text(encoding="utf-8"))
         except Exception as e:
-            print(f"Error: Embedding failed: {e}")
+            print(f"Error: Could not parse JSON file {path}: {e}")
             sys.exit(1)
-        if insert_college_chunk(doc_id, chunk, embedding):
-            inserted += 1
-        else:
-            print(f"Error: Insert failed for chunk {inserted + 1}")
+        if not isinstance(data, dict):
+            print(f"Error: JSON root must be an object in {path}")
+            sys.exit(1)
+        chunks = _build_chunks_from_json(data)
+        if not chunks:
+            print(f"Error: No chunks produced for {path}. Check JSON content.")
             sys.exit(1)
 
-    print(f"Ingested {inserted} chunks from {path} into PostgreSQL (college_knowledge).")
+        inserted_per_locale.setdefault(locale, 0)
+        for chunk in chunks:
+            doc_id = str(uuid.uuid4())
+            try:
+                embedding = generate_embedding(chunk)
+            except Exception as e:
+                print(f"Error: Embedding failed for locale={locale}: {e}")
+                sys.exit(1)
+            if insert_college_chunk(doc_id, chunk, embedding, metadata={"language": locale}):
+                inserted += 1
+                inserted_per_locale[locale] += 1
+            else:
+                print(f"Error: Insert failed for locale={locale}, chunk={inserted_per_locale[locale] + 1}")
+                sys.exit(1)
+
+    per_locale_text = ", ".join(f"{k}={v}" for k, v in sorted(inserted_per_locale.items()))
+    print(
+        f"Ingested {inserted} chunks from {len(locale_files)} locale files into PostgreSQL (college_knowledge). "
+        f"Breakdown: {per_locale_text}"
+    )
 
 
 if __name__ == "__main__":

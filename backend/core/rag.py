@@ -1,4 +1,4 @@
-"""RAG retrieval: PostgreSQL + pgvector and local embeddings for college knowledge."""
+"""RAG retrieval: PostgreSQL + pgvector and local multilingual embeddings."""
 
 import logging
 import threading
@@ -17,7 +17,7 @@ _encode_lock = threading.Lock()
 _tiktoken_encoding = None
 _tiktoken_lock = threading.Lock()
 
-EMBEDDING_MODEL_NAME = "BAAI/bge-base-en"
+EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 EMBEDDING_DIM = 768
 
 
@@ -43,7 +43,7 @@ def _get_tiktoken_encoding():
 
 def generate_embedding(text: str) -> List[float]:
     """
-    Generate 768-dim embedding for text using local BAAI/bge-base-en.
+    Generate 768-dim embedding for text using a local multilingual model.
     Fully local; no network. Thread-safe. Raises on failure.
     """
     if not text or not text.strip():
@@ -63,6 +63,7 @@ def get_relevant_context(
     query: str,
     top_k: int = RAG_TOP_K,
     max_tokens: int = RAG_MAX_TOKENS,
+    language: str | None = None,
 ) -> str:
     """
     Retrieve top-k most relevant chunks from PostgreSQL for the query.
@@ -76,7 +77,9 @@ def get_relevant_context(
         return ""
     try:
         query_embedding = generate_embedding(query)
-        contents = get_similar_contents(query_embedding, top_k)
+        # Current locale corpus is English + Hindi. Route other languages to English by default.
+        lang = "hi" if (language or "").strip().lower() == "hi" else "en"
+        contents = get_similar_contents(query_embedding, top_k, language=lang)
         if not contents:
             logger.warning("RAG: context empty (no documents for query)")
             return ""

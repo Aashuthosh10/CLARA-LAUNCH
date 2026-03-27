@@ -29,20 +29,87 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem;
+  padding: 0;
   z-index: 10;
   background: transparent;
 }
 
+.full-text-message-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: clamp(1.2rem, 2.6vw, 2.6rem) clamp(1.5rem, 6vw, 5.5rem) clamp(12rem, 24vh, 18rem);
+}
+
+.full-text-message-wrapper {
+  width: min(1400px, 100%);
+  max-height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .word-by-word-text {
-  font-size: clamp(2.5rem, 6vw, 4.2rem);
   font-weight: 700;
-  line-height: 1.25;
   text-align: center;
-  max-width: 90%;
   color: #0f172a;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.04));
+  margin: 0;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  will-change: font-size, line-height;
+}
+
+.word-by-word-text::-webkit-scrollbar {
+  display: none;
+}
+
+.clara-thinking-stage {
+  width: min(980px, 92%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.85rem;
   margin-bottom: 8vh;
+  color: #0f172a;
+}
+
+.clara-thinking-emoji {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1;
+  animation: clara-think-bob 1.6s ease-in-out infinite;
+}
+
+.clara-thinking-title {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.clara-thinking-tagline {
+  font-size: clamp(1.1rem, 2.1vw, 1.6rem);
+  font-weight: 500;
+  line-height: 1.45;
+  color: #334155;
+  max-width: 80%;
+}
+
+.clara-thinking-dots {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #7c3aed;
+  animation: clara-think-dots 1.2s steps(3, end) infinite;
 }
 
 .word-span {
@@ -155,6 +222,12 @@
   line-height: 1.5;
 }
 
+.bubble-thinking {
+  border: 1px dashed rgba(124, 58, 237, 0.3);
+  color: #334155;
+  font-weight: 600;
+}
+
 /* ─── Cinematic Card — Light Premium ─── */
 .cinematic-card {
   width: 100%;
@@ -226,4 +299,15 @@
   align-items: center;
   z-index: 100;
   background: linear-gradient(to bottom, transparent, rgba(248, 250, 252, 0.9));
+}
+
+@keyframes clara-think-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes clara-think-dots {
+  0% { opacity: 0.25; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
