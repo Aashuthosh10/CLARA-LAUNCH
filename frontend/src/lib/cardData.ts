@@ -9,7 +9,7 @@ export interface CardDataItem {
 
 interface LocalizedCardData {
   college: CardDataItem[];
-  dept: { CSE: CardDataItem[] };
+  dept: Record<string, CardDataItem[]>;
   hod: CardDataItem[];
   trustees: CardDataItem[];
 }
@@ -40,9 +40,13 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'Prof. M. R. Holla', content: 'Founder Trustee & President. A distinguished academician with 50+ years of experience in technical education.', type: 'trustees' },
+      { title: 'Dr. Manjunath T N', content: 'Principal & Professor. Leads academic direction and institutional excellence at SVIT.', type: 'trustees' },
+      { title: 'Dr. Lakshminarayanachari K', content: 'Vice-Principal. Supports academic operations, governance, and student success.', type: 'trustees' },
       { title: 'Dr. Y. Jayasimha', content: 'Eminent Electronics Professor, Dean (Academics) and a visionary Founder Trustee of SVIT.', type: 'trustees' },
       { title: 'Prof. R C Shanmukhaswamy', content: 'Eminent Electrical Professor and Founder Trustee dedicated to administrative excellence.', type: 'trustees' },
       { title: 'Dr. A. M. Padma Reddy', content: 'A renowned Computer Science Professor and Founder Trustee fostering student welfare and affairs.', type: 'trustees' },
+      { title: 'Sri R. Srinivas Raju', content: 'Trustee. Practicing Civil Engineer contributing governance and infrastructure perspective.', type: 'trustees' },
+      { title: 'Sri M. K. Manohar', content: 'Trustee. Chartered Accountant bringing financial stewardship and transparency.', type: 'trustees' },
       { title: 'The SVIT Mission', content: 'Building a foundation for quality education through selfless service by visionary academicians.', type: 'trustees' },
     ],
   },
@@ -71,9 +75,13 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'ಪ್ರೊ. ಎಂ. ಆರ್. ಹೊಳ್ಳ', content: 'ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ ಮತ್ತು ಅಧ್ಯಕ್ಷರು; 50+ ವರ್ಷದ ತಾಂತ್ರಿಕ ಶಿಕ್ಷಣ ಅನುಭವ ಹೊಂದಿದ ಗಣ್ಯ ಶಿಕ್ಷಣತಜ್ಞರು.', type: 'trustees' },
+      { title: 'ಡಾ. ಮಂಜುನಾಥ್ ಟಿ ಎನ್', content: 'ಪ್ರಿನ್ಸಿಪಾಲ್ ಮತ್ತು ಪ್ರೊಫೆಸರ್. ಶೈಕ್ಷಣಿಕ ದಿಕ್ಕು ಮತ್ತು ಸಾಂಸ್ಥಿಕ ಶ್ರೇಷ್ಠತೆಗೆ ನೇತೃತ್ವ.', type: 'trustees' },
+      { title: 'ಡಾ. ಲಕ್ಷ್ಮೀನಾರಾಯಣಾಚಾರಿ ಕೆ', content: 'ಉಪ ಪ್ರಾಂಶುಪಾಲರು. ಶೈಕ್ಷಣಿಕ ಕಾರ್ಯಾಚರಣೆ, ಆಡಳಿತ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಯಶಸ್ಸಿಗೆ ಬೆಂಬಲ.', type: 'trustees' },
       { title: 'ಡಾ. ವೈ. ಜಯಸಿಂಹ', content: 'ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಪ್ರೊಫೆಸರ್, ಡೀನ್ (ಅಕಾಡೆಮಿಕ್ಸ್), ಮತ್ತು SVITನ ದೃಷ್ಟಿವಂತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
       { title: 'ಪ್ರೊ. ಆರ್. ಸಿ. ಶಣ್ಮುಖಸ್ವಾಮಿ', content: 'ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಿಕಲ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ಆಡಳಿತ ಶ್ರೇಷ್ಠತೆಗೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
       { title: 'ಡಾ. ಎ. ಎಂ. ಪದ್ಮಾ ರೆಡ್ಡಿ', content: 'ಖ್ಯಾತ ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಕಲ್ಯಾಣಕ್ಕೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
+      { title: 'ಶ್ರೀ ಆರ್. ಶ್ರೀನಿವಾಸ್ ರಾಜು', content: 'ಟ್ರಸ್ಟಿ. ಅಭ್ಯಾಸ ನಾಗರಿಕ ಎಂಜಿನಿಯರ್; ಆಡಳಿತ ಮತ್ತು ಮೂಲಸೌಕರ್ಯ ದೃಷ್ಟಿಕೋನಕ್ಕೆ ಕೊಡುಗೆ.', type: 'trustees' },
+      { title: 'ಶ್ರೀ ಎಂ. ಕೆ. ಮನೋಹರ್', content: 'ಟ್ರಸ್ಟಿ. ನೋಂದಣಿ ಖಾತೆ ಪರಿಶೋಧಕ; ಹಣಕಾಸು ನಿರ್ವಹಣೆ ಮತ್ತು ಪಾರದರ್ಶಕತೆ.', type: 'trustees' },
       { title: 'SVIT ಮಿಷನ್', content: 'ದೃಷ್ಟಿವಂತ ಶಿಕ್ಷಣತಜ್ಞರ ನಿಸ್ವಾರ್ಥ ಸೇವೆಯಿಂದ ಗುಣಮಟ್ಟದ ಶಿಕ್ಷಣಕ್ಕೆ ಬಲವಾದ ಅಡಿಪಾಯ ನಿರ್ಮಿಸುವುದು.', type: 'trustees' },
     ],
   },
@@ -102,9 +110,13 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'प्रो. एम. आर. होल्ला', content: 'संस्थापक ट्रस्टी एवं अध्यक्ष; तकनीकी शिक्षा में 50+ वर्षों के अनुभव वाले विशिष्ट शिक्षाविद।', type: 'trustees' },
+      { title: 'डॉ. मंजुनाथ टी एन', content: 'प्राचार्य एवं प्रोफेसर। शैक्षणिक दिशा और संस्थागत उत्कृष्टता का नेतृत्व।', type: 'trustees' },
+      { title: 'डॉ. लक्ष्मीनारायणाचारी के', content: 'उप-प्राचार्य। शैक्षणिक संचालन, प्रशासन और छात्र सफलता में सहयोग।', type: 'trustees' },
       { title: 'डॉ. वाई. जयसिम्हा', content: 'प्रख्यात इलेक्ट्रॉनिक्स प्रोफेसर, डीन (अकादमिक्स), और SVIT के दूरदर्शी संस्थापक ट्रस्टी।', type: 'trustees' },
       { title: 'प्रो. आर. सी. शण्मुखस्वामी', content: 'प्रख्यात इलेक्ट्रिकल प्रोफेसर और प्रशासनिक उत्कृष्टता के लिए समर्पित संस्थापक ट्रस्टी।', type: 'trustees' },
       { title: 'डॉ. ए. एम. पद्मा रेड्डी', content: 'प्रख्यात कंप्यूटर साइंस प्रोफेसर और छात्र कल्याण पर केंद्रित संस्थापक ट्रस्टी।', type: 'trustees' },
+      { title: 'श्री आर. श्रीनिवास राजू', content: 'ट्रस्टी। अभ्यासरत सिविल इंजीनियर; शासन और अवसंरचण दृष्टिकोण।', type: 'trustees' },
+      { title: 'श्री एम. के. मनोहर', content: 'ट्रस्टी। चार्टर्ड अकाउंटेंट; वित्तीय प्रबंधन और पारदर्शिता।', type: 'trustees' },
       { title: 'SVIT मिशन', content: 'दूरदर्शी शिक्षाविदों की निस्वार्थ सेवा से गुणवत्तापूर्ण शिक्षा की मजबूत नींव बनाना।', type: 'trustees' },
     ],
   },
@@ -133,9 +145,13 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'ப்ரொஃ. எம். ஆர். ஹொள்ளா', content: 'நிறுவனர் அறங்காவலர் மற்றும் தலைவர்; தொழில்நுட்பக் கல்வியில் 50+ ஆண்டுகள் அனுபவமுள்ள சிறந்த கல்வியாளர்.', type: 'trustees' },
+      { title: 'டாக்டர் மஞ்சுநாத் டி என்', content: 'முதல்வர் மற்றும் பேராசிரியர். கல்வித் திசையும் நிறுவனச் சிறப்பும்.', type: 'trustees' },
+      { title: 'டாக்டர் லக்ஷ்மீநாராயணாச்சாரி கே', content: 'துணை முதல்வர். கல்வி நிர்வாகம், ஆட்சி மற்றும் மாணவர் வெற்றிக்கு ஆதரவு.', type: 'trustees' },
       { title: 'டாக்டர் வை. ஜெயசிம்ஹா', content: 'புகழ்பெற்ற Electronics பேராசிரியர், Dean (Academics), மற்றும் SVIT இன் தொலைநோக்கு நிறுவனர் அறங்காவலர்.', type: 'trustees' },
       { title: 'ப்ரொஃ. ஆர். சி. சண்முகசுவாமி', content: 'புகழ்பெற்ற Electrical பேராசிரியர் மற்றும் நிர்வாக சிறப்பிற்காக அர்ப்பணித்த நிறுவனர் அறங்காவலர்.', type: 'trustees' },
       { title: 'டாக்டர் ஏ. எம். பத்மா ரெட்டி', content: 'புகழ்பெற்ற Computer Science பேராசிரியர் மற்றும் மாணவர் நலனில் ஈடுபட்ட நிறுவனர் அறங்காவலர்.', type: 'trustees' },
+      { title: 'ஸ்ரீ ஆர். ஸ்ரீனிவாஸ் ராஜு', content: 'அறங்காவலர். பயிற்சி பெற்ற சிவில் பொறியாளர்; நிர்வாகமும் உள்கட்டமைப்பும்.', type: 'trustees' },
+      { title: 'ஸ்ரீ எம். கே. மனோகர்', content: 'அறங்காவலர். நியமிக்கப்பட்ட கணக்காளர்; நிதி மேலாண்மை மற்றும் வெளிப்படைத்தன்மை.', type: 'trustees' },
       { title: 'SVIT நோக்கம்', content: 'தொலைநோக்குடைய கல்வியாளர்களின் தன்னலமற்ற சேவையால் தரமான கல்விக்கு வலுவான அடித்தளத்தை அமைத்தல்.', type: 'trustees' },
     ],
   },
@@ -164,9 +180,13 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'ప్రొ. ఎం. ఆర్. హొల్లా', content: 'స్థాపక ట్రస్టీ మరియు అధ్యక్షులు; సాంకేతిక విద్యలో 50+ సంవత్సరాల అనుభవం కలిగిన విశిష్ట విద్యావేత్త.', type: 'trustees' },
+      { title: 'డా. మంజునాథ్ టి ఎన్', content: 'ప్రిన్సిపాల్ మరియు ప్రొఫెసర్. విద్యా దిశ మరియు సంస్థాగత నైపుణ్యానికి నాయకత్వం.', type: 'trustees' },
+      { title: 'డా. లక్ష్మీనారాయణాచారి కె', content: 'ఉప ప్రిన్సిపాల్. విద్యా కార్యకలాపాలు, పాలన మరియు విద్యార్థి విజయానికి మద్దతు.', type: 'trustees' },
       { title: 'డా. వై. జయసింహ', content: 'ప్రముఖ ఎలక్ట్రానిక్స్ ప్రొఫెసర్, డీన్ (అకాడెమిక్స్), మరియు SVIT స్థాపక ట్రస్టీ.', type: 'trustees' },
       { title: 'ప్రొ. ఆర్. సి. షణ్ముఖస్వామి', content: 'ప్రముఖ ఎలక్ట్రికల్ ప్రొఫెసర్ మరియు పరిపాలనలో ప్రతిభకు అంకితమైన స్థాపక ట్రస్టీ.', type: 'trustees' },
       { title: 'డా. ఎ. ఎం. పద్మా రెడ్డి', content: 'ప్రముఖ కంప్యూటర్ సైన్స్ ప్రొఫెసర్ మరియు విద్యార్థి సంక్షేమంపై దృష్టి పెట్టిన స్థాపక ట్రస్టీ.', type: 'trustees' },
+      { title: 'శ్రీ ఆర్. శ్రీనివాస్ రాజు', content: 'ట్రస్టీ. అభ్యాస సివిల్ ఇంజినీర్; పాలన మరియు మౌలిక సదుపాయాల దృష్టికోణం.', type: 'trustees' },
+      { title: 'శ్రీ ఎం. కె. మనోహర్', content: 'ట్రస్టీ. చార్టర్డ్ అకౌంటెంట్; ఆర్థిక నిర్వహణ మరియు పారదర్శకత.', type: 'trustees' },
       { title: 'SVIT లక్ష్యం', content: 'దూరదృష్టి కలిగిన విద్యావేత్తల నిస్వార్థ సేవతో నాణ్యమైన విద్యకు బలమైన పునాది నిర్మించడం.', type: 'trustees' },
     ],
   },
@@ -195,30 +215,40 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
     ],
     trustees: [
       { title: 'പ്രൊഫ്. എം. ആർ. ഹൊള്ള', content: 'സ്ഥാപക ട്രസ്റ്റിയും പ്രസിഡന്റും; സാങ്കേതിക വിദ്യാഭ്യാസത്തിൽ 50+ വർഷത്തെ പരിചയമുള്ള പ്രമുഖ വിദ്യാഭ്യാസ വിദഗ്ധൻ.', type: 'trustees' },
+      { title: 'ഡോ. മഞ്ജുനാഥ് ടി എൻ', content: 'പ്രിൻസിപ്പലും പ്രൊഫസറും. അക്കാദമിക് ദിശയും സ്ഥാപന മികവും.', type: 'trustees' },
+      { title: 'ഡോ. ലക്ഷ്മീനാരായണാചാരി കെ', content: 'വൈസ് പ്രിൻസിപ്പൽ. അക്കാദമിക് പ്രവർത്തനം, ഭരണം, വിദ്യാർത്ഥി വിജയം.', type: 'trustees' },
       { title: 'ഡോ. വൈ. ജയസിംഹ', content: 'പ്രമുഖ ഇലക്ട്രോണിക്സ് പ്രൊഫസർ, ഡീൻ (അക്കാദമിക്സ്), SVITയുടെ ദൂരദർശിയായ സ്ഥാപക ട്രസ്റ്റി.', type: 'trustees' },
       { title: 'പ്രൊഫ്. ആർ. സി. ശൺമുഖസ്വാമി', content: 'പ്രമുഖ ഇലക്ട്രിക്കൽ പ്രൊഫസറും ഭരണ മികവിന് സമർപ്പിതനായ സ്ഥാപക ട്രസ്റ്റിയും.', type: 'trustees' },
       { title: 'ഡോ. എ. എം. പത്മ റെడ్డి', content: 'പ്രമുഖ കമ്പ്യൂട്ടർ സയൻസ് പ്രൊഫസറും വിദ്യാർത്ഥി ക്ഷേമത്തിന് മുൻഗണന നൽകുന്ന സ്ഥാപക ട്രസ്റ്റിയും.', type: 'trustees' },
+      { title: 'ശ്രീ ആർ. ശ്രീനിവാസ് രാജു', content: 'ട്രസ്റ്റി. പ്രാക്ടീസിംഗ് സിവിൽ എഞ്ചിനീയർ; ഭരണവും അടിസ്ഥാന സൗകര്യവും.', type: 'trustees' },
+      { title: 'ശ്രീ എം. കെ. മനോഹർ', content: 'ട്രസ്റ്റി. ചാർട്ടേഡ് അക്കൗണ്ടൻ്റ്; സാമ്പത്തിക ഭരണവും വ്യക്തതയും.', type: 'trustees' },
       { title: 'SVIT ദൗത്യം', content: 'ദൂരദർശിയുള്ള വിദ്യാഭ്യാസ വിദഗ്ധരുടെ നിസ്വാർത്ഥ സേവനത്തിലൂടെ ഗുണമേന്മയുള്ള വിദ്യാഭ്യാസത്തിന് ശക്തമായ അടിത്തറ നിർമ്മിക്കുന്നു.', type: 'trustees' },
     ],
   },
 };
 
-export function getCardsForTrigger(language: Language, trigger: string): CardDataItem[] | null {
+/**
+ * Static marketing cards only. Department and HOD decks come from locale JSON via collegeLocaleUtils + useCollegeData.
+ */
+export function getStaticCardsForTrigger(language: Language, trigger: string): CardDataItem[] | null {
   const normalized = (trigger || '').toLowerCase();
   const data = LOCALIZED_CARD_DATA[language] ?? LOCALIZED_CARD_DATA.English;
   if (['college', 'college_overview', 'overview', 'institution'].includes(normalized)) {
     return data.college;
   }
-  if (['dept', 'department', 'department_overview'].includes(normalized)) {
-    return data.dept.CSE;
-  }
-  if (['hod', 'hod_profile', 'head_of_department'].includes(normalized)) {
-    return data.hod;
+  if (
+    ['dept', 'department', 'department_overview', 'hod', 'hod_profile', 'head_of_department'].includes(normalized)
+  ) {
+    return null;
   }
   if (['trustees', 'trustee', 'trustees_profile', 'trustee_profile'].includes(normalized)) {
     return data.trustees;
   }
   return null;
+}
+
+export function getCardsForTrigger(language: Language, trigger: string): CardDataItem[] | null {
+  return getStaticCardsForTrigger(language, trigger);
 }
 
 // Backward-compatible exports (English defaults).

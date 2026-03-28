@@ -13,6 +13,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@college-locales': path.resolve(__dirname, '../backend/data/locales'),
       },
     },
     server: {

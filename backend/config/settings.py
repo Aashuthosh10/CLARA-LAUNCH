@@ -69,6 +69,10 @@ RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+# Low-latency Groq model for mixed-language query normalization (Hinglish / regional + English).
+MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama3-8b-8192")
+MULTILINGUAL_PREPROCESSOR_MAX_TOKENS = int(os.getenv("MULTILINGUAL_PREPROCESSOR_MAX_TOKENS", "320"))
+MULTILINGUAL_PREPROCESSOR_TIMEOUT_S = float(os.getenv("MULTILINGUAL_PREPROCESSOR_TIMEOUT_S", "2.8"))
 
 # PostgreSQL + pgvector (RAG storage)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
@@ -104,7 +108,7 @@ KIOSK_TIMEZONE = os.getenv("KIOSK_TIMEZONE", "Asia/Kolkata").strip() or "Asia/Ko
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
-LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS", "80"))
 LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "12.0"))
 ENABLE_LLM_STREAMING = os.getenv("ENABLE_LLM_STREAMING", "true").strip().lower() in ("1", "true", "yes", "on")

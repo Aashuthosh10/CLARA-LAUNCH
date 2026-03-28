@@ -4,7 +4,8 @@ import logging
 import threading
 from typing import List
 
-from backend.clients.database import get_document_count, get_similar_contents, is_db_available
+from backend.clients.database import get_document_count, is_db_available
+from backend.core.db import get_similar_contents
 from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 
 logger = logging.getLogger(__name__)
@@ -64,9 +65,12 @@ def get_relevant_context(
     top_k: int = RAG_TOP_K,
     max_tokens: int = RAG_MAX_TOKENS,
     language: str | None = None,
+    *,
+    lang_key: str | None = None,
 ) -> str:
     """
     Retrieve top-k most relevant chunks from PostgreSQL for the query.
+    Chunks are filtered by metadata language: Hindi sessions use only `hi` rows, others `en`.
     Returns concatenated chunk text, trimmed to max_tokens. Empty string on error or empty table.
     """
     if not isinstance(query, str) or not query.strip():
@@ -77,8 +81,10 @@ def get_relevant_context(
         return ""
     try:
         query_embedding = generate_embedding(query)
-        # Current locale corpus is English + Hindi. Route other languages to English by default.
-        lang = "hi" if (language or "").strip().lower() == "hi" else "en"
+        raw = (lang_key if lang_key is not None else language) or ""
+        lang = raw.strip().lower()
+        if lang != "hi":
+            lang = "en"
         contents = get_similar_contents(query_embedding, top_k, language=lang)
         if not contents:
             logger.warning("RAG: context empty (no documents for query)")

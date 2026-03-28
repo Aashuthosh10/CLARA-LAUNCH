@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
 import { Sparkles, Volume2 } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
+import whatsappBgImage from '../assets/whatsapp_bg.png';
 import {
   type ChatMessage,
   type OrbState,
@@ -11,10 +12,20 @@ import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import VoiceOrb from '../components/VoiceOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
-import ThreeDVisual from '../components/chat/cards/ThreeDVisual';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
-import DepartmentCardStage, { type DepartmentStageCard } from '../components/chat/DepartmentCardStage';
-import { getCardsForTrigger } from '../lib/cardData';
+import DepartmentCardStage from '../components/chat/DepartmentCardStage';
+import LeadershipOverview from '../components/chat/LeadershipOverview';
+import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
+import {
+  buildAdmissionsCardsFromLocale,
+  buildAllDepartmentSummaryCardsFromLocale,
+  buildAllHodCardsFromLocale,
+  buildDepartmentSlidesFromRecord,
+  buildPlacementCardsFromLocale,
+  getDepartmentRecord,
+  menuLabelToJsonKey,
+} from '../lib/collegeLocaleUtils';
+import { useCollegeData } from '../hooks/useCollegeData';
 
 const THINKING_TAGLINES: Record<Language, string[]> = {
   English: [
@@ -74,7 +85,28 @@ const THINKING_EMOJIS = ['🤔', '🧠', '✨', '⚡', '💡'];
 const SPLIT_IDLE_TIMEOUT_MS = 30_000;
 const CARD_AUDIO_START_DELAY_MS = 450;
 const FULL_TEXT_AUDIO_START_DELAY_MS = 140;
-const DEFAULT_COURSE_MENU_OPTIONS = ['CSE', 'ECE', 'Civil', 'Mechanical', 'MBA', 'Basic Sciences'];
+const DEFAULT_COURSE_MENU_OPTIONS = [
+  'CSE',
+  'ISE',
+  'CSE (AI & ML)',
+  'CSE (Data Science)',
+  'CSE (Cyber Security)',
+  'CSE (Business Systems)',
+  'ECE',
+  'Civil',
+  'Mechanical',
+  'MBA',
+  'Basic Sciences',
+];
+
+const INFO_STAGE_CHIPS: Record<Language, { admissions: string; placements: string }> = {
+  English: { admissions: 'Admissions & fees', placements: 'Placements & training' },
+  Kannada: { admissions: 'ಪ್ರವೇಶ ಮತ್ತು ಶುಲ್ಕ', placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
+  Hindi: { admissions: 'प्रवेश और शुल्क', placements: 'प्लेसमेंट और प्रशिक्षण' },
+  Tamil: { admissions: 'சேர்க்கை மற்றும் கட்டணம்', placements: 'பிளேஸ்மென்ட் மற்றும் பயிற்சி' },
+  Telugu: { admissions: 'ప్రవేశం మరియు ఫీజులు', placements: 'ప్లేస్‌మెంట్ మరియు శిక్షణ' },
+  Malayalam: { admissions: 'പ്രവേശനവും ഫീസും', placements: 'പ്ലേസ്മെന്റും പരിശീലനവും' },
+};
 
 type PendingAudio = {
   audioBase64: string;
@@ -84,55 +116,24 @@ type PendingAudio = {
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
 };
 
-const DEPARTMENT_PLACEHOLDER_CARDS: Record<string, DepartmentStageCard[]> = {
-  CSE: [
-    { title: 'Department Snapshot', content: 'CSE offers strong foundations in software, AI, and cloud systems with modern labs.' },
-    { title: 'Leadership', content: 'HOD: Dr. Shashikumar D R. Faculty guide project-based learning and coding practice.' },
-    { title: 'Intake & Outcomes', content: 'Intake: 180. Students are prepared for placements, internships, and higher studies.' },
-  ],
-  ECE: [
-    { title: 'Department Snapshot', content: 'ECE focuses on communication systems, embedded design, and signal processing.' },
-    { title: 'Leadership', content: 'HOD: Dr. Venkatesha M. Faculty support hardware-software integrated learning.' },
-    { title: 'Intake & Outcomes', content: 'Intake: 120. Students build core electronics and industry-ready practical skills.' },
-  ],
-  Civil: [
-    { title: 'Department Snapshot', content: 'Civil covers structural, geotechnical, transportation, and water resources tracks.' },
-    { title: 'Leadership', content: 'HOD: Dr. Ananthayya M B. Field-oriented learning is emphasized with practical labs.' },
-    { title: 'Intake & Outcomes', content: 'Intake: 60. Students gain skills for sustainable infrastructure and planning roles.' },
-  ],
-  Mechanical: [
-    { title: 'Department Snapshot', content: 'Mechanical emphasizes manufacturing, design, thermal systems, and applied mechanics.' },
-    { title: 'Leadership', content: 'HOD: Dr. Raghavendra S. The team drives practical skill-building and project execution.' },
-    { title: 'Intake & Outcomes', content: 'Intake: 30. Students are trained for core engineering and production environments.' },
-  ],
-  MBA: [
-    { title: 'Department Snapshot', content: 'MBA provides management training in finance, marketing, HR, and analytics.' },
-    { title: 'Leadership', content: 'HOD: Dr. Jogish D. Faculty blend academic rigor with industry perspective.' },
-    { title: 'Intake & Outcomes', content: 'Intake: 120. Students are prepared for leadership, business operations, and strategy.' },
-  ],
-  'Basic Sciences': [
-    { title: 'Department Snapshot', content: 'Basic Sciences strengthens foundations in Mathematics, Physics, and Chemistry.' },
-    { title: 'Academic Support', content: 'Faculty focus on conceptual clarity, problem-solving, and applied lab understanding.' },
-    { title: 'Student Outcomes', content: 'Students build strong analytical fundamentals that support all engineering branches.' },
-  ],
-};
-
-const getDepartmentPlaceholderCards = (departmentId: string): DepartmentStageCard[] => {
-  return DEPARTMENT_PLACEHOLDER_CARDS[departmentId] ?? [
-    { title: `${departmentId} Overview`, content: `${departmentId} department details are being expanded. Core highlights are available on request.` },
-    { title: 'Leadership', content: `The ${departmentId} department is guided by experienced faculty and student-focused mentoring.` },
-    { title: 'Intake & Outcomes', content: `${departmentId} offers practical and career-focused learning with project-oriented training.` },
-  ];
-};
-
 const normalizeDepartmentMenuKey = (departmentId: string): string => {
-  const value = (departmentId || '').toLowerCase();
-  if (value.includes('ece')) return 'ECE';
-  if (value.includes('civil')) return 'Civil';
-  if (value.includes('mechanical')) return 'Mechanical';
-  if (value.includes('mba') || value.includes('management')) return 'MBA';
+  const raw = (departmentId || '').trim();
+  const value = raw.toLowerCase();
+  if (!value) return 'CSE';
   if (value.includes('basic')) return 'Basic Sciences';
-  return 'CSE';
+  if (value.includes('mba') || value.includes('management')) return 'MBA';
+  if (value.includes('mechanical') || value === 'mech') return 'Mechanical';
+  if (value.includes('civil')) return 'Civil';
+  if (value.includes('ece') || value.includes('electronics')) return 'ECE';
+  if (value.includes('ise') || value.includes('information science')) return 'ISE';
+  if (value.includes('cyber security') || value.includes('cybersecurity')) return 'CSE (Cyber Security)';
+  if (value.includes('business system')) return 'CSE (Business Systems)';
+  if (value.includes('data science')) return 'CSE (Data Science)';
+  if ((value.includes('ai') && value.includes('ml')) || value.includes('aiml') || value.includes('ai & ml')) {
+    return 'CSE (AI & ML)';
+  }
+  if (value.includes('cse') || value.includes('computer')) return 'CSE';
+  return raw;
 };
 
 interface ChatScreenProps {
@@ -171,6 +172,14 @@ export default function ChatScreen({
   const [currentAudioDuration, setCurrentAudioDuration] = useState<number>(0);
   const [courseMenuOptions, setCourseMenuOptions] = useState<string[]>([]);
   const [activeDepartmentId, setActiveDepartmentId] = useState<string | null>(null);
+  const [isDepartmentOverviewStage, setIsDepartmentOverviewStage] = useState(false);
+  const [isInfoSlideStage, setIsInfoSlideStage] = useState(false);
+  const [infoSlideChip, setInfoSlideChip] = useState('');
+  const [infoSlides, setInfoSlides] = useState<{ title: string; content: string }[]>([]);
+  const [activeTargetDepartment, setActiveTargetDepartment] = useState<string | null>(null);
+
+
+  const collegeData = useCollegeData();
   
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
@@ -224,13 +233,22 @@ export default function ChatScreen({
     return () => clearInterval(ticker);
   }, [isProcessing]);
 
-  const resolveCardsFromTrigger = useCallback((trigger: unknown): any[] | null => {
-    const mapSingleTrigger = (key: string): any[] | null => {
-      return getCardsForTrigger(language, key);
+  const resolveCardsFromTrigger = useCallback((trigger: unknown): CardDataItem[] | null => {
+    const mapSingleTrigger = (key: string): CardDataItem[] | null => {
+      const n = key.toLowerCase();
+      if (n === 'hod' || n === 'hod_profile' || n === 'head_of_department') {
+        const c = buildAllHodCardsFromLocale(collegeData);
+        return c.length ? c : null;
+      }
+      if (n === 'dept' || n === 'department' || n === 'department_overview') {
+        const c = buildAllDepartmentSummaryCardsFromLocale(collegeData);
+        return c.length ? c : null;
+      }
+      return getStaticCardsForTrigger(language, key);
     };
 
     const triggerList = Array.isArray(trigger) ? trigger : [trigger];
-    const merged: any[] = [];
+    const merged: CardDataItem[] = [];
     for (const item of triggerList) {
       if (typeof item !== 'string') continue;
       const cards = mapSingleTrigger(item);
@@ -249,7 +267,7 @@ export default function ChatScreen({
         )
       );
     });
-  }, [language]);
+  }, [language, collegeData]);
 
   // Sync Card Progression with Backend Audio Duration
   const handleAudioPlayback = useCallback(
@@ -337,7 +355,11 @@ export default function ChatScreen({
   useEffect(() => {
     if (!payload) return;
     const cardTrigger = payload?.showCard;
-    const departmentId = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
+    const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
+    const targetDepartment = String(payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload ?? '').trim();
+    setActiveTargetDepartment(targetDepartment || null);
+
+
     const menuOptionsFromPayload = Array.isArray(payload?.options)
       ? payload.options.filter((x: unknown) => typeof x === 'string')
       : [];
@@ -357,6 +379,10 @@ export default function ChatScreen({
       setCurrentCardIdx(0);
       setSuppressedTurnId(null);
       setActiveDepartmentId(null);
+      setIsDepartmentOverviewStage(false);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
       setCourseMenuOptions(menuOptionsFromPayload.length ? menuOptionsFromPayload : DEFAULT_COURSE_MENU_OPTIONS);
       if (audioBase64) {
         setPendingAudio({
@@ -370,28 +396,132 @@ export default function ChatScreen({
       return;
     }
 
+    if (cardTrigger === 'admissions') {
+      setCourseMenuOptions([]);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setIsInfoSlideStage(true);
+      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
+      setInfoSlideChip(chips.admissions);
+      const slides = buildAdmissionsCardsFromLocale(collegeData, language);
+      setInfoSlides(slides);
+      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+      const lastAssistantInPayload = [...payloadMessageList]
+        .reverse()
+        .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
+      const assistantMessageId = lastAssistantInPayload?.id ?? null;
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      setSuppressedTurnId(assistantMessageId ?? turnId);
+      if (audioBase64) {
+        const syncCards: CardDataItem[] = slides.map((s) => ({
+          title: s.title,
+          content: s.content,
+          type: 'dept',
+        }));
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: true,
+          cardsToSync: syncCards,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'placements') {
+      setCourseMenuOptions([]);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setIsInfoSlideStage(true);
+      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
+      setInfoSlideChip(chips.placements);
+      const slides = buildPlacementCardsFromLocale(collegeData, language);
+      setInfoSlides(slides);
+      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+      const lastAssistantInPayload = [...payloadMessageList]
+        .reverse()
+        .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
+      const assistantMessageId = lastAssistantInPayload?.id ?? null;
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      setSuppressedTurnId(assistantMessageId ?? turnId);
+      if (audioBase64) {
+        const syncCards: CardDataItem[] = slides.map((s) => ({
+          title: s.title,
+          content: s.content,
+          type: 'dept',
+        }));
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: true,
+          cardsToSync: syncCards,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
     if (cardTrigger === 'department_overview') {
-      const resolvedDept = normalizeDepartmentMenuKey(departmentId ?? 'CSE');
-      const deptCards = getDepartmentPlaceholderCards(resolvedDept).map(card => ({
-        ...card,
-        type: 'dept',
-      }));
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      const targetRaw = String(
+        payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload ?? ''
+      ).trim();
+
+      const targetAll = targetRaw.toLowerCase() === 'all';
+
       const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
       const lastAssistantInPayload = [...payloadMessageList]
         .reverse()
         .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
       const assistantMessageId = lastAssistantInPayload?.id ?? null;
       setCourseMenuOptions([]);
+
+      if (targetAll) {
+        setIsDepartmentOverviewStage(false);
+        setActiveDepartmentId(null);
+        const allDeptCards = buildAllDepartmentSummaryCardsFromLocale(collegeData);
+        setLayoutMode('SPLIT_CARDS');
+        setActiveCards(allDeptCards);
+        setSuppressedTurnId(assistantMessageId ?? turnId);
+        if (audioBase64) {
+          setPendingAudio({
+            audioBase64,
+            segmentKey,
+            isOverview: true,
+            cardsToSync: allDeptCards,
+            targetLayout: 'SPLIT_CARDS',
+          });
+        }
+        return;
+      }
+
+      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? 'CSE');
+
+      const jsonKey = menuLabelToJsonKey(resolvedDept) ?? 'cse';
+      const deptRecord = getDepartmentRecord(collegeData, jsonKey);
+      const slides = buildDepartmentSlidesFromRecord(deptRecord, jsonKey);
+      const syncCards: CardDataItem[] = slides.map((s) => ({
+        title: s.title,
+        content: s.content,
+        type: 'dept',
+      }));
+
+      setIsDepartmentOverviewStage(true);
       setActiveDepartmentId(resolvedDept);
       setLayoutMode('SPLIT_CARDS');
-      setActiveCards(deptCards);
+      setActiveCards(null);
       setSuppressedTurnId(assistantMessageId ?? turnId);
       if (audioBase64) {
         setPendingAudio({
           audioBase64,
           segmentKey,
           isOverview: true,
-          cardsToSync: deptCards,
+          cardsToSync: syncCards,
           targetLayout: 'SPLIT_CARDS',
         });
       }
@@ -403,6 +533,10 @@ export default function ChatScreen({
     if (cardsForTrigger) {
         setCourseMenuOptions([]);
         setActiveDepartmentId(null);
+        setIsDepartmentOverviewStage(false);
+        setIsInfoSlideStage(false);
+        setInfoSlides([]);
+        setInfoSlideChip('');
         const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
         const lastAssistantInPayload = [...payloadMessageList]
           .reverse()
@@ -428,6 +562,10 @@ export default function ChatScreen({
           setCurrentCardIdx(0);
           setSuppressedTurnId(null);
           setActiveDepartmentId(null);
+          setIsDepartmentOverviewStage(false);
+          setIsInfoSlideStage(false);
+          setInfoSlides([]);
+          setInfoSlideChip('');
           setCourseMenuOptions([]);
         }
         if (audioBase64) {
@@ -440,7 +578,7 @@ export default function ChatScreen({
           });
         }
     }
-  }, [payload, resolveCardsFromTrigger]);
+  }, [payload, resolveCardsFromTrigger, collegeData, language]);
 
   // Start queued audio only after its target layout is visible.
   useEffect(() => {
@@ -473,6 +611,11 @@ export default function ChatScreen({
       setActiveCards(null);
       setCurrentCardIdx(0);
       setSuppressedTurnId(null);
+      setActiveDepartmentId(null);
+      setIsDepartmentOverviewStage(false);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
     }, SPLIT_IDLE_TIMEOUT_MS);
     return () => clearTimeout(idleTimer);
   }, [layoutMode, isPlayingBackendAudio, isProcessing, displayMessages.length]);
@@ -527,6 +670,13 @@ export default function ChatScreen({
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
   const thinkingEmoji = THINKING_EMOJIS[thinkingIndex % THINKING_EMOJIS.length];
+
+  const departmentSlides = useMemo(() => {
+    if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
+    const jk = menuLabelToJsonKey(activeDepartmentId) ?? 'cse';
+    const rec = getDepartmentRecord(collegeData, jk);
+    return buildDepartmentSlidesFromRecord(rec, jk);
+  }, [isDepartmentOverviewStage, activeDepartmentId, collegeData]);
 
   useEffect(() => {
     const prev = prevLayoutModeRef.current;
@@ -592,32 +742,43 @@ export default function ChatScreen({
           ) : (
             <motion.div key="split" layoutId="main" className="split-cards-layout">
               <div className="visual-stage-70 flex flex-col items-center">
-                {activeDepartmentId && activeCards ? (
+                {/* Custom WhatsApp Watermark Overlay */}
+                <div 
+                  className="absolute inset-0 z-0 opacity-100 pointer-events-none"
+                  style={{
+                    backgroundImage: `url(${whatsappBgImage})`,
+                    backgroundSize: '250px 250px',
+                    backgroundRepeat: 'repeat',
+                  }}
+                />
+
+                {/* Content Layer */}
+                <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+
+                {isDepartmentOverviewStage && activeDepartmentId ? (
                   <DepartmentCardStage
-                    departmentId={activeDepartmentId}
-                    cards={activeCards}
+                    departmentLabel={activeDepartmentId}
+                    slides={departmentSlides}
                     currentCardIdx={currentCardIdx}
                   />
-                ) : (
-                  <AnimatePresence mode="wait">
-                    {activeCards && activeCards[currentCardIdx] && (
-                      <motion.div key={currentCardIdx} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="cinematic-card">
-                        <div className="flex-1">
-                          <h2 className="card-title">{activeCards[currentCardIdx].title}</h2>
-                          <p className="card-body">{activeCards[currentCardIdx].content}</p>
-                        </div>
-                        <div className="w-[50%] h-[40%] self-end bg-slate-50 rounded-3xl overflow-hidden mt-6 border border-slate-200 shadow-sm">
-                          <ThreeDVisual type={activeCards[currentCardIdx].type} />
-                        </div>
-                        <div className="mt-auto flex gap-4 pt-8">{activeCards.map((_, i) => (
-                          <div key={i} className={`h-2 flex-1 rounded-full ${i === currentCardIdx ? 'bg-violet-600' : i < currentCardIdx ? 'bg-violet-200' : 'bg-slate-200'}`} />
-                        ))}</div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                )}
+                ) : isInfoSlideStage && infoSlides.length > 0 ? (
+                  <DepartmentCardStage
+                    departmentLabel=""
+                    chipText={infoSlideChip}
+                    slides={infoSlides}
+                    currentCardIdx={currentCardIdx}
+                  />
+                ) : activeCards && activeCards.length > 0 ? (
+                  <LeadershipOverview 
+                    cards={activeCards} 
+                    currentCardIdx={currentCardIdx} 
+                    targetDepartment={activeTargetDepartment}
+                  />
+                ) : null}
+                </div>
               </div>
               <motion.aside className="interaction-panel-30">
+
                 <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
                   {filteredMessages.map((m, i) => isTextMessage(m) && (

@@ -179,22 +179,18 @@ def get_similar_contents(embedding: List[float], top_k: int, language: str | Non
         conn = get_connection()
         cur = conn.cursor()
         lang = (language or "").strip().lower()
-        if lang in {"en", "hi"}:
-            cur.execute(
-                """
-                SELECT content
-                FROM college_knowledge
-                WHERE metadata->>'language' = %s
-                ORDER BY embedding <-> %s
-                LIMIT %s
-                """,
-                (lang, Vector(embedding), top_k),
-            )
-        else:
-            cur.execute(
-                "SELECT content FROM college_knowledge ORDER BY embedding <-> %s LIMIT %s",
-                (Vector(embedding), top_k),
-            )
+        if lang not in {"en", "hi"}:
+            lang = "en"
+        cur.execute(
+            """
+            SELECT content
+            FROM college_knowledge
+            WHERE metadata->>'language' = %s
+            ORDER BY embedding <-> %s
+            LIMIT %s
+            """,
+            (lang, Vector(embedding), top_k),
+        )
         rows = cur.fetchall()
         cur.close()
         return [r[0] for r in rows if r[0] is not None]

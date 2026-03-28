@@ -49,6 +49,7 @@ from backend.config.settings import (
     LLM_STREAM_PARTIAL_DEBOUNCE_MS,
     LLM_STREAM_TIMEOUT_S,
     LLM_TEMPERATURE,
+    MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
     PERF_DEBUG_TIMINGS,
     PORT,
     FRONTEND_URL,
@@ -63,13 +64,17 @@ from backend.core.rag import get_relevant_context, get_rag_document_count, warmu
 from backend.services.greetings import get_greeting
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
+    INTENT_ADMISSIONS,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_OVERVIEW,
     INTENT_HOD_PROFILE,
     INTENT_HOD_TRUSTEES_PROFILE,
     INTENT_NORMAL_QUERY,
+    INTENT_PLACEMENTS,
     INTENT_TRUSTEES_PROFILE,
+    build_narrator_system_prompt,
+    build_target_card_payload,
     detect_department_name,
     detect_intent,
     get_course_menu_options,
@@ -78,6 +83,10 @@ from backend.services.answer_generation import (
     get_profile_direct_reply,
     get_unavailable_reply,
     is_college_related_query,
+    is_narrator_intent,
+    multilingual_rag_reply_directive,
+    normalize_and_classify_query,
+    rag_language_enforcement_directive,
 )
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
@@ -245,10 +254,6 @@ def _get_ack_earcon_base64() -> str:
     wav.extend(pcm)
     _ACK_EARCON_B64 = base64.b64encode(bytes(wav)).decode("ascii")
     return _ACK_EARCON_B64
-    try:
-        return len(base64.b64decode(audio_b64))
-    except Exception:
-        return 0
 
 
 def _debug_payload(timing: TurnTiming) -> dict[str, Any]:
@@ -262,7 +267,7 @@ def _debug_payload(timing: TurnTiming) -> dict[str, Any]:
     }
 
 
-def _append_session_history(session: dict[str, Any], role: str, text: str, *, max_turns: int = 4) -> None:
+def _append_session_history(session: dict[str, Any], role: str, text: str, *, max_turns: int = 3) -> None:
     cleaned = (text or "").strip()
     if not cleaned:
         return
@@ -274,8 +279,10 @@ def _append_session_history(session: dict[str, Any], role: str, text: str, *, ma
 
 
 def _history_for_llm(session: dict[str, Any]) -> list[dict[str, str]]:
+    """Last 3 conversational turns only (6 messages) to limit context bleed."""
     out: list[dict[str, str]] = []
-    for item in session.get("history", []):
+    recent = session.get("history", [])[-6:]
+    for item in recent:
         role = "assistant" if item.get("role") == "assistant" else "user"
         text = (item.get("text") or "").strip()
         if text:
@@ -574,7 +581,7 @@ async def process_user_text_and_reply(
     stt_meta: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
-    _append_session_history(session, "user", text, max_turns=4)
+    _append_session_history(session, "user", text, max_turns=3)
     try:
         processing_payload = {"isProcessing": True}
         processing_payload.update(_debug_payload(timing))
@@ -618,35 +625,76 @@ async def process_user_text_and_reply(
     first_sentence_sent = False
 
     try:
-        intent = detect_intent(text)
+        preprocess: dict[str, Any] | None = None
+        if lang_key != "en":
+            try:
+                preprocess = await asyncio.wait_for(
+                    normalize_and_classify_query(text, lang_name),
+                    timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
+                    MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                )
+                preprocess = None
+
+        if preprocess and (preprocess.get("english_translation") or "").strip():
+            rag_query = str(preprocess["english_translation"]).strip()
+            llm_user_text = rag_query
+            intent = str(preprocess.get("intent") or INTENT_NORMAL_QUERY)
+            detected_department = preprocess.get("target_department")
+            if intent == INTENT_DEPARTMENT_OVERVIEW and not detected_department:
+                detected_department = detect_department_name(rag_query)
+        else:
+            rag_query = text.strip()
+            llm_user_text = text
+            intent = detect_intent(text)
+            detected_department = detect_department_name(text)
+
         is_broad_course_menu = False
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
             try:
                 is_broad_course_menu = await asyncio.wait_for(
-                    asyncio.to_thread(_llm_detect_broad_course_intent, text, lang_name),
+                    asyncio.to_thread(_llm_detect_broad_course_intent, rag_query, lang_name),
                     timeout=1.6,
                 )
             except asyncio.TimeoutError:
                 is_broad_course_menu = False
             if is_broad_course_menu:
                 intent = INTENT_COURSE_MENU
-        detected_department = detect_department_name(text)
+
         off_topic_direct_reply: str | None = None
-        if intent == INTENT_NORMAL_QUERY and not is_college_related_query(text):
+        if intent == INTENT_NORMAL_QUERY and not is_college_related_query(rag_query):
             off_topic_direct_reply = get_off_topic_reply(lang_name)
         timing.mark("rag_start")
+        narrator_payload: dict[str, Any] | None = None
+        context_source = "none"
         if off_topic_direct_reply is not None:
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
-        elif intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
-            # Profile/name queries are deterministic and should return instantly.
+        elif is_narrator_intent(intent):
+            # Presentation mode: only locale JSON slices that match on-screen cards (no vector RAG).
             context = ""
+            narrator_payload = build_target_card_payload(
+                intent,
+                lang_key=lang_key,
+                detected_department_label=detected_department,
+                user_text=text,
+            )
             timing.mark("rag_end")
+            logger.info(
+                "Narrator mode: intent=%s locale=%s payload_keys=%s",
+                intent,
+                narrator_payload.get("locale") if narrator_payload else None,
+                list(narrator_payload.keys()) if narrator_payload else [],
+            )
         else:
+            # English-indexed chunks only: avoids cross-language vector collisions for mixed inputs.
             try:
                 context = await asyncio.wait_for(
-                    asyncio.to_thread(get_relevant_context, text, RAG_TOP_K, language=lang_key),
+                    asyncio.to_thread(get_relevant_context, rag_query, RAG_TOP_K, lang_key="en"),
                     timeout=RAG_CONTEXT_TIMEOUT_S,
                 )
             except asyncio.TimeoutError:
@@ -655,39 +703,22 @@ async def process_user_text_and_reply(
             finally:
                 timing.mark("rag_end")
             if context.strip():
+                context_source = "rag"
                 logger.info("RAG context: ok (%d chars)", len(context))
             else:
                 logger.warning("RAG context: empty")
                 json_context = _load_svit_json_context(lang_key)
                 if json_context:
                     context = json_context
+                    context_source = "json_fallback"
                     logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
 
         # Intent-driven prompt control
         unavailable_reply = get_unavailable_reply(lang_name)
         off_topic_reply = get_off_topic_reply(lang_name)
-        if intent == INTENT_COLLEGE_OVERVIEW:
-            system_prompt = (
-                f"You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. Reply only in {lang_name}. "
-                "CRITICAL: Keep responses extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
-                "Do NOT output long lists, bullet points, or markdown. "
-                "Tone: Warm, direct, and highly impactful. "
-                "If user asks multiple distinct entities, answer all of them based strictly on context. "
-                "For overview requests, summarize only the highest-impact facts."
-            )
-        elif intent == INTENT_DEPARTMENT_OVERVIEW:
-            system_prompt = (
-                f"You are CLARA, a sweet, helpful, and highly direct AI assistant for SVIT. Reply only in {lang_name}. "
-                "CRITICAL: Keep responses extremely concise, punchy, and conversational. Maximum 2 to 3 short sentences. "
-                "Do NOT output long lists, bullet points, or markdown. "
-                "Tone: Warm, direct, and highly impactful. "
-                "Give only a short department snapshot (leadership + core strength + one outcome) from context."
-            )
-        elif intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
-            system_prompt = (
-                f"You are CLARA. Reply only in {lang_name}. "
-                "Give a direct one-line answer with names only. No extra background."
-            )
+        if narrator_payload is not None:
+            card_json = json.dumps(narrator_payload, ensure_ascii=False, indent=2)
+            system_prompt = build_narrator_system_prompt(lang_name, card_json)
         else:
             system_prompt = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
@@ -703,17 +734,29 @@ async def process_user_text_and_reply(
                 f"If the question is not related to SVIT/college topics, say exactly: {off_topic_reply}"
             )
 
-        if context.strip():
+        if context.strip() and narrator_payload is None:
+            if lang_key != "en" and context_source == "rag":
+                directive = multilingual_rag_reply_directive(lang_name)
+            else:
+                directive = rag_language_enforcement_directive(lang_name)
             system_prompt += (
-                " Use only the college information below when relevant. "
+                f" {directive} "
+                "Use only the college information below when relevant. "
                 f"Do not invent facts.\n\nCollege information:\n{context}"
             )
 
-        context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
-        cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(text)}|{context_sig}"
-        direct_reply = off_topic_direct_reply or get_profile_direct_reply(intent, lang_name)
+        if narrator_payload is not None:
+            context_sig = hashlib.sha256(
+                json.dumps(narrator_payload, sort_keys=True, ensure_ascii=True).encode("utf-8")
+            ).hexdigest()[:12]
+        else:
+            context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
+        cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(rag_query)}|{context_sig}"
+        direct_reply = off_topic_direct_reply
         if intent == INTENT_COURSE_MENU:
             direct_reply = get_course_menu_spoken_prompt(lang_name)
+        elif not is_narrator_intent(intent):
+            direct_reply = direct_reply or get_profile_direct_reply(intent, lang_name)
         reply_text = direct_reply or LLM_REPLY_CACHE.get(cache_key)
         first_sentence = ""
 
@@ -780,7 +823,7 @@ async def process_user_text_and_reply(
                     reply_text, first_sentence = await asyncio.wait_for(
                         _stream_groq_reply(
                             session=session,
-                            user_text=text,
+                            user_text=llm_user_text,
                             system_prompt=system_prompt,
                             websocket=websocket,
                             timing=timing,
@@ -792,7 +835,7 @@ async def process_user_text_and_reply(
                     reply_text, first_sentence = await asyncio.wait_for(
                         _complete_groq_reply(
                             session=session,
-                            user_text=text,
+                            user_text=llm_user_text,
                             system_prompt=system_prompt,
                             timing=timing,
                         ),
@@ -813,7 +856,7 @@ async def process_user_text_and_reply(
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)
-        _append_session_history(session, "assistant", reply_text, max_turns=4)
+        _append_session_history(session, "assistant", reply_text, max_turns=3)
 
         if first_sentence and first_sentence != reply_text:
             logger.info(
@@ -836,7 +879,12 @@ async def process_user_text_and_reply(
 
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
-        if intent in (INTENT_COURSE_MENU, INTENT_DEPARTMENT_OVERVIEW):
+        if intent in (
+            INTENT_COURSE_MENU,
+            INTENT_DEPARTMENT_OVERVIEW,
+            INTENT_ADMISSIONS,
+            INTENT_PLACEMENTS,
+        ):
             assistant_msg["isHidden"] = True
         
         # Mark card-driven intents so frontend opens the proper cards.
@@ -845,15 +893,21 @@ async def process_user_text_and_reply(
         course_menu_options = None
         if intent == INTENT_COLLEGE_OVERVIEW:
             show_card = "college"
+        elif intent == INTENT_ADMISSIONS:
+            show_card = "admissions"
+        elif intent == INTENT_PLACEMENTS:
+            show_card = "placements"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             show_card = "department_overview"
             department_id = detected_department or "CSE"
         elif intent == INTENT_HOD_PROFILE:
             show_card = "hod"
+            department_id = detected_department
         elif intent == INTENT_TRUSTEES_PROFILE:
             show_card = "trustees"
         elif intent == INTENT_HOD_TRUSTEES_PROFILE:
             show_card = ["hod", "trustees"]
+            department_id = detected_department
         elif intent == INTENT_COURSE_MENU:
             show_card = "course_menu"
             course_menu_options = get_course_menu_options()

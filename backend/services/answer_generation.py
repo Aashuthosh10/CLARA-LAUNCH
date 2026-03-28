@@ -3,8 +3,10 @@ CLARA answer generation: intent detection, context selection, two-phase overview
 structured prompt building, and Digital Book page building with TTS for overview.
 """
 
+import json
 import logging
 import re
+from pathlib import Path
 from typing import Any, Callable, List
 
 # Digital Book: 5 content sections (Closing Assurance excluded). Same order as prompt.
@@ -20,8 +22,260 @@ DIGITAL_BOOK_COVER_TEXT = "Institution Overview"
 
 from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 from backend.core.rag import get_relevant_context
+from backend.clients.provider_clients import get_groq_client
 
 logger = logging.getLogger(__name__)
+
+_LOCALES_DIR = Path(__file__).resolve().parent.parent / "data" / "locales"
+_locale_data_cache: dict[str, dict[str, Any]] = {}
+
+# Same order as frontend DEPARTMENT_JSON_KEY_ORDER (kiosk HOD / summary cards).
+DEPARTMENT_JSON_KEY_ORDER: tuple[str, ...] = (
+    "cse",
+    "ise",
+    "cse_aiml",
+    "cse_ds",
+    "cse_cysec",
+    "cse_bs",
+    "ece",
+    "civil",
+    "mechanical",
+    "mba",
+    "basic_sciences",
+)
+
+# Maps detect_department_name() canonical labels to locale JSON department keys.
+_CANONICAL_DEPARTMENT_TO_JSON_KEY: dict[str, str] = {
+    "CSE": "cse",
+    "ISE": "ise",
+    "CSE (AI & ML)": "cse_aiml",
+    "CSE (Data Science)": "cse_ds",
+    "CSE (Cyber Security)": "cse_cysec",
+    "CSE (Business Systems)": "cse_bs",
+    "ECE": "ece",
+    "Civil": "civil",
+    "Mechanical": "mechanical",
+    "MBA": "mba",
+    "Basic Sciences": "basic_sciences",
+}
+
+
+def locale_file_id_for_lang_key(lang_key: str | None) -> str:
+    """Which locale JSON file to load: hi.json for Hindi session, else en.json."""
+    return "hi" if (lang_key or "").strip().lower() == "hi" else "en"
+
+
+def load_locale_data_for_lang_key(lang_key: str | None) -> dict[str, Any]:
+    """Load parsed en.json or hi.json (cached)."""
+    locale = locale_file_id_for_lang_key(lang_key)
+    if locale in _locale_data_cache:
+        return _locale_data_cache[locale]
+    path = _LOCALES_DIR / f"{locale}.json"
+    if not path.is_file():
+        if locale != "en":
+            path = _LOCALES_DIR / "en.json"
+        if not path.is_file():
+            logger.warning("Narrator: locale file missing under %s", _LOCALES_DIR)
+            _locale_data_cache[locale] = {}
+            return {}
+    try:
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            _locale_data_cache[locale] = {}
+            return {}
+        _locale_data_cache[locale] = data
+        return data
+    except Exception as exc:
+        logger.warning("Narrator: could not load %s: %s", path, exc)
+        _locale_data_cache[locale] = {}
+        return {}
+
+
+def department_label_to_json_key(label: str | None) -> str:
+    if not label or not isinstance(label, str):
+        return "cse"
+    stripped = label.strip()
+    if stripped in _CANONICAL_DEPARTMENT_TO_JSON_KEY:
+        return _CANONICAL_DEPARTMENT_TO_JSON_KEY[stripped]
+    low = stripped.lower()
+    for canon, jkey in _CANONICAL_DEPARTMENT_TO_JSON_KEY.items():
+        if canon.lower() == low:
+            return jkey
+    return "cse"
+
+
+def _wants_all_departments_narration(user_text: str) -> bool:
+    n = _normalize_text(user_text)
+    if not n:
+        return False
+    return any(
+        p in n
+        for p in (
+            "all department",
+            "all departments",
+            "every department",
+            "each department",
+            "list department",
+            "list departments",
+            "all branches",
+            "every branch",
+        )
+    )
+
+
+def _hod_slice_for_narrator(dept: Any) -> dict[str, Any]:
+    if not isinstance(dept, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for k in ("name", "hod", "intake", "duration", "overview_and_focus"):
+        if k in dept and dept[k] is not None:
+            v = dept[k]
+            if k == "faculty_list" or isinstance(v, (list, dict)):
+                continue
+            out[k] = v
+    fl = dept.get("faculty_list")
+    if isinstance(fl, list) and fl:
+        out["faculty_highlights"] = fl[:8]
+    return out
+
+
+def build_target_card_payload(
+    intent: str,
+    *,
+    lang_key: str | None,
+    detected_department_label: str | None,
+    user_text: str,
+) -> dict[str, Any] | None:
+    """
+    Build the exact locale JSON slice the kiosk UI uses for this card intent.
+    Returns None if intent is not a narrator intent.
+    """
+    if not is_narrator_intent(intent):
+        return None
+    data = load_locale_data_for_lang_key(lang_key)
+    if not data:
+        return {
+            "presentation_type": intent.lower(),
+            "locale": locale_file_id_for_lang_key(lang_key),
+            "note": "Campus knowledge file unavailable; keep reply very brief and suggest Admission Block.",
+        }
+
+    locale_id = locale_file_id_for_lang_key(lang_key)
+    deps = data.get("departments")
+    if not isinstance(deps, dict):
+        deps = {}
+
+    if intent == INTENT_COLLEGE_OVERVIEW:
+        return {
+            "presentation_type": "college_overview",
+            "locale": locale_id,
+            "institution_overview": data.get("institution_overview"),
+            "leadership": data.get("leadership"),
+        }
+
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        if _wants_all_departments_narration(user_text):
+            ordered: dict[str, Any] = {}
+            for k in DEPARTMENT_JSON_KEY_ORDER:
+                if k in deps and isinstance(deps[k], dict):
+                    ordered[k] = _hod_slice_for_narrator(deps[k])
+            return {
+                "presentation_type": "all_departments_overview",
+                "locale": locale_id,
+                "departments": ordered,
+            }
+        jkey = department_label_to_json_key(detected_department_label)
+        dept = deps.get(jkey)
+        return {
+            "presentation_type": "single_department_overview",
+            "locale": locale_id,
+            "department_key": jkey,
+            "department": _hod_slice_for_narrator(dept) if isinstance(dept, dict) else {},
+        }
+
+    if intent == INTENT_ADMISSIONS:
+        return {
+            "presentation_type": "admissions_and_fees",
+            "locale": locale_id,
+            "admissions_and_fees": data.get("admissions_and_fees"),
+        }
+
+    if intent == INTENT_PLACEMENTS:
+        return {
+            "presentation_type": "placements_and_training",
+            "locale": locale_id,
+            "placements_and_training": data.get("placements_and_training"),
+        }
+
+    if intent == INTENT_HOD_PROFILE:
+        hod_rows: dict[str, Any] = {}
+        for k in DEPARTMENT_JSON_KEY_ORDER:
+            d = deps.get(k)
+            if isinstance(d, dict):
+                hod_rows[k] = {
+                    "name": d.get("name"),
+                    "hod": d.get("hod"),
+                    "intake": d.get("intake"),
+                }
+        return {
+            "presentation_type": "hod_overview",
+            "locale": locale_id,
+            "hod_by_department": hod_rows,
+        }
+
+    if intent == INTENT_TRUSTEES_PROFILE:
+        return {
+            "presentation_type": "leadership_trustees",
+            "locale": locale_id,
+            "leadership": data.get("leadership"),
+        }
+
+    if intent == INTENT_HOD_TRUSTEES_PROFILE:
+        hod_rows_b: dict[str, Any] = {}
+        for k in DEPARTMENT_JSON_KEY_ORDER:
+            d = deps.get(k)
+            if isinstance(d, dict):
+                hod_rows_b[k] = {
+                    "name": d.get("name"),
+                    "hod": d.get("hod"),
+                    "intake": d.get("intake"),
+                }
+        return {
+            "presentation_type": "hod_and_trustees",
+            "locale": locale_id,
+            "hod_by_department": hod_rows_b,
+            "leadership": data.get("leadership"),
+        }
+
+    return None
+
+
+def build_narrator_system_prompt(language_name: str, target_card_data_json: str) -> str:
+    """
+    Strict narrator instructions: conversational script aligned with on-screen card data.
+    target_card_data_json should be pretty-printed JSON the model can read but must not recite verbatim.
+    """
+    return (
+        f"You are CLARA, an AI tour guide for Sai Vidya Institute of Technology (SVIT). "
+        f"Reply only in {language_name}.\n\n"
+        "The visitor is looking at an on-screen visual presentation. "
+        "The slides are built from the following structured campus data (TARGET_CARD_DATA). "
+        "This is the ONLY source of facts you may use for this turn.\n\n"
+        "TARGET_CARD_DATA (JSON):\n"
+        f"{target_card_data_json}\n\n"
+        "Rules:\n"
+        "- Your job is to NARRATE this information naturally, like a human guide—not like a Q&A bot reading a database.\n"
+        "- Do NOT read raw JSON keys, field names, snake_case, or bracketed citation tags aloud.\n"
+        "- Do NOT say things like 'HOD colon' or list labels; weave facts into full sentences.\n"
+        "- Example style: instead of 'HOD: Dr. Smith. Intake: 120', say the department is led by Dr. Smith and takes about a hundred twenty students each year.\n"
+        "- Follow the flow of the data: introduce the topic, highlight one or two key numbers or facts, mention people or focus areas where it helps.\n"
+        "- Keep the script to 3 or 4 short sentences maximum so the audio paces well with a short multi-slide presentation.\n"
+        "- Plain text only. No markdown, no bullet points, no numbered lists.\n"
+        "- If TARGET_CARD_DATA is empty or missing detail, give one short sentence and suggest visiting the Admission Block or the relevant office.\n"
+    )
+
+
 MULTI_ENTITY_RULE = (
     "If the user asks multiple distinct questions or about multiple distinct entities in a single sentence "
     "(for example, two different departments), you MUST provide a complete answer for ALL of them "
@@ -35,14 +289,66 @@ CONCISE_VOICE_RULE = (
     "Tone: Warm, direct, and highly impactful."
 )
 
+
+def rag_language_enforcement_directive(language_name: str) -> str:
+    """Strict single-language reply when using RAG context (voice/chat, non-card narrator)."""
+    return (
+        f"CRITICAL: You MUST answer the user's query entirely in {language_name}. "
+        f"Use the provided context, which is already translated into {language_name}, to form your answer. "
+        "Do not mix languages unless citing a specific technical English term like 'CSE' or 'KCET'."
+    )
+
+
+def multilingual_rag_reply_directive(language_name: str) -> str:
+    """When retrieval used English chunks but the session speaks another language."""
+    return (
+        f"Answer this query naturally in conversational {language_name}. "
+        "The college reference below is in English; use it only for verified facts and respond entirely "
+        f"in {language_name}. Do not mix languages except for standard abbreviations like CSE or KCET."
+    )
+
+
 INTENT_COLLEGE_OVERVIEW = "COLLEGE_OVERVIEW"
 INTENT_COURSE_MENU = "COURSE_MENU"
 INTENT_DEPARTMENT_OVERVIEW = "DEPARTMENT_OVERVIEW"
+INTENT_ADMISSIONS = "ADMISSIONS"
+INTENT_PLACEMENTS = "PLACEMENTS"
 INTENT_HOD_PROFILE = "HOD_PROFILE"
 INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
-COURSE_MENU_OPTIONS = ["CSE", "ECE", "Civil", "Mechanical", "MBA", "Basic Sciences"]
+
+NARRATOR_INTENTS: frozenset[str] = frozenset(
+    {
+        INTENT_COLLEGE_OVERVIEW,
+        INTENT_DEPARTMENT_OVERVIEW,
+        INTENT_ADMISSIONS,
+        INTENT_PLACEMENTS,
+        INTENT_HOD_PROFILE,
+        INTENT_TRUSTEES_PROFILE,
+        INTENT_HOD_TRUSTEES_PROFILE,
+    }
+)
+
+
+def is_narrator_intent(intent: str) -> bool:
+    """True when the voice turn should use presentation narrator mode (locale JSON only, no RAG)."""
+    return intent in NARRATOR_INTENTS
+
+
+COURSE_MENU_OPTIONS = [
+    "CSE",
+    "ISE",
+    "CSE (AI & ML)",
+    "CSE (Data Science)",
+    "CSE (Cyber Security)",
+    "CSE (Business Systems)",
+    "ECE",
+    "Civil",
+    "Mechanical",
+    "MBA",
+    "Basic Sciences",
+]
 
 COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
     "English": "Here are the departments available at our college. Please select one.",
@@ -125,49 +431,14 @@ COLLEGE_RELATED_NORMAL_QUERY_KEYWORDS = [
     "college",
     "institute",
     "svit",
-    "ಪ್ರವೇಶ",
-    "ಶುಲ್ಕ",
-    "ಕಾಲೇಜು",
-    "ವಿಭಾಗ",
-    "ಹಾಸ್ಟೆಲ್",
-    "ಪ್ಲೇಸ್‌ಮೆಂಟ್",
-    "ಕ್ಯಾಂಪಸ್",
-    "प्रवेश",
-    "फीस",
-    "कॉलेज",
-    "विभाग",
-    "होस्टल",
-    "प्लेसमेंट",
-    "कैंपस",
-    "சேர்க்கை",
-    "கட்டணம்",
-    "கல்லூரி",
-    "துறை",
-    "ஹாஸ்டல்",
-    "ப்ளேஸ்மென்ட்",
-    "வளாகம்",
-    "ప్రవేశం",
-    "ఫీజు",
-    "కళాశాల",
-    "విభాగం",
-    "హాస్టల్",
-    "ప్లేస్‌మెంట్",
-    "క్యాంపస్",
-    "അഡ്മിഷൻ",
-    "ഫീസ്",
-    "കോളേജ്",
-    "വിഭാഗം",
-    "ഹോസ്റ്റൽ",
-    "പ്ലേസ്മെന്റ്",
-    "ക്യാമ്പസ്",
 ]
 
 OVERVIEW_CONTEXT_MAX_TOKENS = 1000
 OVERVIEW_TOP_K = 10
 MODEL_CONTEXT_LIMIT = 128_000
 MAX_INPUT_TOKEN_FRACTION = 0.7
-GROQ_TEMPERATURE = 0.3
-GROQ_TOP_P = 0.8
+GROQ_TEMPERATURE = 0.1
+GROQ_TOP_P = 0.3
 GROQ_MAX_TOKENS = 400
 
 # Fixed query to retrieve overview-oriented chunks (establishment, affiliation, NAAC, programs, etc.)
@@ -201,32 +472,6 @@ OVERVIEW_KEYWORDS_EN = [
     "college intro",
     "overview about college",
 ]
-# Regional phrases for overview intent (about college, college info, brief, etc.)
-OVERVIEW_KEYWORDS_REGIONAL = [
-    "college overview",
-    "about the college",
-    "about this college",
-    "college information",
-    "about svit",
-    "कॉलेज का विवरण",
-    "कॉलेज की जानकारी",
-    "कॉलेज के बारे में",
-    "कॉलेज डिटेल्स",
-    "ಕಾಲೇಜು ಮಾಹಿತಿ",
-    "ಕಾಲೇಜಿನ ಬಗ್ಗೆ",
-    "ಕಾಲೇಜು ವಿವರ",
-    "கல்லூரி தகவல்",
-    "கல்லூரி பற்றி",
-    "கல்லூரி விவரம்",
-    "இந்த கல்லூரி",
-    "కళాశాల సమాచారం",
-    "కాలేజీ గురించి",
-    "కళాశాల వివరాలు",
-    "കോളേജ് വിവരം",
-    "കോളേജിനെക്കുറിച്ച്",
-    "കോളേജ് വിശദാംശങ്ങൾ",
-]
-
 COLLEGE_ENTITY_KEYWORDS = [
     "college",
     "clg",
@@ -237,33 +482,6 @@ COLLEGE_ENTITY_KEYWORDS = [
     "campus",
     "svit",
     "sai vidya",
-    "ಕಾಲೇಜು",
-    "ಕಾಲೇಜ್",
-    "ಕಾಲೇಜಿನ",
-    "ಕಾಲೆಜ್",
-    "ಸಂಸ್ಥೆ",
-    "ಕ್ಯಾಂಪಸ್",
-    "ವಿಶ್ವವಿದ್ಯಾಲಯ",
-    "कॉलेज",
-    "कॉलेज़",
-    "कॉलेज का",
-    "संस्थान",
-    "इंस्टीट्यूट",
-    "कैंपस",
-    "विश्वविद्यालय",
-    "கல்லூரி",
-    "நிறுவனம்",
-    "கேம்பஸ்",
-    "பல்கலைக்கழகம்",
-    "కళాశాల",
-    "కాలేజీ",
-    "సంస్థ",
-    "క్యాంపస్",
-    "విశ్వవిద్యాలయం",
-    "കോളേജ്",
-    "സ്ഥാപനം",
-    "ക്യാമ്പസ്",
-    "സർവ്വകലാശാല",
 ]
 
 OVERVIEW_CUE_KEYWORDS = [
@@ -322,33 +540,6 @@ OVERVIEW_CUE_KEYWORDS = [
     "parayu",
     "parayoo",
     "vivaram",
-    "ಮಾಹಿತಿ",
-    "ವಿವರ",
-    "ವಿವರಣೆ",
-    "ಬಗ್ಗೆ",
-    "ಪರಿಚಯ",
-    "ಇತಿಹಾಸ",
-    "इतिहास",
-    "जानकारी",
-    "विवरण",
-    "के बारे में",
-    "परिचय",
-    "தகவல்",
-    "விவரம்",
-    "விவரங்கள்",
-    "பற்றி",
-    "அறிமுகம்",
-    "வரலாறு",
-    "సమాచారం",
-    "వివరాలు",
-    "గురించి",
-    "పరిచయం",
-    "చరిత్ర",
-    "വിവരം",
-    "വിശദാംശങ്ങൾ",
-    "കുറിച്ച്",
-    "പരിചയം",
-    "ചരിത്രം",
 ]
 
 COURSE_MENU_KEYWORDS_EN = [
@@ -370,35 +561,6 @@ COURSE_MENU_KEYWORDS_EN = [
     "programs available",
     "courses offered",
     "branches available",
-]
-
-# Regional: course/department list queries in Kannada, Hindi, Tamil, Telugu, Malayalam.
-COURSE_MENU_KEYWORDS_REGIONAL = [
-    "பாடநெறிகள்",
-    "துறைகள்",
-    "கோர்ஸ்கள்",
-    "எந்த பாடநெறி",
-    "கல்லூரி பாடநெறி",
-    "விண்ணப்பிக்க",
-    "ವಿಭಾಗಗಳು",
-    "ಕೋರ್ಸ್‌ಗಳು",
-    "ಯಾವ ಕೋರ್ಸ್",
-    "ಕಾಲೇಜಿನ ಕೋರ್ಸ್",
-    "ವಿಭಾಗಗಳ ಪಟ್ಟಿ",
-    "विभाग",
-    "कोर्स",
-    "कौन सा कोर्स",
-    "कॉलेज में कोर्स",
-    "पाठ्यक्रम",
-    "शाखाएं",
-    "శాఖలు",
-    "కోర్సులు",
-    "ఏ కోర్సులు",
-    "కళాశాల కోర్సులు",
-    "വിഭാഗങ്ങൾ",
-    "കോഴ്സുകൾ",
-    "ഏത് കോഴ്സ്",
-    "കോളേജ് കോഴ്സുകൾ",
 ]
 
 FEE_QUERY_KEYWORDS = [
@@ -425,32 +587,33 @@ FEE_QUERY_KEYWORDS = [
     "kaasu",
     "dabbu",
     "karchu",
-    "ಶುಲ್ಕ",
-    "ಫೀಸ್",
-    "ಕಟ್ಟಣೆ",
-    "फीस",
-    "शुल्क",
-    "फीस संरचना",
-    "कितना",
-    "राशि",
-    "கட்டணம்",
-    "ஃபீஸ்",
-    "செலவு",
-    "எவ்வளவு",
-    "ఫీజు",
-    "ఫీజులు",
-    "రుసుము",
-    "ఎంత",
-    "ఖర్చు",
-    "ഫീസ്",
-    "ചെലവ്",
-    "എത്ര",
 ]
 
 DEPARTMENT_SYNONYMS: dict[str, list[str]] = {
-    "CSE (AI & ML)": ["cse ai", "cse ai ml", "ai ml", "aiml", "ai&ml", "artificial intelligence", "machine learning"],
-    "CSE (Data Science)": ["cse ds", "cse data science", "data science", "datascience"],
-    "CSE": ["cse", "computer science", "computer science engineering", "ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್", "कंप्यूटर साइंस", "கணினி அறிவியல்", "కంప్యూటర్ సైన్స్", "കമ്പ്യൂട്ടർ സയൻസ്"],
+    "CSE (AI & ML)": [
+        "cse ai",
+        "cse ai ml",
+        "cse (ai & ml)",
+        "ai ml",
+        "aiml",
+        "ai&ml",
+        "artificial intelligence",
+        "machine learning",
+    ],
+    "CSE (Data Science)": ["cse ds", "cse data science", "cse (data science)", "data science", "datascience"],
+    "CSE (Cyber Security)": [
+        "cse cyber",
+        "cse (cyber security)",
+        "cyber security",
+        "cybersecurity",
+    ],
+    "CSE (Business Systems)": [
+        "cse business",
+        "cse (business systems)",
+        "business systems",
+        "cs business",
+    ],
+    "CSE": ["cse", "computer science", "computer science engineering"],
     "ISE": ["ise", "information science", "information science engineering"],
     "ECE": ["ece", "electronics", "electronics and communication", "electronics & communication", "electronics communication"],
     "Civil": ["civil", "civil engineering"],
@@ -479,42 +642,6 @@ HOD_PROFILE_KEYWORDS = [
     "head of department",
     "heads of department",
     "heads of the department",
-    "ಎಚ್ ಓ ಡಿ",
-    "ಎಚ್.ಓ.ಡಿ",
-    "ಹೆಚ್ ಒ ಡಿ",
-    "ಹೆಚ್.ಒ.ಡಿ",
-    "ಹೋಡ್",
-    "ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥ",
-    "ವಿಭಾಗ ಮುಖ್ಯಸ್ಥ",
-    "ಮುಖ್ಯಸ್ಥರು",
-    "एच ओ डी",
-    "एच.ओ.डी",
-    "होड",
-    "विभाग प्रमुख",
-    "विभागाध्यक्ष",
-    "एचओडी",
-    "प्रमुख",
-    "ஹெச் ஓ டி",
-    "ஹெச்ஓடி",
-    "hod யார்",
-    "துறைத்தலைவர்",
-    "துறை தலைவர்",
-    "హెచ్ ఓ డి",
-    "హెచ్ఓడి",
-    "హెచ్.ఓ.డి",
-    "హోడ్",
-    "hod ఎవరు",
-    "డిపార్ట్‌మెంట్ హెడ్",
-    "విభాగం అధిపతి",
-    "విభాగాధిపతి",
-    "అధిపతి",
-    "എച്ച്ഒഡി",
-    "എച്ച്.ഒ.ഡി",
-    "ഹോഡ്",
-    "hod ആര്",
-    "വിഭാഗ തലവൻ",
-    "വിഭാഗം മേധാവി",
-    "വിഭാഗ മേധാവി",
 ]
 
 TRUSTEES_PROFILE_KEYWORDS = [
@@ -536,44 +663,6 @@ TRUSTEES_PROFILE_KEYWORDS = [
     "board of trustees",
     "founder trustee",
     "founder trustees",
-    "ಟ್ರಸ್ಟಿ",
-    "ಟ್ರಸ್ಟಿಗಳು",
-    "ಟ್ರಸ್ಟೀಸ್",
-    "ಟ್ರಸ್ಟ್ ಮಂಡಳಿ",
-    "ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ",
-    "ಸ್ಥಾಪಕ",
-    "ಆಡಳಿತ",
-    "ಮಂಡಳಿ",
-    "न्यासी",
-    "ट्रस्टी",
-    "न्यास मंडल",
-    "संस्थापक ट्रस्टी",
-    "ट्रस्टीज",
-    "संस्थापक",
-    "प्रबंधन",
-    "டிரஸ்டி",
-    "டிரஸ்டிகள்",
-    "டிரஸ்டீஸ்",
-    "அறங்காவலர் குழு",
-    "நிறுவனர் டிரஸ்டி",
-    "அறங்காவலர்",
-    "அறங்காவலர்கள்",
-    "நிறுவனர்",
-    "நிர்வாகம்",
-    "ట్రస్టీ",
-    "ట్రస్టీలు",
-    "ట్రస్టీస్",
-    "ట్రస్టీ బోర్డు",
-    "స్థాపక ట్రస్టీ",
-    "స్థాపక",
-    "నిర్వహణ",
-    "ട്രസ്റ്റി",
-    "ട്രസ്റ്റിമാർ",
-    "ട്രസ്റ്റീസ്",
-    "ട്രസ്റ്റ് ബോർഡ്",
-    "സ്ഥാപക ട്രസ്റ്റി",
-    "സ്ഥാപകൻ",
-    "മാനേജ്മെന്റ്",
 ]
 
 BOTH_PROFILE_KEYWORDS = [
@@ -588,18 +677,6 @@ BOTH_PROFILE_KEYWORDS = [
     "iddaru",
     "rendu",
     "randum",
-    "ಇಬ್ಬರೂ",
-    "ಎರಡೂ",
-    "दोनों",
-    "இருவரும்",
-    "இருவரின்",
-    "இரண்டும்",
-    "రెండూ",
-    "ఇద్దరి",
-    "ఇద్దరూ",
-    "രണ്ടും",
-    "ഇരുവരുടെയും",
-    "ഇരുവരും",
 ]
 
 PROFILE_GENERIC_KEYWORDS = [
@@ -614,11 +691,6 @@ PROFILE_GENERIC_KEYWORDS = [
     "kurichu",
     "vivara",
     "maahiti",
-    "ಮಾಹಿತಿ",
-    "जानकारी",
-    "தகவல்",
-    "సమాచారం",
-    "വിവരം",
 ]
 
 _HOD_NAME = "Dr. Shashikumar D R"
@@ -778,19 +850,43 @@ def _is_course_menu_query(normalized: str) -> bool:
     # 1) Check exact known phrases
     if any(k in normalized for k in COURSE_MENU_KEYWORDS_EN):
         return True
-    if any(k in normalized for k in COURSE_MENU_KEYWORDS_REGIONAL):
-        return True
 
-    # 2) Check vigorous mixed-language heuristic (Course Entity + List/Show Cue)
+    # 2) Course entity + list/show cue (Latin script; non-English sessions use LLM preprocessor)
     course_entities = [
-        "course", "courses", "branch", "branches", "department", "departments", "program", "programs", "stream", "streams",
-        "ಕೋರ್ಸ್", "ವಿಭಾಗ", "कोर्स", "विभाग", "கோர்ஸ்", "துறை", "కోర్సు", "విభాగం", "കോഴ്സ്", "വിഭാഗം"
+        "course",
+        "courses",
+        "branch",
+        "branches",
+        "department",
+        "departments",
+        "program",
+        "programs",
+        "stream",
+        "streams",
     ]
     list_cues = [
-        "available", "offer", "list", "show", "what", "which", "how many",
-        "yava", "yaava", "kaun", "kya", "enna", "emi", "emiti", "eth", "ethokke",
-        "kodi", "heli", "batao", "sollu", "cheppu", "parayu",
-        "ಎಷ್ಟು", "ಯಾವ", "कौन", "क्या", "எந்த", "என்ன", "ఏమిటి", "ఏ", "ഏത്", "എന്ത്"
+        "available",
+        "offer",
+        "list",
+        "show",
+        "what",
+        "which",
+        "how many",
+        "yava",
+        "yaava",
+        "kaun",
+        "kya",
+        "enna",
+        "emi",
+        "emiti",
+        "eth",
+        "ethokke",
+        "kodi",
+        "heli",
+        "batao",
+        "sollu",
+        "cheppu",
+        "parayu",
     ]
 
     has_course = any(c in normalized for c in course_entities)
@@ -808,13 +904,69 @@ def _is_fee_query(normalized: str) -> bool:
     return any(_contains_phrase(normalized, k) for k in FEE_QUERY_KEYWORDS)
 
 
+def _is_admissions_query(normalized: str) -> bool:
+    if not normalized:
+        return False
+    if _is_fee_query(normalized):
+        return True
+    admission_phrases = [
+        "admission",
+        "admissions",
+        "admit",
+        "apply",
+        "application",
+        "eligibility",
+        "entrance",
+        "entrance exam",
+        "kcet",
+        "comedk",
+        "kea",
+        "counseling",
+        "counselling",
+        "quota",
+        "scholarship",
+        "scholarships",
+        "fee structure",
+        "how to join",
+        "how to get admission",
+    ]
+    return any(_contains_phrase(normalized, p) for p in admission_phrases)
+
+
+def _is_placements_query(normalized: str) -> bool:
+    if not normalized:
+        return False
+    placement_phrases = [
+        "placement",
+        "placements",
+        "campus drive",
+        "campus placement",
+        "recruiter",
+        "recruitment",
+        "job",
+        "jobs",
+        "hiring",
+        "package",
+        "salary",
+        "ctc",
+        "internship",
+        "internships",
+        "training program",
+        "mock interview",
+        "career",
+        "placed",
+        "companies visit",
+        "tnp",
+        "training and placement",
+    ]
+    return any(_contains_phrase(normalized, p) for p in placement_phrases)
+
+
 def _is_college_overview_query(normalized: str) -> bool:
     if not normalized:
         return False
 
     if _matches_any_phrase(normalized, OVERVIEW_KEYWORDS_EN):
-        return True
-    if _matches_any_phrase(normalized, OVERVIEW_KEYWORDS_REGIONAL):
         return True
 
     has_college_entity = _matches_any_phrase(normalized, COLLEGE_ENTITY_KEYWORDS)
@@ -833,11 +985,12 @@ def detect_intent(text: str) -> str:
     """
     Deterministic intent detection with priority:
     1) Profile queries (HOD/TRUSTEES/BOTH)
-    2) Fee queries -> NORMAL_QUERY (short direct answers)
-    3) DEPARTMENT_OVERVIEW (if a specific department is detected)
-    4) COURSE_MENU (generic programs/branches query)
-    5) COLLEGE_OVERVIEW (about the college)
-    6) NORMAL_QUERY
+    2) ADMISSIONS (fees, admission process, entrance exams — kiosk card deck)
+    3) PLACEMENTS (jobs, training, placement support — kiosk card deck)
+    4) DEPARTMENT_OVERVIEW (if a specific department is detected)
+    5) COURSE_MENU (generic programs/branches query)
+    6) COLLEGE_OVERVIEW (about the college)
+    7) NORMAL_QUERY
     """
     normalized = _normalize_text(text)
     if not normalized:
@@ -845,10 +998,10 @@ def detect_intent(text: str) -> str:
     profile_intent = _detect_profile_intent(normalized)
     if profile_intent:
         return profile_intent
-    # Fee queries should stay in normal QA mode (short direct answer),
-    # even if a department name appears.
-    if _is_fee_query(normalized):
-        return INTENT_NORMAL_QUERY
+    if _is_admissions_query(normalized):
+        return INTENT_ADMISSIONS
+    if _is_placements_query(normalized):
+        return INTENT_PLACEMENTS
     if _detect_department(normalized):
         return INTENT_DEPARTMENT_OVERVIEW
     if _is_course_menu_query(normalized):
@@ -856,6 +1009,106 @@ def detect_intent(text: str) -> str:
     if _is_college_overview_query(normalized):
         return INTENT_COLLEGE_OVERVIEW
     return INTENT_NORMAL_QUERY
+
+
+def _strip_json_fence(text: str) -> str:
+    s = text.strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"\s*```\s*$", "", s)
+    return s.strip()
+
+
+def _coerce_preprocessor_intent(raw: str | None) -> str:
+    if raw is None:
+        return INTENT_NORMAL_QUERY
+    s = str(raw).strip().upper().replace("-", "_")
+    if s.startswith("INTENT_"):
+        s = s[7:]
+    aliases: dict[str, str] = {
+        "COLLEGE_OVERVIEW": INTENT_COLLEGE_OVERVIEW,
+        "COURSE_MENU": INTENT_COURSE_MENU,
+        "DEPARTMENT_OVERVIEW": INTENT_DEPARTMENT_OVERVIEW,
+        "ADMISSIONS": INTENT_ADMISSIONS,
+        "PLACEMENTS": INTENT_PLACEMENTS,
+        "HOD_PROFILE": INTENT_HOD_PROFILE,
+        "TRUSTEES_PROFILE": INTENT_TRUSTEES_PROFILE,
+        "HOD_TRUSTEES_PROFILE": INTENT_HOD_TRUSTEES_PROFILE,
+        "NORMAL_QUERY": INTENT_NORMAL_QUERY,
+    }
+    return aliases.get(s, INTENT_NORMAL_QUERY)
+
+
+def department_label_from_preprocessor(value: Any) -> str | None:
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s or s.lower() in ("null", "none", "n/a", "-", ""):
+        return None
+    for canon in DEPARTMENT_SYNONYMS:
+        if canon.lower() == s.lower():
+            return canon
+    return _detect_department(_normalize_text(s))
+
+
+async def normalize_and_classify_query(user_text: str, session_lang: str) -> dict[str, Any]:
+    """
+    For non-English sessions: translate mixed-language input to English and classify intent + department.
+    English sessions should not call this (use detect_intent / detect_department_name instead).
+    """
+    from backend.config.settings import MULTILINGUAL_PREPROCESSOR_MAX_TOKENS, MULTILINGUAL_PREPROCESSOR_MODEL
+
+    text = (user_text or "").strip()
+    fallback: dict[str, Any] = {
+        "english_translation": text,
+        "intent": INTENT_NORMAL_QUERY,
+        "target_department": None,
+    }
+    if not text:
+        return fallback
+    try:
+        client = await get_groq_client()
+        if not client:
+            return fallback
+        allowed = (
+            "COLLEGE_OVERVIEW, COURSE_MENU, DEPARTMENT_OVERVIEW, ADMISSIONS, PLACEMENTS, "
+            "HOD_PROFILE, TRUSTEES_PROFILE, HOD_TRUSTEES_PROFILE, NORMAL_QUERY"
+        )
+        system_prompt = (
+            "You are a linguistic translation and classification engine for a college kiosk (SVIT). "
+            f"The user's session language label is: {session_lang}. "
+            "The user text may mix that language with English (code-switching).\n"
+            "1) Translate the user's query into clear, concise English (one short sentence).\n"
+            f"2) Classify intent as exactly one of: {allowed}.\n"
+            "3) If the question targets a specific academic department or branch, set target_department to one of: "
+            "CSE, ISE, CSE (AI & ML), CSE (Data Science), CSE (Cyber Security), CSE (Business Systems), "
+            "ECE, Civil, Mechanical, MBA, Basic Sciences, Mathematics, Physics, Chemistry. Otherwise JSON null.\n"
+            "Output ONLY one JSON object, no markdown fences, no extra keys, with exactly: "
+            "english_translation (string), intent (string), target_department (string or null)."
+        )
+        completion = await client.chat.completions.create(
+            model=MULTILINGUAL_PREPROCESSOR_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text},
+            ],
+            temperature=0.0,
+            top_p=0.2,
+            max_tokens=MULTILINGUAL_PREPROCESSOR_MAX_TOKENS,
+        )
+        raw = (completion.choices[0].message.content or "").strip()
+        payload = json.loads(_strip_json_fence(raw))
+        if not isinstance(payload, dict):
+            return fallback
+        en = (payload.get("english_translation") or "").strip()
+        if not en:
+            en = text
+        intent = _coerce_preprocessor_intent(payload.get("intent"))
+        dept = department_label_from_preprocessor(payload.get("target_department"))
+        return {"english_translation": en, "intent": intent, "target_department": dept}
+    except Exception as e:
+        logger.warning("normalize_and_classify_query failed: %s", e, exc_info=True)
+        return fallback
 
 
 FALLBACK_MSG = "I'm sorry, I couldn't process your request right now."
@@ -870,24 +1123,26 @@ def _fallback_reply(context: str) -> str:
     return FALLBACK_MSG
 
 
-def build_overview_context() -> str:
+def build_overview_context(lang_key: str | None = None) -> str:
     """
     Return overview-oriented RAG context, hard-capped at OVERVIEW_CONTEXT_MAX_TOKENS (1000).
-    Uses fixed canonical query; no DB schema changes.
+    Uses fixed canonical query; rows are filtered by locale metadata when lang_key is set.
     """
     return get_relevant_context(
         OVERVIEW_QUERY,
         top_k=OVERVIEW_TOP_K,
         max_tokens=OVERVIEW_CONTEXT_MAX_TOKENS,
+        lang_key=lang_key,
     )
 
 
-def build_normal_context(query: str) -> str:
+def build_normal_context(query: str, lang_key: str | None = None) -> str:
     """Thin wrapper around get_relevant_context for normal (non-overview) queries."""
     return get_relevant_context(
         query,
         top_k=RAG_TOP_K,
         max_tokens=RAG_MAX_TOKENS,
+        lang_key=lang_key,
     )
 
 
@@ -901,6 +1156,8 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
         prefix = (
             CONCISE_VOICE_RULE
             + " "
+            + rag_language_enforcement_directive(language)
+            + " "
             "Give a short college overview in 2-3 sentences using only verified context. "
             "Plain text only. No markdown. No bullets. No emojis. "
             "If information is missing, explicitly state 'Information not available.' "
@@ -911,6 +1168,8 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
         prefix = (
             CONCISE_VOICE_RULE
             + "\n\n"
+            + rag_language_enforcement_directive(language)
+            + "\n\n"
             "Give a short department snapshot in 2-3 sentences using only verified department data.\n"
             "No markdown. No bullets.\n"
             "If missing, say 'Information not available.'\n"
@@ -919,12 +1178,38 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
             "Department information:\n"
         )
         return f"{prefix}{ctx}" if ctx else prefix.rstrip()
+    if intent == INTENT_ADMISSIONS:
+        prefix = (
+            CONCISE_VOICE_RULE
+            + "\n\n"
+            + rag_language_enforcement_directive(language)
+            + "\n\n"
+            "The user is asking about admissions, fees, eligibility, or entrance exams. "
+            "Reply in 2-3 very short sentences using only the context. No markdown or bullets. "
+            "Direct them to the Admission Block if exact numbers are uncertain.\n"
+            + MULTI_ENTITY_RULE
+            + "\n\nAdmissions and fees information:\n"
+        )
+        return f"{prefix}{ctx}" if ctx else prefix.rstrip()
+    if intent == INTENT_PLACEMENTS:
+        prefix = (
+            CONCISE_VOICE_RULE
+            + "\n\n"
+            + rag_language_enforcement_directive(language)
+            + "\n\n"
+            "The user is asking about placements, jobs, internships, or training. "
+            "Reply in 2-3 very short sentences using only the context. No markdown or bullets.\n"
+            + MULTI_ENTITY_RULE
+            + "\n\nPlacements and training information:\n"
+        )
+        return f"{prefix}{ctx}" if ctx else prefix.rstrip()
     # NORMAL_QUERY
     unavailable_reply = get_unavailable_reply(language)
     off_topic_reply = get_off_topic_reply(language)
     if ctx:
         return (
             f"{CONCISE_VOICE_RULE} "
+            f"{rag_language_enforcement_directive(language)} "
             f"Reply only in {language}. "
             f"For college-related emotional or opinion questions (for example, 'is this a good college?'), reply with a reassuring, polite tone in one or two short sentences. "
             f"Use ONLY the following college information when it is relevant to the user's question. "
@@ -938,6 +1223,7 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
         )
     return (
         f"{CONCISE_VOICE_RULE} "
+        f"{rag_language_enforcement_directive(language)} "
         f"Reply only in {language}. "
         f"For college-related emotional or opinion questions, respond politely in one or two short sentences. "
         f"{MULTI_ENTITY_RULE} "
@@ -982,7 +1268,7 @@ def generate_structured_overview(
 ) -> str:
     """
     Phase 1: Generate structured college overview in English only.
-    Uses temperature=0.3, top_p=0.8, max_tokens=400. On failure returns empty string (caller uses fallback).
+    Uses low temperature (GROQ_TEMPERATURE), top_p=GROQ_TOP_P, max_tokens=400. On failure returns empty string (caller uses fallback).
     """
     if not groq_client or not model:
         return ""
@@ -1018,7 +1304,7 @@ def generate_structured_department_overview(
 ) -> str:
     """
     Generate structured department overview in English only.
-    Uses temperature=0.3, top_p=0.8, max_tokens=400. On failure returns empty string.
+    Uses low temperature (GROQ_TEMPERATURE), top_p=GROQ_TOP_P, max_tokens=400. On failure returns empty string.
     """
     if not groq_client or not model:
         return ""
@@ -1146,43 +1432,47 @@ def generate_reply(
     if not groq_client or not model:
         return unavailable
 
-    if intent in (INTENT_HOD_PROFILE, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE):
-        return get_profile_direct_reply(intent, language) or unavailable
+    lang_key_for_locale = "hi" if (language or "").strip().lower() == "hindi" else "en"
+
+    if is_narrator_intent(intent):
+        dept_label = detect_department_name(text)
+        npayload = build_target_card_payload(
+            intent,
+            lang_key=lang_key_for_locale,
+            detected_department_label=dept_label,
+            user_text=text,
+        )
+        if npayload is None:
+            npayload = {}
+        card_json = json.dumps(npayload, ensure_ascii=False, indent=2)
+        narrator_system = build_narrator_system_prompt(language, card_json)
+        try:
+            messages = [{"role": "system", "content": narrator_system}]
+            for m in session_messages or []:
+                role = "assistant" if m.get("role") == "clara" else "user"
+                messages.append({"role": role, "content": m.get("text", "") or ""})
+            messages.append({"role": "user", "content": text or ""})
+            completion = groq_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=GROQ_TEMPERATURE,
+                top_p=GROQ_TOP_P,
+                max_tokens=GROQ_MAX_TOKENS,
+            )
+            out = (completion.choices[0].message.content or "").strip()
+            if out:
+                logger.info("Reply generated narrator intent=%s model=%s", intent, model)
+            return out if out else unavailable
+        except Exception as e:
+            logger.error("LLM failure (narrator): %s", e, exc_info=True)
+            return unavailable
+
     if intent == INTENT_NORMAL_QUERY and not is_college_related_query(text):
         return off_topic
-
-    if intent == INTENT_COLLEGE_OVERVIEW:
-        try:
-            system_prompt = build_system_prompt(INTENT_COLLEGE_OVERVIEW, "English", safe_context)
-            reply_text = generate_structured_overview(system_prompt, safe_context, groq_client, model)
-            if not reply_text:
-                return unavailable
-            if language and language != "English":
-                reply_text = translate_preserving_structure(reply_text, language, groq_client, model)
-            reply_text = reply_text or unavailable
-            return reply_text
-        except Exception as e:
-            logger.error("LLM failure (overview): %s", e, exc_info=True)
-            return unavailable
 
     if intent == INTENT_COURSE_MENU:
         # Frontend renders the course menu; keep backend response deterministic.
         return "COURSE_MENU"
-
-    if intent == INTENT_DEPARTMENT_OVERVIEW:
-        try:
-            normalized = _normalize_text(text)
-            dept_name = _detect_department(normalized) or "Department"
-            system_prompt = build_system_prompt(INTENT_DEPARTMENT_OVERVIEW, "English", safe_context)
-            reply_text = generate_structured_department_overview(system_prompt, dept_name, groq_client, model)
-            if not reply_text:
-                return unavailable
-            if language and language != "English":
-                reply_text = translate_preserving_structure(reply_text, language, groq_client, model)
-            return reply_text or unavailable
-        except Exception as e:
-            logger.error("LLM failure (department overview): %s", e, exc_info=True)
-            return unavailable
 
     # NORMAL_QUERY: token safety before Groq call
     try:
@@ -1193,6 +1483,7 @@ def generate_reply(
         if total_tokens > max_allowed and safe_context:
             normal_prefix = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
+                f"{rag_language_enforcement_directive(language)} "
                 f"Reply only in {language}. "
                 f"For college-related emotional or opinion questions, respond politely in one or two short sentences. "
                 f"Use ONLY the following college information when it is relevant to the user's question. "

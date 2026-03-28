@@ -1,10 +1,15 @@
 import base64
+import hashlib
 import io
 import unittest
 import wave
 from unittest.mock import AsyncMock, patch
 
 from backend.app import main
+
+
+def _empty_rag_context(*_args, **_kwargs) -> str:
+    return ""
 
 
 class _FakeWebSocket:
@@ -50,14 +55,20 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
                 return fake_remaining_audio, False
             return self._silent_wav_base64(duration_s=0.5), False
 
-        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
+            main, "ENABLE_FIRST_SENTENCE_TTS", True
+        ), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
         ), patch.object(
-            main, "get_relevant_context", new=lambda _text, _k: ""
+            main, "is_college_related_query", new=lambda _t: True
+        ), patch.object(
+            main, "get_relevant_context", new=_empty_rag_context
+        ), patch.object(
+            main, "_load_svit_json_context", new=lambda _k: ""
         ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, first_sentence))
         ), patch.object(
@@ -100,14 +111,18 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
             return fake_audio, False
 
-        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
+            main, "ENABLE_FIRST_SENTENCE_TTS", True
+        ), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
         ), patch.object(
-            main, "get_relevant_context", new=lambda _text, _k: ""
+            main, "get_relevant_context", new=_empty_rag_context
+        ), patch.object(
+            main, "_load_svit_json_context", new=lambda _k: ""
         ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, full_reply))
         ), patch.object(
@@ -132,8 +147,11 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             "Our library is open from 8 AM to 8 PM on weekdays. "
             "On Saturdays it is open from 9 AM to 5 PM."
         )
-        context_sig = "e3b0c44298fc"
-        cache_key = f"en|{main._normalized_cache_text(user_text)}|{context_sig}"
+        context_sig = hashlib.sha256(b"").hexdigest()[:12]
+        cache_key = (
+            f"v2-direct|{main.INTENT_NORMAL_QUERY}|en|"
+            f"{main._normalized_cache_text(user_text)}|{context_sig}"
+        )
         main.LLM_REPLY_CACHE.set(cache_key, full_reply)
         tts_calls: list[dict] = []
 
@@ -141,14 +159,18 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
             return self._silent_wav_base64(duration_s=0.8), False
 
-        with patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
+        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
+            main, "ENABLE_FIRST_SENTENCE_TTS", True
+        ), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
         ), patch.object(
-            main, "get_relevant_context", new=lambda _text, _k: ""
+            main, "get_relevant_context", new=_empty_rag_context
+        ), patch.object(
+            main, "_load_svit_json_context", new=lambda _k: ""
         ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=("", ""))
         ), patch.object(
