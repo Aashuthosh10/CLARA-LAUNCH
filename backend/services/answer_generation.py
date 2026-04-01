@@ -61,23 +61,31 @@ _CANONICAL_DEPARTMENT_TO_JSON_KEY: dict[str, str] = {
 
 
 def locale_file_id_for_lang_key(lang_key: str | None) -> str:
-    """Which locale JSON file to load: hi.json for Hindi session, else en.json."""
-    return "hi" if (lang_key or "").strip().lower() == "hi" else "en"
+    """Basename (no .json) of the single college-data file: backend/data/locales/<id>.json.
+
+    Allowed ids: en, hi, kn, ta, te, ml only. Unrecognized keys fall back to en.
+    """
+    lk = (lang_key or "").strip().lower()
+    mapping = {
+        "hi": "hi",
+        "kn": "kn",
+        "ta": "ta",
+        "te": "te",
+        "ml": "ml",
+    }
+    return mapping.get(lk, "en")
 
 
 def load_locale_data_for_lang_key(lang_key: str | None) -> dict[str, Any]:
-    """Load parsed en.json or hi.json (cached)."""
+    """Load parsed locale JSON for the session language (cached)."""
     locale = locale_file_id_for_lang_key(lang_key)
     if locale in _locale_data_cache:
         return _locale_data_cache[locale]
     path = _LOCALES_DIR / f"{locale}.json"
     if not path.is_file():
-        if locale != "en":
-            path = _LOCALES_DIR / "en.json"
-        if not path.is_file():
-            logger.warning("Narrator: locale file missing under %s", _LOCALES_DIR)
-            _locale_data_cache[locale] = {}
-            return {}
+        logger.warning("Narrator: locale file missing: %s", path)
+        _locale_data_cache[locale] = {}
+        return {}
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
@@ -317,6 +325,7 @@ INTENT_HOD_PROFILE = "HOD_PROFILE"
 INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
+INTENT_OFF_TOPIC = "OFF_TOPIC"
 
 NARRATOR_INTENTS: frozenset[str] = frozenset(
     {
@@ -405,33 +414,6 @@ def _assert_language_parity(mapping: dict[str, Any], mapping_name: str) -> None:
 _assert_language_parity(COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE, "COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE")
 _assert_language_parity(UNAVAILABLE_REPLY_BY_LANGUAGE, "UNAVAILABLE_REPLY_BY_LANGUAGE")
 _assert_language_parity(OFF_TOPIC_REPLY_BY_LANGUAGE, "OFF_TOPIC_REPLY_BY_LANGUAGE")
-
-COLLEGE_RELATED_NORMAL_QUERY_KEYWORDS = [
-    "admission",
-    "admissions",
-    "apply",
-    "application",
-    "eligibility",
-    "cutoff",
-    "cut-off",
-    "fee",
-    "fees",
-    "hostel",
-    "placement",
-    "placements",
-    "department",
-    "departments",
-    "course",
-    "courses",
-    "faculty",
-    "syllabus",
-    "exam",
-    "semester",
-    "campus",
-    "college",
-    "institute",
-    "svit",
-]
 
 OVERVIEW_CONTEXT_MAX_TOKENS = 1000
 OVERVIEW_TOP_K = 10
@@ -806,18 +788,6 @@ def get_profile_direct_reply(intent: str, language: str | None = None) -> str | 
     return None
 
 
-def is_college_related_query(text: str | None) -> bool:
-    normalized = _normalize_text(text)
-    if not normalized:
-        return False
-    intent = detect_intent(normalized)
-    if intent != INTENT_NORMAL_QUERY:
-        return True
-    if _matches_any_phrase(normalized, COLLEGE_ENTITY_KEYWORDS):
-        return True
-    return _matches_any_phrase(normalized, COLLEGE_RELATED_NORMAL_QUERY_KEYWORDS)
-
-
 def get_course_menu_options() -> list[str]:
     return list(COURSE_MENU_OPTIONS)
 
@@ -1035,6 +1005,7 @@ def _coerce_preprocessor_intent(raw: str | None) -> str:
         "TRUSTEES_PROFILE": INTENT_TRUSTEES_PROFILE,
         "HOD_TRUSTEES_PROFILE": INTENT_HOD_TRUSTEES_PROFILE,
         "NORMAL_QUERY": INTENT_NORMAL_QUERY,
+        "OFF_TOPIC": INTENT_OFF_TOPIC,
     }
     return aliases.get(s, INTENT_NORMAL_QUERY)
 
@@ -1072,17 +1043,23 @@ async def normalize_and_classify_query(user_text: str, session_lang: str) -> dic
             return fallback
         allowed = (
             "COLLEGE_OVERVIEW, COURSE_MENU, DEPARTMENT_OVERVIEW, ADMISSIONS, PLACEMENTS, "
-            "HOD_PROFILE, TRUSTEES_PROFILE, HOD_TRUSTEES_PROFILE, NORMAL_QUERY"
+            "HOD_PROFILE, TRUSTEES_PROFILE, HOD_TRUSTEES_PROFILE, NORMAL_QUERY, OFF_TOPIC"
         )
         system_prompt = (
             "You are a linguistic translation and classification engine for a college kiosk (SVIT). "
             f"The user's session language label is: {session_lang}. "
             "The user text may mix that language with English (code-switching).\n"
-            "1) Translate the user's query into clear, concise English (one short sentence).\n"
-            f"2) Classify intent as exactly one of: {allowed}.\n"
+            "1) Translate the user's query into clear, concise English (one short sentence). "
+            "For OFF_TOPIC intent, you may use a minimal English placeholder such as the user's topic in English.\n"
+            f"2) Classify intent as exactly one of: {allowed}. "
+            "Use OFF_TOPIC only when the query is completely unrelated to SVIT, college admissions, education at this "
+            "institute, campus life, placements, departments, fees, or polite greetings/small talk that do not ask for "
+            "college facts (e.g. weather elsewhere, politics, unrelated trivia). Greetings like hello/hi asking for help "
+            "about the college should be NORMAL_QUERY or another in-scope intent, not OFF_TOPIC.\n"
             "3) If the question targets a specific academic department or branch, set target_department to one of: "
             "CSE, ISE, CSE (AI & ML), CSE (Data Science), CSE (Cyber Security), CSE (Business Systems), "
-            "ECE, Civil, Mechanical, MBA, Basic Sciences, Mathematics, Physics, Chemistry. Otherwise JSON null.\n"
+            "ECE, Civil, Mechanical, MBA, Basic Sciences, Mathematics, Physics, Chemistry. Otherwise JSON null. "
+            "For OFF_TOPIC, set target_department to null.\n"
             "Output ONLY one JSON object, no markdown fences, no extra keys, with exactly: "
             "english_translation (string), intent (string), target_department (string or null)."
         )
@@ -1429,6 +1406,8 @@ def generate_reply(
     safe_context = (context or "").strip()
     unavailable = get_unavailable_reply(language)
     off_topic = get_off_topic_reply(language)
+    if intent == INTENT_OFF_TOPIC:
+        return off_topic
     if not groq_client or not model:
         return unavailable
 
@@ -1466,9 +1445,6 @@ def generate_reply(
         except Exception as e:
             logger.error("LLM failure (narrator): %s", e, exc_info=True)
             return unavailable
-
-    if intent == INTENT_NORMAL_QUERY and not is_college_related_query(text):
-        return off_topic
 
     if intent == INTENT_COURSE_MENU:
         # Frontend renders the course menu; keep backend response deterministic.

@@ -1,4 +1,4 @@
-/** Subset of backend locales/en.json (and hi.json) departments + root shape used by the UI. */
+/** Subset of backend locales (en, hi, kn, ta, te, ml) departments + root shape used by the UI. */
 
 export interface CollegeDepartmentRecord {
   name?: string;

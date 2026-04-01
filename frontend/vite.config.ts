@@ -13,6 +13,7 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        // Single source of truth for college facts: en.json, hi.json, kn.json, ta.json, te.json, ml.json
         '@college-locales': path.resolve(__dirname, '../backend/data/locales'),
       },
     },

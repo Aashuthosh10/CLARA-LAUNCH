@@ -64,8 +64,6 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(return_value=None)
         ), patch.object(
-            main, "is_college_related_query", new=lambda _t: True
-        ), patch.object(
             main, "get_relevant_context", new=_empty_rag_context
         ), patch.object(
             main, "_load_svit_json_context", new=lambda _k: ""

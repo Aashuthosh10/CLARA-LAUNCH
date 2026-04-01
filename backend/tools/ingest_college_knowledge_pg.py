@@ -1,4 +1,8 @@
-"""Ingest locale JSON (en.json, hi.json) into pgvector as context-rich hierarchical leaf chunks."""
+"""Ingest English-indexed locale JSON into pgvector (leaf chunks).
+
+RAG stays English-indexed: the universal pre-processor normalizes queries to English before search.
+Only en.json (and optionally hi.json) are ingested. kn/ta/te/ml JSON are for UI + Narrator only — never vector DB.
+"""
 
 import json
 import sys
