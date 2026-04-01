@@ -77,6 +77,7 @@ export default function App() {
               isConnected={isConnected}
               voiceInputMode={VOICE_INPUT_MODE}
               onBack={() => setManualState(3)}
+              onHome={() => setManualState(0)}
               onOrbTap={() => sendMessage({ action: 'mic_start' })}
               sendMessage={sendMessage}
             />

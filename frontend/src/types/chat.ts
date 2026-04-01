@@ -89,5 +89,5 @@ export function isTextMessage(m: ChatMessage): m is TextMessage {
   return !isCardMessage(m) && !isCollegeBriefMessage(m) && !isImageCardMessage(m) && !isSystemMessage(m);
 }
 
-/** Orb state: backend + mic-driven; off = silence detected for 800ms */
-export type OrbState = 'idle' | 'listening' | 'processing' | 'speaking' | 'off';
+/** Orb state: automatically manages UI feedback during conversations */
+export type OrbState = 'idle' | 'ready' | 'listening' | 'processing' | 'speaking';

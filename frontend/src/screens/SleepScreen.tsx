@@ -34,15 +34,15 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
       onClick={onWake}
       data-testid="sleep-screen"
     >
-      {/* Background Slideshow */}
-      <AnimatePresence mode="wait">
+      {/* Background Slideshow (Pure Crossfade) */}
+      <AnimatePresence>
         <motion.div
           key={currentIndex}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 2, ease: 'easeInOut' }}
-          className="absolute inset-0 z-0"
+          transition={{ duration: 1, ease: 'easeInOut' }}
+          className="absolute inset-0 z-0 bg-black"
         >
           <img
             src={CAMPUS_IMAGES[currentIndex]}
@@ -52,13 +52,9 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Cinematic Overlay: Gradient and Vignette */}
-      <div className="absolute inset-0 z-10">
-        {/* Dark cinematic gradient overlay: darker top/bottom, lighter center */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/78" />
-
-        {/* Vignette effect */}
-        <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+      {/* Solid Dark Overlay for text readability (NO gradients) */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-black/60" />
       </div>
 
       {/* Top-Left: Institutional Identity Block */}
@@ -115,11 +111,8 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
         transition={{ delay: 0.9, duration: 1 }}
         className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6 text-center"
       >
-        {/* Subtle spotlight glow behind hero text */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(117,140,255,0.14)_0%,rgba(134,87,255,0.10)_35%,rgba(0,0,0,0)_72%)]" />
-
         <div
-          className="relative mx-auto flex w-full max-w-5xl flex-col items-center text-center [filter:drop-shadow(0_0_15px_rgba(59,130,246,0.3))]"
+          className="relative mx-auto flex w-full max-w-5xl flex-col items-center text-center"
           style={{ fontFamily: "'Playfair Display', 'Times New Roman', serif" }}
         >
           <p className="text-5xl md:text-6xl font-medium leading-[1.1] tracking-normal text-white whitespace-nowrap">
@@ -129,7 +122,7 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
             Step closer to awaken{' '}
             <AuroraText
               colors={['#00E5FF', '#3B82F6', '#9333EA', '#60A5FA']}
-              className="font-bold [filter:drop-shadow(0_0_8px_rgba(59,130,246,0.6))]"
+              className="font-bold"
             >
               CLARA
             </AuroraText>

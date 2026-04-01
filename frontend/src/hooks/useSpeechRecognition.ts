@@ -99,5 +99,21 @@ export function useSpeechRecognition(
     }
   }, [language, onError, onEmptyTranscript]);
 
-  return { startListening };
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        if (typeof recognitionRef.current.abort === 'function') {
+           recognitionRef.current.abort();
+        } else {
+           recognitionRef.current.stop();
+        }
+      } catch {
+        // ignore
+      }
+      recognitionRef.current = null;
+    }
+    isListeningRef.current = false;
+  }, []);
+
+  return { startListening, stopListening };
 }

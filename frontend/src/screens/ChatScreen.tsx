@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
-import { Sparkles, Volume2 } from 'lucide-react';
+import { Sparkles, Volume2, Home } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import {
@@ -145,6 +145,7 @@ interface ChatScreenProps {
   voiceInputMode?: 'browser' | 'backend';
   payload?: any | null;
   onBack: () => void;
+  onHome?: () => void;
   onOrbTap: () => void;
   sendMessage: (msg: object) => void;
 }
@@ -157,6 +158,7 @@ export default function ChatScreen({
   voiceInputMode = 'browser',
   payload,
   onBack,
+  onHome,
   onOrbTap,
   sendMessage,
 }: ChatScreenProps) {
@@ -184,12 +186,14 @@ export default function ChatScreen({
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
+  const [hasGreeted, setHasGreeted] = useState(false);
   const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
   const [visuallyFocusedMessage, setVisuallyFocusedMessage] = useState<ChatMessage | null>(null);
   const hasStartedRef = useRef(false);
   const prevLayoutModeRef = useRef<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
+  const hasAutoStartedRef = useRef(false);
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
@@ -198,7 +202,7 @@ export default function ChatScreen({
 
   // Intent Classifier & Speech Hooks
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
-  const { startListening: startSpeechRecognition } = useSpeechRecognition(
+  const { startListening: startSpeechRecognition, stopListening } = useSpeechRecognition(
     sendMessage,
     language,
     () => {},
@@ -269,6 +273,16 @@ export default function ChatScreen({
     });
   }, [language, collegeData]);
 
+  const handleHomeClick = useCallback(() => {
+    stopListening();
+    if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+    }
+    setIsPlayingBackendAudio(false);
+    if (onHome) onHome();
+  }, [stopListening, onHome]);
+
   // Sync Card Progression with Backend Audio Duration
   const handleAudioPlayback = useCallback(
     (audioBase64: string, segmentKey: string, isOverview: boolean, cardsToSync: any[] | null) => {
@@ -329,6 +343,7 @@ export default function ChatScreen({
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
+        setHasGreeted(true); // Session is active after any Clara audio completes
         if (isOverview && cardsToSync && cardsToSync.length > 0) {
             setCurrentCardIdx(cardsToSync.length - 1);
         }
@@ -347,6 +362,7 @@ export default function ChatScreen({
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
+        setHasGreeted(true); // Fallback so they can progress
         setShowUnmuteHint(true);
     });
   }, []);
@@ -625,8 +641,20 @@ export default function ChatScreen({
     if (isPlayingBackendAudio) setOrbState('speaking');
     else if (isProcessing) setOrbState('processing');
     else if (propIsListening) setOrbState('listening');
+    else if (hasGreeted && !showUnmuteHint) setOrbState('ready');
     else setOrbState('idle');
-  }, [propIsListening, isProcessing, isPlayingBackendAudio]);
+  }, [propIsListening, isProcessing, isPlayingBackendAudio, hasGreeted, showUnmuteHint]);
+
+  // Auto-Start Listening Loop (ONLY ONCE)
+  useEffect(() => {
+    if (orbState === 'ready' && !propIsListening && voiceInputMode !== 'backend' && !hasAutoStartedRef.current) {
+      hasAutoStartedRef.current = true;
+      const timer = setTimeout(() => {
+        startSpeechRecognition();
+      }, 600); // Sustain the 'ready' visual feedback briefly before engaging mic
+      return () => clearTimeout(timer);
+    }
+  }, [orbState, propIsListening, voiceInputMode, startSpeechRecognition]);
 
   useEffect(() => {
     if (!hasStartedRef.current) {
@@ -637,8 +665,9 @@ export default function ChatScreen({
 
   const handleOrbTap = () => {
     setShowUnmuteHint(false);
+    setHasGreeted(true);
     setVisuallyFocusedMessage(null);
-    if (orbState === 'idle') {
+    if (orbState === 'idle' || orbState === 'ready') {
       if (voiceInputMode === 'backend') onOrbTap();
       else startSpeechRecognition();
     }
@@ -754,6 +783,20 @@ export default function ChatScreen({
 
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+
+                {/* HOME BUTTON (TOP-LEFT OF LEFT PANEL) */}
+                <motion.button
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.8 }}
+                  whileHover={{ scale: 1.03, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleHomeClick}
+                  className="absolute z-[50] flex items-center justify-center w-16 h-16 rounded-2xl glass interactive-button group"
+                  style={{ top: '20px', left: '20px' }}
+                >
+                  <Home className="w-6 h-6 text-slate-600 group-hover:text-slate-900 transition-colors" />
+                </motion.button>
 
                 {isDepartmentOverviewStage && activeDepartmentId ? (
                   <DepartmentCardStage

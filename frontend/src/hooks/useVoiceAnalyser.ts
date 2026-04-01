@@ -12,6 +12,7 @@ export interface VoiceAnalyserResult {
   rms: number;
   frequencyIntensity: number;
   isSilent: boolean;
+  amplitude: number; // 0 to 1 normalized visual amplitude
   smoothedRms: number;
   smoothedFrequency: number;
   error: string | null;
@@ -27,6 +28,7 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
     rms: 0,
     frequencyIntensity: 0,
     isSilent: true,
+    amplitude: 0,
     smoothedRms: 0,
     smoothedFrequency: 0,
     error: null,
@@ -41,13 +43,14 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
   const enabledAtRef = useRef<number>(0);
 
   const updateResult = useCallback(
-    (rms: number, freq: number, isSilent: boolean) => {
+    (rms: number, freq: number, isSilent: boolean, amplitude: number) => {
       const sr = smoothedRmsRef.current;
       const sf = smoothedFreqRef.current;
       setResult({
         rms,
         frequencyIntensity: freq,
         isSilent,
+        amplitude,
         smoothedRms: sr,
         smoothedFrequency: sf,
         error: null,
@@ -72,7 +75,7 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
       smoothedRmsRef.current = 0;
       smoothedFreqRef.current = 0;
       silenceStartRef.current = null;
-      setResult((r) => ({ ...r, rms: 0, frequencyIntensity: 0, smoothedRms: 0, smoothedFrequency: 0, isSilent: true }));
+      setResult((r) => ({ ...r, rms: 0, frequencyIntensity: 0, amplitude: 0, smoothedRms: 0, smoothedFrequency: 0, isSilent: true }));
       return;
     }
 
@@ -105,7 +108,7 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
           a.getByteTimeDomainData(timeData);
           a.getByteFrequencyData(frequencyDataRef.current);
 
-          // Calculate RMS (Amplitude)
+          // Calculate RMS
           let sum = 0;
           for (let i = 0; i < timeData.length; i++) {
             const n = (timeData[i] - 128) / 128;
@@ -113,14 +116,17 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
           }
           const rms = Math.sqrt(sum / timeData.length);
 
+          // Boost and clamp for visual amplitude (0 to 1 range)
+          const rawVisualAmp = Math.min(1, rms * 10); 
+
           // Frequency intensity
           const fd = frequencyDataRef.current;
           let freqSum = 0;
           for (let i = 0; i < fd.length; i++) freqSum += fd[i];
           const frequencyIntensity = fd.length ? freqSum / fd.length / 255 : 0;
 
-          // Smoothing for animation
-          smoothedRmsRef.current = lerp(smoothedRmsRef.current, rms, 0.2); // Faster response
+          // Smoothing for animation (amplitude drives visuals)
+          smoothedRmsRef.current = lerp(smoothedRmsRef.current, rawVisualAmp, 0.25);
           smoothedFreqRef.current = lerp(smoothedFreqRef.current, frequencyIntensity, 0.2);
 
           const now = Date.now();
@@ -131,10 +137,10 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
             if (silenceStartRef.current === null) silenceStartRef.current = now;
             const silenceDuration = now - (silenceStartRef.current ?? now);
             const isSilent = silenceDuration >= SILENCE_THRESHOLD_MS;
-            updateResult(rms, frequencyIntensity, isSilent);
+            updateResult(rms, frequencyIntensity, isSilent, smoothedRmsRef.current);
           } else {
             silenceStartRef.current = null;
-            updateResult(rms, frequencyIntensity, false);
+            updateResult(rms, frequencyIntensity, false, smoothedRmsRef.current);
           }
 
           rafRef.current = requestAnimationFrame(tick);
