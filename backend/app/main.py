@@ -71,6 +71,7 @@ from backend.services.answer_generation import (
     INTENT_HOD_PROFILE,
     INTENT_HOD_TRUSTEES_PROFILE,
     INTENT_NORMAL_QUERY,
+    INTENT_OFF_TOPIC,
     INTENT_PLACEMENTS,
     INTENT_TRUSTEES_PROFILE,
     build_narrator_system_prompt,
@@ -82,8 +83,8 @@ from backend.services.answer_generation import (
     get_off_topic_reply,
     get_profile_direct_reply,
     get_unavailable_reply,
-    is_college_related_query,
     is_narrator_intent,
+    locale_file_id_for_lang_key,
     multilingual_rag_reply_directive,
     normalize_and_classify_query,
     rag_language_enforcement_directive,
@@ -166,30 +167,25 @@ def _text_preview(text: str, limit: int = 80) -> str:
 
 def _load_svit_json_context(language_code_key: str | None) -> str:
     """
-    Load locale-specific SVIT knowledge JSON and return minified JSON string for prompt injection.
-    Uses Hindi locale for "hi"; defaults to English locale for all other language keys.
-    Returns empty string if file is missing/invalid.
+    Load SVIT college facts from backend/data/locales/<locale>.json only (via locale_file_id_for_lang_key).
+    Returns minified JSON for prompt injection. Empty string if file missing/invalid.
     """
-    locale = "hi" if (language_code_key or "").strip().lower() == "hi" else "en"
+    locale = locale_file_id_for_lang_key(language_code_key)
     if locale in _svit_json_context_cache:
         return _svit_json_context_cache[locale]
     try:
         path = _SVIT_LOCALES_DIR / f"{locale}.json"
         if not path.is_file():
-            if locale != "en":
-                logger.warning("Fallback JSON locale missing (%s), defaulting to English", path)
-                path = _SVIT_LOCALES_DIR / "en.json"
-            if not path.is_file():
-                logger.warning("Fallback JSON context missing: %s", path)
-                _svit_json_context_cache[locale] = ""
-                return ""
+            logger.warning("JSON context locale missing: %s", path)
+            _svit_json_context_cache[locale] = ""
+            return ""
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
         minified = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
         _svit_json_context_cache[locale] = minified
         return minified
     except Exception as exc:
-        logger.warning("Could not load fallback JSON context: %s", exc)
+        logger.warning("Could not load JSON context: %s", exc)
         _svit_json_context_cache[locale] = ""
         return ""
 
@@ -665,7 +661,7 @@ async def process_user_text_and_reply(
                 intent = INTENT_COURSE_MENU
 
         off_topic_direct_reply: str | None = None
-        if intent == INTENT_NORMAL_QUERY and not is_college_related_query(rag_query):
+        if intent == INTENT_OFF_TOPIC:
             off_topic_direct_reply = get_off_topic_reply(lang_name)
         timing.mark("rag_start")
         narrator_payload: dict[str, Any] | None = None
