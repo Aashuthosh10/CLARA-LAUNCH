@@ -618,23 +618,7 @@ export default function ChatScreen({
     return () => clearTimeout(timer);
   }, [pendingAudio, layoutMode, handleAudioPlayback]);
 
-  // Keep split mode visible for 30s after activity/audio, then auto-return to full text.
-  useEffect(() => {
-    if (layoutMode !== 'SPLIT_CARDS') return;
-    if (isPlayingBackendAudio || isProcessing) return;
-    const idleTimer = setTimeout(() => {
-      setLayoutMode('FULL_TEXT');
-      setActiveCards(null);
-      setCurrentCardIdx(0);
-      setSuppressedTurnId(null);
-      setActiveDepartmentId(null);
-      setIsDepartmentOverviewStage(false);
-      setIsInfoSlideStage(false);
-      setInfoSlides([]);
-      setInfoSlideChip('');
-    }, SPLIT_IDLE_TIMEOUT_MS);
-    return () => clearTimeout(idleTimer);
-  }, [layoutMode, isPlayingBackendAudio, isProcessing, displayMessages.length]);
+  // Time-based reset UI behavior removed to enforce persistent screen state.
 
   // Orb State
   useEffect(() => {
@@ -672,6 +656,14 @@ export default function ChatScreen({
       else startSpeechRecognition();
     }
   };
+
+  const handleCardSelect = useCallback((idx: number) => {
+    if (cardProgressTimerRef.current) {
+      clearInterval(cardProgressTimerRef.current);
+      cardProgressTimerRef.current = null;
+    }
+    setCurrentCardIdx(idx);
+  }, []);
 
   const handleCourseMenuSelect = useCallback(
     (departmentName: string) => {
@@ -803,6 +795,7 @@ export default function ChatScreen({
                     departmentLabel={activeDepartmentId}
                     slides={departmentSlides}
                     currentCardIdx={currentCardIdx}
+                    onCardClick={handleCardSelect}
                   />
                 ) : isInfoSlideStage && infoSlides.length > 0 ? (
                   <DepartmentCardStage
@@ -810,12 +803,14 @@ export default function ChatScreen({
                     chipText={infoSlideChip}
                     slides={infoSlides}
                     currentCardIdx={currentCardIdx}
+                    onCardClick={handleCardSelect}
                   />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 
                     currentCardIdx={currentCardIdx} 
                     targetDepartment={activeTargetDepartment}
+                    onCardClick={handleCardSelect}
                   />
                 ) : null}
                 </div>

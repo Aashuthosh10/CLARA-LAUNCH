@@ -9,12 +9,13 @@ export default function DepartmentCardStage({
   chipText,
   slides,
   currentCardIdx,
+  onCardClick,
 }: {
   departmentLabel: string;
-  /** When set, shown as the chip instead of "{departmentLabel} Department". */
   chipText?: string;
   slides: DepartmentStageSlide[];
   currentCardIdx: number;
+  onCardClick?: (idx: number) => void;
 }) {
   const maxIdx = Math.max(0, slides.length - 1);
   const safeIdx = slides.length ? Math.min(Math.max(0, currentCardIdx), maxIdx) : 0;
@@ -53,10 +54,12 @@ export default function DepartmentCardStage({
         </div>
         <div className="mt-auto flex gap-4 pt-8">
           {slides.map((_, i) => (
-            <div
+            <button
+              onClick={() => onCardClick?.(i)}
               key={`${chipText ?? departmentLabel}-progress-${i}`}
-              className={`h-2 flex-1 rounded-full ${
-                i === safeIdx ? 'bg-violet-600' : i < safeIdx ? 'bg-violet-200' : 'bg-slate-200'
+              aria-label={`Go to card ${i + 1}`}
+              className={`h-2 flex-1 rounded-full cursor-pointer transition-colors ${
+                i === safeIdx ? 'bg-violet-600' : 'bg-slate-200 hover:bg-violet-300'
               }`}
             />
           ))}

@@ -3,6 +3,39 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { CardDataItem } from '../../lib/cardData';
 import ThreeDVisual from './cards/ThreeDVisual';
 import PremiumHODCard from './cards/PremiumHODCard';
+import PremiumHODCardCSE from './cards/PremiumHODCard(CSE)';
+import PremiumHODCardAIML from './cards/PremiumHODCard(AIML)';
+import PremiumHODCardEC from './cards/PremiumHODCard(EC)';
+import PremiumHODCardISE from './cards/PremiumHODCard(ISE)';
+import PremiumHODCardCivil from './cards/PremiumHODCard(Civil)';
+import PremiumHODCardMechanical from './cards/PremiumHODCard(Mechanical)';
+import PremiumHODCardMBA from './cards/PremiumHODCard(MBA)';
+import PremiumHODCardMathematics from './cards/PremiumHODCard(Mathematics)';
+import PremiumHODCardPhysics from './cards/PremiumHODCard(Physics)';
+import PremiumHODCardChemistry from './cards/PremiumHODCard(Chemistry)';
+
+const COMPONENT_MAP: Record<string, React.FC> = {
+  "CSE (Data Science)": PremiumHODCard,
+  "Data Science": PremiumHODCard,
+  "CSE": PremiumHODCardCSE,
+  "Computer Science & Engineering": PremiumHODCardCSE,
+  "AIML": PremiumHODCardAIML,
+  "CSE (Artificial Intelligence & Machine Learning)": PremiumHODCardAIML,
+  "EC": PremiumHODCardEC,
+  "ECE": PremiumHODCardEC,
+  "Electronics & Communication Engineering": PremiumHODCardEC,
+  "ISE": PremiumHODCardISE,
+  "Information Science & Engineering": PremiumHODCardISE,
+  "Civil": PremiumHODCardCivil,
+  "Civil Engineering": PremiumHODCardCivil,
+  "Mechanical": PremiumHODCardMechanical,
+  "Mechanical Engineering": PremiumHODCardMechanical,
+  "MBA": PremiumHODCardMBA,
+  "Master of Business Administration (MBA)": PremiumHODCardMBA,
+  "Mathematics": PremiumHODCardMathematics,
+  "Physics": PremiumHODCardPhysics,
+  "Chemistry": PremiumHODCardChemistry,
+};
 
 /**
  * Card stack for leadership / HOD overviews (and other static card lists).
@@ -12,18 +45,30 @@ export default function LeadershipOverview({
   cards,
   currentCardIdx,
   targetDepartment,
+  onCardClick,
 }: {
   cards: CardDataItem[];
   currentCardIdx: number;
   targetDepartment?: string | null;
+  onCardClick?: (idx: number) => void;
 }) {
-  // If target is specific to CSE (Data Science) HOD, show the premium card
-  if (targetDepartment === "CSE (Data Science)") {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <PremiumHODCard />
-      </div>
+  // Check if we have a specific HOD card for the requested department
+  if (targetDepartment) {
+    // Find a matching component (case insensitive, partial match for robustness)
+    const targetKeys = Object.keys(COMPONENT_MAP);
+    const matchedKey = targetKeys.find(key => 
+      targetDepartment.toLowerCase().includes(key.toLowerCase()) || 
+      key.toLowerCase().includes(targetDepartment.toLowerCase())
     );
+
+    if (matchedKey) {
+      const TargetComponent = COMPONENT_MAP[matchedKey];
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <TargetComponent />
+        </div>
+      );
+    }
   }
 
   if (!cards.length) {
@@ -56,10 +101,12 @@ export default function LeadershipOverview({
           </div>
           <div className="mt-auto flex gap-4 pt-8">
             {cards.map((_, i) => (
-              <div
+              <button
                 key={`overview-progress-${i}`}
-                className={`h-2 flex-1 rounded-full ${
-                  i === safeIdx ? 'bg-violet-600' : i < safeIdx ? 'bg-violet-200' : 'bg-slate-200'
+                onClick={() => onCardClick?.(i)}
+                aria-label={`Go to card ${i + 1}`}
+                className={`h-2 flex-1 rounded-full cursor-pointer transition-colors ${
+                  i === safeIdx ? 'bg-violet-600' : 'bg-slate-200 hover:bg-violet-300'
                 }`}
               />
             ))}
