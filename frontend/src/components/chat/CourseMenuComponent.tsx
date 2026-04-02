@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function CourseMenuComponent({
   options,
@@ -8,12 +9,13 @@ export default function CourseMenuComponent({
   options: string[];
   onSelect: (departmentName: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="course-menu-overlay">
       <div className="course-menu-shell">
         <div className="course-menu-header">
-          <div className="course-menu-eyebrow">ENGINEERING</div>
-          <h2 className="course-menu-title">Select a Department</h2>
+          <div className="course-menu-eyebrow">{t('menuEngineering')}</div>
+          <h2 className="course-menu-title">{t('menuSelectDept')}</h2>
         </div>
         <div className="course-menu-grid">
           {options.map((dept, idx) => (
@@ -26,8 +28,8 @@ export default function CourseMenuComponent({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.28, delay: idx * 0.03 }}
             >
-              <span className="course-menu-tile-title">{dept}</span>
-              <span className="course-menu-tile-subtitle">Overview</span>
+              <span className="course-menu-tile-title">{t(dept)}</span>
+              <span className="course-menu-tile-subtitle">{t('menuOverview')}</span>
             </motion.button>
           ))}
         </div>

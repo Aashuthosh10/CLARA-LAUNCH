@@ -149,238 +149,92 @@
   },
   "departments": {
     "cse": {
-      "name": "Computer Science & Engineering (CSE) [cite: 111]",
-      "hod": "Dr. Shashikumar D R [cite: 52]",
-      "intake": "180 [cite: 103]",
-      "duration": "4 Years [cite: 115]",
-      "overview_and_focus": "Cloud Computing, Software Development, AI, Deep Learning, Distributed Systems [cite: 116]",
-      "faculty_list": [
-        "Dr. Manjunath TN (Principal & Professor) [cite: 120]",
-        "Dr. Shashikumar D R (Professor & HOD) [cite: 120]"
-      ],
-      "additional_details": {
-        "staff_count": 29,
-        "special_tracks": [
-          {
-            "department": "CSE (Artificial Intelligence & Machine Learning) [cite: 124]",
-            "hod": "Dr. T G Manjunatha [cite: 55]",
-            "intake": "120 [cite: 104]",
-            "duration": "4 Years [cite: 130]",
-            "special_achievement": "2021 batch students secured FOUR university ranks at VTU level [cite: 131]",
-            "features": [
-              "NEP-2020 compliant cutting-edge curriculum [cite: 133]",
-              "Advanced AI, ML, and Deep Learning concepts [cite: 134]",
-              "Stipend-based internships through MOUS [cite: 137]"
-            ],
-            "staff_count": 19,
-            "key_staff": [
-              "Dr. T G Manjunatha (Professor & HOD) [cite: 129]"
-            ]
-          },
-          {
-            "department": "CSE (Data Science) [cite: 143]",
-            "hod": "Dr. Nagashree N [cite: 64]",
-            "intake": "120 [cite: 105]",
-            "duration": "4 Years [cite: 153]",
-            "program_start": "2021-22 [cite: 153]",
-            "special_achievement": "2021 batch students secured THREE university ranks at VTU level [cite: 155]",
-            "staff_count": 17,
-            "key_staff": [
-              "Dr. Padma Reddy A.M (Dean-Student Affairs & Professor) [cite: 162]",
-              "Dr. Nagashree N (Associate Professor & HOD) [cite: 162]"
-            ]
-          },
-          {
-            "department": "CSE (Cyber Security) [cite: 106]",
-            "intake": "60 [cite: 106]"
-          },
-          {
-            "department": "CSE (Business Systems) [cite: 107]",
-            "intake": "60 [cite: 107]"
-          }
-        ],
-        "related_department_ise": {
-          "department": "Information Science & Engineering (ISE) [cite: 164]",
-          "hod": "Dr. Vrinda Shetty [cite: 58]",
-          "intake": "120 [cite: 173]",
-          "duration": "4 Years [cite: 174]",
-          "program_start": "2008-09 [cite: 174]",
-          "staff_count": 18,
-          "key_staff": [
-            "Dr. Vrinda Shetty (Professor & HOD) [cite: 183]"
-          ]
-        }
-      }
-    },
-    "ise": {
-      "name": "Information Science & Engineering (ISE) [cite: 164]",
-      "hod": "Dr. Vrinda Shetty [cite: 58]",
-      "intake": "120 [cite: 173]",
-      "duration": "4 Years [cite: 174]",
-      "overview_and_focus": "Information systems, software engineering, data structures, networks, and applied computing aligned with industry needs [cite: 164]",
-      "faculty_list": [
-        "Dr. Vrinda Shetty (Professor & HOD) [cite: 183]"
-      ],
-      "additional_details": {
-        "program_start": "2008-09 [cite: 174]",
-        "staff_count": 18
-      }
+      "name": "Computer Science & Engineering",
+      "intro": "The Computer Science & Engineering department leads the digital revolution with a cutting-edge curriculum. We transform students into top-tier software developers and system architects.",
+      "hod_voice": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+      "achievements": "Our labs are state-of-the-art, ensuring strong VTU rankings and continuous success in national hackathons.",
+      "placement": "Top recruiters include TCS, Infosys, and Amazon. Students receive rigorous technical and aptitude training.",
+      "fees": "KCET: As per KEA norms | Management: ₹3,50,000/year"
     },
     "cse_aiml": {
-      "name": "Computer Science & Engineering (AI & Machine Learning) [cite: 124]",
-      "hod": "Dr. T G Manjunath [cite: 55]",
-      "intake": "120 [cite: 104]",
-      "duration": "4 Years [cite: 130]",
-      "overview_and_focus": "NEP-2020 aligned curriculum; AI, ML, and deep learning; stipend-based internships through MOUs [cite: 133]",
-      "faculty_list": [
-        "Dr. T G Manjunatha (Professor & HOD) [cite: 129]"
-      ],
-      "additional_details": {
-        "staff_count": 19,
-        "special_achievement": "2021 batch students secured FOUR university ranks at VTU level [cite: 131]"
-      }
+      "name": "CSE (AI & ML)",
+      "intro": "The AI & Machine Learning department pioneers the future of intelligent systems. We prepare innovators for the rapidly evolving tech landscape.",
+      "hod_voice": "Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum enriched with deep learning and real-world AI applications.",
+      "achievements": "Our 2021 batch secured FOUR university ranks at the VTU level, showcasing our academic rigor and student excellence.",
+      "placement": "Students gain hands-on experience through stipend-based internships and targeted workshops with industry experts.",
+      "fees": "KCET: As per KEA norms | Management: ₹3,50,000/year"
     },
     "cse_ds": {
-      "name": "Computer Science & Engineering (Data Science) [cite: 143]",
-      "hod": "Dr. Nagashree N. [cite: 64]",
-      "intake": "120 [cite: 105]",
-      "duration": "4 Years [cite: 153]",
-      "overview_and_focus": "Data science, analytics, and computing foundations with strong VTU outcomes [cite: 143]",
-      "faculty_list": [
-        "Dr. Padma Reddy A.M (Dean-Student Affairs & Professor) [cite: 162]",
-        "Dr. Nagashree N (Associate Professor & HOD) [cite: 162]"
-      ],
-      "additional_details": {
-        "program_start": "2021-22 [cite: 153]",
-        "staff_count": 17,
-        "special_achievement": "2021 batch students secured THREE university ranks at VTU level [cite: 155]"
-      }
+      "name": "CSE (Data Science)",
+      "intro": "Data Science is the backbone of modern analytics. We equip students with scientific methods to extract knowledge from complex data.",
+      "hod_voice": "Dr. Nagashree N directs our commitment to generate knowledge through state-of-the-art concepts and rigorous analytical training.",
+      "achievements": "Since starting in 2021, our students have already secured THREE university ranks at the VTU level.",
+      "placement": "We foster strong connections with analytics firms, ensuring our graduates are ready for high-demand data roles.",
+      "fees": "KCET: As per KEA norms | Management: ₹2,50,000/year"
     },
     "cse_cysec": {
-      "name": "Computer Science & Engineering (Cyber Security) [cite: 106]",
-      "hod": "Information not available",
-      "intake": "60 [cite: 106]",
-      "duration": "4 Years [cite: 115]",
-      "overview_and_focus": "Cyber security fundamentals, secure systems, and defensive computing aligned with VTU curriculum.",
-      "faculty_list": [],
-      "additional_details": {}
+      "name": "CSE (Cyber Security)",
+      "intro": "The Cyber Security department trains the frontline defenders of the digital age. We focus on secure systems and defensive computing.",
+      "hod_voice": "Our vision is to build highly ethical security professionals capable of securing enterprise networks and modern digital infrastructure.",
+      "achievements": "We maintain active collaborations with cybersecurity centers of excellence to keep our curriculum highly relevant.",
+      "placement": "Graduates are highly sought after by top IT firms and specialized security agencies worldwide.",
+      "fees": "KCET: As per KEA norms | Management: ₹3,25,000/year"
     },
     "cse_bs": {
-      "name": "Computer Science & Engineering (Business Systems) [cite: 107]",
-      "hod": "Information not available",
-      "intake": "60 [cite: 107]",
-      "duration": "4 Years [cite: 115]",
-      "overview_and_focus": "Computing with business systems, enterprise applications, and industry-oriented skills.",
-      "faculty_list": [],
-      "additional_details": {}
+      "name": "CSE (Business Systems)",
+      "intro": "Bridging technology and enterprise strategy, the Business Systems department creates the next generation of tech-savvy business leaders.",
+      "hod_voice": "We blend core computing skills with business administration principles, optimizing enterprise workflows and systems.",
+      "achievements": "Our students excel in cross-disciplinary projects, creating software that solves real-world corporate challenges.",
+      "placement": "Consulting and tech firms actively recruit our graduates for roles bridging engineering and enterprise management.",
+      "fees": "KCET: As per KEA norms | Management: ₹2,75,000/year"
+    },
+    "ise": {
+      "name": "Information Science",
+      "intro": "Information Science focuses on applied computing and software engineering aligned directly with current industry needs.",
+      "hod_voice": "Led by Dr. Vrinda Shetty, we encourage faculty and students to actively engage in workshops, internships, and dynamic problem-solving.",
+      "achievements": "Our dedicated faculty ensures project-based learning, entrepreneurial thinking, and ethical technical development.",
+      "placement": "Consistent placements in leading IT service and product companies, supported by strong alumni networking.",
+      "fees": "KCET: As per KEA norms | Management: ₹2,50,000/year"
     },
     "ece": {
-      "name": "Electronics & Communication Engineering (ECE) [cite: 186]",
-      "hod": "Dr. Venkatesha M [cite: 61]",
-      "intake": "120 [cite: 198]",
-      "duration": "4 Years [cite: 198]",
-      "overview_and_focus": "VLSI Design [cite: 202] Embedded Systems [cite: 203] Photonics [cite: 204] Signal Processing [cite: 205] Communication Systems [cite: 206] High-Speed Networks [cite: 207]",
-      "faculty_list": [
-        "Dr. Jayasimha.Y (Dean-Academics & Professor) [cite: 214]",
-        "Prof. Shanmukha Swamy R.C (Dean-Administration & Professor) [cite: 214]",
-        "Dr. Venkatesha M (Professor & HOD) [cite: 214]"
-      ],
-      "additional_details": {
-        "program_start": "2008-09 [cite: 199]",
-        "accreditation": "VTU affiliated, NBA accredited [cite: 199]",
-        "staff_count": 24
-      }
+      "name": "Electronics & Communication",
+      "intro": "ECE is the cornerstone of modern hardware and communication systems, offering deep expertise from VLSI to High-Speed Networks.",
+      "hod_voice": "Dr. Venkatesha M leads our NBA-accredited department, fostering research in Embedded Systems, Photonics, and Signal Processing.",
+      "achievements": "Supported by over 70 Lakhs in research grants, our state-of-the-art labs feature industry tools like Cadence and MATLAB.",
+      "placement": "We run dedicated Centers of Excellence in 5G and IoT, directly connecting students to top tech manufacturers and research labs.",
+      "fees": "KCET: As per KEA norms | Management: ₹2,00,000/year"
     },
     "civil": {
-      "name": "Civil Engineering [cite: 217]",
-      "hod": "Dr. Ananthayya M B [cite: 67]",
-      "intake": "60 [cite: 224]",
-      "duration": "4 Years [cite: 224]",
-      "overview_and_focus": "Structural Engineering [cite: 226] Geotechnical Engineering [cite: 226] Transportation Systems [cite: 226] Water Resource Management [cite: 226]",
-      "faculty_list": [
-        "Dr. Ananthayya M B (Professor & HOD) [cite: 233]"
-      ],
-      "additional_details": {
-        "program_start": "2010 [cite: 225]",
-        "staff_count": 6
-      }
+      "name": "Civil Engineering",
+      "intro": "Civil Engineering shapes the infrastructure of tomorrow. We build sustainable engineers who design and innovate for the future.",
+      "hod_voice": "Dr. Ananthayya M B guides our mission to transform students into frontrunners and guardians of natural resources.",
+      "achievements": "Established in 2010, the department boasts experienced faculty deeply involved in R&D and core structural engineering.",
+      "placement": "Strong alumni network in reputed global construction and consultancy industries provides excellent career opportunities.",
+      "fees": "KCET: ₹1,10,000/year | Management: Priority CET-FEES as per KEA"
     },
     "mechanical": {
-      "name": "Mechanical Engineering [cite: 238]",
-      "hod": "Dr. Raghavendra S [cite: 70]",
-      "intake": "30 [cite: 246]",
-      "duration": "4 Years [cite: 246]",
-      "overview_and_focus": "Information not available",
-      "faculty_list": [
-        "Dr. Raghavendra S (Professor & HOD) [cite: 255]"
-      ],
-      "additional_details": {
-        "program_start": "2010 [cite: 247]",
-        "staff_count": 8
-      }
+      "name": "Mechanical Engineering",
+      "intro": "Mechanical Engineering is the bedrock of industrial innovation. We instill global competency through practical, ethical education.",
+      "hod_voice": "Under Dr. Raghavendra S, we create technologically superior global manpower through active industry participation and R&D.",
+      "achievements": "Our well-equipped labs and dedicated researchers provide hands-on technical skill enhancement with modern tools.",
+      "placement": "Core manufacturing and automotive companies actively recruit our skilled, industry-ready graduates.",
+      "fees": "KCET: ₹1,10,000/year | Management: Priority CET-FEES as per KEA"
     },
     "mba": {
-      "name": "Master of Business Administration (MBA) [cite: 263]",
-      "hod": "Dr. Jogish.D [cite: 73]",
-      "intake": "120 [cite: 277]",
-      "duration": "2 Years (4 Semesters) [cite: 277]",
-      "overview_and_focus": "Information not available",
-      "faculty_list": [
-        "Dr. Jogish D (Professor & HOD) [cite: 296]",
-        "Dr. Naveen G (Associate Professor) [cite: 297]"
-      ],
-      "additional_details": {
-        "program_start": "2009 [cite: 278]",
-        "specializations_offered": [
-          "Finance [cite: 282]",
-          "Marketing [cite: 283]",
-          "Human Resource Management [cite: 284]",
-          "Business Analytics [cite: 285]"
-        ],
-        "staff_count": 10
-      }
+      "name": "Master of Business Administration",
+      "intro": "Our MBA program empowers students with the knowledge, skills, and values needed for holistic corporate development.",
+      "hod_voice": "Led by Dr. Jogish D, boasting 25+ years of experience, we master Specializations across Finance, HR, IT, and Marketing.",
+      "achievements": "Our modern management laboratories and experienced full-time faculty drive premier business education and alumni success.",
+      "placement": "Comprehensive career guidance places our postgraduates in leading global corporations across diverse business sectors.",
+      "fees": "Total Course (2 Years): General ₹1,55,000 - ₹3,10,000 | Core Specializations ₹1,40,000"
     },
     "basic_sciences": {
       "name": "Basic Sciences",
-      "hod": "Dr. Arun Kumar R [cite: 76], Dr. Shankar P [cite: 79], Dr. Bhagya NP [cite: 82]",
-      "intake": "Information not available",
-      "duration": "Integrated across first-year engineering curriculum",
-      "overview_and_focus": "Mathematics, Physics, and Chemistry provide foundational scientific and analytical skills.",
-      "faculty_list": [
-        "Dr. Lakshminarayanachari K (Professor & Vice Principal) [cite: 311]",
-        "Dr. Arun Kumar R (Professor & HOD) [cite: 311]",
-        "Dr. Shankar P (Associate Professor & HOD) [cite: 325]",
-        "Dr. Bhagya N P (HOD) [cite: 328]"
-      ],
-      "additional_details": {
-        "departments": [
-          {
-            "department": "Mathematics [cite: 303]",
-            "hod": "Dr. Arun Kumar R [cite: 76]",
-            "staff_count": 9,
-            "key_staff": [
-              "Dr. Lakshminarayanachari K (Professor & Vice Principal) [cite: 311]",
-              "Dr. Arun Kumar R (Professor & HOD) [cite: 311]"
-            ]
-          },
-          {
-            "department": "Physics [cite: 317]",
-            "hod": "Dr. Shankar P [cite: 79]",
-            "staff_count": 5,
-            "key_staff": [
-              "Dr. Shankar P (Associate Professor & HOD) [cite: 325]"
-            ]
-          },
-          {
-            "department": "Chemistry [cite: 327]",
-            "hod": "Dr. Bhagya NP [cite: 82]",
-            "staff_count": 5,
-            "key_staff": [
-              "Dr. Bhagya N P (HOD) [cite: 328]"
-            ]
-          }
-        ]
-      }
+      "intro": "The Basic Sciences departments—Mathematics, Physics, and Chemistry—provide the essential scientific and analytical foundation for all engineers.",
+      "hod_voice": "Headed by Dr. Arun Kumar R, Dr. Shankar P, and Dr. Bhagya N P, we promote mathematical thinking, applied chemistry, and fundamental physics.",
+      "achievements": "Recognized as VTU Research Centres, our faculty continuously publish research findings in peer-reviewed international journals.",
+      "placement": "A strong first-year foundation ensures all SVIT engineers excel in aptitude and logical reasoning throughout their careers.",
+      "fees": "Integrated seamlessly across the first-year engineering curriculum."
     }
   },
   "placements_and_training": {

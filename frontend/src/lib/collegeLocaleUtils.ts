@@ -179,29 +179,104 @@ export function getDepartmentRecord(
   return rec && typeof rec === 'object' ? rec : null;
 }
 
+const DEPT_LABELS: Record<Language, {
+  department: string;
+  leadAndVision: string;
+  hodAndVision: string;
+  achievements: string;
+  placements: string;
+  fees: string;
+  notAvail: string;
+  unlisted: string;
+}> = {
+  English: {
+    department: 'Department',
+    leadAndVision: 'Leadership & Vision',
+    hodAndVision: 'HOD & Vision',
+    achievements: 'Achievements',
+    placements: 'Placements',
+    fees: 'Fee Structure',
+    notAvail: 'Information not available',
+    unlisted: 'This department is not listed in the campus knowledge file yet.',
+  },
+  Kannada: {
+    department: 'ವಿಭಾಗ',
+    leadAndVision: 'ನಾಯಕತ್ವ ಮತ್ತು ದೃಷ್ಟಿಕೋನ',
+    hodAndVision: 'HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ',
+    achievements: 'ಸಾಧನೆಗಳು',
+    placements: 'ಉದ್ಯೋಗಾವಕಾಶಗಳು',
+    fees: 'ಶುಲ್ಕದ ವಿವರಗಳು',
+    notAvail: 'ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ',
+    unlisted: 'ಈ ವಿಭಾಗವು ಕ್ಯಾಂಪಸ್ ಜ್ಞಾನದಲ್ಲಿ ಇನ್ನೂ ಪಟ್ಟಿ ಮಾಡಲಾಗಿಲ್ಲ.',
+  },
+  Hindi: {
+    department: 'विभाग',
+    leadAndVision: 'नेतृत्व और दृष्टिकोण',
+    hodAndVision: 'HOD और दृष्टिकोण',
+    achievements: 'उपलब्धियां',
+    placements: 'प्लेसमेंट',
+    fees: 'शुल्क संरचना',
+    notAvail: 'जानकारी उपलब्ध नहीं है',
+    unlisted: 'यह विभाग अभी कैंपस नॉलेज में सूचीबद्ध नहीं है।',
+  },
+  Tamil: {
+    department: 'துறை',
+    leadAndVision: 'தலைமை மற்றும் பார்வை',
+    hodAndVision: 'HOD மற்றும் பார்வை',
+    achievements: 'சாதனைகள்',
+    placements: 'வேலைவாய்ப்பு',
+    fees: 'கட்டண விவரம்',
+    notAvail: 'தகவல் கிடைக்கவில்லை',
+    unlisted: 'இந்தத் துறை இன்னும் கேம்பஸ் அறிவில் பட்டியலிடப்படவில்லை.',
+  },
+  Telugu: {
+    department: 'విభాగం',
+    leadAndVision: 'నాయకత్వం మరియు దృక్పథం',
+    hodAndVision: 'HOD మరియు దృక్పథం',
+    achievements: 'సాధనలు',
+    placements: 'ప్లేస్‌మెంట్‌లు',
+    fees: 'ఫీజు నిర్మాణం',
+    notAvail: 'సమాచారం అందుబాటులో లేదు',
+    unlisted: 'ఈ విభాగం ఇంకా క్యాంపస్ నాలెడ్జ్‌లో జాబితా చేయబడలేదు.',
+  },
+  Malayalam: {
+    department: 'വിഭാഗം',
+    leadAndVision: 'നേതൃത്വവും വീക്ഷണവും',
+    hodAndVision: 'HOD ഉം വീക്ഷണവും',
+    achievements: 'നേട്ടങ്ങൾ',
+    placements: 'പ്ലേസ്‌മെന്റുകൾ',
+    fees: 'ഫീസ് രൂപരേഖ',
+    notAvail: 'വിവരം ലഭ്യമല്ല',
+    unlisted: 'ഈ വിഭാഗം ഇതുവരെ ക്യാമ്പസ് അറിവിൽ ലിസ്റ്റ് ചെയ്തിട്ടില്ല.',
+  },
+};
+
+
 function clean(s: unknown): string {
   return String(s ?? '').replace(/\s+/g, ' ').trim();
 }
 
-export function buildAllHodCardsFromLocale(data: CollegeLocaleData): CardDataItem[] {
+export function buildAllHodCardsFromLocale(data: CollegeLocaleData, language: Language): CardDataItem[] {
+  const L = DEPT_LABELS[language] ?? DEPT_LABELS.English;
   const deps = data.departments;
   if (!deps || typeof deps !== 'object') return [];
   const cards: CardDataItem[] = [];
   for (const key of DEPARTMENT_JSON_KEY_ORDER) {
     const d = deps[key];
     if (!d || typeof d !== 'object') continue;
-    const hod = clean(d.hod) || 'Information not available';
     const name = clean(d.name) || key.toUpperCase();
+    const hod_voice = clean(d.hod_voice) || L.notAvail;
     cards.push({
-      title: hod,
-      content: `Department: ${name}. HOD: ${hod}. Intake: ${clean(d.intake) || 'Information not available'}.`,
+      title: name,
+      content: `${L.department}: ${name}\n${L.leadAndVision}: ${hod_voice}`,
       type: 'hod',
     });
   }
   return cards;
 }
 
-export function buildAllDepartmentSummaryCardsFromLocale(data: CollegeLocaleData): CardDataItem[] {
+export function buildAllDepartmentSummaryCardsFromLocale(data: CollegeLocaleData, language: Language): CardDataItem[] {
+  const L = DEPT_LABELS[language] ?? DEPT_LABELS.English;
   const deps = data.departments;
   if (!deps || typeof deps !== 'object') return [];
   const cards: CardDataItem[] = [];
@@ -209,17 +284,10 @@ export function buildAllDepartmentSummaryCardsFromLocale(data: CollegeLocaleData
     const d = deps[key];
     if (!d || typeof d !== 'object') continue;
     const name = clean(d.name) || key.toUpperCase();
-    const overview = clean(d.overview_and_focus);
+    const intro = clean(d.intro);
     cards.push({
       title: name,
-      content: [
-        `HOD: ${clean(d.hod) || 'Information not available'}.`,
-        `Intake: ${clean(d.intake) || 'Information not available'}.`,
-        `Duration: ${clean(d.duration) || 'Information not available'}.`,
-        overview ? `Focus: ${overview}` : '',
-      ]
-        .filter(Boolean)
-        .join(' '),
+      content: intro || L.notAvail,
       type: 'dept',
     });
   }
@@ -233,41 +301,31 @@ export interface DepartmentStageSlide {
 
 export function buildDepartmentSlidesFromRecord(
   dept: CollegeDepartmentRecord | null,
-  jsonKey: string
+  jsonKey: string,
+  language: Language
 ): DepartmentStageSlide[] {
+  const L = DEPT_LABELS[language] ?? DEPT_LABELS.English;
   if (!dept) {
     return [
       {
-        title: 'Department',
-        content:
-          'This department is not listed in the campus knowledge file yet. Please visit the Admission Block for the latest details.',
+        title: L.department,
+        content: L.unlisted,
       },
     ];
   }
   const name = clean(dept.name) || jsonKey.toUpperCase();
-  const hod = clean(dept.hod) || 'Information not available';
-  const intake = clean(dept.intake) || 'Information not available';
-  const duration = clean(dept.duration) || 'Information not available';
-  const overview = clean(dept.overview_and_focus) || 'Information not available';
-  const faculty = Array.isArray(dept.faculty_list)
-    ? dept.faculty_list.map((x) => clean(x)).filter(Boolean)
-    : [];
-  const facultyText =
-    faculty.length > 0 ? faculty.slice(0, 12).join(' · ') + (faculty.length > 12 ? ' …' : '') : 'Information not available';
+  const intro = clean(dept.intro) || L.notAvail;
+  const hod_voice = clean(dept.hod_voice) || L.notAvail;
+  const achievements = clean(dept.achievements) || L.notAvail;
+  const placement = clean(dept.placement) || L.notAvail;
+  const fees = clean(dept.fees) || L.notAvail;
 
   return [
-    {
-      title: name,
-      content: `HOD: ${hod}\nIntake: ${intake}\nDuration: ${duration}`,
-    },
-    {
-      title: 'Overview & focus',
-      content: overview,
-    },
-    {
-      title: 'Faculty highlights',
-      content: facultyText,
-    },
+    { title: name, content: intro },
+    { title: L.hodAndVision, content: hod_voice },
+    { title: L.achievements, content: achievements },
+    { title: L.placements, content: placement },
+    { title: L.fees, content: fees },
   ];
 }
 

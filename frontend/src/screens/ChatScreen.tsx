@@ -237,11 +237,11 @@ export default function ChatScreen({
     const mapSingleTrigger = (key: string): CardDataItem[] | null => {
       const n = key.toLowerCase();
       if (n === 'hod' || n === 'hod_profile' || n === 'head_of_department') {
-        const c = buildAllHodCardsFromLocale(collegeData);
+        const c = buildAllHodCardsFromLocale(collegeData, language);
         return c.length ? c : null;
       }
       if (n === 'dept' || n === 'department' || n === 'department_overview') {
-        const c = buildAllDepartmentSummaryCardsFromLocale(collegeData);
+        const c = buildAllDepartmentSummaryCardsFromLocale(collegeData, language);
         return c.length ? c : null;
       }
       return getStaticCardsForTrigger(language, key);
@@ -374,7 +374,7 @@ export default function ChatScreen({
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
 
     if (cardTrigger === 'course_menu') {
-      setLayoutMode('FULL_TEXT');
+      setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       setCurrentCardIdx(0);
       setSuppressedTurnId(null);
@@ -390,7 +390,7 @@ export default function ChatScreen({
           segmentKey,
           isOverview: false,
           cardsToSync: null,
-          targetLayout: 'FULL_TEXT',
+          targetLayout: 'SPLIT_CARDS',
         });
       }
       return;
@@ -484,7 +484,7 @@ export default function ChatScreen({
       if (targetAll) {
         setIsDepartmentOverviewStage(false);
         setActiveDepartmentId(null);
-        const allDeptCards = buildAllDepartmentSummaryCardsFromLocale(collegeData);
+        const allDeptCards = buildAllDepartmentSummaryCardsFromLocale(collegeData, language);
         setLayoutMode('SPLIT_CARDS');
         setActiveCards(allDeptCards);
         setSuppressedTurnId(assistantMessageId ?? turnId);
@@ -504,7 +504,7 @@ export default function ChatScreen({
 
       const jsonKey = menuLabelToJsonKey(resolvedDept) ?? 'cse';
       const deptRecord = getDepartmentRecord(collegeData, jsonKey);
-      const slides = buildDepartmentSlidesFromRecord(deptRecord, jsonKey);
+      const slides = buildDepartmentSlidesFromRecord(deptRecord, jsonKey, language);
       const syncCards: CardDataItem[] = slides.map((s) => ({
         title: s.title,
         content: s.content,
@@ -675,8 +675,8 @@ export default function ChatScreen({
     if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
     const jk = menuLabelToJsonKey(activeDepartmentId) ?? 'cse';
     const rec = getDepartmentRecord(collegeData, jk);
-    return buildDepartmentSlidesFromRecord(rec, jk);
-  }, [isDepartmentOverviewStage, activeDepartmentId, collegeData]);
+    return buildDepartmentSlidesFromRecord(rec, jk, language);
+  }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
 
   useEffect(() => {
     const prev = prevLayoutModeRef.current;
@@ -706,9 +706,7 @@ export default function ChatScreen({
             <motion.div key="full-text" layoutId="main" className="full-text-layout">
               {/* Clean top — no debug labels */}
               <div className="full-text-message-stage">
-                {courseMenuOptions.length > 0 ? (
-                  <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
-                ) : isProcessing ? (
+                {isProcessing ? (
                   <div className="clara-thinking-stage">
                     <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
                     <div className="clara-thinking-title">{thinkingTitle}</div>
@@ -768,6 +766,8 @@ export default function ChatScreen({
                     slides={infoSlides}
                     currentCardIdx={currentCardIdx}
                   />
+                ) : courseMenuOptions.length > 0 ? (
+                  <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 

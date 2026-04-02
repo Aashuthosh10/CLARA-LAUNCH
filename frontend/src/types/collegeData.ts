@@ -2,6 +2,12 @@
 
 export interface CollegeDepartmentRecord {
   name?: string;
+  intro?: string;
+  hod_voice?: string;
+  achievements?: string;
+  placement?: string;
+  fees?: string;
+  // deprecated/old fields
   hod?: string;
   intake?: string | number;
   duration?: string;
