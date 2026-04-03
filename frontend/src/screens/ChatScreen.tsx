@@ -14,6 +14,7 @@ import VoiceOrb from '../components/VoiceOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
+import InlineDepartmentCarousel from '../components/chat/InlineDepartmentCarousel';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
@@ -26,6 +27,7 @@ import {
   menuLabelToJsonKey,
 } from '../lib/collegeLocaleUtils';
 import { useCollegeData } from '../hooks/useCollegeData';
+import { normalizeIntent, type NormalizedIntent } from '../lib/intentNormalizer';
 
 const THINKING_TAGLINES: Record<Language, string[]> = {
   English: [
@@ -178,6 +180,36 @@ export default function ChatScreen({
   const [isInfoSlideStage, setIsInfoSlideStage] = useState(false);
   const [infoSlideChip, setInfoSlideChip] = useState('');
   const [infoSlides, setInfoSlides] = useState<{ title: string; content: string }[]>([]);
+  
+  // Multilingual Intent Map overriding
+  const [pendingLocalIntent, setPendingLocalIntent] = useState<NormalizedIntent | null>(null);
+
+  // Response Priority Lock (CARD > UI > TEXT)
+  const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
+
+  // Wraps original sendMessage to sniff for intents dynamically on dispatch
+  const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
+    if (msg?.action === 'user_message' && typeof msg.text === 'string') {
+      // 1. Reset UI completely on NEW VOICE queries
+      // Rule 5: Navigation clicks (UI source) should NOT wipe the layout mode.
+      if (source === 'VOICE') {
+        setLayoutMode('FULL_TEXT');
+        setActiveCards(null);
+        setIsDepartmentOverviewStage(false);
+        setActiveDepartmentId(null);
+        setIsInfoSlideStage(false);
+        setInfoSlides([]);
+        setInfoSlideChip('');
+        setCourseMenuOptions([]);
+        currentUiLockRef.current = 'IDLE'; // Release the lock
+      }
+      
+      const intent = normalizeIntent(msg.text);
+      if (intent.trigger) setPendingLocalIntent(intent);
+    }
+    sendMessage(msg);
+  }, [sendMessage]);
+
   const [activeTargetDepartment, setActiveTargetDepartment] = useState<string | null>(null);
 
 
@@ -202,8 +234,19 @@ export default function ChatScreen({
 
   // Intent Classifier & Speech Hooks
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
+  // Browser Speech Rec fallback (used if not relying on backend voice activity detection)
+  const handleEmptyTranscript = useCallback(() => {
+     setShowUnmuteHint(false);
+     setIsDepartmentOverviewStage(false);
+     setActiveDepartmentId(null);
+     interceptAndSendMessage({
+        action: "user_message",
+        text: "**BACKGROUND_NOISE** No words detected, returning to idle state."
+     });
+  }, [interceptAndSendMessage]);
+
   const { startListening: startSpeechRecognition, stopListening } = useSpeechRecognition(
-    sendMessage,
+    interceptAndSendMessage,
     language,
     () => {},
     () => {}
@@ -370,10 +413,21 @@ export default function ChatScreen({
   // Sync from payload
   useEffect(() => {
     if (!payload) return;
-    const cardTrigger = payload?.showCard;
+    
+    // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
+    const nativeTrigger = payload?.showCard;
+    const cardTrigger = nativeTrigger || pendingLocalIntent?.trigger;
+    
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
-    const targetDepartment = String(payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload ?? '').trim();
+    const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
+    const targetDepartment = String(rawTargetDept || pendingLocalIntent?.departmentLabel || '').trim();
+    
     setActiveTargetDepartment(targetDepartment || null);
+
+    // Ensure we clear the pending intent so subsequent replies don't loop the previous card
+    if (pendingLocalIntent && !nativeTrigger) {
+      setPendingLocalIntent(null);
+    }
 
 
     const menuOptionsFromPayload = Array.isArray(payload?.options)
@@ -390,6 +444,7 @@ export default function ChatScreen({
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
 
     if (cardTrigger === 'course_menu') {
+      currentUiLockRef.current = 'CARD';
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       setCurrentCardIdx(0);
@@ -413,6 +468,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'admissions') {
+      currentUiLockRef.current = 'CARD';
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -481,6 +537,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'department_overview') {
+      currentUiLockRef.current = 'CARD';
       setIsInfoSlideStage(false);
       setInfoSlides([]);
       setInfoSlideChip('');
@@ -547,6 +604,7 @@ export default function ChatScreen({
     const cardsForTrigger = resolveCardsFromTrigger(cardTrigger);
 
     if (cardsForTrigger) {
+        currentUiLockRef.current = 'CARD';
         setCourseMenuOptions([]);
         setActiveDepartmentId(null);
         setIsDepartmentOverviewStage(false);
@@ -570,31 +628,40 @@ export default function ChatScreen({
             targetLayout: 'SPLIT_CARDS',
           });
         }
-    } else {
-        // For text-only replies, always move back to full-text before playback.
-        if (payload?.isProcessing === false) {
-          setLayoutMode('FULL_TEXT');
-          setActiveCards(null);
-          setCurrentCardIdx(0);
-          setSuppressedTurnId(null);
-          setActiveDepartmentId(null);
-          setIsDepartmentOverviewStage(false);
-          setIsInfoSlideStage(false);
-          setInfoSlides([]);
-          setInfoSlideChip('');
-          setCourseMenuOptions([]);
-        }
+        return;
+    }
+
+    // FALLBACK / TEXT-ONLY RESPONSE
+    // If a higher priority UI layout (CARD) is already locked, DO NOT override it with text.
+    if (currentUiLockRef.current === 'CARD') {
         if (audioBase64) {
           setPendingAudio({
             audioBase64,
             segmentKey,
             isOverview: false,
             cardsToSync: null,
-            targetLayout: 'FULL_TEXT',
+            targetLayout: 'SPLIT_CARDS', // Play audio gracefully in background alongside locked card
           });
         }
+        return; 
     }
-  }, [payload, resolveCardsFromTrigger, collegeData, language]);
+
+    // Valid text progression since no higher priority rules are locked
+    currentUiLockRef.current = 'TEXT';
+    
+    // Resetting behavior completely removed from backend completion chunk parsing (Rule 5)
+    // We strictly use `interceptAndSendMessage` to reset on explicitly new inquiries!
+    if (audioBase64) {
+      setPendingAudio({
+        audioBase64,
+        segmentKey,
+        isOverview: false,
+        cardsToSync: null,
+        targetLayout: 'FULL_TEXT',
+      });
+    }
+
+  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage]);
 
   // Start queued audio only after its target layout is visible.
   useEffect(() => {
@@ -668,12 +735,21 @@ export default function ChatScreen({
   const handleCourseMenuSelect = useCallback(
     (departmentName: string) => {
       setCourseMenuOptions([]);
-      sendMessage({
+      
+      // DIRECT ACTION MAPPING (UI_CLICK = Deterministic Command)
+      // Completely bypass language pipeline by setting state IMMEDIATELY
+      currentUiLockRef.current = 'CARD';
+      setActiveDepartmentId(departmentName);
+      setIsDepartmentOverviewStage(true);
+      setLayoutMode('SPLIT_CARDS');
+      
+      // Notify backend for audio response in current language
+      interceptAndSendMessage({
         action: 'user_message',
         text: `Tell me about the ${departmentName} department`,
-      });
+      }, 'UI');
     },
-    [sendMessage]
+    [interceptAndSendMessage]
   );
 
   const filteredMessages = useMemo(() => {
@@ -779,22 +855,30 @@ export default function ChatScreen({
                   initial={{ y: -20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5, duration: 0.8 }}
-                  whileHover={{ scale: 1.03, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.5)' }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={handleHomeClick}
-                  className="absolute z-[50] flex items-center justify-center w-16 h-16 rounded-2xl glass interactive-button group"
-                  style={{ top: '20px', left: '20px' }}
+                  className="absolute z-[50] flex items-center justify-center w-[60px] h-[60px] rounded-[1.25rem] bg-white/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 interactive-button group"
+                  style={{ top: '4%', left: '4%' }}
                 >
                   <Home className="w-6 h-6 text-slate-600 group-hover:text-slate-900 transition-colors" />
                 </motion.button>
 
                 {isDepartmentOverviewStage && activeDepartmentId ? (
-                  <DepartmentCardStage
+                  <InlineDepartmentCarousel 
                     departmentLabel={activeDepartmentId}
                     slides={departmentSlides}
                     currentCardIdx={currentCardIdx}
                     onCardClick={handleCardSelect}
+                    onClose={() => {
+                      setIsDepartmentOverviewStage(false);
+                      setActiveDepartmentId(null);
+                      currentUiLockRef.current = 'IDLE'; // Unlocking response priority
+                      // Only if we need to return to chat: setLayoutMode('FULL_TEXT');
+                    }}
                   />
+                ) : courseMenuOptions.length > 0 ? (
+                  <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
                 ) : isInfoSlideStage && infoSlides.length > 0 ? (
                   <DepartmentCardStage
                     departmentLabel=""
@@ -803,8 +887,6 @@ export default function ChatScreen({
                     currentCardIdx={currentCardIdx}
                     onCardClick={handleCardSelect}
                   />
-                ) : courseMenuOptions.length > 0 ? (
-                  <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 
