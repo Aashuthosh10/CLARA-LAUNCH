@@ -16,10 +16,36 @@ export interface CollegeDepartmentRecord {
   additional_details?: Record<string, unknown>;
 }
 
+export interface RoleHolderPrincipal {
+  name?: string;
+  title?: string;
+  profile?: string;
+}
+
+export interface RoleHolderTrustee {
+  name?: string;
+  designation?: string;
+}
+
+export interface RoleHolderDepartment {
+  department_name?: string;
+  hod_name?: string;
+  hod_title?: string;
+  hod_bio?: string;
+  aliases?: string[];
+}
+
+export interface RoleHoldersRecord {
+  principal?: RoleHolderPrincipal;
+  trustees?: RoleHolderTrustee[];
+  hod_by_department?: Record<string, RoleHolderDepartment>;
+}
+
 export interface CollegeLocaleData {
   institution_overview?: Record<string, unknown>;
   leadership?: Array<{ role?: string; name?: string }>;
   admissions_and_fees?: Record<string, unknown>;
   departments?: Record<string, CollegeDepartmentRecord>;
   placements_and_training?: Record<string, unknown>;
+  role_holders?: RoleHoldersRecord;
 }

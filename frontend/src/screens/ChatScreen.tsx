@@ -16,8 +16,6 @@ import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
-import PremiumHODCard from '../components/chat/cards/PremiumHODCard';
-import PremiumHODCardDataScience from '../components/chat/cards/PremiumHODCard(DataScience)';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAdmissionsCardsFromLocale,
@@ -102,8 +100,6 @@ const DEFAULT_COURSE_MENU_OPTIONS = [
   'MBA',
   'Basic Sciences',
 ];
-
-// Data Science HOD data has been moved to its own dedicated component: PremiumHODCard(DataScience).tsx
 
 const INFO_STAGE_CHIPS: Record<Language, { admissions: string; placements: string }> = {
   English: { admissions: 'Admissions & fees', placements: 'Placements & training' },
@@ -988,8 +984,12 @@ export default function ChatScreen({
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 
-                {isHodStage && activeTargetDepartment === 'Data Science' ? (
-                  <PremiumHODCardDataScience />
+                {isHodStage ? (
+                  <LeadershipOverview
+                    cards={[]}
+                    currentCardIdx={0}
+                    targetDepartment={activeTargetDepartment}
+                  />
                 ) : isDepartmentOverviewStage && activeDepartmentId ? (
                   <DepartmentCardFactory 
                     departmentId={activeDepartmentId}

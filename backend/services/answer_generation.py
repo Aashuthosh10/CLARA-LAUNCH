@@ -158,6 +158,50 @@ def _hod_slice_for_narrator(dept: Any) -> dict[str, Any]:
     return out
 
 
+def _role_holders_block(data: dict[str, Any]) -> dict[str, Any]:
+    block = data.get("role_holders")
+    return block if isinstance(block, dict) else {}
+
+
+def _role_holders_block_with_en_fallback(data: dict[str, Any]) -> dict[str, Any]:
+    primary = _role_holders_block(data)
+    if primary:
+        return primary
+    en_data = load_locale_data_for_lang_key("en")
+    return _role_holders_block(en_data)
+
+
+def _build_hod_rows_from_role_holders(data: dict[str, Any], deps: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    role_holders = _role_holders_block_with_en_fallback(data)
+    hod_by_department = role_holders.get("hod_by_department")
+    if isinstance(hod_by_department, dict):
+        for key in DEPARTMENT_JSON_KEY_ORDER:
+            row = hod_by_department.get(key)
+            if isinstance(row, dict):
+                out[key] = {
+                    "department_name": row.get("department_name"),
+                    "name": row.get("hod_name"),
+                    "title": row.get("hod_title"),
+                    "bio": row.get("hod_bio"),
+                    "aliases": row.get("aliases"),
+                }
+    if out:
+        return out
+
+    # Legacy fallback from departments[] for older locale files.
+    for key in DEPARTMENT_JSON_KEY_ORDER:
+        dept = deps.get(key)
+        if isinstance(dept, dict):
+            out[key] = {
+                "department_name": dept.get("name"),
+                "name": dept.get("hod"),
+                "title": None,
+                "bio": dept.get("hod_voice"),
+            }
+    return out
+
+
 def build_target_card_payload(
     intent: str,
     *,
@@ -229,15 +273,7 @@ def build_target_card_payload(
         }
 
     if intent == INTENT_HOD_PROFILE:
-        hod_rows: dict[str, Any] = {}
-        for k in DEPARTMENT_JSON_KEY_ORDER:
-            d = deps.get(k)
-            if isinstance(d, dict):
-                hod_rows[k] = {
-                    "name": d.get("name"),
-                    "hod": d.get("hod"),
-                    "intake": d.get("intake"),
-                }
+        hod_rows = _build_hod_rows_from_role_holders(data, deps)
         return {
             "presentation_type": "hod_overview",
             "locale": locale_id,
@@ -245,26 +281,24 @@ def build_target_card_payload(
         }
 
     if intent == INTENT_TRUSTEES_PROFILE:
+        role_holders = _role_holders_block_with_en_fallback(data)
         return {
             "presentation_type": "leadership_trustees",
             "locale": locale_id,
+            "principal": role_holders.get("principal"),
+            "trustees": role_holders.get("trustees"),
             "leadership": data.get("leadership"),
         }
 
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
-        hod_rows_b: dict[str, Any] = {}
-        for k in DEPARTMENT_JSON_KEY_ORDER:
-            d = deps.get(k)
-            if isinstance(d, dict):
-                hod_rows_b[k] = {
-                    "name": d.get("name"),
-                    "hod": d.get("hod"),
-                    "intake": d.get("intake"),
-                }
+        role_holders = _role_holders_block_with_en_fallback(data)
+        hod_rows_b = _build_hod_rows_from_role_holders(data, deps)
         return {
             "presentation_type": "hod_and_trustees",
             "locale": locale_id,
             "hod_by_department": hod_rows_b,
+            "principal": role_holders.get("principal"),
+            "trustees": role_holders.get("trustees"),
             "leadership": data.get("leadership"),
         }
 
@@ -670,6 +704,10 @@ TRUSTEES_PROFILE_KEYWORDS = [
     "board of trustees",
     "founder trustee",
     "founder trustees",
+    "principal",
+    "principal name",
+    "who is principal",
+    "college principal",
 ]
 
 BOTH_PROFILE_KEYWORDS = [
@@ -700,13 +738,36 @@ PROFILE_GENERIC_KEYWORDS = [
     "maahiti",
 ]
 
-_HOD_NAME = "Dr. Shashikumar D R"
-_TRUSTEE_NAMES = [
-    "Prof. M. R. Holla",
-    "Dr. Y. Jayasimha",
-    "Prof. R C Shanmukhaswamy",
-    "Dr. A. M. Padma Reddy",
-]
+def _default_profile_names() -> tuple[str, list[str]]:
+    return (
+        "Dr. Shashikumar D R",
+        [
+            "Prof. M. R. Holla",
+            "Dr. Y. Jayasimha",
+            "Prof. R C Shanmukhaswamy",
+            "Dr. A. M. Padma Reddy",
+        ],
+    )
+
+
+def _profile_names_from_en_locale() -> tuple[str, list[str]]:
+    data = load_locale_data_for_lang_key("en")
+    role_holders = _role_holders_block(data)
+    hod_by_department = role_holders.get("hod_by_department")
+    default_hod, default_trustees = _default_profile_names()
+    if isinstance(hod_by_department, dict):
+        cse = hod_by_department.get("cse")
+        if isinstance(cse, dict):
+            hod_name = str(cse.get("hod_name") or "").strip()
+            if hod_name:
+                default_hod = hod_name
+    trustees = role_holders.get("trustees")
+    if isinstance(trustees, list):
+        names = [str(item.get("name") or "").strip() for item in trustees if isinstance(item, dict)]
+        names = [n for n in names if n]
+        if names:
+            default_trustees = names
+    return default_hod, default_trustees
 
 PROFILE_REPLY_TEMPLATES: dict[str, dict[str, str]] = {
     "English": {
@@ -803,13 +864,14 @@ def get_off_topic_reply(language: str | None) -> str:
 def get_profile_direct_reply(intent: str, language: str | None = None) -> str | None:
     lang = language if language in SUPPORTED_LANGUAGES else "English"
     templates = PROFILE_REPLY_TEMPLATES.get(lang, PROFILE_REPLY_TEMPLATES["English"])
-    trustees_joined = ", ".join(_TRUSTEE_NAMES)
+    hod_name, trustee_names = _profile_names_from_en_locale()
+    trustees_joined = ", ".join(trustee_names)
     if intent == INTENT_HOD_PROFILE:
-        return templates["hod"].format(hod=_HOD_NAME, trustees=trustees_joined)
+        return templates["hod"].format(hod=hod_name, trustees=trustees_joined)
     if intent == INTENT_TRUSTEES_PROFILE:
-        return templates["trustees"].format(hod=_HOD_NAME, trustees=trustees_joined)
+        return templates["trustees"].format(hod=hod_name, trustees=trustees_joined)
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
-        return templates["both"].format(hod=_HOD_NAME, trustees=trustees_joined)
+        return templates["both"].format(hod=hod_name, trustees=trustees_joined)
     return None
 
 
@@ -974,34 +1036,250 @@ def _normalize_text(text: str | None) -> str:
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
-def detect_intent(text: str) -> str:
+# Mixed-language → English-friendly cues before strict intent matching.
+_MIXED_LANGUAGE_PHRASE_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"\bbagge\s+helu\b", "tell me about"),
+    (r"\bbagge\s+heli\b", "tell me about"),
+    (r"\bhelu\b", "tell"),
+    (r"\bhelid\b", "tell"),
+    (r"\bkaise\s+hai\b", "how is"),
+    (r"\bepdi\s+iruku\b", "how is"),
+    (r"\beppidi\s+irukku\b", "how is"),
+    (r"\bela\s+unnavu\b", "how is"),
+    (r"\byaaru\b", "who"),
+    (r"\byaar\b", "who"),
+    (r"\byaarig\b", "who"),
+    (r"\bkaun\b", "who"),
+    (r"\bkon\s+ala\b", "who is"),
+    (r"\bhod\s+yaaru\b", "hod who"),
+    (r"\bhead\s+yaaru\b", "head who"),
+    (r"\byaaru\b", "who"),
+    (r"\bheli\b", ""),
+)
+
+
+def normalize_user_input(text: str | None) -> str:
     """
-    Deterministic intent detection with priority:
-    1) Profile queries (HOD/TRUSTEES/BOTH)
-    2) ADMISSIONS (fees, admission process, entrance exams — kiosk card deck)
-    3) PLACEMENTS (jobs, training, placement support — kiosk card deck)
-    4) DEPARTMENT_OVERVIEW (if a specific department is detected)
-    5) COURSE_MENU (generic programs/branches query)
-    6) COLLEGE_OVERVIEW (about the college)
-    7) NORMAL_QUERY
+    Lowercase, collapse whitespace, and map common mixed-language phrases to English cues.
+    Intended to run before ``extract_entities`` / ``detect_intent_with_priority`` (and on translated English for multilingual sessions).
     """
-    normalized = _normalize_text(text)
-    if not normalized:
+    if text is None or not isinstance(text, str):
+        return ""
+    s = text.strip()
+    if not s:
+        return ""
+    for pattern, repl in _MIXED_LANGUAGE_PHRASE_PATTERNS:
+        s = re.sub(pattern, repl, s, flags=re.IGNORECASE)
+    return _normalize_text(s)
+
+
+DEPARTMENT_KEYWORDS: dict[str, str] = {
+    "computer science": "CSE",
+    "cse": "CSE",
+    "aiml": "AIML",
+    "ai ml": "AIML",
+    "ece": "ECE",
+    "ec": "ECE",
+    "ise": "ISE",
+    "civil": "CIVIL",
+    "mechanical": "MECH",
+    "mba": "MBA",
+}
+
+
+def extract_entities(query_normalized: str) -> dict[str, Any]:
+    """
+    Extract **entities first** (before intent). Works on normalized English-friendly text.
+
+    Returns:
+        ``department``: canonical label (e.g. ``\"CSE\"``, ``\"CSE (AI & ML)\"``) or ``None``.
+        ``role``: ``\"HOD\"``, ``\"TRUSTEES\"``, ``\"BOTH\"``, or ``None``.
+    """
+    n = (query_normalized or "").strip()
+    out: dict[str, Any] = {"department": None, "role": None}
+    if not n:
+        return out
+
+    # Role detection FIRST.
+    hod_terms = (
+        "hod",
+        "head of department",
+        "department head",
+        "head",
+        "incharge",
+        "hod who",
+        "head who",
+        "who is hod",
+    )
+    has_hod = any(_contains_phrase(n, term) for term in hod_terms) or _matches_any_phrase(n, HOD_PROFILE_KEYWORDS)
+    has_tr = _matches_any_phrase(n, TRUSTEES_PROFILE_KEYWORDS)
+    if not has_tr and _contains_phrase(n, "trusted"):
+        if has_hod or _contains_phrase(n, "profile") or _contains_phrase(n, "profiles"):
+            has_tr = True
+
+    if has_hod and has_tr:
+        out["role"] = "BOTH"
+    elif has_hod:
+        out["role"] = "HOD"
+    elif has_tr:
+        out["role"] = "TRUSTEES"
+
+    # Strict department mapping for deterministic card routing.
+    for key, mapped in DEPARTMENT_KEYWORDS.items():
+        if key in n:
+            out["department"] = mapped
+            break
+
+    # Backward-compatible fallback if strict map didn't match.
+    if not out["department"]:
+        dept = _detect_department(n)
+        if dept:
+            out["department"] = dept
+    return out
+
+
+def detect_intent_with_priority(query_en: str, entities: dict[str, Any]) -> str:
+    """
+    Priority-based intent after ``extract_entities`` on the same normalized ``query_en``.
+
+    1. Role: HOD → ``HOD_PROFILE`` (highest). Trustees / both preserved for existing flows.
+    2. Admissions (admission, fees keywords).
+    3. Placements (placement, jobs).
+    4. Department overview if ``entities[\"department\"]`` is set.
+    5. Course menu (courses, branches).
+    6. College overview (overview, about college).
+    7. Else ``NORMAL_QUERY``.
+    """
+    n = (query_en or "").strip()
+    if not n:
         return INTENT_NORMAL_QUERY
-    profile_intent = _detect_profile_intent(normalized)
-    if profile_intent:
-        return profile_intent
-    if _is_admissions_query(normalized):
+
+    role = entities.get("role")
+    if role == "HOD":
+        return INTENT_HOD_PROFILE
+    if role == "TRUSTEES":
+        return INTENT_TRUSTEES_PROFILE
+    if role == "BOTH":
+        return INTENT_HOD_TRUSTEES_PROFILE
+
+    if re.search(r"\badmissions?\b", n) or re.search(r"\bfees?\b", n) or _is_admissions_query(n):
         return INTENT_ADMISSIONS
-    if _is_placements_query(normalized):
+
+    if re.search(r"\bplacements?\b", n) or re.search(r"\bjobs?\b", n) or _is_placements_query(n):
         return INTENT_PLACEMENTS
-    if _detect_department(normalized):
+
+    if entities.get("department"):
         return INTENT_DEPARTMENT_OVERVIEW
-    if _is_course_menu_query(normalized):
+
+    if re.search(r"\bcourses\b", n) or re.search(r"\bbranches\b", n) or _is_course_menu_query(n):
         return INTENT_COURSE_MENU
-    if _is_college_overview_query(normalized):
+
+    if re.search(r"\boverview\b", n) or "about college" in n or _is_college_overview_query(n):
         return INTENT_COLLEGE_OVERVIEW
+
     return INTENT_NORMAL_QUERY
+
+
+def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
+    """
+    Backend showCard / departmentId (mirrors main.py): prefer ``entities[\"department\"]`` for HOD and department cards.
+    """
+    dept = entities.get("department")
+    if intent == INTENT_HOD_PROFILE:
+        return {"showCard": "hod", "departmentId": dept}
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        return {"showCard": "department_overview", "departmentId": dept}
+    if intent == INTENT_COLLEGE_OVERVIEW:
+        return {"showCard": "college", "departmentId": None}
+    if intent == INTENT_ADMISSIONS:
+        return {"showCard": "admissions", "departmentId": None}
+    if intent == INTENT_PLACEMENTS:
+        return {"showCard": "placements", "departmentId": None}
+    if intent == INTENT_COURSE_MENU:
+        return {"showCard": "course_menu", "departmentId": None}
+    if intent == INTENT_TRUSTEES_PROFILE:
+        return {"showCard": "trustees", "departmentId": None}
+    if intent == INTENT_HOD_TRUSTEES_PROFILE:
+        return {"showCard": ["hod", "trustees"], "departmentId": dept}
+    return {"showCard": None, "departmentId": dept}
+
+
+def detect_intent_strict(normalized: str) -> str:
+    """
+    Back-compat: entities first, then ``detect_intent_with_priority``.
+    """
+    n = (normalized or "").strip()
+    if not n:
+        return INTENT_NORMAL_QUERY
+    entities = extract_entities(n)
+    return detect_intent_with_priority(n, entities)
+
+
+def resolve_card_intent_and_department(
+    raw_text: str,
+    english_query: str | None,
+    lang_key: str,
+    *,
+    preprocessor_intent_raw: str | None = None,
+) -> tuple[str, str | None, str, dict[str, Any]]:
+    """
+    Backend-only card routing: normalize → ``extract_entities`` → ``detect_intent_with_priority``.
+
+    - Non-English: prefer ``english_query`` (translated) for detection when provided.
+    - ``preprocessor_intent_raw`` may supply off-topic from ``normalize_and_classify_query``.
+    """
+    if preprocessor_intent_raw:
+        s = str(preprocessor_intent_raw).strip().upper().replace("-", "_")
+        if s.startswith("INTENT_"):
+            s = s[7:]
+        if s == "OFF_TOPIC":
+            base = normalize_user_input(english_query or raw_text)
+            ent = extract_entities(base)
+            logger.info("[INTENT_PRIORITY] query_en=%r entities=%s intent=%s", base, ent, INTENT_OFF_TOPIC)
+            return INTENT_OFF_TOPIC, None, base, ent
+
+    if lang_key != "en":
+        base_in = (english_query or raw_text or "").strip()
+    else:
+        base_in = (raw_text or "").strip()
+
+    query_en = normalize_user_input(base_in)
+    entities = extract_entities(query_en)
+    intent = detect_intent_with_priority(query_en, entities)
+    dept: str | None = entities.get("department")
+
+    logger.info("[INTENT_PRIORITY] query_en=%r entities=%s intent=%s", query_en, entities, intent)
+    logger.info("[INTENT_PRIORITY] card_hints=%s", card_trigger_hints(intent, entities))
+
+    return intent, dept, query_en, entities
+
+
+def infer_show_card_label(intent: str, detected_department: str | None) -> str | list[str] | None:
+    """Human-readable showCard label(s) for logging only (mirrors main.py payload)."""
+    if intent == INTENT_COLLEGE_OVERVIEW:
+        return "college"
+    if intent == INTENT_ADMISSIONS:
+        return "admissions"
+    if intent == INTENT_PLACEMENTS:
+        return "placements"
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        return "department_overview"
+    if intent == INTENT_HOD_PROFILE:
+        return "hod"
+    if intent == INTENT_TRUSTEES_PROFILE:
+        return "trustees"
+    if intent == INTENT_HOD_TRUSTEES_PROFILE:
+        return ["hod", "trustees"]
+    if intent == INTENT_COURSE_MENU:
+        return "course_menu"
+    return None
+
+
+def detect_intent(text: str) -> str:
+    """Public API: normalize → ``extract_entities`` → ``detect_intent_with_priority``."""
+    query_en = normalize_user_input(text)
+    entities = extract_entities(query_en)
+    return detect_intent_with_priority(query_en, entities)
 
 
 def _strip_json_fence(text: str) -> str:

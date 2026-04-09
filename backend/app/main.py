@@ -76,18 +76,18 @@ from backend.services.answer_generation import (
     INTENT_TRUSTEES_PROFILE,
     build_narrator_system_prompt,
     build_target_card_payload,
-    detect_department_name,
-    detect_intent,
     get_course_menu_options,
     get_course_menu_spoken_prompt,
     get_off_topic_reply,
     get_profile_direct_reply,
     get_unavailable_reply,
+    infer_show_card_label,
     is_narrator_intent,
     locale_file_id_for_lang_key,
     multilingual_rag_reply_directive,
     normalize_and_classify_query,
     rag_language_enforcement_directive,
+    resolve_card_intent_and_department,
 )
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
@@ -575,7 +575,6 @@ async def process_user_text_and_reply(
     websocket: WebSocket,
     timing: TurnTiming,
     stt_meta: dict[str, Any] | None = None,
-    local_intent: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
     _append_session_history(session, "user", text, max_turns=3)
@@ -639,53 +638,41 @@ async def process_user_text_and_reply(
                 logger.warning("Multilingual preprocessor failed: %s", exc)
                 preprocess = None
 
-        # ─── NLP Pipeline: Normalize & Classify ───
-        # For non-English sessions, we prioritize translated English for all subsequent logic.
-        if lang_key != "en" and preprocess and (preprocess.get("english_translation") or "").strip():
-            # LLM-based translation is the "Canonical" source for intent/entity matching
-            rag_query = str(preprocess["english_translation"]).strip()
-            llm_user_text = rag_query
-            intent = str(preprocess.get("intent") or INTENT_NORMAL_QUERY)
-            detected_department = preprocess.get("target_department")
-            
-            # Cross-verify: if LLM classified as NORMAL but keywords suggest otherwise in English
-            if intent == INTENT_NORMAL_QUERY:
-                intent = detect_intent(rag_query)
-            if not detected_department:
-                detected_department = detect_department_name(rag_query)
-        else:
-            rag_query = text.strip()
-            llm_user_text = text
-            # Always use rag_query (English or normalized) for deterministic checks
-            intent = detect_intent(rag_query)
-            detected_department = detect_department_name(rag_query)
-            
-        # ─── FRONTEND LOCAL INTENT FALLBACK ───
-        # If the backend NLP pipeline failed to classify the intent (e.g. timeout, rate limit, foreign text missed)
-        if local_intent and intent == INTENT_NORMAL_QUERY:
-            frontend_trigger = local_intent.get("trigger")
-            if frontend_trigger == "department_overview":
-                intent = INTENT_DEPARTMENT_OVERVIEW
-            elif frontend_trigger == "course_menu":
-                intent = INTENT_COURSE_MENU
-            elif frontend_trigger == "hod_info":
-                intent = INTENT_HOD_PROFILE
-            elif frontend_trigger == "admissions":
-                intent = INTENT_ADMISSIONS
-            elif frontend_trigger == "placements":
-                intent = INTENT_PLACEMENTS
-                
-            frontend_dept = local_intent.get("departmentLabel")
-            if frontend_dept and not detected_department:
-                detected_department = frontend_dept
-                
-            logger.info("[NLP_TRACE] Used frontend localIntent fallback: intent=%s, dept=%s", intent, detected_department)
+        # ─── NLP: translate (multilingual) → normalize_user_input → detect_intent_strict → extract_entities ───
+        english_translation = ""
+        preprocessor_intent_raw: str | None = None
+        if lang_key != "en" and preprocess:
+            english_translation = str(preprocess.get("english_translation") or "").strip()
+            preprocessor_intent_raw = str(preprocess.get("intent") or "").strip() or None
 
-        logger.info(f"[NLP_TRACE] RAW INPUT: {text}")
-        logger.info(f"[NLP_TRACE] DETECTED LANGUAGE: {lang_name} ({lang_key})")
-        logger.info(f"[NLP_TRACE] TRANSLATED/NORMALIZED INPUT: {rag_query}")
-        logger.info(f"[NLP_TRACE] FINAL INTENT: {intent}")
-        logger.info(f"[NLP_TRACE] FINAL DEPARTMENT: {detected_department}")
+        intent, detected_department, normalized_for_intent, entity_map = resolve_card_intent_and_department(
+            raw_text=text,
+            english_query=english_translation if lang_key != "en" else None,
+            lang_key=lang_key,
+            preprocessor_intent_raw=preprocessor_intent_raw,
+        )
+
+        if lang_key != "en" and english_translation:
+            rag_query = english_translation
+            llm_user_text = english_translation
+        else:
+            rag_query = normalized_for_intent
+            llm_user_text = normalized_for_intent
+
+        show_card_preview = infer_show_card_label(intent, detected_department)
+        logger.info(
+            "[CARD_TRIGGER] normalized=%r intent=%s departmentId=%r showCard=%s entities=%s",
+            normalized_for_intent,
+            intent,
+            detected_department,
+            show_card_preview,
+            entity_map,
+        )
+        logger.info("[NLP_TRACE] RAW INPUT: %s", text)
+        logger.info("[NLP_TRACE] DETECTED LANGUAGE: %s (%s)", lang_name, lang_key)
+        logger.info("[NLP_TRACE] RAG_QUERY: %s", rag_query)
+        logger.info("[NLP_TRACE] FINAL INTENT: %s", intent)
+        logger.info("[NLP_TRACE] FINAL DEPARTMENT: %s", detected_department)
 
         is_broad_course_menu = False
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
@@ -813,6 +800,9 @@ async def process_user_text_and_reply(
             context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
         cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(rag_query)}|{context_sig}"
         direct_reply = off_topic_direct_reply
+        if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
+            # Deterministic guard: never default to CSE for ambiguous HOD requests.
+            direct_reply = "Please specify the department to know the HOD."
         if intent == INTENT_COURSE_MENU:
             direct_reply = get_course_menu_spoken_prompt(lang_name)
         elif not is_narrator_intent(intent):
@@ -973,15 +963,19 @@ async def process_user_text_and_reply(
             show_card = "placements"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             show_card = "department_overview"
-            department_id = detected_department or "CSE"
+            department_id = entity_map.get("department")
         elif intent == INTENT_HOD_PROFILE:
-            show_card = "hod"
-            department_id = detected_department
+            if entity_map.get("department"):
+                show_card = "hod"
+                department_id = entity_map.get("department")
+            else:
+                show_card = None
+                department_id = None
         elif intent == INTENT_TRUSTEES_PROFILE:
             show_card = "trustees"
         elif intent == INTENT_HOD_TRUSTEES_PROFILE:
             show_card = ["hod", "trustees"]
-            department_id = detected_department
+            department_id = entity_map.get("department")
         elif intent == INTENT_COURSE_MENU:
             show_card = "course_menu"
             course_menu_options = get_course_menu_options()
@@ -991,6 +985,16 @@ async def process_user_text_and_reply(
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
+
+        logger.info(
+            "[CARD_TRIGGER_FINAL] raw=%r normalized=%r entities=%s intent=%s showCard=%s departmentId=%r",
+            text,
+            normalized_for_intent,
+            entity_map,
+            intent,
+            show_card,
+            department_id,
+        )
             
         session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
 
@@ -1303,7 +1307,6 @@ async def websocket_clara(websocket: WebSocket):
 
             if action == "user_message":
                 text = (msg.get("text") or "").strip()
-                local_intent = msg.get("localIntent")
                 timing = TurnTiming()
                 timing.mark("transcript_ready")
 
@@ -1314,7 +1317,7 @@ async def websocket_clara(websocket: WebSocket):
                     await websocket.send_json({"state": 5, "payload": payload})
                     _log_turn_metrics(timing, error="missing_text")
                 else:
-                    await process_user_text_and_reply(session, text, websocket, timing, stt_meta=None, local_intent=local_intent)
+                    await process_user_text_and_reply(session, text, websocket, timing, stt_meta=None)
                 continue
 
             if action in ("toggle_mic", "mic_start"):

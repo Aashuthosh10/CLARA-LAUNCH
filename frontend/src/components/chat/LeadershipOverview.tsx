@@ -3,40 +3,113 @@ import { AnimatePresence, motion } from 'motion/react';
 import type { CardDataItem } from '../../lib/cardData';
 import ThreeDVisual from './cards/ThreeDVisual';
 import PremiumHODCard from './cards/PremiumHODCard';
-import PremiumHODCardCSE from './cards/PremiumHODCard(CSE)';
-import PremiumHODCardAIML from './cards/PremiumHODCard(AIML)';
-import PremiumHODCardEC from './cards/PremiumHODCard(EC)';
-import PremiumHODCardISE from './cards/PremiumHODCard(ISE)';
-import PremiumHODCardCivil from './cards/PremiumHODCard(Civil)';
-import PremiumHODCardMechanical from './cards/PremiumHODCard(Mechanical)';
-import PremiumHODCardMBA from './cards/PremiumHODCard(MBA)';
-import PremiumHODCardMathematics from './cards/PremiumHODCard(Mathematics)';
-import PremiumHODCardPhysics from './cards/PremiumHODCard(Physics)';
-import PremiumHODCardChemistry from './cards/PremiumHODCard(Chemistry)';
-import PremiumHODCardDataScience from './cards/PremiumHODCard(DataScience)';
+import { useCollegeData } from '../../hooks/useCollegeData';
+import hodCseImg from '../../assets/hod_shashikumar.jpg';
+import hodAimlImg from '../../assets/hod_manjunatha.jpg';
+import hodEceImg from '../../assets/hod_venkatesha.jpg';
+import hodIseImg from '../../assets/hod_vrinda.jpg';
+import hodCivilImg from '../../assets/hod_civil.jpg';
+import hodMechanicalImg from '../../assets/hod_mechanical.jpg';
+import hodDsImg from '../../assets/hod_nagashree.png';
+import hodChemImg from '../../assets/hod_chemistry.jpg';
+import placeholderImg from '../../assets/image_8c37bf.png';
 
-const COMPONENT_MAP: Record<string, React.FC> = {
-  "CSE (Data Science)": PremiumHODCardDataScience,
-  "Data Science": PremiumHODCardDataScience,
-  "CSE": PremiumHODCardCSE,
-  "Computer Science & Engineering": PremiumHODCardCSE,
-  "AIML": PremiumHODCardAIML,
-  "CSE (Artificial Intelligence & Machine Learning)": PremiumHODCardAIML,
-  "EC": PremiumHODCardEC,
-  "ECE": PremiumHODCardEC,
-  "Electronics & Communication Engineering": PremiumHODCardEC,
-  "ISE": PremiumHODCardISE,
-  "Information Science & Engineering": PremiumHODCardISE,
-  "Civil": PremiumHODCardCivil,
-  "Civil Engineering": PremiumHODCardCivil,
-  "Mechanical": PremiumHODCardMechanical,
-  "Mechanical Engineering": PremiumHODCardMechanical,
-  "MBA": PremiumHODCardMBA,
-  "Master of Business Administration (MBA)": PremiumHODCardMBA,
-  "Mathematics": PremiumHODCardMathematics,
-  "Physics": PremiumHODCardPhysics,
-  "Chemistry": PremiumHODCardChemistry,
+const HOD_PORTRAITS: Record<string, string> = {
+  cse: hodCseImg,
+  cse_aiml: hodAimlImg,
+  cse_ds: hodDsImg,
+  ece: hodEceImg,
+  ise: hodIseImg,
+  civil: hodCivilImg,
+  mechanical: hodMechanicalImg,
+  mba: placeholderImg,
+  mathematics: placeholderImg,
+  physics: placeholderImg,
+  chemistry: hodChemImg,
 };
+
+type HodFallback = { name: string; title: string; bio: string };
+
+const HOD_FALLBACK: Record<string, HodFallback> = {
+  cse: {
+    name: 'Dr. Shashikumar D R',
+    title: 'Professor & HOD, Computer Science & Engineering',
+    bio: 'With extensive teaching and research experience in core computer science, Dr. Shashikumar D R leads the CSE department with a strong focus on fundamentals and industry-oriented learning. He has guided multiple student projects, promotes coding culture and hackathons, and actively works on curriculum enhancement aligned with emerging technologies. His areas of interest span algorithms, software engineering, and modern computing practices.',
+  },
+  cse_aiml: {
+    name: 'Dr. T G Manjunatha',
+    title: 'Professor & HOD, CSE (Artificial Intelligence & Machine Learning)',
+    bio: 'Dr. T G Manjunatha heads the AIML department, emphasizing solid foundations in AI, machine learning, and data-driven problem solving. He has significant academic and research experience, guiding projects that apply AI techniques to real-world applications. Under his leadership, the department conducts workshops, coding events, and hands-on sessions to build strong practical skills.',
+  },
+  cse_ds: {
+    name: 'Dr. Nagashree N',
+    title: 'Associate Professor & HOD, CSE (Data Science)',
+    bio: 'With 20 years of experience, Dr. Nagashree N holds a Ph.D. from Visvesvaraya Technological University and specializes in Data Science, Machine Learning, and Deep Learning. She has over 35 publications in international journals and conferences, reflecting strong research contributions. As HOD of CSE (Data Science), she leads initiatives that blend theory with practical analytics and AI applications for real-world problems.',
+  },
+  ise: {
+    name: 'Dr. Vrinda Shetty',
+    title: 'Professor & HOD, Information Science & Engineering',
+    bio: 'Dr. Vrinda Shetty leads the ISE department with a focus on information systems, data management, and modern software technologies. She has rich teaching experience and encourages students to work on industry-relevant projects and internships. Her interests include databases, networking, and emerging trends in information science.',
+  },
+  ece: {
+    name: 'Dr. Venkatesha M',
+    title: 'Professor & HOD, Electronics & Communication Engineering',
+    bio: 'Dr. Venkatesha M heads the ECE department, focusing on core electronics, communication systems, and embedded technologies. He has many years of academic experience and actively supports student participation in hardware projects and research. His work spans VLSI, communication networks, and applied electronics.',
+  },
+  civil: {
+    name: 'Dr. Ananthayya M B',
+    title: 'Professor & HOD, Civil Engineering',
+    bio: 'Dr. Ananthayya M B leads the Civil Engineering department with emphasis on structural, environmental, and construction engineering. He has considerable teaching and field experience, encouraging students to engage in practical design and site-related learning. His academic interests cover core civil domains and sustainable infrastructure.',
+  },
+  mechanical: {
+    name: 'Dr. Raghavendra S',
+    title: 'Professor & HOD, Mechanical Engineering',
+    bio: 'Dr. Raghavendra S heads the Mechanical Engineering department, focusing on design, manufacturing, and thermal engineering. He has strong academic and research exposure and supports project-based learning, labs, and industry interaction. His interests include advanced manufacturing and applied mechanics.',
+  },
+  mba: {
+    name: 'Dr. Jogish D',
+    title: 'Professor & HOD, Master of Business Administration (MBA)',
+    bio: 'Dr. Jogish D leads the MBA department, integrating management education with practical exposure to industry practices. He has experience in teaching, training, and consultancy, guiding students towards careers in business, analytics, and entrepreneurship. His interests span marketing, strategy, and organizational development.',
+  },
+  mathematics: {
+    name: 'Dr. Arun Kumar R',
+    title: 'Professor & HOD, Mathematics',
+    bio: 'Dr. Arun Kumar R heads the Mathematics department, ensuring strong mathematical foundations for all engineering disciplines. He has extensive teaching experience and focuses on applied mathematics relevant to engineering and data analysis. His work supports advanced courses and research that rely on rigorous quantitative skills.',
+  },
+  physics: {
+    name: 'Dr. Shankar P',
+    title: 'Professor & HOD, Physics',
+    bio: 'Dr. Shankar P leads the Physics department, concentrating on engineering physics and fundamental science education. He emphasizes conceptual clarity and experimental skills through well-designed laboratory work. His interests include materials, electronics-related physics, and applied physical sciences.',
+  },
+  chemistry: {
+    name: 'Dr. Bhagya N P',
+    title: 'Professor & HOD, Chemistry',
+    bio: 'Dr. Bhagya N P heads the Chemistry department, teaching engineering chemistry and its applications in materials and environmental domains. She has strong academic experience and promotes lab-based learning to connect theory with practice. Her interests lie in applied chemistry relevant to engineering and industry processes.',
+  },
+};
+
+function toDepartmentKey(targetDepartment: string | null | undefined): string | null {
+  if (!targetDepartment) return null;
+  const raw = targetDepartment.trim().toLowerCase();
+  if (!raw) return null;
+  if (raw.includes('data science') || (raw.includes('cse') && raw.includes('data'))) return 'cse_ds';
+  if (
+    raw.includes('aiml') ||
+    raw.includes('ai & ml') ||
+    raw.includes('ai and ml') ||
+    (raw.includes('artificial intelligence') && raw.includes('machine learning'))
+  ) return 'cse_aiml';
+  if (raw === 'ec' || raw.includes('ece') || raw.includes('electronics')) return 'ece';
+  if (raw.includes('ise') || raw.includes('information science')) return 'ise';
+  if (raw.includes('civil')) return 'civil';
+  if (raw.includes('mechanical') || raw === 'mech') return 'mechanical';
+  if (raw.includes('mba') || raw.includes('management')) return 'mba';
+  if (raw.includes('mathematics') || raw.includes('math')) return 'mathematics';
+  if (raw.includes('physics')) return 'physics';
+  if (raw.includes('chemistry')) return 'chemistry';
+  if (raw.includes('cse') || raw.includes('computer')) return 'cse';
+  return null;
+}
 
 /**
  * Card stack for leadership / HOD overviews (and other static card lists).
@@ -53,20 +126,26 @@ export default function LeadershipOverview({
   targetDepartment?: string | null;
   onCardClick?: (idx: number) => void;
 }) {
-  // Check if we have a specific HOD card for the requested department
-  if (targetDepartment) {
-    // Find a matching component (case insensitive, partial match for robustness)
-    const targetKeys = Object.keys(COMPONENT_MAP);
-    const matchedKey = targetKeys.find(key => 
-      targetDepartment.toLowerCase().includes(key.toLowerCase()) || 
-      key.toLowerCase().includes(targetDepartment.toLowerCase())
-    );
+  const collegeData = useCollegeData();
 
-    if (matchedKey) {
-      const TargetComponent = COMPONENT_MAP[matchedKey];
+  // Render a canonical HOD card from locale role_holders when a department is resolved.
+  if (targetDepartment) {
+    const deptKey = toDepartmentKey(targetDepartment);
+    const roleHolders = collegeData.role_holders?.hod_by_department;
+    const row = deptKey ? roleHolders?.[deptKey] : undefined;
+    const fallback = deptKey ? HOD_FALLBACK[deptKey] : undefined;
+    const name = row?.hod_name || fallback?.name;
+    const title = row?.hod_title || fallback?.title;
+    const bio = row?.hod_bio || fallback?.bio;
+    if (deptKey && name && title && bio) {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <TargetComponent />
+          <PremiumHODCard
+            name={name}
+            title={title}
+            bio={bio}
+            portrait={HOD_PORTRAITS[deptKey] ?? placeholderImg}
+          />
         </div>
       );
     }
