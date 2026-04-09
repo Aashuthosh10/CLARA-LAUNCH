@@ -3,11 +3,14 @@ CLARA answer generation: intent detection, context selection, two-phase overview
 structured prompt building, and Digital Book page building with TTS for overview.
 """
 
+import hashlib
 import json
 import logging
 import re
 from pathlib import Path
 from typing import Any, Callable, List
+
+from backend.utils.cache import TTLRUCache
 
 # Digital Book: 5 content sections (Closing Assurance excluded). Same order as prompt.
 DIGITAL_BOOK_SECTION_TITLES = [
@@ -352,6 +355,19 @@ NARRATOR_INTENTS: frozenset[str] = frozenset(
 def is_narrator_intent(intent: str) -> bool:
     """True when the voice turn should use presentation narrator mode (locale JSON only, no RAG)."""
     return intent in NARRATOR_INTENTS
+
+
+# Structured (JSON-sourced) intents: English locale slices only — no full-locale dump to the LLM.
+STRUCTURED_INTENTS: frozenset[str] = NARRATOR_INTENTS
+
+# Open-ended retrieval: small context for latency.
+RAG_PIPELINE_TOP_K = 4
+RAG_PIPELINE_MAX_TOKENS = 1000
+
+CONTROLLED_FALLBACK_EN = "I'm sorry, I don't have that information right now."
+
+_STRUCTURED_PROMPT_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=128, ttl_seconds=600.0)
+_TRANSLATION_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=256, ttl_seconds=900.0)
 
 
 COURSE_MENU_OPTIONS = [
@@ -1396,6 +1412,241 @@ def translate_preserving_structure(
         return english_text
 
 
+def extract_structured_json_context(
+    intent: str,
+    query_en: str,
+    detected_department_label: str | None,
+) -> dict[str, Any] | None:
+    """
+    Load English locale JSON only; return a minimal dict for the intent.
+    Does not pass the full locale file to callers.
+    """
+    data = load_locale_data_for_lang_key("en")
+    if not data:
+        return None
+    deps = data.get("departments")
+    if not isinstance(deps, dict):
+        deps = {}
+
+    if intent == INTENT_COLLEGE_OVERVIEW:
+        io = data.get("institution_overview")
+        program_names = {k: (v.get("name") if isinstance(v, dict) else None) for k, v in deps.items()}
+        return {
+            "institution_overview": io,
+            "programs_offered": program_names,
+            "placements_and_training": data.get("placements_and_training"),
+        }
+
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        if _wants_all_departments_narration(query_en):
+            ordered: dict[str, Any] = {}
+            for k in DEPARTMENT_JSON_KEY_ORDER:
+                if k in deps and isinstance(deps[k], dict):
+                    ordered[k] = _hod_slice_for_narrator(deps[k])
+            return {"all_departments": ordered}
+        jkey = department_label_to_json_key(detected_department_label or detect_department_name(query_en))
+        dept = deps.get(jkey)
+        if not isinstance(dept, dict):
+            return None
+        return {"department_key": jkey, "department": _hod_slice_for_narrator(dept)}
+
+    if intent == INTENT_ADMISSIONS:
+        return {"admissions_and_fees": data.get("admissions_and_fees")}
+
+    if intent == INTENT_PLACEMENTS:
+        return {"placements_and_training": data.get("placements_and_training")}
+
+    if intent == INTENT_HOD_PROFILE:
+        hod_rows: dict[str, Any] = {}
+        for k in DEPARTMENT_JSON_KEY_ORDER:
+            d = deps.get(k)
+            if isinstance(d, dict):
+                hod_rows[k] = {"name": d.get("name"), "hod": d.get("hod"), "intake": d.get("intake")}
+        return {"hod_by_department": hod_rows}
+
+    if intent == INTENT_TRUSTEES_PROFILE:
+        lead = data.get("leadership")
+        if isinstance(lead, list):
+            return {"leadership": lead[:12]}
+        return {"leadership": lead}
+
+    if intent == INTENT_HOD_TRUSTEES_PROFILE:
+        hod_rows_b: dict[str, Any] = {}
+        for k in DEPARTMENT_JSON_KEY_ORDER:
+            d = deps.get(k)
+            if isinstance(d, dict):
+                hod_rows_b[k] = {"name": d.get("name"), "hod": d.get("hod"), "intake": d.get("intake")}
+        lead_b = data.get("leadership")
+        out: dict[str, Any] = {"hod_by_department": hod_rows_b}
+        if isinstance(lead_b, list):
+            out["leadership"] = lead_b[:12]
+        else:
+            out["leadership"] = lead_b
+        return out
+
+    return None
+
+
+def _build_structured_english_system_prompt(intent: str) -> str:
+    base = (
+        "You are CLARA, a campus assistant for Sai Vidya Institute of Technology (SVIT).\n"
+        "Rules:\n"
+        "- Use ONLY the DATA section below. Do NOT hallucinate. Do NOT add external information.\n"
+        "- Reply in clear English only. Plain text. No markdown code fences. No emojis.\n"
+        "- Be concise. Prefer 2–4 short sentences unless a numbered outline is required.\n"
+        "- If DATA is missing or insufficient for the question, reply exactly: "
+        f"{CONTROLLED_FALLBACK_EN}\n"
+    )
+    if intent == INTENT_COLLEGE_OVERVIEW:
+        return (
+            base
+            + "Format your answer with exactly these numbered sections (each 1–2 short sentences):\n"
+            "1) About the Institution\n"
+            "2) Academic Programs\n"
+            "3) Infrastructure & Quality\n"
+            "4) Achievements\n"
+            "5) Placements\n"
+        )
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        return (
+            base
+            + "Format your answer with exactly these numbered sections (each 1–2 short sentences):\n"
+            "1) Overview\n"
+            "2) Academics\n"
+            "3) Facilities\n"
+            "4) Achievements\n"
+            "5) Career Scope\n"
+        )
+    return base + "Answer the visitor's question directly using DATA.\n"
+
+
+def _english_normal_query_system_with_rag(ctx: str) -> str:
+    ctx_stripped = (ctx or "").strip()
+    return (
+        "You are CLARA, a campus assistant for Sai Vidya Institute of Technology (SVIT).\n"
+        "Rules:\n"
+        "- Use ONLY the English reference chunks below. Do NOT hallucinate.\n"
+        "- Reply in English only. Plain text. 2–3 short sentences unless a tight list is required.\n"
+        "- If the answer is not in the reference, reply exactly: "
+        f"{CONTROLLED_FALLBACK_EN}\n"
+        f"{MULTI_ENTITY_RULE}\n\n"
+        "College reference:\n"
+        f"{ctx_stripped}"
+    )
+
+
+def _english_normal_query_system_empty() -> str:
+    return (
+        "You are CLARA, a campus assistant for SVIT.\n"
+        "No reference data is available for this question.\n"
+        f"Reply in English only with exactly: {CONTROLLED_FALLBACK_EN}\n"
+    )
+
+
+def compose_llm_system_prompt_for_turn(
+    *,
+    intent: str,
+    rag_query: str,
+    user_text: str,
+    lang_key: str,
+    lang_name: str,
+    detected_department: str | None,
+) -> tuple[str, dict[str, Any] | None, str]:
+    """
+    English-first pipeline: build the Groq system prompt and optional narrator card payload.
+
+    Returns (system_prompt, narrator_payload_or_none, context_source).
+    context_source is one of: structured_json | structured_json_cached | structured_empty | rag | rag_empty
+    """
+    _ = lang_name  # reserved for future prompt personalization
+
+    if is_narrator_intent(intent):
+        narrator_payload = build_target_card_payload(
+            intent,
+            lang_key=lang_key,
+            detected_department_label=detected_department,
+            user_text=user_text,
+        )
+        if narrator_payload is None:
+            narrator_payload = {}
+        structured = extract_structured_json_context(intent, rag_query.strip(), detected_department)
+        cache_key = ""
+        if structured is not None:
+            cache_key = f"{intent}|{hashlib.sha256(json.dumps(structured, sort_keys=True, ensure_ascii=True).encode()).hexdigest()}"
+            cached = _STRUCTURED_PROMPT_CACHE.get(cache_key)
+            if cached:
+                return cached, narrator_payload, "structured_json_cached"
+
+        if structured is None:
+            sp = _build_structured_english_system_prompt(intent) + f"\n\nDATA:\n{{}}\n"
+            return sp, narrator_payload, "structured_empty"
+
+        data_text = json.dumps(structured, ensure_ascii=False, indent=2)
+        if len(data_text) > 14000:
+            data_text = data_text[:14000] + "\n...[truncated]"
+        sp = _build_structured_english_system_prompt(intent) + "\n\nDATA (JSON):\n" + data_text
+        if cache_key:
+            _STRUCTURED_PROMPT_CACHE.set(cache_key, sp)
+        return sp, narrator_payload, "structured_json"
+
+    # Non-narrator intents should use compose_llm_system_prompt_open_ended_from_context() with
+    # RAG text retrieved on the caller side (e.g. asyncio.to_thread in main).
+    raise ValueError(
+        "compose_llm_system_prompt_for_turn() is for structured (narrator) intents only; "
+        "use compose_llm_system_prompt_open_ended_from_context(precomputed_rag_context) for open-ended queries."
+    )
+
+
+def compose_llm_system_prompt_open_ended_from_context(precomputed_rag_context: str) -> tuple[str, None, str]:
+    """Build English-first system prompt for NORMAL_QUERY / open-ended turns from retrieved RAG text."""
+    ctx = (precomputed_rag_context or "").strip()
+    if not ctx:
+        return _english_normal_query_system_empty(), None, "rag_empty"
+    return _english_normal_query_system_with_rag(ctx), None, "rag"
+
+
+async def translate_reply_to_session_language_async(
+    reply_en: str,
+    lang_name: str,
+    client: Any,
+    model: str,
+) -> str:
+    """Translate an English-only model reply into the session language; preserves structure."""
+    if not reply_en or not client or not model:
+        return reply_en or ""
+    if (lang_name or "").strip() == "English":
+        return reply_en
+    ck = f"{lang_name}|{hashlib.sha256(reply_en.encode('utf-8')).hexdigest()}"
+    hit = _TRANSLATION_CACHE.get(ck)
+    if hit:
+        return hit
+    try:
+        completion = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Translate the following text into {lang_name}. "
+                        "Preserve numbering, line breaks, and sentence boundaries. "
+                        "Do not expand or shorten. Output only the translation."
+                    ),
+                },
+                {"role": "user", "content": reply_en},
+            ],
+            temperature=GROQ_TEMPERATURE,
+            top_p=GROQ_TOP_P,
+            max_tokens=min(800, GROQ_MAX_TOKENS * 2),
+        )
+        out = (completion.choices[0].message.content or "").strip()
+        if out:
+            _TRANSLATION_CACHE.set(ck, out)
+            return out
+    except Exception as e:
+        logger.warning("translate_reply_to_session_language_async: %s", e)
+    return reply_en
+
+
 def generate_reply(
     intent: str,
     text: str,
@@ -1406,39 +1657,49 @@ def generate_reply(
     model: str,
     tts_callback: Callable[[str, str], str | None] | None = None,
     language_code: str | None = None,
+    query_en: str | None = None,
 ) -> str | dict:
     """
-    Orchestrator: COLLEGE_OVERVIEW = two-phase (English then translate), optionally build overview pages with TTS.
-    NORMAL_QUERY = single call. Returns plain string replies.
+    English-first pipeline: structured intents use filtered English JSON; open-ended uses RAG (small top_k).
+    Non-English replies are produced by translate_preserving_structure after the English LLM output.
+    The legacy ``context`` argument is ignored (retrieval is driven by ``query_en`` / ``text``); kept for API compatibility.
     """
-    safe_context = (context or "").strip()
+    _ = context
+    _ = tts_callback
+    _ = language_code
     unavailable = get_unavailable_reply(language)
-    off_topic = get_off_topic_reply(language)
     if intent == INTENT_OFF_TOPIC:
-        return off_topic
+        return get_off_topic_reply(language)
     if not groq_client or not model:
         return unavailable
 
     lang_key_for_locale = "hi" if (language or "").strip().lower() == "hindi" else "en"
+    qen = (query_en or text or "").strip()
+
+    if intent == INTENT_COURSE_MENU:
+        return "COURSE_MENU"
 
     if is_narrator_intent(intent):
         dept_label = detect_department_name(text)
-        npayload = build_target_card_payload(
-            intent,
+        system_prompt, _, src = compose_llm_system_prompt_for_turn(
+            intent=intent,
+            rag_query=qen,
+            user_text=text or "",
             lang_key=lang_key_for_locale,
-            detected_department_label=dept_label,
-            user_text=text,
+            lang_name=language or "English",
+            detected_department=dept_label,
         )
-        if npayload is None:
-            npayload = {}
-        card_json = json.dumps(npayload, ensure_ascii=False, indent=2)
-        narrator_system = build_narrator_system_prompt(language, card_json)
         try:
-            messages = [{"role": "system", "content": narrator_system}]
+            if _count_tokens(system_prompt) > int(MODEL_CONTEXT_LIMIT * MAX_INPUT_TOKEN_FRACTION):
+                system_prompt = _trim_to_tokens(
+                    system_prompt,
+                    int(MODEL_CONTEXT_LIMIT * MAX_INPUT_TOKEN_FRACTION) - 80,
+                )
+            messages = [{"role": "system", "content": system_prompt}]
             for m in session_messages or []:
                 role = "assistant" if m.get("role") == "clara" else "user"
                 messages.append({"role": role, "content": m.get("text", "") or ""})
-            messages.append({"role": "user", "content": text or ""})
+            messages.append({"role": "user", "content": qen})
             completion = groq_client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -1446,46 +1707,37 @@ def generate_reply(
                 top_p=GROQ_TOP_P,
                 max_tokens=GROQ_MAX_TOKENS,
             )
-            out = (completion.choices[0].message.content or "").strip()
-            if out:
-                logger.info("Reply generated narrator intent=%s model=%s", intent, model)
-            return out if out else unavailable
+            out_en = (completion.choices[0].message.content or "").strip()
+            if out_en:
+                logger.info("Reply generated narrator intent=%s model=%s src=%s", intent, model, src)
+            if not out_en:
+                return unavailable
+            if (language or "").strip() == "English":
+                return out_en
+            return translate_preserving_structure(out_en, language, groq_client, model)
         except Exception as e:
             logger.error("LLM failure (narrator): %s", e, exc_info=True)
             return unavailable
 
-    if intent == INTENT_COURSE_MENU:
-        # Frontend renders the course menu; keep backend response deterministic.
-        return "COURSE_MENU"
-
-    # NORMAL_QUERY: token safety before Groq call
     try:
-        system_prompt = build_system_prompt(INTENT_NORMAL_QUERY, language, safe_context)
-        rest_tokens = sum(_count_tokens(m.get("text", "") or "") for m in (session_messages or [])) + _count_tokens(text or "")
+        ctx = get_relevant_context(
+            qen,
+            top_k=RAG_PIPELINE_TOP_K,
+            max_tokens=RAG_PIPELINE_MAX_TOKENS,
+            lang_key="en",
+        )
+        system_prompt, _, src = compose_llm_system_prompt_open_ended_from_context(ctx)
+        rest_tokens = sum(_count_tokens(m.get("text", "") or "") for m in (session_messages or [])) + _count_tokens(qen)
         total_tokens = _count_tokens(system_prompt) + rest_tokens
         max_allowed = int(MODEL_CONTEXT_LIMIT * MAX_INPUT_TOKEN_FRACTION)
-        if total_tokens > max_allowed and safe_context:
-            normal_prefix = (
-                f"You are CLARA, a warm and professional campus receptionist for SVIT. "
-                f"{rag_language_enforcement_directive(language)} "
-                f"Reply only in {language}. "
-                f"For college-related emotional or opinion questions, respond politely in one or two short sentences. "
-                f"Use ONLY the following college information when it is relevant to the user's question. "
-                f"Do not invent or assume college-specific facts; only use what is in the College information below. "
-                f"If the answer is not in the context, reply exactly: '{unavailable}' "
-                f"If the question is outside SVIT/college domain, reply exactly: '{off_topic}' "
-                f"Be concise and helpful.\n\nCollege information:\n"
-            )
-            prefix_tokens = _count_tokens(normal_prefix)
-            max_context_tokens = max(0, max_allowed - prefix_tokens - rest_tokens)
-            trimmed_context = _trim_to_tokens(safe_context, max_context_tokens)
-            system_prompt = normal_prefix + trimmed_context
-            logger.info("Context truncated to fit model limit; approx_tokens=%d", _count_tokens(trimmed_context))
+        if total_tokens > max_allowed:
+            system_prompt = _trim_to_tokens(system_prompt, max(500, max_allowed - rest_tokens - 50))
+            logger.info("System prompt truncated for token limit; src=%s", src)
         messages = [{"role": "system", "content": system_prompt}]
         for m in session_messages or []:
             role = "assistant" if m.get("role") == "clara" else "user"
             messages.append({"role": role, "content": m.get("text", "") or ""})
-        messages.append({"role": "user", "content": text or ""})
+        messages.append({"role": "user", "content": qen})
 
         completion = groq_client.chat.completions.create(
             model=model,
@@ -1494,10 +1746,14 @@ def generate_reply(
             top_p=GROQ_TOP_P,
             max_tokens=GROQ_MAX_TOKENS,
         )
-        out = (completion.choices[0].message.content or "").strip()
-        if out:
-            logger.info("Reply generated intent=%s model=%s", intent, model)
-        return out if out else unavailable
+        out_en = (completion.choices[0].message.content or "").strip()
+        if out_en:
+            logger.info("Reply generated intent=%s model=%s src=%s", intent, model, src)
+        if not out_en:
+            return unavailable
+        if (language or "").strip() == "English":
+            return out_en
+        return translate_preserving_structure(out_en, language, groq_client, model)
     except Exception as e:
         logger.error("LLM failure (normal query): %s", e, exc_info=True)
         return unavailable
