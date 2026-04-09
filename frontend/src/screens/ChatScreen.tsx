@@ -14,8 +14,10 @@ import VoiceOrb from '../components/VoiceOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
-import InlineDepartmentCarousel from '../components/chat/InlineDepartmentCarousel';
+import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
+import PremiumHODCard from '../components/chat/cards/PremiumHODCard';
+import PremiumHODCardDataScience from '../components/chat/cards/PremiumHODCard(DataScience)';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAdmissionsCardsFromLocale,
@@ -101,6 +103,8 @@ const DEFAULT_COURSE_MENU_OPTIONS = [
   'Basic Sciences',
 ];
 
+// Data Science HOD data has been moved to its own dedicated component: PremiumHODCard(DataScience).tsx
+
 const INFO_STAGE_CHIPS: Record<Language, { admissions: string; placements: string }> = {
   English: { admissions: 'Admissions & fees', placements: 'Placements & training' },
   Kannada: { admissions: 'ಪ್ರವೇಶ ಮತ್ತು ಶುಲ್ಕ', placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
@@ -118,10 +122,10 @@ type PendingAudio = {
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
 };
 
-const normalizeDepartmentMenuKey = (departmentId: string): string => {
+const normalizeDepartmentMenuKey = (departmentId: string): string | null => {
   const raw = (departmentId || '').trim();
   const value = raw.toLowerCase();
-  if (!value) return 'CSE';
+  if (!value) return null;
   if (value.includes('basic')) return 'Basic Sciences';
   if (value.includes('mba') || value.includes('management')) return 'MBA';
   if (value.includes('mechanical') || value === 'mech') return 'Mechanical';
@@ -180,6 +184,7 @@ export default function ChatScreen({
   const [isInfoSlideStage, setIsInfoSlideStage] = useState(false);
   const [infoSlideChip, setInfoSlideChip] = useState('');
   const [infoSlides, setInfoSlides] = useState<{ title: string; content: string }[]>([]);
+  const [isHodStage, setIsHodStage] = useState(false);
   
   // Multilingual Intent Map overriding
   const [pendingLocalIntent, setPendingLocalIntent] = useState<NormalizedIntent | null>(null);
@@ -200,12 +205,16 @@ export default function ChatScreen({
         setIsInfoSlideStage(false);
         setInfoSlides([]);
         setInfoSlideChip('');
+        setIsHodStage(false);
         setCourseMenuOptions([]);
         currentUiLockRef.current = 'IDLE'; // Release the lock
       }
       
       const intent = normalizeIntent(msg.text);
-      if (intent.trigger) setPendingLocalIntent(intent);
+      if (intent.trigger) {
+        setPendingLocalIntent(intent);
+        msg.localIntent = intent;
+      }
     }
     sendMessage(msg);
   }, [sendMessage]);
@@ -413,6 +422,18 @@ export default function ChatScreen({
   // Sync from payload
   useEffect(() => {
     if (!payload) return;
+
+    // Helper to detect if the backend is sending us a fallback message ("Go to admissions block")
+    const isFallbackMessage = (text: string) => {
+      const t = text.toLowerCase();
+      return t.includes('admission block') || 
+             t.includes('admissions block') || 
+             t.includes('एडमिशन ब्लॉक') || 
+             t.includes('अडमिशन ब्लॉक') ||
+             t.includes('सबसे सटीक जानकारी') ||
+             t.includes('ವಿಭಾಗ') || 
+             t.includes('प्रवेश');
+    };
     
     // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
     const nativeTrigger = payload?.showCard;
@@ -420,9 +441,25 @@ export default function ChatScreen({
     
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
-    const targetDepartment = String(rawTargetDept || pendingLocalIntent?.departmentLabel || '').trim();
     
-    setActiveTargetDepartment(targetDepartment || null);
+    // PRIORITY: If the trigger came from LOCAL intent (not the backend's showCard),
+    // always use the local intent's departmentLabel — the backend often sends the wrong
+    // department (e.g. 'CSE') for AIML/Data Science queries.
+    const targetDepartment = (
+      (!nativeTrigger && pendingLocalIntent?.departmentLabel)
+        ? pendingLocalIntent.departmentLabel
+        : (rawTargetDept || pendingLocalIntent?.departmentLabel || null)
+    );
+
+    
+    // STICKY STATE: Only update if we have a fresh target, otherwise preserve existing for this turn
+    if (targetDepartment && targetDepartment !== '') {
+      setActiveTargetDepartment(targetDepartment);
+      // Also sync back to activeDepartmentId if we are in an overview stage
+      if (isDepartmentOverviewStage) {
+        setActiveDepartmentId(targetDepartment);
+      }
+    }
 
     // Ensure we clear the pending intent so subsequent replies don't loop the previous card
     if (pendingLocalIntent && !nativeTrigger) {
@@ -463,6 +500,80 @@ export default function ChatScreen({
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
         });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'admissions') {
+      currentUiLockRef.current = 'CARD';
+      setIsHodStage(false);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions([]);
+      setIsInfoSlideStage(true);
+      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
+      setInfoSlideChip(chips.admissions);
+      const slides = buildAdmissionsCardsFromLocale(collegeData, language);
+      setInfoSlides(slides);
+      
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: true,
+          cardsToSync: slides.map(s => ({ title: s.title, content: s.content, type: 'dept' })),
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'placements') {
+      currentUiLockRef.current = 'CARD';
+      setIsHodStage(false);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions([]);
+      setIsInfoSlideStage(true);
+      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
+      setInfoSlideChip(chips.placements);
+      const slides = buildPlacementCardsFromLocale(collegeData, language);
+      setInfoSlides(slides);
+      
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: true,
+          cardsToSync: slides.map(s => ({ title: s.title, content: s.content, type: 'dept' })),
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'hod_info') {
+      const targetDept = String(targetDepartment || '').trim();
+      if (targetDept) {
+        // Any department with a valid label — lock onto the HOD card stage.
+        // LeadershipOverview will pick the correct component from its COMPONENT_MAP.
+        setIsInfoSlideStage(false);
+        setInfoSlides([]);
+        setInfoSlideChip('');
+        setIsDepartmentOverviewStage(false);
+        setActiveDepartmentId(null);
+        setCourseMenuOptions([]);
+
+        currentUiLockRef.current = 'CARD';
+        setIsHodStage(true);
+        setLayoutMode('SPLIT_CARDS');
+      } else if (currentUiLockRef.current !== 'CARD') {
+        // No department resolved — only go to text if we haven't already locked a card
+        setLayoutMode('FULL_TEXT');
       }
       return;
     }
@@ -541,10 +652,9 @@ export default function ChatScreen({
       setIsInfoSlideStage(false);
       setInfoSlides([]);
       setInfoSlideChip('');
-      const targetRaw = String(
-        payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload ?? ''
-      ).trim();
-
+      setIsHodStage(false); // Protect against HOD stage bleed-over
+      
+      const targetRaw = targetDepartment;
       const targetAll = targetRaw.toLowerCase() === 'all';
 
       const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
@@ -573,7 +683,13 @@ export default function ChatScreen({
         return;
       }
 
-      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? 'CSE');
+      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? (targetDepartment || ''));
+
+      if (!resolvedDept) {
+          // If no department is resolved, and it's not 'all', do not switch layouts.
+          // This prevents accidental CSE defaulting for "the department" queries.
+          return;
+      }
 
       const jsonKey = menuLabelToJsonKey(resolvedDept) ?? 'cse';
       const deptRecord = getDepartmentRecord(collegeData, jsonKey);
@@ -633,7 +749,17 @@ export default function ChatScreen({
 
     // FALLBACK / TEXT-ONLY RESPONSE
     // If a higher priority UI layout (CARD) is already locked, DO NOT override it with text.
-    if (currentUiLockRef.current === 'CARD') {
+    // TEXT-ONLY FALLBACK (NO CARD METADATA)
+    // Check if we should block the 'FULL_TEXT' transition because this is a backend failure message
+    const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+    const combinedContent = payloadMessageList.map((m: any) => m.content).join(' ');
+    const isFallback = isFallbackMessage(combinedContent);
+
+    if (currentUiLockRef.current === 'CARD' || (isFallback && activeTargetDepartment)) {
+        if (isFallback && activeTargetDepartment) {
+            // Backend failed, but we have a department. Stay in SPLIT_CARDS.
+            setLayoutMode('SPLIT_CARDS'); 
+        }
         if (audioBase64) {
           setPendingAudio({
             audioBase64,
@@ -796,6 +922,18 @@ export default function ChatScreen({
   return (
     <div className="light-chat-container" data-testid="chat-screen">
       <div className="cinematic-overlay" />
+      {/* Global Home Button */}
+      <motion.button
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        onClick={handleHomeClick}
+        className="premium-home-button"
+        title="Go Home"
+      >
+        <Home className="w-6 h-6" />
+      </motion.button>
+
       <LayoutGroup>
         <AnimatePresence mode="wait">
           {/* ─── FULL TEXT MODE ─── */}
@@ -850,31 +988,21 @@ export default function ChatScreen({
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 
-                {/* HOME BUTTON (TOP-LEFT OF LEFT PANEL) */}
-                <motion.button
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
-                  whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.5)' }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleHomeClick}
-                  className="absolute z-[50] flex items-center justify-center w-[60px] h-[60px] rounded-[1.25rem] bg-white/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-white/60 interactive-button group"
-                  style={{ top: '4%', left: '4%' }}
-                >
-                  <Home className="w-6 h-6 text-slate-600 group-hover:text-slate-900 transition-colors" />
-                </motion.button>
-
-                {isDepartmentOverviewStage && activeDepartmentId ? (
-                  <InlineDepartmentCarousel 
-                    departmentLabel={activeDepartmentId}
+                {isHodStage && activeTargetDepartment === 'Data Science' ? (
+                  <PremiumHODCardDataScience />
+                ) : isDepartmentOverviewStage && activeDepartmentId ? (
+                  <DepartmentCardFactory 
+                    departmentId={activeDepartmentId}
                     slides={departmentSlides}
-                    currentCardIdx={currentCardIdx}
-                    onCardClick={handleCardSelect}
+                    currentIdx={currentCardIdx}
+                    onNext={() => handleCardSelect(Math.min(departmentSlides.length - 1, currentCardIdx + 1))}
+                    onPrev={() => handleCardSelect(Math.max(0, currentCardIdx - 1))}
+                    onSelectSlide={handleCardSelect}
+                    language={language}
                     onClose={() => {
                       setIsDepartmentOverviewStage(false);
                       setActiveDepartmentId(null);
-                      currentUiLockRef.current = 'IDLE'; // Unlocking response priority
-                      // Only if we need to return to chat: setLayoutMode('FULL_TEXT');
+                      currentUiLockRef.current = 'IDLE';
                     }}
                   />
                 ) : courseMenuOptions.length > 0 ? (

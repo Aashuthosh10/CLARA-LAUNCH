@@ -13,10 +13,11 @@ import PremiumHODCardMBA from './cards/PremiumHODCard(MBA)';
 import PremiumHODCardMathematics from './cards/PremiumHODCard(Mathematics)';
 import PremiumHODCardPhysics from './cards/PremiumHODCard(Physics)';
 import PremiumHODCardChemistry from './cards/PremiumHODCard(Chemistry)';
+import PremiumHODCardDataScience from './cards/PremiumHODCard(DataScience)';
 
 const COMPONENT_MAP: Record<string, React.FC> = {
-  "CSE (Data Science)": PremiumHODCard,
-  "Data Science": PremiumHODCard,
+  "CSE (Data Science)": PremiumHODCardDataScience,
+  "Data Science": PremiumHODCardDataScience,
   "CSE": PremiumHODCardCSE,
   "Computer Science & Engineering": PremiumHODCardCSE,
   "AIML": PremiumHODCardAIML,

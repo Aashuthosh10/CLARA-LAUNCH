@@ -575,6 +575,7 @@ async def process_user_text_and_reply(
     websocket: WebSocket,
     timing: TurnTiming,
     stt_meta: dict[str, Any] | None = None,
+    local_intent: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
     _append_session_history(session, "user", text, max_turns=3)
@@ -634,19 +635,57 @@ async def process_user_text_and_reply(
                     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
                 )
                 preprocess = None
+            except Exception as exc:
+                logger.warning("Multilingual preprocessor failed: %s", exc)
+                preprocess = None
 
-        if preprocess and (preprocess.get("english_translation") or "").strip():
+        # ─── NLP Pipeline: Normalize & Classify ───
+        # For non-English sessions, we prioritize translated English for all subsequent logic.
+        if lang_key != "en" and preprocess and (preprocess.get("english_translation") or "").strip():
+            # LLM-based translation is the "Canonical" source for intent/entity matching
             rag_query = str(preprocess["english_translation"]).strip()
             llm_user_text = rag_query
             intent = str(preprocess.get("intent") or INTENT_NORMAL_QUERY)
             detected_department = preprocess.get("target_department")
-            if intent == INTENT_DEPARTMENT_OVERVIEW and not detected_department:
+            
+            # Cross-verify: if LLM classified as NORMAL but keywords suggest otherwise in English
+            if intent == INTENT_NORMAL_QUERY:
+                intent = detect_intent(rag_query)
+            if not detected_department:
                 detected_department = detect_department_name(rag_query)
         else:
             rag_query = text.strip()
             llm_user_text = text
-            intent = detect_intent(text)
-            detected_department = detect_department_name(text)
+            # Always use rag_query (English or normalized) for deterministic checks
+            intent = detect_intent(rag_query)
+            detected_department = detect_department_name(rag_query)
+            
+        # ─── FRONTEND LOCAL INTENT FALLBACK ───
+        # If the backend NLP pipeline failed to classify the intent (e.g. timeout, rate limit, foreign text missed)
+        if local_intent and intent == INTENT_NORMAL_QUERY:
+            frontend_trigger = local_intent.get("trigger")
+            if frontend_trigger == "department_overview":
+                intent = INTENT_DEPARTMENT_OVERVIEW
+            elif frontend_trigger == "course_menu":
+                intent = INTENT_COURSE_MENU
+            elif frontend_trigger == "hod_info":
+                intent = INTENT_HOD_PROFILE
+            elif frontend_trigger == "admissions":
+                intent = INTENT_ADMISSIONS
+            elif frontend_trigger == "placements":
+                intent = INTENT_PLACEMENTS
+                
+            frontend_dept = local_intent.get("departmentLabel")
+            if frontend_dept and not detected_department:
+                detected_department = frontend_dept
+                
+            logger.info("[NLP_TRACE] Used frontend localIntent fallback: intent=%s, dept=%s", intent, detected_department)
+
+        logger.info(f"[NLP_TRACE] RAW INPUT: {text}")
+        logger.info(f"[NLP_TRACE] DETECTED LANGUAGE: {lang_name} ({lang_key})")
+        logger.info(f"[NLP_TRACE] TRANSLATED/NORMALIZED INPUT: {rag_query}")
+        logger.info(f"[NLP_TRACE] FINAL INTENT: {intent}")
+        logger.info(f"[NLP_TRACE] FINAL DEPARTMENT: {detected_department}")
 
         is_broad_course_menu = False
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
@@ -672,22 +711,47 @@ async def process_user_text_and_reply(
             timing.mark("rag_end")
         elif is_narrator_intent(intent):
             # Presentation mode: only locale JSON slices that match on-screen cards (no vector RAG).
-            context = ""
             narrator_payload = build_target_card_payload(
                 intent,
                 lang_key=lang_key,
                 detected_department_label=detected_department,
-                user_text=text,
+                user_text=rag_query,
             )
-            timing.mark("rag_end")
-            logger.info(
-                "Narrator mode: intent=%s locale=%s payload_keys=%s",
-                intent,
-                narrator_payload.get("locale") if narrator_payload else None,
-                list(narrator_payload.keys()) if narrator_payload else [],
-            )
+            if narrator_payload is not None:
+                context = ""
+                timing.mark("rag_end")
+                logger.info(
+                    "Narrator mode: intent=%s locale=%s payload_keys=%s",
+                    intent,
+                    narrator_payload.get("locale") if narrator_payload else None,
+                    list(narrator_payload.keys()) if narrator_payload else [],
+                )
+            else:
+                # Narrator payload failed (e.g., department not found in locale data).
+                # Fall back to RAG context so the LLM can still produce a useful answer
+                # instead of the generic "visit Admission Block" fallback.
+                logger.warning(
+                    "[NLP_TRACE] Narrator payload was None for intent=%s dept=%s; falling back to RAG context",
+                    intent, detected_department,
+                )
+                try:
+                    context = await asyncio.wait_for(
+                        asyncio.to_thread(get_relevant_context, rag_query, RAG_TOP_K, lang_key="en"),
+                        timeout=RAG_CONTEXT_TIMEOUT_S,
+                    )
+                except asyncio.TimeoutError:
+                    context = ""
+                finally:
+                    timing.mark("rag_end")
+                if context.strip():
+                    context_source = "rag"
+                else:
+                    json_context = _load_svit_json_context(lang_key)
+                    if json_context:
+                        context = json_context
+                        context_source = "json_fallback"
         else:
-            # English-indexed chunks only: avoids cross-language vector collisions for mixed inputs.
+            # Normal query: English-indexed RAG chunks.
             try:
                 context = await asyncio.wait_for(
                     asyncio.to_thread(get_relevant_context, rag_query, RAG_TOP_K, lang_key="en"),
@@ -848,7 +912,21 @@ async def process_user_text_and_reply(
                 first_sentence = ""
 
         if not reply_text:
-            reply_text = unavailable_reply
+            if is_narrator_intent(intent):
+                if lang_key == "kn":
+                    reply_text = "ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ."
+                elif lang_key == "hi":
+                    reply_text = "जानकारी स्क्रीन पर प्रदर्शित हो रही है।"
+                elif lang_key == "te":
+                    reply_text = "సమాచారం స్క్రీన్‌పై ప్రదర్శించబడుతుంది."
+                elif lang_key == "ta":
+                    reply_text = "தகவல் திரையில் காண்பிக்கப்படுகிறது."
+                elif lang_key == "ml":
+                    reply_text = "കൂടുതൽ വിവരങ്ങൾ സ്ക്രീനിൽ കാണാം."
+                else:
+                    reply_text = "Here is the information you requested."
+            else:
+                reply_text = unavailable_reply
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)
@@ -1225,6 +1303,7 @@ async def websocket_clara(websocket: WebSocket):
 
             if action == "user_message":
                 text = (msg.get("text") or "").strip()
+                local_intent = msg.get("localIntent")
                 timing = TurnTiming()
                 timing.mark("transcript_ready")
 
@@ -1235,7 +1314,7 @@ async def websocket_clara(websocket: WebSocket):
                     await websocket.send_json({"state": 5, "payload": payload})
                     _log_turn_metrics(timing, error="missing_text")
                 else:
-                    await process_user_text_and_reply(session, text, websocket, timing, stt_meta=None)
+                    await process_user_text_and_reply(session, text, websocket, timing, stt_meta=None, local_intent=local_intent)
                 continue
 
             if action in ("toggle_mic", "mic_start"):

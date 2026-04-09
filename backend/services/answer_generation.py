@@ -100,9 +100,9 @@ def load_locale_data_for_lang_key(lang_key: str | None) -> dict[str, Any]:
         return {}
 
 
-def department_label_to_json_key(label: str | None) -> str:
+def department_label_to_json_key(label: str | None) -> str | None:
     if not label or not isinstance(label, str):
-        return "cse"
+        return None
     stripped = label.strip()
     if stripped in _CANONICAL_DEPARTMENT_TO_JSON_KEY:
         return _CANONICAL_DEPARTMENT_TO_JSON_KEY[stripped]
@@ -110,7 +110,7 @@ def department_label_to_json_key(label: str | None) -> str:
     for canon, jkey in _CANONICAL_DEPARTMENT_TO_JSON_KEY.items():
         if canon.lower() == low:
             return jkey
-    return "cse"
+    return None
 
 
 def _wants_all_departments_narration(user_text: str) -> bool:
@@ -136,10 +136,17 @@ def _hod_slice_for_narrator(dept: Any) -> dict[str, Any]:
     if not isinstance(dept, dict):
         return {}
     out: dict[str, Any] = {}
-    for k in ("name", "hod", "intake", "duration", "overview_and_focus"):
+    # Include both legacy field names AND actual locale-file field names.
+    # Locale JSON files use: name, intro, hod_voice, achievements, placement, fees
+    # Legacy / alternate names: hod, intake, duration, overview_and_focus
+    scalar_keys = (
+        "name", "hod", "intake", "duration", "overview_and_focus",
+        "intro", "hod_voice", "achievements", "placement", "fees",
+    )
+    for k in scalar_keys:
         if k in dept and dept[k] is not None:
             v = dept[k]
-            if k == "faculty_list" or isinstance(v, (list, dict)):
+            if isinstance(v, (list, dict)):
                 continue
             out[k] = v
     fl = dept.get("faculty_list")
@@ -194,6 +201,8 @@ def build_target_card_payload(
                 "departments": ordered,
             }
         jkey = department_label_to_json_key(detected_department_label)
+        if not jkey:
+            return None
         dept = deps.get(jkey)
         return {
             "presentation_type": "single_department_overview",
@@ -827,8 +836,6 @@ def _is_course_menu_query(normalized: str) -> bool:
         "courses",
         "branch",
         "branches",
-        "department",
-        "departments",
         "program",
         "programs",
         "stream",
@@ -1074,6 +1081,7 @@ async def normalize_and_classify_query(user_text: str, session_lang: str) -> dic
             max_tokens=MULTILINGUAL_PREPROCESSOR_MAX_TOKENS,
         )
         raw = (completion.choices[0].message.content or "").strip()
+        logger.info(f"[NLP_TRACE] LLM Preprocessor Output: {raw}")
         payload = json.loads(_strip_json_fence(raw))
         if not isinstance(payload, dict):
             return fallback
@@ -1084,7 +1092,7 @@ async def normalize_and_classify_query(user_text: str, session_lang: str) -> dic
         dept = department_label_from_preprocessor(payload.get("target_department"))
         return {"english_translation": en, "intent": intent, "target_department": dept}
     except Exception as e:
-        logger.warning("normalize_and_classify_query failed: %s", e, exc_info=True)
+        logger.warning(f"[NLP_TRACE] normalize_and_classify_query failed: {e}", exc_info=True)
         return fallback
 
 
