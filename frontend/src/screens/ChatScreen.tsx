@@ -16,9 +16,9 @@ import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
+import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
-  buildAdmissionsCardsFromLocale,
   buildAllDepartmentSummaryCardsFromLocale,
   buildAllHodCardsFromLocale,
   buildDepartmentSlidesFromRecord,
@@ -101,13 +101,13 @@ const DEFAULT_COURSE_MENU_OPTIONS = [
   'Basic Sciences',
 ];
 
-const INFO_STAGE_CHIPS: Record<Language, { admissions: string; placements: string }> = {
-  English: { admissions: 'Admissions & fees', placements: 'Placements & training' },
-  Kannada: { admissions: 'ಪ್ರವೇಶ ಮತ್ತು ಶುಲ್ಕ', placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
-  Hindi: { admissions: 'प्रवेश और शुल्क', placements: 'प्लेसमेंट और प्रशिक्षण' },
-  Tamil: { admissions: 'சேர்க்கை மற்றும் கட்டணம்', placements: 'பிளேஸ்மென்ட் மற்றும் பயிற்சி' },
-  Telugu: { admissions: 'ప్రవేశం మరియు ఫీజులు', placements: 'ప్లేస్‌మెంట్ మరియు శిక్షణ' },
-  Malayalam: { admissions: 'പ്രവേശനവും ഫീസും', placements: 'പ്ലേസ്മെന്റും പരിശീലനവും' },
+const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
+  English: { placements: 'Placements & training' },
+  Kannada: { placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
+  Hindi: { placements: 'प्लेसमेंट और प्रशिक्षण' },
+  Tamil: { placements: 'பிளேஸ்மென்ட் மற்றும் பயிற்சி' },
+  Telugu: { placements: 'ప్లేస్‌మెంట్ మరియు శిక్షణ' },
+  Malayalam: { placements: 'പ്ലേസ്മെന്റും പരിശീലനവും' },
 };
 
 type PendingAudio = {
@@ -181,6 +181,8 @@ export default function ChatScreen({
   const [infoSlideChip, setInfoSlideChip] = useState('');
   const [infoSlides, setInfoSlides] = useState<{ title: string; content: string }[]>([]);
   const [isHodStage, setIsHodStage] = useState(false);
+  const [isFeesStage, setIsFeesStage] = useState(false);
+  const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   
   // Multilingual Intent Map overriding
   const [pendingLocalIntent, setPendingLocalIntent] = useState<NormalizedIntent | null>(null);
@@ -202,6 +204,8 @@ export default function ChatScreen({
         setInfoSlides([]);
         setInfoSlideChip('');
         setIsHodStage(false);
+        setIsFeesStage(false);
+        setActiveFeesDepartmentId(null);
         setCourseMenuOptions([]);
         currentUiLockRef.current = 'IDLE'; // Release the lock
       }
@@ -476,6 +480,23 @@ export default function ChatScreen({
     const audioSig = `${audioBase64?.length ?? 0}:${audioBase64?.slice(0, 24) ?? ''}`;
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
 
+    // Keep Fees card sticky for the active response stream.
+    // Some backend chunks can arrive without `showCard: "fees"` (or with a generic fallback trigger),
+    // which previously caused a temporary switch back to FULL_TEXT while TTS was still speaking.
+    if (isFeesStage && currentUiLockRef.current === 'CARD' && cardTrigger !== 'fees') {
+      setLayoutMode('SPLIT_CARDS');
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
     if (cardTrigger === 'course_menu') {
       currentUiLockRef.current = 'CARD';
       setLayoutMode('SPLIT_CARDS');
@@ -487,6 +508,8 @@ export default function ChatScreen({
       setIsInfoSlideStage(false);
       setInfoSlides([]);
       setInfoSlideChip('');
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
       setCourseMenuOptions(menuOptionsFromPayload.length ? menuOptionsFromPayload : DEFAULT_COURSE_MENU_OPTIONS);
       if (audioBase64) {
         setPendingAudio({
@@ -501,26 +524,25 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'admissions') {
-      currentUiLockRef.current = 'CARD';
-      setIsHodStage(false);
+      // Admissions cards are intentionally disabled; keep response in text mode.
+      setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
-      setCourseMenuOptions([]);
-      setIsInfoSlideStage(true);
-      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
-      setInfoSlideChip(chips.admissions);
-      const slides = buildAdmissionsCardsFromLocale(collegeData, language);
-      setInfoSlides(slides);
-      
-      setLayoutMode('SPLIT_CARDS');
-      setActiveCards(null);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsHodStage(false);
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      currentUiLockRef.current = 'TEXT';
+      setLayoutMode('FULL_TEXT');
       if (audioBase64) {
         setPendingAudio({
           audioBase64,
           segmentKey,
-          isOverview: true,
-          cardsToSync: slides.map(s => ({ title: s.title, content: s.content, type: 'dept' })),
-          targetLayout: 'SPLIT_CARDS',
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'FULL_TEXT',
         });
       }
       return;
@@ -532,6 +554,8 @@ export default function ChatScreen({
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
       setCourseMenuOptions([]);
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
       setIsInfoSlideStage(true);
       const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
       setInfoSlideChip(chips.placements);
@@ -553,6 +577,8 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'hod_info') {
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
       const targetDept = String(targetDepartment || '').trim();
       if (targetDept) {
         // Any department with a valid label — lock onto the HOD card stage.
@@ -574,42 +600,9 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'admissions') {
-      currentUiLockRef.current = 'CARD';
-      setCourseMenuOptions([]);
-      setIsDepartmentOverviewStage(false);
-      setActiveDepartmentId(null);
-      setIsInfoSlideStage(true);
-      const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
-      setInfoSlideChip(chips.admissions);
-      const slides = buildAdmissionsCardsFromLocale(collegeData, language);
-      setInfoSlides(slides);
-      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
-      const lastAssistantInPayload = [...payloadMessageList]
-        .reverse()
-        .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
-      const assistantMessageId = lastAssistantInPayload?.id ?? null;
-      setLayoutMode('SPLIT_CARDS');
-      setActiveCards(null);
-      setSuppressedTurnId(assistantMessageId ?? turnId);
-      if (audioBase64) {
-        const syncCards: CardDataItem[] = slides.map((s) => ({
-          title: s.title,
-          content: s.content,
-          type: 'dept',
-        }));
-        setPendingAudio({
-          audioBase64,
-          segmentKey,
-          isOverview: true,
-          cardsToSync: syncCards,
-          targetLayout: 'SPLIT_CARDS',
-        });
-      }
-      return;
-    }
-
     if (cardTrigger === 'placements') {
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -649,6 +642,8 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false); // Protect against HOD stage bleed-over
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
       
       const targetRaw = targetDepartment;
       const targetAll = targetRaw.toLowerCase() === 'all';
@@ -713,6 +708,39 @@ export default function ChatScreen({
       return;
     }
 
+    if (cardTrigger === 'fees') {
+      currentUiLockRef.current = 'CARD';
+      setCourseMenuOptions([]);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsHodStage(false);
+      setActiveCards(null);
+      setSuppressedTurnId(null);
+
+      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? String(targetDepartment || ''));
+      const feeDeptKey =
+        menuLabelToJsonKey(resolvedDept ?? '') ??
+        menuLabelToJsonKey(String(targetDepartment || '')) ??
+        menuLabelToJsonKey(String(departmentIdFromPayload || ''));
+      setIsFeesStage(true);
+      setActiveFeesDepartmentId(feeDeptKey);
+      setLayoutMode('SPLIT_CARDS');
+
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
     const cardsForTrigger = resolveCardsFromTrigger(cardTrigger);
 
     if (cardsForTrigger) {
@@ -723,6 +751,8 @@ export default function ChatScreen({
         setIsInfoSlideStage(false);
         setInfoSlides([]);
         setInfoSlideChip('');
+        setIsFeesStage(false);
+        setActiveFeesDepartmentId(null);
         const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
         const lastAssistantInPayload = [...payloadMessageList]
           .reverse()
@@ -990,6 +1020,8 @@ export default function ChatScreen({
                     currentCardIdx={0}
                     targetDepartment={activeTargetDepartment}
                   />
+                ) : isFeesStage ? (
+                  <DepartmentFeesCard departmentId={activeFeesDepartmentId} />
                 ) : isDepartmentOverviewStage && activeDepartmentId ? (
                   <DepartmentCardFactory 
                     departmentId={activeDepartmentId}

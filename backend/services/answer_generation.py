@@ -370,6 +370,7 @@ INTENT_PLACEMENTS = "PLACEMENTS"
 INTENT_HOD_PROFILE = "HOD_PROFILE"
 INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
+INTENT_FEES = "FEES"
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
 INTENT_OFF_TOPIC = "OFF_TOPIC"
 
@@ -628,6 +629,46 @@ FEE_QUERY_KEYWORDS = [
     "kaasu",
     "dabbu",
     "karchu",
+    # Kannada (script + transliteration)
+    "ಶುಲ್ಕ",
+    "ಶುಲ್ಕಗಳು",
+    "ಫೀಸ್",
+    "feesu",
+    "shulka",
+    "shulkagalu",
+    # Hindi (script + transliteration)
+    "फीस",
+    "शुल्क",
+    "shulk",
+    # Tamil
+    "கட்டணம்",
+    "கட்டணங்கள்",
+    "kattanam",
+    # Telugu
+    "ఫీజు",
+    "ఫీజులు",
+    "phiju",
+    # Malayalam
+    "ഫീസ്",
+]
+
+FEES_KEYWORDS = [
+    "fees",
+    "fee",
+    "fee structure",
+    "cost",
+    "tuition",
+    "price",
+    # Regional scripts / mixed forms
+    "ಶುಲ್ಕ",
+    "ಫೀಸ್",
+    "फीस",
+    "शुल्क",
+    "கட்டணம்",
+    "ఫీజు",
+    "ഫീസ്",
+    "feesu",
+    "feeu",
 ]
 
 DEPARTMENT_SYNONYMS: dict[str, list[str]] = {
@@ -641,7 +682,16 @@ DEPARTMENT_SYNONYMS: dict[str, list[str]] = {
         "artificial intelligence",
         "machine learning",
     ],
-    "CSE (Data Science)": ["cse ds", "cse data science", "cse (data science)", "data science", "datascience"],
+    "CSE (Data Science)": [
+        "cse ds",
+        "cse data science",
+        "cse (data science)",
+        "data science",
+        "datascience",
+        "daascince",
+        "datascince",
+        "datscience",
+    ],
     "CSE (Cyber Security)": [
         "cse cyber",
         "cse (cyber security)",
@@ -956,7 +1006,14 @@ def _is_course_menu_query(normalized: str) -> bool:
 def _is_fee_query(normalized: str) -> bool:
     if not normalized:
         return False
-    return any(_contains_phrase(normalized, k) for k in FEE_QUERY_KEYWORDS)
+    n = _normalize_text(normalized)
+    fee_hit = any(_contains_phrase(n, k) for k in FEES_KEYWORDS) or any(
+        _contains_phrase(n, k) for k in FEE_QUERY_KEYWORDS
+    )
+    if fee_hit:
+        return True
+    # Extra safety for common ASR misspellings around "fees"
+    return bool(re.search(r"\bf(?:e|i){1,2}s\b", n))
 
 
 def _is_admissions_query(normalized: str) -> bool:
@@ -1036,6 +1093,114 @@ def _normalize_text(text: str | None) -> str:
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
+def _inject_regional_department_tokens(text: str) -> str:
+    """
+    Map regional-script spellings of department names to English tokens so
+    ``extract_entities`` / ``_detect_department`` can match (e.g. Kannada
+    ``ಎ ಎಂ ಎಲ್`` spaced letters for AIML).
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    out = text
+    # (pattern, replacement) — order matters: longer / more specific first.
+    regional: tuple[tuple[str, str], ...] = (
+        # Kannada — AIML spelled as letters or words
+        (r"ಎ\s*ಎಂ\s*ಎಲ್", " aiml "),
+        (r"ಎಎಂಎಲ್", " aiml "),
+        (r"ಎ\s*ಎಂ\s*ಎಲ್\s*ಡಿಪಾರ್ಟ್ಮೆಂಟ್", " aiml department "),
+        (r"ಡೇಟಾ\s*ಸೈನ್ಸ್", " data science "),
+        (r"ಸೈಬರ್\s*ಸೆಕ್ಯುರಿಟಿ", " cyber security "),
+        (r"ಬಿಸಿನೆಸ್\s*ಸಿಸ್ಟಮ್ಸ್", " business systems "),
+        (r"ಮಾಹಿತಿ\s*ವಿಜ್ಞಾನ", " information science "),
+        (r"ಐಎಸ್ಇ", " ise "),
+        (r"ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್", " electronics "),
+        (r"ಇಸಿಇ", " ece "),
+        (r"ಸಿವಿಲ್", " civil "),
+        (r"ಮೆಕ್ಯಾನಿಕಲ್", " mechanical "),
+        # Tamil — common spellings
+        (r"ஏ\s*ஐ\s*எம்\s*எல்", " aiml "),
+        (r"டேட்டா\s*சயின்ஸ்", " data science "),
+        (r"சைபர்\s*செக்யூரிட்டி", " cyber security "),
+        # Telugu
+        (r"ఎ\s*ఐ\s*ఎం\s*ఎల్", " aiml "),
+        (r"డేటా\s*సైన్స్", " data science "),
+        # Malayalam
+        (r"എ\s*ഐ\s*എം\s*എൽ", " aiml "),
+        (r"ഡാറ്റാ\s*സയൻസ്", " data science "),
+    )
+    for pat, repl in regional:
+        out = re.sub(pat, repl, out, flags=re.IGNORECASE)
+    return out
+
+
+def normalize_query_to_english(text: str) -> str:
+    """
+    Normalize mixed-language query tokens (Hinglish/Kanglish/Tanglish/etc.) to
+    simple English-friendly cues before intent/entity detection.
+    """
+    if text is None or not isinstance(text, str):
+        return ""
+    s = text.strip()
+    if not s:
+        return ""
+    # Must run before lowercasing collapses meaning: map regional script → English dept tokens.
+    s = _inject_regional_department_tokens(s)
+    base = _normalize_text(s)
+    if not base:
+        return ""
+
+    # Phrase-level conversions first.
+    phrase_map: tuple[tuple[str, str], ...] = (
+        (r"\bfees\s+enna\b", "fees what"),
+    )
+    out = base
+    for pattern, repl in phrase_map:
+        out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
+
+    # Token-level normalization + filler cleanup.
+    token_map: dict[str, str] = {
+        # Kannada
+        "bagge": "about",
+        "helu": "",
+        "heli": "",
+        "enu": "what",
+        "hegide": "how",
+        "eshtu": "how much",
+        # Tamil
+        "enna": "what",
+        "solu": "",
+        "sollu": "",
+        "sollunga": "",
+        # Telugu
+        "enti": "what",
+        "cheppu": "",
+        "cheppandi": "",
+        # Hindi
+        "kya": "what",
+        "kitna": "how much",
+        "batao": "",
+        "bataye": "",
+        "batayiye": "",
+    }
+    for src, dst in token_map.items():
+        out = re.sub(rf"\b{re.escape(src)}\b", dst, out, flags=re.IGNORECASE)
+
+    # Drop residual filler words.
+    filler_words = (
+        "pls",
+        "please",
+        "anna",
+        "bro",
+        "sir",
+        "madam",
+    )
+    for w in filler_words:
+        out = re.sub(rf"\b{re.escape(w)}\b", "", out, flags=re.IGNORECASE)
+
+    out = re.sub(r"[^\w\s&()]+", " ", out)
+    return _normalize_text(out)
+
+
 # Mixed-language → English-friendly cues before strict intent matching.
 _MIXED_LANGUAGE_PHRASE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bbagge\s+helu\b", "tell me about"),
@@ -1068,21 +1233,29 @@ def normalize_user_input(text: str | None) -> str:
     s = text.strip()
     if not s:
         return ""
+    s = normalize_query_to_english(s)
     for pattern, repl in _MIXED_LANGUAGE_PHRASE_PATTERNS:
         s = re.sub(pattern, repl, s, flags=re.IGNORECASE)
     return _normalize_text(s)
 
 
 DEPARTMENT_KEYWORDS: dict[str, str] = {
+    "data science": "CSE (Data Science)",
+    "datascience": "CSE (Data Science)",
+    "daascince": "CSE (Data Science)",
+    "datascince": "CSE (Data Science)",
+    "datscience": "CSE (Data Science)",
+    "ds": "CSE (Data Science)",
+    "cse ds": "CSE (Data Science)",
     "computer science": "CSE",
     "cse": "CSE",
-    "aiml": "AIML",
-    "ai ml": "AIML",
+    "aiml": "CSE (AI & ML)",
+    "ai ml": "CSE (AI & ML)",
     "ece": "ECE",
     "ec": "ECE",
     "ise": "ISE",
     "civil": "CIVIL",
-    "mechanical": "MECH",
+    "mechanical": "Mechanical",
     "mba": "MBA",
 }
 
@@ -1154,6 +1327,10 @@ def detect_intent_with_priority(query_en: str, entities: dict[str, Any]) -> str:
     if not n:
         return INTENT_NORMAL_QUERY
 
+    # FEES has strict priority over other intents once detected.
+    if _is_fee_query(n):
+        return INTENT_FEES
+
     role = entities.get("role")
     if role == "HOD":
         return INTENT_HOD_PROFILE
@@ -1162,7 +1339,7 @@ def detect_intent_with_priority(query_en: str, entities: dict[str, Any]) -> str:
     if role == "BOTH":
         return INTENT_HOD_TRUSTEES_PROFILE
 
-    if re.search(r"\badmissions?\b", n) or re.search(r"\bfees?\b", n) or _is_admissions_query(n):
+    if re.search(r"\badmissions?\b", n) or _is_admissions_query(n):
         return INTENT_ADMISSIONS
 
     if re.search(r"\bplacements?\b", n) or re.search(r"\bjobs?\b", n) or _is_placements_query(n):
@@ -1187,6 +1364,8 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
     dept = entities.get("department")
     if intent == INTENT_HOD_PROFILE:
         return {"showCard": "hod", "departmentId": dept}
+    if intent == INTENT_FEES:
+        return {"showCard": "fees", "departmentId": dept}
     if intent == INTENT_DEPARTMENT_OVERVIEW:
         return {"showCard": "department_overview", "departmentId": dept}
     if intent == INTENT_COLLEGE_OVERVIEW:
@@ -1238,17 +1417,34 @@ def resolve_card_intent_and_department(
             logger.info("[INTENT_PRIORITY] query_en=%r entities=%s intent=%s", base, ent, INTENT_OFF_TOPIC)
             return INTENT_OFF_TOPIC, None, base, ent
 
+    original_input = (raw_text or "").strip()
     if lang_key != "en":
         base_in = (english_query or raw_text or "").strip()
     else:
-        base_in = (raw_text or "").strip()
+        base_in = original_input
 
     query_en = normalize_user_input(base_in)
-    entities = extract_entities(query_en)
-    intent = detect_intent_with_priority(query_en, entities)
+    raw_normalized = normalize_user_input(original_input)
+
+    # Use both normalized forms so mixed-language/translator misses cannot suppress FEES intent.
+    merged_query = _normalize_text(" ".join([q for q in (query_en, raw_normalized) if q]))
+    entities = extract_entities(merged_query)
+    intent = detect_intent_with_priority(merged_query, entities)
+    # Hard guard: any fee-like query must stay in FEES lane (never department_overview first).
+    if _is_fee_query(merged_query):
+        intent = INTENT_FEES
     dept: str | None = entities.get("department")
 
-    logger.info("[INTENT_PRIORITY] query_en=%r entities=%s intent=%s", query_en, entities, intent)
+    logger.info(
+        "[INTENT_PRIORITY] original_input=%r normalized=%r raw_normalized=%r merged=%r intent=%s department=%r entities=%s",
+        original_input,
+        query_en,
+        raw_normalized,
+        merged_query,
+        intent,
+        dept,
+        entities,
+    )
     logger.info("[INTENT_PRIORITY] card_hints=%s", card_trigger_hints(intent, entities))
 
     return intent, dept, query_en, entities
@@ -1258,6 +1454,8 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
     """Human-readable showCard label(s) for logging only (mirrors main.py payload)."""
     if intent == INTENT_COLLEGE_OVERVIEW:
         return "college"
+    if intent == INTENT_FEES:
+        return "fees"
     if intent == INTENT_ADMISSIONS:
         return "admissions"
     if intent == INTENT_PLACEMENTS:
@@ -1300,6 +1498,7 @@ def _coerce_preprocessor_intent(raw: str | None) -> str:
         "COLLEGE_OVERVIEW": INTENT_COLLEGE_OVERVIEW,
         "COURSE_MENU": INTENT_COURSE_MENU,
         "DEPARTMENT_OVERVIEW": INTENT_DEPARTMENT_OVERVIEW,
+        "FEES": INTENT_FEES,
         "ADMISSIONS": INTENT_ADMISSIONS,
         "PLACEMENTS": INTENT_PLACEMENTS,
         "HOD_PROFILE": INTENT_HOD_PROFILE,
@@ -1956,6 +2155,15 @@ def generate_reply(
 
     if intent == INTENT_COURSE_MENU:
         return "COURSE_MENU"
+
+    if intent == INTENT_FEES:
+        fee_base = normalize_user_input(qen)
+        fee_entities = extract_entities(fee_base)
+        fee_dept = fee_entities.get("department")
+        if not fee_dept:
+            return "Please specify the department to view fee structure."
+        # Keep spoken reply short; UI renders the strict fee card.
+        return f"Showing fee structure for {fee_dept}."
 
     if is_narrator_intent(intent):
         dept_label = detect_department_name(text)

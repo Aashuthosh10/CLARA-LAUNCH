@@ -70,6 +70,7 @@ from backend.services.answer_generation import (
     INTENT_DEPARTMENT_OVERVIEW,
     INTENT_HOD_PROFILE,
     INTENT_HOD_TRUSTEES_PROFILE,
+    INTENT_FEES,
     INTENT_NORMAL_QUERY,
     INTENT_OFF_TOPIC,
     INTENT_PLACEMENTS,
@@ -119,6 +120,36 @@ ERROR_RECOVERABLE_HINTS: dict[str, str] = {
     "RECORD_ERROR": "Recording failed. Check mic and try again.",
     "PROCESS_FAILED": "Something went wrong. Please try again.",
 }
+
+
+def _looks_like_fee_query(raw_text: str, normalized_text: str) -> bool:
+    s = f"{raw_text or ''} {normalized_text or ''}".lower()
+    return any(
+        k in s
+        for k in (
+            "fee",
+            "fees",
+            "fee structure",
+            "tuition",
+            "cost",
+            "price",
+            "eshtu",
+            "estu",
+            "kitna",
+            "ಫೀಸ್",
+            "ಶುಲ್ಕ",
+            "ಎಷ್ಟು",
+            "फीस",
+            "शुल्क",
+            "कितना",
+            "கட்டணம்",
+            "எவ்வளவு",
+            "ఫీజు",
+            "ఎంత",
+            "ഫീസ്",
+            "എത്ര",
+        )
+    )
 
 
 def _build_error_payload(
@@ -652,6 +683,10 @@ async def process_user_text_and_reply(
             preprocessor_intent_raw=preprocessor_intent_raw,
         )
 
+        # Safety override: fee-like multilingual queries must route to FEES card flow.
+        if _looks_like_fee_query(text, normalized_for_intent):
+            intent = INTENT_FEES
+
         if lang_key != "en" and english_translation:
             rag_query = english_translation
             llm_user_text = english_translation
@@ -946,6 +981,7 @@ async def process_user_text_and_reply(
         if intent in (
             INTENT_COURSE_MENU,
             INTENT_DEPARTMENT_OVERVIEW,
+            INTENT_FEES,
             INTENT_ADMISSIONS,
             INTENT_PLACEMENTS,
         ):
@@ -963,6 +999,9 @@ async def process_user_text_and_reply(
             show_card = "placements"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             show_card = "department_overview"
+            department_id = entity_map.get("department")
+        elif intent == INTENT_FEES:
+            show_card = "fees"
             department_id = entity_map.get("department")
         elif intent == INTENT_HOD_PROFILE:
             if entity_map.get("department"):

@@ -1,5 +1,5 @@
 export type NormalizedIntent = {
-  trigger: 'course_menu' | 'department_overview' | 'hod_info' | 'admissions' | 'placements' | null;
+  trigger: 'course_menu' | 'department_overview' | 'hod_info' | 'admissions' | 'placements' | 'fees' | null;
   departmentLabel?: string;
 };
 
@@ -50,6 +50,20 @@ const INTENT_MAP = {
     'కోర్సు', 'కోర్సులు', 'చదువు',
     // Malayalam
     'കോഴ്സുകൾ', 'കോഴ്സ്', 'പഠനം'
+  ],
+  fees: [
+    // English
+    'fee', 'fees', 'tuition', 'management quota',
+    // Kannada
+    'ಶುಲ್ಕ', 'ಶುಲ್ಕಗಳು',
+    // Hindi
+    'फीस', 'शुल्क',
+    // Tamil
+    'கட்டணம்', 'கட்டணங்கள்',
+    // Telugu
+    'ఫీజు', 'ఫీజులు',
+    // Malayalam
+    'ഫീസ്'
   ],
   hod: [
     // English
@@ -148,6 +162,14 @@ export type InternalIntent = 'COURSE_LIST' | 'DEPARTMENT_INFO' | 'DEPARTMENT_COM
  * Detects abstract user intents (deterministic UI triggers)
  */
 function detectIntent(normalized: string, entityCount: number): InternalIntent {
+  let isFeesTriggered = false;
+  for (const phrase of INTENT_MAP.fees) {
+    if (normalized.includes(phrase.toLowerCase())) {
+      isFeesTriggered = true;
+      break;
+    }
+  }
+
   let isCourseListTriggered = false;
   for (const phrase of INTENT_MAP.course_menu) {
     if (normalized.includes(phrase.toLowerCase())) {
@@ -191,6 +213,7 @@ function detectIntent(normalized: string, entityCount: number): InternalIntent {
   }
 
   // Specific high-priority routing intents
+  if (isFeesTriggered && entityCount >= 1) return 'DEPARTMENT_INFO';
   if (isAdmissionsTriggered) return 'ADMISSIONS_GOTO';
   if (isPlacementsTriggered) return 'PLACEMENTS_GOTO';
 
@@ -236,6 +259,7 @@ function detectEntities(normalized: string): string[] {
 export function normalizeIntent(input: string): NormalizedIntent {
   // 0. Language Normalization Layer
   const normalized = normalizeToEnglish(input);
+  const hasFeeKeyword = INTENT_MAP.fees.some((phrase) => normalized.includes(phrase.toLowerCase()));
 
   // 1. Entity Extraction
   const entities = detectEntities(normalized);
@@ -260,6 +284,12 @@ export function normalizeIntent(input: string): NormalizedIntent {
 
   // CASE 2.7 — DEPARTMENT OVERVIEW -> Carousel
   if (intent === 'DEPARTMENT_INFO' && entities.length === 1) {
+    if (hasFeeKeyword) {
+      return {
+        trigger: 'fees',
+        departmentLabel: entities[0]
+      };
+    }
     return {
         trigger: 'department_overview',
         departmentLabel: entities[0]

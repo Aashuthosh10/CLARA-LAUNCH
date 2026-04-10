@@ -1,0 +1,26 @@
+{
+  "fees": {
+    "title": "Department Fee Structure",
+    "description": "Below is the estimated annual fee structure for the department.",
+    "management": "Management Quota",
+    "other": "Other Quotas",
+    "visit_office": "Please visit the Admission Office for detailed fee information",
+    "footer": "*Fees are subject to institutional policy",
+    "admission_quota": "Admission Quota",
+    "estimated_fee": "Estimated Annual Fee (INR)",
+    "specify_department": "Please specify the department to view fee details"
+  },
+  "departments": {
+    "cse": { "name": "Computer Science & Engineering", "fees": { "management": "325000" } },
+    "ise": { "name": "Information Science & Engineering", "fees": { "management": "250000" } },
+    "cse_aiml": { "name": "CSE (AI & ML)", "fees": { "management": "325000" } },
+    "cse_ds": { "name": "CSE (Data Science)", "fees": { "management": "300000" } },
+    "cse_cysec": { "name": "CSE (Cyber Security)", "fees": { "management": "325000" } },
+    "cse_bs": { "name": "CSE (Business Systems)", "fees": { "management": "275000" } },
+    "ece": { "name": "Electronics & Communication Engineering", "fees": { "management": "250000" } },
+    "civil": { "name": "Civil Engineering", "fees": { "management": "125000" } },
+    "mechanical": { "name": "Mechanical Engineering", "fees": { "management": "125000" } },
+    "mba": { "name": "Master of Business Administration", "fees": { "management": "" } },
+    "basic_sciences": { "name": "Basic Sciences", "fees": { "management": "" } }
+  }
+}
