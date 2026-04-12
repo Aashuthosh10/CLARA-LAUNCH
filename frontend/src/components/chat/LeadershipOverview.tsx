@@ -4,27 +4,28 @@ import type { CardDataItem } from '../../lib/cardData';
 import ThreeDVisual from './cards/ThreeDVisual';
 import PremiumHODCard from './cards/PremiumHODCard';
 import { useCollegeData } from '../../hooks/useCollegeData';
-import hodCseImg from '../../assets/hod_shashikumar.jpg';
-import hodAimlImg from '../../assets/hod_manjunatha.jpg';
-import hodEceImg from '../../assets/hod_venkatesha.jpg';
-import hodIseImg from '../../assets/hod_vrinda.jpg';
+import hodCseImg from '../../assets/hod_cse.jpg';
+import hodAimlImg from '../../assets/hod_aiml.jpg';
+import hodEceImg from '../../assets/hod_ece.jpg';
 import hodCivilImg from '../../assets/hod_civil.jpg';
 import hodMechanicalImg from '../../assets/hod_mechanical.jpg';
-import hodDsImg from '../../assets/hod_nagashree.png';
+import hodDsImg from '../../assets/hod_datascience.png';
 import hodChemImg from '../../assets/hod_chemistry.jpg';
-import placeholderImg from '../../assets/image_8c37bf.png';
+import hodPhysicsImg from '../../assets/hod_physics.jpeg';
+import hodMathsImg from '../../assets/hod_maths.jpg';
+import placeholderImg from '../../assets/logo/svit_logo_clean.png';
 
 const HOD_PORTRAITS: Record<string, string> = {
   cse: hodCseImg,
   cse_aiml: hodAimlImg,
   cse_ds: hodDsImg,
   ece: hodEceImg,
-  ise: hodIseImg,
+  ise: placeholderImg,
   civil: hodCivilImg,
   mechanical: hodMechanicalImg,
   mba: placeholderImg,
-  mathematics: placeholderImg,
-  physics: placeholderImg,
+  mathematics: hodMathsImg,
+  physics: hodPhysicsImg,
   chemistry: hodChemImg,
 };
 
