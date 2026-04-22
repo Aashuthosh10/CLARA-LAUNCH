@@ -1,5 +1,6 @@
 export type NormalizedIntent = {
-  trigger: 'course_menu' | 'department_overview' | 'hod_info' | 'admissions' | 'placements' | 'fees' | null;
+  trigger: 'course_menu' | 'department_overview' | 'hod' | 'admissions' | 'placements' | 'department_fees' | 'documents' | null;
+  type?: 'department_click';
   departmentLabel?: string;
 };
 
@@ -21,6 +22,19 @@ const MULTILINGUAL_TOKEN_MAP: Record<string, string> = {
   // Malayalam
   'കോഴ്സ്': 'course', 'വിഭാഗം': 'department', 'കുറിച്ച്': 'about', 'ആരാണ്': 'who',
   'വിവരങ്ങൾ': 'information', 'പ്രവേശനം': 'admission', 'ഫീസ്': 'fee', 'ജോലി': 'placement'
+  ,
+  // Common transliterated Kannada/Hinglish tokens
+  'yaav': 'which',
+  'yaava': 'which',
+  'yav': 'which',
+  'alli': 'in',
+  'ali': 'in',
+  'aithe': 'available',
+  'ide': 'available',
+  'ideya': 'available',
+  'estu': 'how much',
+  'eshtu': 'how much',
+  'du': ''
 };
 
 /**
@@ -37,6 +51,12 @@ function normalizeToEnglish(input: string): string {
 
 // Map of intents to an array of multilingual keywords that signify them.
 const INTENT_MAP = {
+  documents: [
+    'document', 'documents', 'documents required', 'admission documents',
+    'document bagge', 'documents beku', 'dakhalegalu',
+    'document kya chahiye', 'documents kaunse', 'admission ke documents',
+    'documents enna venum', 'documents enti', 'documents entha', 'documents kurich'
+  ],
   course_menu: [
     // English
     'courses', 'programs', 'degrees', 'what do you offer', 'academic options',
@@ -49,7 +69,14 @@ const INTENT_MAP = {
     // Telugu
     'కోర్సు', 'కోర్సులు', 'చదువు',
     // Malayalam
-    'കോഴ്സുകൾ', 'കോഴ്സ്', 'പഠനം'
+    'കോഴ്സുകൾ', 'കോഴ്സ്', 'പഠനം',
+    // Transliteration phrases
+    'college ali yaav courses ide',
+    'college ali yaav yaav departments aithe',
+    'what departments are there',
+    'which departments are available',
+    'departments in college',
+    'department list'
   ],
   fees: [
     // English
@@ -111,8 +138,8 @@ const INTENT_MAP = {
 
 // Map of departments to their standard internal labels, indexed by multilingual keyword triggers.
 const DEPT_MAP: Record<string, string[]> = {
-  'Data Science': [
-    'data science', 'ಡೇಟಾ ಸೈನ್ಸ್', 'ಡೇಟಾ', 'डेटा साइंस', 'डेटा', 'डाटा साइंस', 'डाटा', 'डेटा विज्ञान', 'डेटासाइंस', 'डाटासाइंस', 'डिएस', 'डीएस', 'डिजिटल साइंस', 'डिजिटल'
+  'CSE (Data Science)': [
+    'data science', 'datascience', 'cse data science', 'cse datascience', 'ಡೇಟಾ ಸೈನ್ಸ್', 'ಡೇಟಾ', 'डेटा साइंस', 'डेटा', 'डाटा साइंस', 'डाटा', 'डेटा विज्ञान', 'डेटासाइंस', 'डाटासाइंस', 'डिएस', 'डीएस', 'डिजिटल साइंस', 'डिजिटल'
   ],
   'CSE': [
     'computer science', 'cse', 'ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್', 'ಸಿಎಸ್ಇ', 'कंप्यूटर साइंस', 'कम्प्यूटर विज्ञान', 'सीएसई', 'सीएस इ', 'कम्प्यूटर साइंस', 'सीएसई', 'कंप्यूटर इंजीनियरिंग', 'कंप्यूटरसाइंस', 'कम्प्यूटरसाइंस', 'कंप्यूटर सायंस', 'कंप्यूटर विज्ञान', 'कम्प्यूटर सायंस'
@@ -129,10 +156,10 @@ const DEPT_MAP: Record<string, string[]> = {
   'Civil': [
     'civil', 'ಸಿವಿಲ್', 'सिविल', 'सिविल इंजीनियरिंग', 'सिविल विभाग', 'सिविलइंजीनियरिंग', 'சிவில்', 'சிவில் இன்ஜினியரிங்', 'సివిల్', 'సివిల్ ఇంజనీరింగ్', 'സിവിൽ', 'സിവിൽ എഞ്ചിനീയറിംഗ്'
   ],
-  'AIML': [
+  'CSE (AI & ML)': [
     'aiml', 'artificial intelligence', 'ai and ml', 'ai ml', 'ಎಐ ಎಂಎಲ್', 'ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ', 'एआई एमएल', 'आर्टिफिशियल इंटेलिजेंस', 'एआई और एमएल', 'एआईएमएल', 'कृत्रिम बुद्धिमत्ता', 'आर्टिफिशियल', 'एआई'
   ],
-  'Cyber Security': [
+  'CSE (Cyber Security)': [
     'cyber security', 'cyber', 'ಸೈಬರ್ ಭದ್ರತೆ', 'ಸೈಬರ್', 'साइबर सिक्योरिटी', 'साइबर सुरक्षा', 'साइबर', 'साइबरसिक्योरिटी', 'साइबरसुरक्षा', 'சைபர் செக்யூரிட்டி', 'சைபர் பாதுகாப்பு', 'సైబర్ సెక్యూరిటీ', 'సైబర్ భద్రత', 'సైబర్ സുരക്ഷ', 'സൈബർ'
   ],
   'MBA': [
@@ -147,11 +174,11 @@ const DEPT_MAP: Record<string, string[]> = {
  */
 const PRIORITY_OVERRIDES: Record<string, string[]> = {
   // If AIML is matched, CSE must NOT also match (AIML is a CSE specialization)
-  'AIML': ['CSE'],
+  'CSE (AI & ML)': ['CSE'],
   // If Data Science is matched, CSE must NOT also match
-  'Data Science': ['CSE'],
+  'CSE (Data Science)': ['CSE'],
   // If Cyber Security is matched, CSE must NOT also match
-  'Cyber Security': ['CSE'],
+  'CSE (Cyber Security)': ['CSE'],
   // If ISE is matched, CSE must NOT also match
   'ISE': ['CSE'],
 };
@@ -162,6 +189,13 @@ export type InternalIntent = 'COURSE_LIST' | 'DEPARTMENT_INFO' | 'DEPARTMENT_COM
  * Detects abstract user intents (deterministic UI triggers)
  */
 function detectIntent(normalized: string, entityCount: number): InternalIntent {
+  let isDocumentsTriggered = false;
+  for (const phrase of INTENT_MAP.documents) {
+    if (normalized.includes(phrase.toLowerCase())) {
+      isDocumentsTriggered = true;
+      break;
+    }
+  }
   let isFeesTriggered = false;
   for (const phrase of INTENT_MAP.fees) {
     if (normalized.includes(phrase.toLowerCase())) {
@@ -176,6 +210,18 @@ function detectIntent(normalized: string, entityCount: number): InternalIntent {
       isCourseListTriggered = true;
       break;
     }
+  }
+  const hasDepartmentListCue =
+    (normalized.includes('department') || normalized.includes('departments')) &&
+    (
+      normalized.includes('which') ||
+      normalized.includes('what') ||
+      normalized.includes('list') ||
+      normalized.includes('available') ||
+      normalized.includes('in college')
+    );
+  if (hasDepartmentListCue) {
+    isCourseListTriggered = true;
   }
 
   let isHodTriggered = false;
@@ -213,6 +259,7 @@ function detectIntent(normalized: string, entityCount: number): InternalIntent {
   }
 
   // Specific high-priority routing intents
+  if (isDocumentsTriggered) return 'UNKNOWN';
   if (isFeesTriggered && entityCount >= 1) return 'DEPARTMENT_INFO';
   if (isAdmissionsTriggered) return 'ADMISSIONS_GOTO';
   if (isPlacementsTriggered) return 'PLACEMENTS_GOTO';
@@ -257,6 +304,9 @@ function detectEntities(normalized: string): string[] {
  * Sweeps a raw string transcript against the multilingual dictionary using Intent + Entity architecture.
  */
 export function normalizeIntent(input: string): NormalizedIntent {
+  if (INTENT_MAP.documents.some((phrase) => normalized.includes(phrase.toLowerCase()))) {
+    return { trigger: 'documents' };
+  }
   // 0. Language Normalization Layer
   const normalized = normalizeToEnglish(input);
   const hasFeeKeyword = INTENT_MAP.fees.some((phrase) => normalized.includes(phrase.toLowerCase()));
@@ -277,7 +327,7 @@ export function normalizeIntent(input: string): NormalizedIntent {
   // CASE 2.5 — HOD INFO -> Entity-locked Card
   if (intent === 'HOD_INFO' && entities.length === 1) {
     return {
-      trigger: 'hod_info',
+      trigger: 'hod',
       departmentLabel: entities[0]
     };
   }
@@ -286,7 +336,7 @@ export function normalizeIntent(input: string): NormalizedIntent {
   if (intent === 'DEPARTMENT_INFO' && entities.length === 1) {
     if (hasFeeKeyword) {
       return {
-        trigger: 'fees',
+        trigger: 'department_fees',
         departmentLabel: entities[0]
       };
     }

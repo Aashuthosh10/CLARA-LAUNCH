@@ -67,14 +67,16 @@ from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
+    INTENT_DEPARTMENT_FEES,
+    INTENT_DOCUMENTS,
     INTENT_DEPARTMENT_OVERVIEW,
     INTENT_HOD_PROFILE,
     INTENT_HOD_TRUSTEES_PROFILE,
-    INTENT_FEES,
     INTENT_NORMAL_QUERY,
     INTENT_OFF_TOPIC,
     INTENT_PLACEMENTS,
     INTENT_TRUSTEES_PROFILE,
+    extract_features,
     build_narrator_system_prompt,
     build_target_card_payload,
     get_course_menu_options,
@@ -82,13 +84,13 @@ from backend.services.answer_generation import (
     get_off_topic_reply,
     get_profile_direct_reply,
     get_unavailable_reply,
-    infer_show_card_label,
     is_narrator_intent,
     locale_file_id_for_lang_key,
     multilingual_rag_reply_directive,
     normalize_and_classify_query,
     rag_language_enforcement_directive,
-    resolve_card_intent_and_department,
+    resolve_intent_from_features,
+    translate_reply_to_session_language_async,
 )
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
@@ -122,34 +124,97 @@ ERROR_RECOVERABLE_HINTS: dict[str, str] = {
 }
 
 
-def _looks_like_fee_query(raw_text: str, normalized_text: str) -> bool:
-    s = f"{raw_text or ''} {normalized_text or ''}".lower()
-    return any(
-        k in s
-        for k in (
-            "fee",
-            "fees",
-            "fee structure",
-            "tuition",
-            "cost",
-            "price",
-            "eshtu",
-            "estu",
-            "kitna",
-            "ಫೀಸ್",
-            "ಶುಲ್ಕ",
-            "ಎಷ್ಟು",
-            "फीस",
-            "शुल्क",
-            "कितना",
-            "கட்டணம்",
-            "எவ்வளவு",
-            "ఫీజు",
-            "ఎంత",
-            "ഫീസ്",
-            "എത്ര",
-        )
-    )
+def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
+    dept = (department or "").strip()
+    if not dept:
+        return "Please specify the department to view fee structure."
+    mapping = {
+        "kn": f"{dept} ವಿಭಾಗದ ಶುಲ್ಕ ವಿವರಗಳನ್ನು ತೆರುತ್ತಿದ್ದೇನೆ.",
+        "hi": f"{dept} विभाग की फीस जानकारी दिखा रही हूँ।",
+        "ta": f"{dept} துறைக்கான கட்டண விவரத்தை காட்டுகிறேன்.",
+        "te": f"{dept} విభాగానికి ఫీజు వివరాలు చూపిస్తున్నాను.",
+        "ml": f"{dept} വിഭാഗത്തിനായുള്ള ഫീസ് വിവരങ്ങൾ കാണിച്ചുതരാം.",
+    }
+    return mapping.get(language_key, f"Showing fee structure for {dept}.")
+
+
+def _documents_card_direct_reply(language_key: str) -> str:
+    docs_en = [
+        "10th Marks Card",
+        "12th / II PUC Marks Card",
+        "CET / COMEDK Rank Card + Allotment Letter",
+        "Transfer Certificate (TC)",
+        "Conduct / Character Certificate",
+        "Caste / Income Certificate (if applicable)",
+        "Aadhaar Card Copy",
+        "Passport Size Photos (6–10)",
+        "Migration Certificate (for other board students)",
+        "VTU Eligibility Certificate (if required)",
+    ]
+    spoken_lists: dict[str, list[str]] = {
+        "kn": [
+            "10ನೇ ತರಗತಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
+            "12ನೇ ಅಥವಾ ದ್ವಿತೀಯ ಪಿಯುಸಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
+            "ಸಿಇಟಿ ಅಥವಾ ಕೋಮೆಡ್ಕೆ ರ್ಯಾಂಕ್ ಕಾರ್ಡ್ ಮತ್ತು ಅಲಾಟ್ಮೆಂಟ್ ಲೆಟರ್",
+            "ಟ್ರಾನ್ಸ್‌ಫರ್ ಸರ್ಟಿಫಿಕೆಟ್",
+            "ಕಂಡಕ್ಟ್ ಅಥವಾ ಕ್ಯಾರಕ್ಟರ್ ಸರ್ಟಿಫಿಕೆಟ್",
+            "ಜಾತಿ ಅಥವಾ ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ ಅಗತ್ಯವಿದ್ದರೆ",
+            "ಆಧಾರ್ ಕಾರ್ಡ್ ಪ್ರತಿಯೊಂದು",
+            "ಪಾಸ್ಪೋರ್ಟ್ ಸೈಸ್ ಫೋಟೋಗಳು ಆರುರಿಂದ ಹತ್ತು",
+            "ಇತರೆ ಬೋರ್ಡ್ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಮೈಗ್ರೇಶನ್ ಪ್ರಮಾಣಪತ್ರ",
+            "ಅಗತ್ಯವಿದ್ದರೆ ವಿ ಟಿ ಯು ಅರ್ಹತಾ ಪ್ರಮಾಣಪತ್ರ",
+        ],
+        "hi": [
+            "दसवीं की मार्क्स कार्ड",
+            "बारहवीं या द्वितीय पीयूसी मार्क्स कार्ड",
+            "सीईटी या कॉमेडके रैंक कार्ड और अलॉटमेंट लेटर",
+            "ट्रांसफर सर्टिफिकेट",
+            "कंडक्ट या कैरेक्टर सर्टिफिकेट",
+            "आवश्यक होने पर जाति या आय प्रमाणपत्र",
+            "आधार कार्ड की प्रति",
+            "पासपोर्ट साइज फोटो छह से दस",
+            "अन्य बोर्ड छात्रों के लिए माइग्रेशन सर्टिफिकेट",
+            "आवश्यक होने पर वीटीयू एलिजिबिलिटी सर्टिफिकेट",
+        ],
+        "ta": [
+            "10ஆம் வகுப்பு மதிப்பெண் அட்டை",
+            "12ஆம் அல்லது இரண்டாம் PUC மதிப்பெண் அட்டை",
+            "CET அல்லது COMEDK தரவரிசை அட்டை மற்றும் ஒதுக்கீட்டு கடிதம்",
+            "மாற்றுச் சான்றிதழ்",
+            "நடத்தை அல்லது குணச் சான்றிதழ்",
+            "தேவையெனில் சாதி அல்லது வருமானச் சான்றிதழ்",
+            "ஆதார் அட்டை நகல்",
+            "பாஸ்போர்ட் அளவு புகைப்படங்கள் ஆறு முதல் பத்து",
+            "பிற வாரிய மாணவர்களுக்கு மைக்ரேஷன் சான்றிதழ்",
+            "தேவையெனில் VTU தகுதி சான்றிதழ்",
+        ],
+        "te": [
+            "10వ తరగతి మార్క్స్ కార్డు",
+            "12వ లేదా II PUC మార్క్స్ కార్డు",
+            "CET లేదా COMEDK ర్యాంక్ కార్డు మరియు అలాట్‌మెంట్ లెటర్",
+            "ట్రాన్స్‌ఫర్ సర్టిఫికేట్",
+            "కండక్ట్ లేదా క్యారెక్టర్ సర్టిఫికేట్",
+            "అవసరమైతే కులం లేదా ఆదాయం సర్టిఫికేట్",
+            "ఆధార్ కార్డు కాపీ",
+            "పాస్‌పోర్ట్ సైజ్ ఫోటోలు ఆరు నుండి పది",
+            "ఇతర బోర్డు విద్యార్థులకు మైగ్రేషన్ సర్టిఫికేట్",
+            "అవసరమైతే VTU ఎలిజిబిలిటీ సర్టిఫికేట్",
+        ],
+        "ml": [
+            "10ാം ക്ലാസ് മാർക്ക് കാർഡ്",
+            "12ാം അല്ലെങ്കിൽ II PUC മാർക്ക് കാർഡ്",
+            "CET അല്ലെങ്കിൽ COMEDK റാങ്ക് കാർഡ് കൂടാതെ അലോട്ട്മെന്റ് ലെറ്റർ",
+            "ട്രാൻസ്ഫർ സർട്ടിഫിക്കറ്റ്",
+            "കണ്ടക്റ്റ് അല്ലെങ്കിൽ കാരക്ടർ സർട്ടിഫിക്കറ്റ്",
+            "ആവശ്യമായാൽ ജാതി അല്ലെങ്കിൽ വരുമാന സർട്ടിഫിക്കറ്റ്",
+            "ആധാർ കാർഡ് പകർപ്പ്",
+            "പാസ്‌പോർട്ട് സൈസ് ഫോട്ടോകൾ ആറ് മുതൽ പത്ത് വരെ",
+            "മറ്റ് ബോർഡ് വിദ്യാർത്ഥികൾക്ക് മൈഗ്രേഷൻ സർട്ടിഫിക്കറ്റ്",
+            "ആവശ്യമായാൽ VTU യോഗ്യത സർട്ടിഫിക്കറ്റ്",
+        ],
+    }
+    items = spoken_lists.get(language_key, docs_en)
+    return "Required documents are: " + "; ".join(items) + "."
 
 
 def _build_error_payload(
@@ -606,6 +671,7 @@ async def process_user_text_and_reply(
     websocket: WebSocket,
     timing: TurnTiming,
     stt_meta: dict[str, Any] | None = None,
+    local_intent: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
     _append_session_history(session, "user", text, max_turns=3)
@@ -653,61 +719,83 @@ async def process_user_text_and_reply(
 
     try:
         preprocess: dict[str, Any] | None = None
-        if lang_key != "en":
-            try:
-                preprocess = await asyncio.wait_for(
-                    normalize_and_classify_query(text, lang_name),
-                    timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
-                    MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-                )
-                preprocess = None
-            except Exception as exc:
-                logger.warning("Multilingual preprocessor failed: %s", exc)
-                preprocess = None
+        try:
+            preprocess = await asyncio.wait_for(
+                normalize_and_classify_query(text, lang_name),
+                timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
+                MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+            )
+            preprocess = None
+        except Exception as exc:
+            logger.warning("Multilingual preprocessor failed: %s", exc)
+            preprocess = None
 
-        # ─── NLP: translate (multilingual) → normalize_user_input → detect_intent_strict → extract_entities ───
-        english_translation = ""
-        preprocessor_intent_raw: str | None = None
-        if lang_key != "en" and preprocess:
-            english_translation = str(preprocess.get("english_translation") or "").strip()
-            preprocessor_intent_raw = str(preprocess.get("intent") or "").strip() or None
+        english_translation = str((preprocess or {}).get("english_translation") or "").strip()
+        department_hint = (preprocess or {}).get("target_department")
+        query_en = english_translation or text.strip()
+        features = extract_features(query_en, department_hint=department_hint)
+        intent = resolve_intent_from_features(features)
+        detected_department = features.department_name
 
-        intent, detected_department, normalized_for_intent, entity_map = resolve_card_intent_and_department(
-            raw_text=text,
-            english_query=english_translation if lang_key != "en" else None,
-            lang_key=lang_key,
-            preprocessor_intent_raw=preprocessor_intent_raw,
-        )
+        # Safety fallback: if translation drops department tokens, retry extraction on raw input.
+        if intent == INTENT_DEPARTMENT_FEES and not detected_department:
+            raw_features = extract_features(text, department_hint=department_hint)
+            if raw_features.department_name:
+                detected_department = raw_features.department_name
 
-        # Safety override: fee-like multilingual queries must route to FEES card flow.
-        if _looks_like_fee_query(text, normalized_for_intent):
-            intent = INTENT_FEES
+        # Hard override for deterministic department clicks from department menu.
+        local_intent_type = str((local_intent or {}).get("type") or "").strip().lower()
+        if local_intent_type == "department_click":
+            selected_department = str((local_intent or {}).get("departmentLabel") or "").strip()
+            if selected_department:
+                detected_department = selected_department
+                intent = INTENT_DEPARTMENT_OVERVIEW
 
-        if lang_key != "en" and english_translation:
-            rag_query = english_translation
-            llm_user_text = english_translation
-        else:
-            rag_query = normalized_for_intent
-            llm_user_text = normalized_for_intent
+        # Frontend local intent is a fallback path only when backend resolves no actionable card.
+        elif local_intent and intent == INTENT_NORMAL_QUERY:
+            frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
+            if frontend_trigger in {"department_overview", "department"}:
+                intent = INTENT_DEPARTMENT_OVERVIEW
+            elif frontend_trigger in {"course_menu", "courses"}:
+                intent = INTENT_COURSE_MENU
+            elif frontend_trigger in {"hod", "hod_info", "head_of_department"}:
+                intent = INTENT_HOD_PROFILE
+            elif frontend_trigger == "admissions":
+                intent = INTENT_ADMISSIONS
+            elif frontend_trigger == "placements":
+                intent = INTENT_PLACEMENTS
+            elif frontend_trigger in {"fees", "department_fees"}:
+                intent = INTENT_DEPARTMENT_FEES
+            elif frontend_trigger == "documents":
+                intent = INTENT_DOCUMENTS
+            frontend_dept = local_intent.get("departmentLabel")
+            if frontend_dept and not detected_department:
+                detected_department = str(frontend_dept)
+        elif local_intent:
+            frontend_dept = local_intent.get("departmentLabel")
+            if frontend_dept and not detected_department:
+                detected_department = str(frontend_dept)
+            # If local layer clearly identified fees intent, keep it card-driven.
+            frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
+            if frontend_trigger in {"fees", "department_fees"} and intent in {INTENT_NORMAL_QUERY, INTENT_ADMISSIONS}:
+                intent = INTENT_DEPARTMENT_FEES if detected_department else INTENT_ADMISSIONS
+            elif frontend_trigger == "documents" and intent == INTENT_NORMAL_QUERY:
+                intent = INTENT_DOCUMENTS
 
-        show_card_preview = infer_show_card_label(intent, detected_department)
-        logger.info(
-            "[CARD_TRIGGER] normalized=%r intent=%s departmentId=%r showCard=%s entities=%s",
-            normalized_for_intent,
-            intent,
-            detected_department,
-            show_card_preview,
-            entity_map,
-        )
-        logger.info("[NLP_TRACE] RAW INPUT: %s", text)
-        logger.info("[NLP_TRACE] DETECTED LANGUAGE: %s (%s)", lang_name, lang_key)
-        logger.info("[NLP_TRACE] RAG_QUERY: %s", rag_query)
-        logger.info("[NLP_TRACE] FINAL INTENT: %s", intent)
-        logger.info("[NLP_TRACE] FINAL DEPARTMENT: %s", detected_department)
+        rag_query = query_en
+        llm_user_text = query_en
+        entity_map = {"department": detected_department}
+
+        logger.info("[NLP_TRACE] RAW_INPUT=%r", text)
+        logger.info("[NLP_TRACE] QUERY_EN=%r", query_en)
+        logger.info("[NLP_TRACE] DETECTED_LANGUAGE=%s(%s)", lang_name, lang_key)
+        logger.info("[NLP_TRACE] FEATURES=%s", features)
+        logger.info("[NLP_TRACE] FINAL_INTENT=%s", intent)
+        logger.info("[NLP_TRACE] FINAL_DEPARTMENT=%s", detected_department)
 
         is_broad_course_menu = False
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
@@ -729,6 +817,9 @@ async def process_user_text_and_reply(
         context_source = "none"
         if off_topic_direct_reply is not None:
             # Strict scope guard: do not answer non-college questions.
+            context = ""
+            timing.mark("rag_end")
+        elif intent == INTENT_DOCUMENTS:
             context = ""
             timing.mark("rag_end")
         elif is_narrator_intent(intent):
@@ -758,7 +849,7 @@ async def process_user_text_and_reply(
                 )
                 try:
                     context = await asyncio.wait_for(
-                        asyncio.to_thread(get_relevant_context, rag_query, RAG_TOP_K, lang_key="en"),
+                        asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key="en"),
                         timeout=RAG_CONTEXT_TIMEOUT_S,
                     )
                 except asyncio.TimeoutError:
@@ -776,7 +867,7 @@ async def process_user_text_and_reply(
             # Normal query: English-indexed RAG chunks.
             try:
                 context = await asyncio.wait_for(
-                    asyncio.to_thread(get_relevant_context, rag_query, RAG_TOP_K, lang_key="en"),
+                    asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key="en"),
                     timeout=RAG_CONTEXT_TIMEOUT_S,
                 )
             except asyncio.TimeoutError:
@@ -840,6 +931,10 @@ async def process_user_text_and_reply(
             direct_reply = "Please specify the department to know the HOD."
         if intent == INTENT_COURSE_MENU:
             direct_reply = get_course_menu_spoken_prompt(lang_name)
+        elif intent == INTENT_DOCUMENTS:
+            direct_reply = _documents_card_direct_reply(lang_key)
+        elif intent == INTENT_DEPARTMENT_FEES:
+            direct_reply = _fees_card_direct_reply(lang_key, detected_department)
         elif not is_narrator_intent(intent):
             direct_reply = direct_reply or get_profile_direct_reply(intent, lang_name)
         reply_text = direct_reply or LLM_REPLY_CACHE.get(cache_key)
@@ -936,6 +1031,19 @@ async def process_user_text_and_reply(
                 reply_text = ""
                 first_sentence = ""
 
+        # Keep model output structure consistent across languages: generate in English, then translate.
+        if reply_text and not direct_reply and lang_name != "English":
+            try:
+                client = await get_groq_client()
+                reply_text = await translate_reply_to_session_language_async(
+                    reply_en=reply_text,
+                    lang_name=lang_name,
+                    client=client,
+                    model=RAG_MODEL,
+                )
+            except Exception:
+                logger.exception("Reply translation failed; using English output")
+
         if not reply_text:
             if is_narrator_intent(intent):
                 if lang_key == "kn":
@@ -980,8 +1088,9 @@ async def process_user_text_and_reply(
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
         if intent in (
             INTENT_COURSE_MENU,
+            INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
-            INTENT_FEES,
+            INTENT_DEPARTMENT_FEES,
             INTENT_ADMISSIONS,
             INTENT_PLACEMENTS,
         ):
@@ -994,14 +1103,20 @@ async def process_user_text_and_reply(
         if intent == INTENT_COLLEGE_OVERVIEW:
             show_card = "college"
         elif intent == INTENT_ADMISSIONS:
-            show_card = "admissions"
+            # Regional/mixed fee queries without resolved department still open the fees card
+            # (all-departments table), instead of falling back to plain text admissions mode.
+            if getattr(features, "is_fee_query", False):
+                show_card = "department_fees"
+                department_id = entity_map.get("department")
+            else:
+                show_card = "admissions"
         elif intent == INTENT_PLACEMENTS:
             show_card = "placements"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
             show_card = "department_overview"
             department_id = entity_map.get("department")
-        elif intent == INTENT_FEES:
-            show_card = "fees"
+        elif intent == INTENT_DEPARTMENT_FEES:
+            show_card = "department_fees"
             department_id = entity_map.get("department")
         elif intent == INTENT_HOD_PROFILE:
             if entity_map.get("department"):
@@ -1011,9 +1126,9 @@ async def process_user_text_and_reply(
                 show_card = None
                 department_id = None
         elif intent == INTENT_TRUSTEES_PROFILE:
-            show_card = "trustees"
+            show_card = "college"
         elif intent == INTENT_HOD_TRUSTEES_PROFILE:
-            show_card = ["hod", "trustees"]
+            show_card = "hod"
             department_id = entity_map.get("department")
         elif intent == INTENT_COURSE_MENU:
             show_card = "course_menu"
@@ -1021,14 +1136,18 @@ async def process_user_text_and_reply(
             reply_text = get_course_menu_spoken_prompt(lang_name)
             assistant_msg["text"] = reply_text
             assistant_msg["isHidden"] = True
+        elif intent == INTENT_DOCUMENTS:
+            show_card = "documents"
+            assistant_msg["text"] = _documents_card_direct_reply(lang_key)
+            assistant_msg["isHidden"] = True
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
 
         logger.info(
-            "[CARD_TRIGGER_FINAL] raw=%r normalized=%r entities=%s intent=%s showCard=%s departmentId=%r",
+            "[CARD_TRIGGER_FINAL] raw=%r query_en=%r entities=%s intent=%s showCard=%s departmentId=%r",
             text,
-            normalized_for_intent,
+            query_en,
             entity_map,
             intent,
             show_card,
@@ -1346,6 +1465,7 @@ async def websocket_clara(websocket: WebSocket):
 
             if action == "user_message":
                 text = (msg.get("text") or "").strip()
+                local_intent = msg.get("localIntent")
                 timing = TurnTiming()
                 timing.mark("transcript_ready")
 
@@ -1356,7 +1476,14 @@ async def websocket_clara(websocket: WebSocket):
                     await websocket.send_json({"state": 5, "payload": payload})
                     _log_turn_metrics(timing, error="missing_text")
                 else:
-                    await process_user_text_and_reply(session, text, websocket, timing, stt_meta=None)
+                    await process_user_text_and_reply(
+                        session,
+                        text,
+                        websocket,
+                        timing,
+                        stt_meta=None,
+                        local_intent=local_intent,
+                    )
                 continue
 
             if action in ("toggle_mic", "mic_start"):

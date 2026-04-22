@@ -17,6 +17,7 @@ import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
 import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
+import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAllDepartmentSummaryCardsFromLocale,
@@ -138,6 +139,16 @@ const normalizeDepartmentMenuKey = (departmentId: string): string | null => {
   return raw;
 };
 
+const normalizeCardTrigger = (trigger: unknown): string | null => {
+  if (typeof trigger !== 'string') return null;
+  const n = trigger.trim().toLowerCase();
+  if (!n) return null;
+  if (n === 'hod_info' || n === 'head_of_department' || n === 'hod_profile') return 'hod';
+  if (n === 'dept' || n === 'department') return 'department_overview';
+  if (n === 'fees') return 'department_fees';
+  return n;
+};
+
 interface ChatScreenProps {
   messages: ChatMessage[];
   isListening?: boolean;
@@ -183,6 +194,7 @@ export default function ChatScreen({
   const [isHodStage, setIsHodStage] = useState(false);
   const [isFeesStage, setIsFeesStage] = useState(false);
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
+  const [isDocumentsStage, setIsDocumentsStage] = useState(false);
   
   // Multilingual Intent Map overriding
   const [pendingLocalIntent, setPendingLocalIntent] = useState<NormalizedIntent | null>(null);
@@ -206,6 +218,7 @@ export default function ChatScreen({
         setIsHodStage(false);
         setIsFeesStage(false);
         setActiveFeesDepartmentId(null);
+        setIsDocumentsStage(false);
         setCourseMenuOptions([]);
         currentUiLockRef.current = 'IDLE'; // Release the lock
       }
@@ -437,19 +450,20 @@ export default function ChatScreen({
     
     // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
     const nativeTrigger = payload?.showCard;
-    const cardTrigger = nativeTrigger || pendingLocalIntent?.trigger;
+    const cardTrigger = normalizeCardTrigger(nativeTrigger || pendingLocalIntent?.trigger);
+    const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+    const isResponseReady = payload?.isProcessing !== true && payloadMessageList.length > 0;
     
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
-    
-    // PRIORITY: If the trigger came from LOCAL intent (not the backend's showCard),
-    // always use the local intent's departmentLabel — the backend often sends the wrong
-    // department (e.g. 'CSE') for AIML/Data Science queries.
-    const targetDepartment = (
-      (!nativeTrigger && pendingLocalIntent?.departmentLabel)
-        ? pendingLocalIntent.departmentLabel
-        : (rawTargetDept || pendingLocalIntent?.departmentLabel || null)
-    );
+    const localDeptLabel = pendingLocalIntent?.departmentLabel ?? null;
+    // Click-driven department flows must always trust the locally clicked department.
+    const shouldPreferLocalDepartment =
+      Boolean(localDeptLabel) &&
+      (cardTrigger === 'department_overview' || cardTrigger === 'department_fees' || cardTrigger === 'hod');
+    const targetDepartment = shouldPreferLocalDepartment
+      ? localDeptLabel
+      : (rawTargetDept || localDeptLabel || null);
 
     
     // STICKY STATE: Only update if we have a fresh target, otherwise preserve existing for this turn
@@ -462,7 +476,7 @@ export default function ChatScreen({
     }
 
     // Ensure we clear the pending intent so subsequent replies don't loop the previous card
-    if (pendingLocalIntent && !nativeTrigger) {
+    if (pendingLocalIntent && (!nativeTrigger || isResponseReady)) {
       setPendingLocalIntent(null);
     }
 
@@ -480,10 +494,24 @@ export default function ChatScreen({
     const audioSig = `${audioBase64?.length ?? 0}:${audioBase64?.slice(0, 24) ?? ''}`;
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
 
+    // Defer all split-card transitions until the turn has finalized messages.
+    if (cardTrigger && cardTrigger !== 'documents' && !isResponseReady) {
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'FULL_TEXT',
+        });
+      }
+      return;
+    }
+
     // Keep Fees card sticky for the active response stream.
     // Some backend chunks can arrive without `showCard: "fees"` (or with a generic fallback trigger),
     // which previously caused a temporary switch back to FULL_TEXT while TTS was still speaking.
-    if (isFeesStage && currentUiLockRef.current === 'CARD' && cardTrigger !== 'fees') {
+    if (isFeesStage && currentUiLockRef.current === 'CARD' && cardTrigger !== 'department_fees') {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
         setPendingAudio({
@@ -510,6 +538,7 @@ export default function ChatScreen({
       setInfoSlideChip('');
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       setCourseMenuOptions(menuOptionsFromPayload.length ? menuOptionsFromPayload : DEFAULT_COURSE_MENU_OPTIONS);
       if (audioBase64) {
         setPendingAudio({
@@ -534,6 +563,7 @@ export default function ChatScreen({
       setIsHodStage(false);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       currentUiLockRef.current = 'TEXT';
       setLayoutMode('FULL_TEXT');
       if (audioBase64) {
@@ -556,6 +586,7 @@ export default function ChatScreen({
       setCourseMenuOptions([]);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       setIsInfoSlideStage(true);
       const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
       setInfoSlideChip(chips.placements);
@@ -576,9 +607,10 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'hod_info') {
+    if (cardTrigger === 'hod') {
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       const targetDept = String(targetDepartment || '').trim();
       if (targetDept) {
         // Any department with a valid label — lock onto the HOD card stage.
@@ -603,6 +635,7 @@ export default function ChatScreen({
     if (cardTrigger === 'placements') {
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -611,7 +644,6 @@ export default function ChatScreen({
       setInfoSlideChip(chips.placements);
       const slides = buildPlacementCardsFromLocale(collegeData, language);
       setInfoSlides(slides);
-      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
       const lastAssistantInPayload = [...payloadMessageList]
         .reverse()
         .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
@@ -644,11 +676,11 @@ export default function ChatScreen({
       setIsHodStage(false); // Protect against HOD stage bleed-over
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
       
       const targetRaw = targetDepartment;
       const targetAll = targetRaw.toLowerCase() === 'all';
 
-      const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
       const lastAssistantInPayload = [...payloadMessageList]
         .reverse()
         .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
@@ -682,7 +714,11 @@ export default function ChatScreen({
           return;
       }
 
-      const jsonKey = menuLabelToJsonKey(resolvedDept) ?? 'cse';
+      const jsonKey = menuLabelToJsonKey(resolvedDept);
+      if (!jsonKey) {
+        // Never force a default department when backend/local resolution is ambiguous.
+        return;
+      }
       const deptRecord = getDepartmentRecord(collegeData, jsonKey);
       const slides = buildDepartmentSlidesFromRecord(deptRecord, jsonKey, language);
       const syncCards: CardDataItem[] = slides.map((s) => ({
@@ -708,7 +744,7 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'fees') {
+    if (cardTrigger === 'department_fees') {
       currentUiLockRef.current = 'CARD';
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
@@ -717,18 +753,49 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false);
+      setIsDocumentsStage(false);
       setActiveCards(null);
       setSuppressedTurnId(null);
-
-      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? String(targetDepartment || ''));
+      const resolvedDept = normalizeDepartmentMenuKey(
+        String(departmentIdFromPayload || targetDepartment || pendingLocalIntent?.departmentLabel || ''),
+      );
       const feeDeptKey =
         menuLabelToJsonKey(resolvedDept ?? '') ??
         menuLabelToJsonKey(String(targetDepartment || '')) ??
-        menuLabelToJsonKey(String(departmentIdFromPayload || ''));
+        menuLabelToJsonKey(String(departmentIdFromPayload || '')) ??
+        menuLabelToJsonKey(String(pendingLocalIntent?.departmentLabel || '')) ??
+        null;
       setIsFeesStage(true);
       setActiveFeesDepartmentId(feeDeptKey);
       setLayoutMode('SPLIT_CARDS');
 
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'documents') {
+      currentUiLockRef.current = 'CARD';
+      setCourseMenuOptions([]);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsHodStage(false);
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(true);
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      setSuppressedTurnId(turnId);
       if (audioBase64) {
         setPendingAudio({
           audioBase64,
@@ -753,7 +820,7 @@ export default function ChatScreen({
         setInfoSlideChip('');
         setIsFeesStage(false);
         setActiveFeesDepartmentId(null);
-        const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
+        setIsDocumentsStage(false);
         const lastAssistantInPayload = [...payloadMessageList]
           .reverse()
           .find((m: any) => m?.role === 'clara' && typeof m?.id === 'string');
@@ -777,7 +844,6 @@ export default function ChatScreen({
     // If a higher priority UI layout (CARD) is already locked, DO NOT override it with text.
     // TEXT-ONLY FALLBACK (NO CARD METADATA)
     // Check if we should block the 'FULL_TEXT' transition because this is a backend failure message
-    const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
     const combinedContent = payloadMessageList.map((m: any) => m.content).join(' ');
     const isFallback = isFallbackMessage(combinedContent);
 
@@ -898,18 +964,25 @@ export default function ChatScreen({
       // Notify backend for audio response in current language
       interceptAndSendMessage({
         action: 'user_message',
-        text: `Tell me about the ${departmentName} department`,
+        text: departmentName,
+        localIntent: {
+          type: 'department_click',
+          departmentLabel: departmentName,
+        },
       }, 'UI');
     },
     [interceptAndSendMessage]
   );
 
   const filteredMessages = useMemo(() => {
+    if (isDocumentsStage) {
+      return [];
+    }
     return displayMessages.filter(m => {
        const isHidden = (m as any).isHidden || (m as any).isCardData;
        return !isHidden && (m.id !== suppressedTurnId);
     });
-  }, [displayMessages, suppressedTurnId]);
+  }, [displayMessages, suppressedTurnId, isDocumentsStage]);
 
   const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
     ? visuallyFocusedMessage
@@ -922,7 +995,8 @@ export default function ChatScreen({
 
   const departmentSlides = useMemo(() => {
     if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
-    const jk = menuLabelToJsonKey(activeDepartmentId) ?? 'cse';
+    const jk = menuLabelToJsonKey(activeDepartmentId);
+    if (!jk) return [];
     const rec = getDepartmentRecord(collegeData, jk);
     return buildDepartmentSlidesFromRecord(rec, jk, language);
   }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
@@ -1039,6 +1113,8 @@ export default function ChatScreen({
                   />
                 ) : courseMenuOptions.length > 0 ? (
                   <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
+                ) : isDocumentsStage ? (
+                  <DocumentsBlock />
                 ) : isInfoSlideStage && infoSlides.length > 0 ? (
                   <DepartmentCardStage
                     departmentLabel=""
@@ -1072,7 +1148,7 @@ export default function ChatScreen({
                           className="bubble-clara" 
                         />
                   ))}
-                  {isProcessing && (
+                  {isProcessing && !isDocumentsStage && (
                     <div className="bubble-clara bubble-thinking">
                       <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
                     </div>
