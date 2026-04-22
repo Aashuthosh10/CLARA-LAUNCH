@@ -304,11 +304,12 @@ function detectEntities(normalized: string): string[] {
  * Sweeps a raw string transcript against the multilingual dictionary using Intent + Entity architecture.
  */
 export function normalizeIntent(input: string): NormalizedIntent {
+  // 0. Language Normalization Layer
+  const normalized = normalizeToEnglish(input);
+
   if (INTENT_MAP.documents.some((phrase) => normalized.includes(phrase.toLowerCase()))) {
     return { trigger: 'documents' };
   }
-  // 0. Language Normalization Layer
-  const normalized = normalizeToEnglish(input);
   const hasFeeKeyword = INTENT_MAP.fees.some((phrase) => normalized.includes(phrase.toLowerCase()));
 
   // 1. Entity Extraction
