@@ -210,7 +210,6 @@ const MULTILINGUAL_PHRASE_MAP: Record<string, string> = {
   'ಮೆಕ್': 'mechanical',
   'ಎಬಿಎ': 'mba',
   'ಐಎಎಸ್ಇ': 'ise',
-  'ಯಾಂತ್ರಿಕ': 'mechanical',
   'ಯಂತ್ರ ವಿಜ್ಞಾನ': 'mechanical',
 
   // ── Tamil ────────────────────────────────────────────────────────────────
