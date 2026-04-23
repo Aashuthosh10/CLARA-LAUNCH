@@ -68,7 +68,7 @@ RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 # Must be a valid Groq chat model id; if API returns 404, set in .env (see https://console.groq.com/docs/models)
 RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
-RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "4"))
 # Low-latency Groq model for mixed-language query normalization (Hinglish / regional + English).
 MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama-3.1-8b-instant")
 MULTILINGUAL_PREPROCESSOR_MAX_TOKENS = int(os.getenv("MULTILINGUAL_PREPROCESSOR_MAX_TOKENS", "320"))

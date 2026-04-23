@@ -7,6 +7,8 @@ import hashlib
 import json
 import logging
 import re
+from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Callable, List
 
@@ -370,7 +372,10 @@ INTENT_PLACEMENTS = "PLACEMENTS"
 INTENT_HOD_PROFILE = "HOD_PROFILE"
 INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
-INTENT_FEES = "FEES"
+INTENT_DEPARTMENT_FEES = "DEPARTMENT_FEES"
+INTENT_DOCUMENTS = "DOCUMENTS"
+# Backward-compatible alias for legacy imports.
+INTENT_FEES = INTENT_DEPARTMENT_FEES
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
 INTENT_OFF_TOPIC = "OFF_TOPIC"
 
@@ -430,38 +435,20 @@ COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
 
 SUPPORTED_LANGUAGES = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
 UNAVAILABLE_REPLY_BY_LANGUAGE: dict[str, str] = {
-    "English": "Happy to help. For the most accurate details, please meet our Admission Block team for complete guidance.",
-    "Kannada": "ಸಹಾಯ ಮಾಡಲು ಸಂತೋಷ. ಅತ್ಯಂತ ನಿಖರ ಮಾಹಿತಿಗಾಗಿ ದಯವಿಟ್ಟು ಅಡ್ಮಿಷನ್ ಬ್ಲಾಕ್ ತಂಡವನ್ನು ಭೇಟಿ ಮಾಡಿ.",
-    "Hindi": "मदद करके खुशी होगी। सबसे सटीक जानकारी के लिए कृपया एडमिशन ब्लॉक टीम से मिलें।",
-    "Tamil": "உதவுவதில் மகிழ்ச்சி. மிகத் துல்லியமான தகவல்களுக்கு தயவுசெய்து அட்மிஷன் ப்ளாக் குழுவைச் சந்திக்கவும்.",
-    "Telugu": "సహాయం చేయడం ఆనందంగా ఉంది. అత్యంత ఖచ్చితమైన వివరాల కోసం దయచేసి అడ్మిషన్ బ్లాక్ టీంను కలవండి.",
-    "Malayalam": "സഹായിക്കാൻ സന്തോഷം. ഏറ്റവും കൃത്യമായ വിവരങ്ങൾക്ക് ദയവായി അഡ്മിഷൻ ബ്ലോക്ക് ടീമിനെ സമീപിക്കുക.",
+    "English": "I currently don't have that exact detail. Please contact the admission office for precise information.",
+    "Kannada": "ಈ ಕ್ಷಣದಲ್ಲಿ ಆ ನಿಖರ ವಿವರ ನನ್ನ ಬಳಿ ಇಲ್ಲ. ದಯವಿಟ್ಟು ಖಚಿತ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+    "Hindi": "इस समय मेरे पास वह सटीक जानकारी नहीं है। कृपया सटीक विवरण के लिए एडमिशन ऑफिस से संपर्क करें।",
+    "Tamil": "அந்த துல்லியமான தகவல் இப்போது என்னிடம் இல்லை. சரியான விவரங்களுக்கு அட்மிஷன் அலுவலகத்தை தொடர்புகொள்ளவும்.",
+    "Telugu": "ఆ ఖచ్చితమైన వివరాలు ప్రస్తుతం నా వద్ద లేవు. సరైన సమాచారం కోసం దయచేసి అడ్మిషన్ కార్యాలయాన్ని సంప్రదించండి.",
+    "Malayalam": "ആ കൃത്യമായ വിശദാംശം ഇപ്പോൾ എനിക്ക് ലഭ്യമല്ല. ദയവായി കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസിനെ സമീപിക്കുക.",
 }
 OFF_TOPIC_REPLY_BY_LANGUAGE: dict[str, str] = {
-    "English": (
-        "I can help with SVIT-related queries only, such as admissions, fees, departments, placements, and campus details. "
-        "For further guidance, please meet our Admission Block team."
-    ),
-    "Kannada": (
-        "ನಾನು SVIT ಸಂಬಂಧಿತ ಪ್ರಶ್ನೆಗಳಿಗೆ ಮಾತ್ರ ಸಹಾಯ ಮಾಡುತ್ತೇನೆ (ಅಡ್ಮಿಷನ್, ಶುಲ್ಕ, ವಿಭಾಗಗಳು, ಪ್ಲೇಸ್‌ಮೆಂಟ್, ಕ್ಯಾಂಪಸ್). "
-        "ಹೆಚ್ಚಿನ ಮಾರ್ಗದರ್ಶನಕ್ಕಾಗಿ ದಯವಿಟ್ಟು ಅಡ್ಮಿಷನ್ ಬ್ಲಾಕ್ ತಂಡವನ್ನು ಭೇಟಿ ಮಾಡಿ."
-    ),
-    "Hindi": (
-        "मैं केवल SVIT से संबंधित प्रश्नों में मदद कर सकती हूँ (एडमिशन, फीस, विभाग, प्लेसमेंट, कैंपस)। "
-        "अधिक मार्गदर्शन के लिए कृपया एडमिशन ब्लॉक टीम से मिलें।"
-    ),
-    "Tamil": (
-        "நான் SVIT தொடர்பான கேள்விகளுக்கே உதவ முடியும் (அட்மிஷன், கட்டணம், துறைகள், ப்ளேஸ்மென்ட், வளாகம்). "
-        "மேலும் வழிகாட்டலுக்கு தயவுசெய்து அட்மிஷன் ப்ளாக் குழுவைச் சந்திக்கவும்."
-    ),
-    "Telugu": (
-        "నేను SVIT‌కు సంబంధించిన ప్రశ్నలకు మాత్రమే సహాయం చేయగలను (అడ్మిషన్, ఫీజులు, విభాగాలు, ప్లేస్‌మెంట్స్, క్యాంపస్). "
-        "మరింత మార్గదర్శకత్వం కోసం దయచేసి అడ్మిషన్ బ్లాక్ టీంను కలవండి."
-    ),
-    "Malayalam": (
-        "ഞാൻ SVIT സംബന്ധമായ ചോദ്യങ്ങൾക്കാണ് സഹായിക്കുക (അഡ്മിഷൻ, ഫീസ്, വിഭാഗങ്ങൾ, പ്ലേസ്മെന്റ്, ക്യാമ്പസ്). "
-        "കൂടുതൽ മാർഗനിർദേശത്തിന് ദയവായി അഡ്മിഷൻ ബ്ലോക്ക് ടീമിനെ സമീപിക്കുക."
-    ),
+    "English": "I currently don't have that exact detail. Please contact the admission office for precise information.",
+    "Kannada": "ಈ ಕ್ಷಣದಲ್ಲಿ ಆ ನಿಖರ ವಿವರ ನನ್ನ ಬಳಿ ಇಲ್ಲ. ದಯವಿಟ್ಟು ಖಚಿತ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+    "Hindi": "इस समय मेरे पास वह सटीक जानकारी नहीं है। कृपया सटीक विवरण के लिए एडमिशन ऑफिस से संपर्क करें।",
+    "Tamil": "அந்த துல்லியமான தகவல் இப்போது என்னிடம் இல்லை. சரியான விவரங்களுக்கு அட்மிஷன் அலுவலகத்தை தொடர்புகொள்ளவும்.",
+    "Telugu": "ఆ ఖచ్చితమైన వివరాలు ప్రస్తుతం నా వద్ద లేవు. సరైన సమాచారం కోసం దయచేసి అడ్మిషన్ కార్యాలయాన్ని సంప్రదించండి.",
+    "Malayalam": "ആ കൃത്യമായ വിശദാംശം ഇപ്പോൾ എനിക്ക് ലഭ്യമല്ല. ദയവായി കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസിനെ സമീപിക്കുക.",
 }
 
 
@@ -603,11 +590,39 @@ COURSE_MENU_KEYWORDS_EN = [
     "programs available",
     "courses offered",
     "branches available",
+    # Kannada / mixed
+    "course ide",
+    "yava course",
+    "course ideya",
+    "courses en ide",
+    "course ideya svit alli",
+    # Hindi
+    "course kya hai",
+    "kaunse course",
+    # Tamil
+    "enna course",
+    "course iruka",
+    # Telugu
+    "course enti",
+    "course unnaya",
+    "college ali yaav courses ide",
+    "college alli yaava courses ide",
+    "college ali yaav yaav departments aithe",
+    "college alli yaava yaava departments ide",
+    "yaav departments aithe",
+    "yaava departments ide",
 ]
 
 FEE_QUERY_KEYWORDS = [
     "fee",
     "fees",
+    "fees eshtu",
+    "fees bagge",
+    "fees kitna",
+    "fee kya hai",
+    "fees evlo",
+    "fees entha",
+    "fees estu",
     "fee structure",
     "tuition",
     "cost",
@@ -629,6 +644,12 @@ FEE_QUERY_KEYWORDS = [
     "kaasu",
     "dabbu",
     "karchu",
+    "evlo",
+    "entha",
+    "enu",
+    "yaaru",
+    "kaun",
+    "evaru",
     # Kannada (script + transliteration)
     "ಶುಲ್ಕ",
     "ಶುಲ್ಕಗಳು",
@@ -716,6 +737,59 @@ DEPARTMENT_SYNONYMS: dict[str, list[str]] = {
     "Chemistry": ["chemistry"],
 }
 
+
+@dataclass(frozen=True)
+class QueryFeatures:
+    has_department: bool
+    department_name: str | None
+    is_hod_query: bool
+    is_fee_query: bool
+    is_course_query: bool
+    is_documents_query: bool
+    is_placement_query: bool
+    is_overview_query: bool
+
+
+def _normalize_department_match_text(text: str | None) -> str:
+    """Normalize text for deterministic longest-first department matching."""
+    n = re.sub(r"\s+", " ", str(text or "").strip().lower())
+    if not n:
+        return ""
+    n = n.replace("data science", "datascience")
+    n = re.sub(r"\bdata\s*science\b", "datascience", n)
+    n = re.sub(r"\bai\s*&?\s*ml\b", "aiml", n)
+    return re.sub(r"\s+", " ", n.strip())
+
+
+def _normalize_department_synonym(term: str) -> str:
+    t = re.sub(r"\s+", " ", str(term or "").strip().lower())
+    if not t:
+        return ""
+    t = t.replace("data science", "datascience")
+    t = re.sub(r"\bdata\s*science\b", "datascience", t)
+    t = re.sub(r"\bai\s*&?\s*ml\b", "aiml", t)
+    return re.sub(r"\s+", " ", t.strip())
+
+
+def _iter_department_candidates_longest_first() -> list[tuple[str, str]]:
+    candidates: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for dept, aliases in DEPARTMENT_SYNONYMS.items():
+        for alias in aliases:
+            norm_alias = _normalize_department_synonym(alias)
+            if not norm_alias:
+                continue
+            item = (norm_alias, dept)
+            if item in seen:
+                continue
+            seen.add(item)
+            candidates.append(item)
+    candidates.sort(key=lambda x: len(x[0]), reverse=True)
+    return candidates
+
+
+_DEPARTMENT_CANDIDATES_LONGEST_FIRST = _iter_department_candidates_longest_first()
+
 HOD_PROFILE_KEYWORDS = [
     "hod",
     "hods",
@@ -733,6 +807,9 @@ HOD_PROFILE_KEYWORDS = [
     "head of department",
     "heads of department",
     "heads of the department",
+    "yaaru",
+    "kaun",
+    "evaru",
 ]
 
 TRUSTEES_PROFILE_KEYWORDS = [
@@ -936,18 +1013,294 @@ def get_course_menu_spoken_prompt(language: str | None) -> str:
 
 
 def detect_department_name(text: str | None) -> str | None:
-    normalized = _normalize_text(text)
+    normalized = _normalize_department_match_text(text)
     return _detect_department(normalized)
 
 
 def _detect_department(normalized: str) -> str | None:
     if not normalized:
         return None
-    for dept, keys in DEPARTMENT_SYNONYMS.items():
-        for k in keys:
-            if k in normalized:
-                return dept
+    n = _normalize_department_match_text(normalized)
+    if not n:
+        return None
+    for alias, dept in _DEPARTMENT_CANDIDATES_LONGEST_FIRST:
+        if _contains_phrase(n, alias):
+            return dept
     return None
+
+
+def extract_features(query_en: str, department_hint: str | None = None) -> QueryFeatures:
+    """
+    Pure, deterministic feature extraction. No intent decisions here.
+    """
+    raw = str(query_en or "")
+    lowered = raw.lower()
+    # Remove common punctuation without stripping non-Latin script glyphs.
+    cleaned = re.sub(r"[.,!?;:'\"()\[\]{}<>|/\\@#$%^&*_+=~`-]", " ", lowered)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    filler_words = {
+        # English
+        "what",
+        "tell",
+        "give",
+        "about",
+        "please",
+        # Kannada
+        "bagge",
+        "helu",
+        "tilsi",
+        "enu",
+        "yenu",
+        # Hindi
+        "ke",
+        "ka",
+        "hai",
+        "kya",
+        # Tamil
+        "pathi",
+        "solu",
+        "enna",
+        # Telugu
+        "gurinchi",
+        "cheppu",
+        "enti",
+        # Malayalam
+        "kurich",
+        "parayu",
+        "entha",
+    }
+
+    raw_tokens = [tok for tok in cleaned.split(" ") if tok]
+    tokens = [tok for tok in raw_tokens if tok not in filler_words]
+    normalized = " ".join(tokens)
+
+    def _sim(a: str, b: str) -> float:
+        return SequenceMatcher(None, a, b).ratio()
+
+    def _fuzzy_match(word: str, keyword: str) -> bool:
+        w = (word or "").strip()
+        k = (keyword or "").strip()
+        if not w or not k:
+            return False
+        if w == k:
+            return True
+        return _sim(w, k) > 0.7
+
+    def _any_token_fuzzy_match(word_tokens: list[str], keywords: list[str]) -> bool:
+        for tok in word_tokens:
+            for kw in keywords:
+                if _fuzzy_match(tok, kw):
+                    return True
+        return False
+
+    def _any_hod_token_fuzzy_match(word_tokens: list[str], keywords: list[str]) -> bool:
+        for tok in word_tokens:
+            for kw in keywords:
+                t = (tok or "").strip()
+                k = (kw or "").strip()
+                if not t or not k:
+                    continue
+                if t == k:
+                    return True
+                # Avoid aggressive false positives like "kaunse" -> "kaun".
+                if len(k) <= 4:
+                    continue
+                if SequenceMatcher(None, t, k).ratio() > 0.82:
+                    return True
+        return False
+
+    def _build_ngrams(word_tokens: list[str], max_n: int = 3) -> list[str]:
+        out: list[str] = []
+        if not word_tokens:
+            return out
+        for n in range(1, max_n + 1):
+            for i in range(0, len(word_tokens) - n + 1):
+                out.append(" ".join(word_tokens[i : i + n]))
+        return out
+
+    ngrams = _build_ngrams(tokens, max_n=3)
+    token_and_phrase_units = list(dict.fromkeys(tokens + ngrams))
+
+    fees_keywords = [
+        "fee",
+        "fees",
+        "structure",
+        "estu",
+        "eshtu",
+        "evlo",
+        "entha",
+        "kitna",
+        "kattanam",
+        "dabbulu",
+        "feesu",
+        "ಶುಲ್ಕ",
+        "फीस",
+        "கட்டணம்",
+        "ఫీజు",
+        "ഫീസ്",
+    ]
+    hod_keywords = [
+        "hod",
+        "head",
+        "yaaru",
+        "kaun",
+        "yaar",
+        "evaru",
+        "aaranu",
+    ]
+    course_keywords = [
+        "course",
+        "courses",
+        "program",
+        "branch",
+        "department",
+        "departments",
+        "course enu",
+        "courses en ide",
+        "course kya",
+        "kaunse courses",
+        "course enna",
+        "course pathi",
+        "course enti",
+        "courses enti",
+        "course entha",
+        "course kurich",
+    ]
+    documents_keywords = [
+        "document",
+        "documents",
+        "documentsrequired",
+        "admissiondocuments",
+        "documentbagge",
+        "documentsbeku",
+        "dakhalegalu",
+        "documentkyachahiye",
+        "documentskaunse",
+        "admissionkedocuments",
+        "documentsennavenum",
+        "documentsenti",
+        "documentsentha",
+        "documentskurich",
+        # common misspellings
+        "doccuments",
+        "documnts",
+        "doucments",
+    ]
+
+    dept_aliases: dict[str, list[str]] = {
+        "CSE (Data Science)": [
+            "cse data science",
+            "cse datascience",
+            "data science",
+            "datascience",
+            "dtascience",
+            "ds",
+        ],
+        "CSE (AI & ML)": [
+            "cse ai ml",
+            "ai ml",
+            "aiml",
+        ],
+        "CSE (Cyber Security)": [
+            "cse cyber security",
+            "cyber security",
+            "cybersecurity",
+            "cyber",
+        ],
+        "CSE (Business Systems)": [
+            "cse business systems",
+            "business systems",
+        ],
+        "ISE": ["information science", "ise"],
+        "ECE": ["electronics", "ece"],
+        "Civil": ["civil"],
+        "Mechanical": ["mechanical", "mech"],
+        "MBA": ["mba"],
+        "Basic Sciences": ["basic sciences"],
+        "CSE": ["computer science", "cse"],
+    }
+
+    hinted_department = department_label_from_preprocessor(department_hint)
+
+    detected_department: str | None = None
+    if hinted_department:
+        detected_department = hinted_department
+    else:
+        # Longest phrase priority first.
+        dept_candidates: list[tuple[str, str]] = []
+        for dept_name, aliases in dept_aliases.items():
+            for alias in aliases:
+                dept_candidates.append((alias, dept_name))
+        dept_candidates.sort(key=lambda x: len(x[0]), reverse=True)
+
+        joined = f" {normalized} " if normalized else ""
+        for alias, dept_name in dept_candidates:
+            a = alias.strip()
+            if not a:
+                continue
+            if f" {a} " in joined:
+                detected_department = dept_name
+                break
+
+        if not detected_department:
+            # Token/phrase fuzzy fallback for broken spellings.
+            for alias, dept_name in dept_candidates:
+                for unit in token_and_phrase_units:
+                    if _fuzzy_match(unit, alias):
+                        detected_department = dept_name
+                        break
+                if detected_department:
+                    break
+
+        if not detected_department:
+            detected_department = _detect_department(normalize_user_input(raw))
+
+    has_department = bool(detected_department)
+    is_hod_query = _any_hod_token_fuzzy_match(tokens, hod_keywords)
+    is_fee_query = _any_token_fuzzy_match(tokens, fees_keywords)
+    def _matches_course_intent(units: list[str], keywords: list[str]) -> bool:
+        for unit in units:
+            u = (unit or "").strip()
+            if not u:
+                continue
+            for kw in keywords:
+                k = (kw or "").strip()
+                if not k:
+                    continue
+                if u == k:
+                    return True
+                # Token-level fuzzy detection for multilingual mixed/broken input.
+                if _sim(u, k) >= 0.7:
+                    return True
+        return False
+
+    def _matches_documents_intent(units: list[str], keywords: list[str]) -> bool:
+        compact_units = [re.sub(r"\s+", "", u.strip()) for u in units if u and u.strip()]
+        for unit in compact_units:
+            for kw in keywords:
+                k = re.sub(r"\s+", "", (kw or "").strip())
+                if not k:
+                    continue
+                if unit == k:
+                    return True
+                if _sim(unit, k) >= 0.7:
+                    return True
+        return False
+
+    is_course_query = _matches_course_intent(token_and_phrase_units, course_keywords)
+    is_documents_query = _matches_documents_intent(token_and_phrase_units, documents_keywords)
+
+    return QueryFeatures(
+        has_department=has_department,
+        department_name=detected_department,
+        is_hod_query=is_hod_query,
+        is_fee_query=is_fee_query or _is_fee_query(normalized),
+        is_course_query=is_course_query,
+        is_documents_query=is_documents_query,
+        is_placement_query=_is_placements_query(normalized),
+        is_overview_query=_is_college_overview_query(normalized),
+    )
 
 
 def _is_course_menu_query(normalized: str) -> bool:
@@ -957,11 +1310,17 @@ def _is_course_menu_query(normalized: str) -> bool:
     # 1) Check exact known phrases
     if any(k in normalized for k in COURSE_MENU_KEYWORDS_EN):
         return True
+    if _contains_phrase(normalized, "courses in") or _contains_phrase(normalized, "course in"):
+        return True
+    if _contains_phrase(normalized, "courses") or _contains_phrase(normalized, "course"):
+        return True
 
-    # 2) Course entity + list/show cue (Latin script; non-English sessions use LLM preprocessor)
+    # 2) Course/department entity + list/show cue (Latin script; robust to transliterated speech)
     course_entities = [
         "course",
         "courses",
+        "department",
+        "departments",
         "branch",
         "branches",
         "program",
@@ -979,6 +1338,8 @@ def _is_course_menu_query(normalized: str) -> bool:
         "how many",
         "yava",
         "yaava",
+        "yaav",
+        "yav",
         "kaun",
         "kya",
         "enna",
@@ -992,6 +1353,11 @@ def _is_course_menu_query(normalized: str) -> bool:
         "sollu",
         "cheppu",
         "parayu",
+        "ide",
+        "ideya",
+        "aithe",
+        "alli",
+        "ali",
     ]
 
     has_course = any(c in normalized for c in course_entities)
@@ -1163,6 +1529,16 @@ def normalize_query_to_english(text: str) -> str:
         "bagge": "about",
         "helu": "",
         "heli": "",
+        "yaav": "which",
+        "yaava": "which",
+        "yav": "which",
+        "ali": "in",
+        "alli": "in",
+        "aithe": "available",
+        "ide": "available",
+        "ideya": "available",
+        "estu": "how much",
+        "du": "",
         "enu": "what",
         "hegide": "how",
         "eshtu": "how much",
@@ -1254,7 +1630,7 @@ DEPARTMENT_KEYWORDS: dict[str, str] = {
     "ece": "ECE",
     "ec": "ECE",
     "ise": "ISE",
-    "civil": "CIVIL",
+    "civil": "Civil",
     "mechanical": "Mechanical",
     "mba": "MBA",
 }
@@ -1311,49 +1687,26 @@ def extract_entities(query_normalized: str) -> dict[str, Any]:
     return out
 
 
-def detect_intent_with_priority(query_en: str, entities: dict[str, Any]) -> str:
+def resolve_intent_from_features(features: QueryFeatures) -> str:
     """
-    Priority-based intent after ``extract_entities`` on the same normalized ``query_en``.
-
-    1. Role: HOD → ``HOD_PROFILE`` (highest). Trustees / both preserved for existing flows.
-    2. Admissions (admission, fees keywords).
-    3. Placements (placement, jobs).
-    4. Department overview if ``entities[\"department\"]`` is set.
-    5. Course menu (courses, branches).
-    6. College overview (overview, about college).
-    7. Else ``NORMAL_QUERY``.
+    Final deterministic intent resolver from extracted features only.
     """
-    n = (query_en or "").strip()
-    if not n:
-        return INTENT_NORMAL_QUERY
-
-    # FEES has strict priority over other intents once detected.
-    if _is_fee_query(n):
-        return INTENT_FEES
-
-    role = entities.get("role")
-    if role == "HOD":
+    if features.is_hod_query:
         return INTENT_HOD_PROFILE
-    if role == "TRUSTEES":
-        return INTENT_TRUSTEES_PROFILE
-    if role == "BOTH":
-        return INTENT_HOD_TRUSTEES_PROFILE
-
-    if re.search(r"\badmissions?\b", n) or _is_admissions_query(n):
-        return INTENT_ADMISSIONS
-
-    if re.search(r"\bplacements?\b", n) or re.search(r"\bjobs?\b", n) or _is_placements_query(n):
-        return INTENT_PLACEMENTS
-
-    if entities.get("department"):
-        return INTENT_DEPARTMENT_OVERVIEW
-
-    if re.search(r"\bcourses\b", n) or re.search(r"\bbranches\b", n) or _is_course_menu_query(n):
+    if features.is_documents_query:
+        return INTENT_DOCUMENTS
+    if features.is_fee_query and features.has_department:
+        return INTENT_DEPARTMENT_FEES
+    if features.is_course_query:
         return INTENT_COURSE_MENU
-
-    if re.search(r"\boverview\b", n) or "about college" in n or _is_college_overview_query(n):
+    if features.has_department:
+        return INTENT_DEPARTMENT_OVERVIEW
+    if features.is_fee_query:
+        return INTENT_ADMISSIONS
+    if features.is_placement_query:
+        return INTENT_PLACEMENTS
+    if features.is_overview_query:
         return INTENT_COLLEGE_OVERVIEW
-
     return INTENT_NORMAL_QUERY
 
 
@@ -1364,8 +1717,8 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
     dept = entities.get("department")
     if intent == INTENT_HOD_PROFILE:
         return {"showCard": "hod", "departmentId": dept}
-    if intent == INTENT_FEES:
-        return {"showCard": "fees", "departmentId": dept}
+    if intent == INTENT_DEPARTMENT_FEES:
+        return {"showCard": "department_fees", "departmentId": dept}
     if intent == INTENT_DEPARTMENT_OVERVIEW:
         return {"showCard": "department_overview", "departmentId": dept}
     if intent == INTENT_COLLEGE_OVERVIEW:
@@ -1376,6 +1729,8 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
         return {"showCard": "placements", "departmentId": None}
     if intent == INTENT_COURSE_MENU:
         return {"showCard": "course_menu", "departmentId": None}
+    if intent == INTENT_DOCUMENTS:
+        return {"showCard": "documents", "departmentId": None}
     if intent == INTENT_TRUSTEES_PROFILE:
         return {"showCard": "trustees", "departmentId": None}
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
@@ -1390,8 +1745,8 @@ def detect_intent_strict(normalized: str) -> str:
     n = (normalized or "").strip()
     if not n:
         return INTENT_NORMAL_QUERY
-    entities = extract_entities(n)
-    return detect_intent_with_priority(n, entities)
+    feats = extract_features(n)
+    return resolve_intent_from_features(feats)
 
 
 def resolve_card_intent_and_department(
@@ -1400,62 +1755,45 @@ def resolve_card_intent_and_department(
     lang_key: str,
     *,
     preprocessor_intent_raw: str | None = None,
-) -> tuple[str, str | None, str, dict[str, Any]]:
+) -> tuple[str, str | None, str, dict[str, Any], QueryFeatures]:
     """
     Backend-only card routing: normalize → ``extract_entities`` → ``detect_intent_with_priority``.
 
     - Non-English: prefer ``english_query`` (translated) for detection when provided.
     - ``preprocessor_intent_raw`` may supply off-topic from ``normalize_and_classify_query``.
     """
-    if preprocessor_intent_raw:
-        s = str(preprocessor_intent_raw).strip().upper().replace("-", "_")
-        if s.startswith("INTENT_"):
-            s = s[7:]
-        if s == "OFF_TOPIC":
-            base = normalize_user_input(english_query or raw_text)
-            ent = extract_entities(base)
-            logger.info("[INTENT_PRIORITY] query_en=%r entities=%s intent=%s", base, ent, INTENT_OFF_TOPIC)
-            return INTENT_OFF_TOPIC, None, base, ent
-
     original_input = (raw_text or "").strip()
-    if lang_key != "en":
-        base_in = (english_query or raw_text or "").strip()
-    else:
-        base_in = original_input
-
+    base_in = (english_query or raw_text or "").strip() if lang_key != "en" else original_input
     query_en = normalize_user_input(base_in)
     raw_normalized = normalize_user_input(original_input)
-
-    # Use both normalized forms so mixed-language/translator misses cannot suppress FEES intent.
     merged_query = _normalize_text(" ".join([q for q in (query_en, raw_normalized) if q]))
     entities = extract_entities(merged_query)
-    intent = detect_intent_with_priority(merged_query, entities)
-    # Hard guard: any fee-like query must stay in FEES lane (never department_overview first).
-    if _is_fee_query(merged_query):
-        intent = INTENT_FEES
-    dept: str | None = entities.get("department")
+    features = extract_features(merged_query, department_hint=entities.get("department"))
+    intent = resolve_intent_from_features(features)
+    dept: str | None = features.department_name
 
     logger.info(
-        "[INTENT_PRIORITY] original_input=%r normalized=%r raw_normalized=%r merged=%r intent=%s department=%r entities=%s",
+        "[INTENT_PRIORITY] original_input=%r query_en=%r raw_normalized=%r merged=%r features=%s intent=%s department=%r entities=%s",
         original_input,
         query_en,
         raw_normalized,
         merged_query,
+        features,
         intent,
         dept,
         entities,
     )
     logger.info("[INTENT_PRIORITY] card_hints=%s", card_trigger_hints(intent, entities))
 
-    return intent, dept, query_en, entities
+    return intent, dept, query_en, entities, features
 
 
 def infer_show_card_label(intent: str, detected_department: str | None) -> str | list[str] | None:
     """Human-readable showCard label(s) for logging only (mirrors main.py payload)."""
     if intent == INTENT_COLLEGE_OVERVIEW:
         return "college"
-    if intent == INTENT_FEES:
-        return "fees"
+    if intent == INTENT_DEPARTMENT_FEES:
+        return "department_fees"
     if intent == INTENT_ADMISSIONS:
         return "admissions"
     if intent == INTENT_PLACEMENTS:
@@ -1470,14 +1808,16 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
         return ["hod", "trustees"]
     if intent == INTENT_COURSE_MENU:
         return "course_menu"
+    if intent == INTENT_DOCUMENTS:
+        return "documents"
     return None
 
 
 def detect_intent(text: str) -> str:
-    """Public API: normalize → ``extract_entities`` → ``detect_intent_with_priority``."""
+    """Public API: normalize → ``extract_features`` → ``resolve_intent_from_features``."""
     query_en = normalize_user_input(text)
-    entities = extract_entities(query_en)
-    return detect_intent_with_priority(query_en, entities)
+    features = extract_features(query_en)
+    return resolve_intent_from_features(features)
 
 
 def _strip_json_fence(text: str) -> str:
@@ -1497,8 +1837,10 @@ def _coerce_preprocessor_intent(raw: str | None) -> str:
     aliases: dict[str, str] = {
         "COLLEGE_OVERVIEW": INTENT_COLLEGE_OVERVIEW,
         "COURSE_MENU": INTENT_COURSE_MENU,
+        "DOCUMENTS": INTENT_DOCUMENTS,
         "DEPARTMENT_OVERVIEW": INTENT_DEPARTMENT_OVERVIEW,
-        "FEES": INTENT_FEES,
+        "FEES": INTENT_DEPARTMENT_FEES,
+        "DEPARTMENT_FEES": INTENT_DEPARTMENT_FEES,
         "ADMISSIONS": INTENT_ADMISSIONS,
         "PLACEMENTS": INTENT_PLACEMENTS,
         "HOD_PROFILE": INTENT_HOD_PROFILE,
@@ -1524,17 +1866,13 @@ def department_label_from_preprocessor(value: Any) -> str | None:
 
 async def normalize_and_classify_query(user_text: str, session_lang: str) -> dict[str, Any]:
     """
-    For non-English sessions: translate mixed-language input to English and classify intent + department.
-    English sessions should not call this (use detect_intent / detect_department_name instead).
+    Translate mixed-language input to English and optionally hint department.
+    Intent from this helper is advisory only and must not drive final routing.
     """
     from backend.config.settings import MULTILINGUAL_PREPROCESSOR_MAX_TOKENS, MULTILINGUAL_PREPROCESSOR_MODEL
 
     text = (user_text or "").strip()
-    fallback: dict[str, Any] = {
-        "english_translation": text,
-        "intent": INTENT_NORMAL_QUERY,
-        "target_department": None,
-    }
+    fallback: dict[str, Any] = {"english_translation": text, "target_department": None}
     if not text:
         return fallback
     try:
@@ -1581,9 +1919,8 @@ async def normalize_and_classify_query(user_text: str, session_lang: str) -> dic
         en = (payload.get("english_translation") or "").strip()
         if not en:
             en = text
-        intent = _coerce_preprocessor_intent(payload.get("intent"))
         dept = department_label_from_preprocessor(payload.get("target_department"))
-        return {"english_translation": en, "intent": intent, "target_department": dept}
+        return {"english_translation": en, "target_department": dept}
     except Exception as e:
         logger.warning(f"[NLP_TRACE] normalize_and_classify_query failed: {e}", exc_info=True)
         return fallback
@@ -2156,7 +2493,7 @@ def generate_reply(
     if intent == INTENT_COURSE_MENU:
         return "COURSE_MENU"
 
-    if intent == INTENT_FEES:
+    if intent == INTENT_DEPARTMENT_FEES:
         fee_base = normalize_user_input(qen)
         fee_entities = extract_entities(fee_base)
         fee_dept = fee_entities.get("department")

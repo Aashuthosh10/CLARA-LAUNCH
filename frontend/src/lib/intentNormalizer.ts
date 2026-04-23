@@ -1,5 +1,5 @@
 export type NormalizedIntent = {
-  trigger: 'course_menu' | 'department_overview' | 'hod_info' | 'admissions' | 'placements' | 'fees' | 'college_overview' | 'trustees' | null;
+  trigger: 'course_menu' | 'department_overview' | 'hod_info' | 'admissions' | 'placements' | 'fees' | 'college_overview' | 'trustees' | 'documents' | null;
   departmentLabel?: string;
 };
 
@@ -196,7 +196,7 @@ const MULTILINGUAL_PHRASE_MAP: Record<string, string> = {
   'संस्थान': 'institute',
   'कैंपस': 'campus',
   'कटऑफ': 'cutoff',
-  'केसीईटी': 'kcet',
+  'केसीईಟಿ': 'kcet',
   'कितनी': 'how much',
   'क्या': 'what',
   // Specific fixes
@@ -206,12 +206,12 @@ const MULTILINGUAL_PHRASE_MAP: Record<string, string> = {
   'डिजिटल': 'digital',
   'आईटी': 'information science',
   'आई एस ई': 'ise',
-  'मैक': 'mechanical',
-  'मेक': 'mechanical',
-  'एबीए': 'mba',
-  'आईएएसई': 'ise',
-  'यांत्रिक': 'mechanical',
-  'यंत्र विज्ञान': 'mechanical',
+  'मैಕ್': 'mechanical',
+  'ಮೆಕ್': 'mechanical',
+  'ಎಬಿಎ': 'mba',
+  'ಐಎಎಸ್ಇ': 'ise',
+  'ಯಾಂತ್ರಿಕ': 'mechanical',
+  'ಯಂತ್ರ ವಿಜ್ಞಾನ': 'mechanical',
 
   // ── Tamil ────────────────────────────────────────────────────────────────
   'டேட்டா சயின்ஸ்': 'data science',
@@ -228,7 +228,7 @@ const MULTILINGUAL_PHRASE_MAP: Record<string, string> = {
   'எம்.பி.ஏ': 'mba',
   'ஐஎஸ்இ': 'ise',
   'ஈசிஇ': 'ece',
-  'ஹெச்ஓடி': 'hod',
+  'ஹெಚ್ஓடி': 'hod',
   'துறைத் தலைவர்': 'head of department',
   'தலைவர்': 'head',
   'தலைமை': 'head',
@@ -307,8 +307,8 @@ const MULTILINGUAL_PHRASE_MAP: Record<string, string> = {
   'യന്ത്രവിദ്യ': 'mechanical',
   'എംബിഎ': 'mba',
   'എബീഎ': 'mba',
-  'ഐഎസ്ഇ': 'ise',
-  'ഇസിഇ': 'ece',
+  'ഐഎസ്ഈ': 'ise',
+  'ഇസിഈ': 'ece',
   'എച്ച്ഒഡി': 'hod',
   'വിഭാഗം മേധാവി': 'head of department',
   'തലവൻ': 'head',
@@ -369,9 +369,15 @@ function normalizeToEnglish(input: string): string {
 
 // Intent keyword lists — ENGLISH ONLY (multilingual tokens already normalized above)
 const INTENT_MAP = {
+  documents: [
+    'document', 'documents', 'documents required', 'admission documents',
+    'document bagge', 'documents beku', 'dakhalegalu',
+    'document kya chahiye', 'documents kaunse', 'admission ke documents',
+    'documents enna venum', 'documents enti', 'documents entha', 'documents kurich'
+  ],
   course_menu: [
     'courses', 'programs', 'degrees', 'what do you offer', 'academic options',
-    'college courses', 'which course', 'course',
+    'college courses', 'which course', 'course', 'which departments', 'department list'
   ],
   fees: [
     'fee', 'fees', 'tuition', 'management quota', 'how much', 'cost', 'price',
@@ -411,7 +417,7 @@ const INTENT_MAP = {
 // Department entity map — ENGLISH ONLY
 const DEPT_MAP: Record<string, string[]> = {
   'Data Science': [
-    'data science',
+    'data science', 'datascience', 'cse data science',
   ],
   'CSE': [
     'computer science', 'cse',
@@ -463,6 +469,7 @@ export type InternalIntent =
   | 'COLLEGE_OVERVIEW'
   | 'FEES_QUERY'
   | 'CUTOFF_QUERY'
+  | 'DOCUMENTS_QUERY'
   | 'UNKNOWN';
 
 /**
@@ -473,6 +480,7 @@ function detectIntent(normalized: string, entityCount: number): InternalIntent {
   // ── Check all intent categories ──────────────────────────────────────────
   const check = (phrases: string[]) => phrases.some(p => normalized.includes(p));
 
+  const isDocumentsTriggered = check(INTENT_MAP.documents);
   const isFeesTriggered = check(INTENT_MAP.fees);
   const isCourseListTriggered = check(INTENT_MAP.course_menu);
   const isHodTriggered = check(INTENT_MAP.hod);
@@ -489,6 +497,9 @@ function detectIntent(normalized: string, entityCount: number): InternalIntent {
   if (entityCount > 1 || normalized.includes('compare') || normalized.includes('difference') || normalized.includes(' vs ')) {
     return 'DEPARTMENT_COMPARE';
   }
+
+  // Documents
+  if (isDocumentsTriggered) return 'DOCUMENTS_QUERY';
 
   // Principal has highest priority (specific person query)
   if (isPrincipalTriggered) return 'PRINCIPAL_INFO';
@@ -581,6 +592,10 @@ export function normalizeIntent(input: string): NormalizedIntent {
   let result: NormalizedIntent;
 
   switch (intent) {
+    case 'DOCUMENTS_QUERY':
+      result = { trigger: 'documents' };
+      break;
+
     case 'DEPARTMENT_COMPARE':
       result = { trigger: null };
       break;
