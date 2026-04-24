@@ -11,7 +11,6 @@ import {
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import SiriOrb from '../components/SiriOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
@@ -19,6 +18,8 @@ import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/Depa
 import LeadershipOverview from '../components/chat/LeadershipOverview';
 import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
+import ChatOrbControl from './chat/ChatOrbControl';
+import { useChatLayoutReducer } from './chat/useChatLayoutReducer';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAllDepartmentSummaryCardsFromLocale,
@@ -180,7 +181,7 @@ export default function ChatScreen({
   const [displayMessages, setDisplayMessages] = useState<ChatMessage[]>(payloadMessages);
   
   // Layout Management State
-  const [layoutMode, setLayoutMode] = useState<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
+  const { layoutMode, setLayoutMode } = useChatLayoutReducer('FULL_TEXT');
   const [activeCards, setActiveCards] = useState<any[] | null>(null);
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
   const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
@@ -1128,17 +1129,13 @@ export default function ChatScreen({
                   layoutId="orb-container" 
                   className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-[100]"
                 >
-                  <div className="relative flex flex-col items-center group cursor-pointer" onClick={handleOrbTap}>
-                    <SiriOrb 
-                      isListening={orbState === 'listening' || isProcessing} 
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)} 
-                    />
-                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center">
-                      <span className={`text-[11px] font-bold tracking-[0.3em] uppercase transition-colors whitespace-nowrap ${orbState === 'listening' || isProcessing ? 'text-indigo-500 animate-pulse' : 'text-slate-400 group-hover:text-indigo-500'}`}>
-                        {isProcessing ? 'Thinking...' : (orbState === 'listening' ? 'Listening...' : 'Tap to speak')}
-                      </span>
-                    </div>
-                  </div>
+                  <ChatOrbControl
+                    orbState={orbState}
+                    isProcessing={isProcessing}
+                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
+                    onTap={handleOrbTap}
+                    bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
+                  />
                 </motion.div>
               </div>
               
@@ -1226,17 +1223,13 @@ export default function ChatScreen({
                   layoutId="orb-container" 
                   className="w-full flex justify-center pb-12"
                 >
-                  <div className="relative flex flex-col items-center group cursor-pointer" onClick={handleOrbTap}>
-                    <SiriOrb 
-                      isListening={orbState === 'listening' || isProcessing} 
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)} 
-                    />
-                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center">
-                      <span className={`text-[11px] font-bold tracking-[0.3em] uppercase transition-colors whitespace-nowrap ${orbState === 'listening' || isProcessing ? 'text-indigo-500 animate-pulse' : 'text-slate-400 group-hover:text-indigo-500'}`}>
-                        {isProcessing ? 'Thinking...' : (orbState === 'listening' ? 'Listening...' : 'Tap to speak')}
-                      </span>
-                    </div>
-                  </div>
+                  <ChatOrbControl
+                    orbState={orbState}
+                    isProcessing={isProcessing}
+                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
+                    onTap={handleOrbTap}
+                    bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
+                  />
                 </motion.div>
               </motion.aside>
             </motion.div>
