@@ -32,6 +32,16 @@ from backend.clients.provider_clients import (
     sarvam_tts_to_base64,
     warmup_clients,
 )
+from backend.app.error_events import build_error_payload, error_hint
+from backend.app.audio_utils import (
+    audio_bytes_len,
+    estimate_wav_duration_ms,
+    normalize_tts_pronunciation,
+    split_first_sentence,
+)
+from backend.app.session_state import append_session_history, history_for_llm
+from backend.app.telemetry import debug_payload, log_turn_metrics, text_preview
+from backend.app.ws_schemas import parse_inbound_ws_message
 from backend.config.settings import (
     AUDIO_RECORD_MODE,
     AUTO_LANGUAGE_DETECT_CONFIDENCE_THRESHOLD,
@@ -50,7 +60,6 @@ from backend.config.settings import (
     LLM_STREAM_TIMEOUT_S,
     LLM_TEMPERATURE,
     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-    PERF_DEBUG_TIMINGS,
     PORT,
     FRONTEND_URL,
     RAG_CONTEXT_TIMEOUT_S,
@@ -61,11 +70,6 @@ from backend.config.settings import (
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
-from backend.app.ws_schemas import parse_inbound_ws_message
-from backend.security.ws_auth import (
-    log_ws_auth_configuration_warnings,
-    validate_websocket_handshake,
-)
 from backend.services.greetings import get_greeting
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
@@ -97,6 +101,10 @@ from backend.services.answer_generation import (
     resolve_intent_from_features,
     translate_reply_to_session_language_async,
 )
+from backend.security.ws_auth import (
+    log_ws_auth_configuration_warnings,
+    validate_websocket_handshake,
+)
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
 from backend.utils.voice_logger import (
@@ -116,17 +124,6 @@ FORCE_FINAL_TTS_ONLY = True
 RAG_WARMUP_TIMEOUT_S = 5.0
 RAG_DOC_COUNT_TIMEOUT_S = 3.0
 AUDIO_DEVICE_VALIDATE_TIMEOUT_S = 3.0
-
-# Unified error event schema
-ERROR_RECOVERABLE_HINTS: dict[str, str] = {
-    "MIC_SILENT": "Check mic selection and speak closer.",
-    "VAD_TIMEOUT": "Speak within 10 seconds of tapping the mic.",
-    "STT_EMPTY": "Speak clearly and try again.",
-    "STT_FAILED": "Speech recognition failed. Please try again.",
-    "MIC_CAPTURE_FAILED": "Check mic connection and permissions.",
-    "RECORD_ERROR": "Recording failed. Check mic and try again.",
-    "PROCESS_FAILED": "Something went wrong. Please try again.",
-}
 
 
 def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
@@ -222,25 +219,6 @@ def _documents_card_direct_reply(language_key: str) -> str:
     return "Required documents are: " + "; ".join(items) + "."
 
 
-def _build_error_payload(
-    code: str,
-    message: str,
-    turn_id: str,
-    *,
-    recoverable: bool = True,
-) -> dict[str, Any]:
-    return {
-        "event": "error",
-        "error": message,
-        "errorCode": code,
-        "code": code,
-        "message": message,
-        "turn_id": turn_id,
-        "recoverable": recoverable,
-        "hint": ERROR_RECOVERABLE_HINTS.get(code, "Please try again."),
-        "isProcessing": False,
-    }
-
 LLM_REPLY_CACHE = TTLRUCache[str, str](max_size=256, ttl_seconds=600.0)
 TTS_CACHE = TTLRUCache[str, str](max_size=256, ttl_seconds=1200.0)
 _singleflight_lock_guard = asyncio.Lock()
@@ -259,11 +237,6 @@ async def _singleflight_lock_for(key: str) -> asyncio.Lock:
 
 def _normalized_cache_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip()).lower()
-
-
-def _text_preview(text: str, limit: int = 80) -> str:
-    compact = re.sub(r"\s+", " ", (text or "").strip())
-    return compact[:limit]
 
 
 def _load_svit_json_context(language_code_key: str | None) -> str:
@@ -289,40 +262,6 @@ def _load_svit_json_context(language_code_key: str | None) -> str:
         logger.warning("Could not load JSON context: %s", exc)
         _svit_json_context_cache[locale] = ""
         return ""
-
-
-def _split_first_sentence(text: str) -> tuple[str, str]:
-    cleaned = (text or "").strip()
-    if not cleaned:
-        return "", ""
-    match = re.search(r"[.!?](?:\s|$)", cleaned)
-    if not match:
-        return cleaned, ""
-    end = match.end()
-    return cleaned[:end].strip(), cleaned[end:].strip()
-
-
-def _estimate_wav_duration_ms(audio_b64: str) -> float | None:
-    try:
-        data = base64.b64decode(audio_b64)
-        if len(data) < 44 or data[:4] != b"RIFF":
-            return None
-        sample_rate = int.from_bytes(data[24:28], "little", signed=False)
-        channels = int.from_bytes(data[22:24], "little", signed=False)
-        bits_per_sample = int.from_bytes(data[34:36], "little", signed=False)
-        data_size = int.from_bytes(data[40:44], "little", signed=False)
-        if sample_rate <= 0 or channels <= 0 or bits_per_sample <= 0:
-            return None
-        bytes_per_sample = bits_per_sample / 8.0
-        duration_s = data_size / (sample_rate * channels * bytes_per_sample)
-        return max(0.0, duration_s * 1000.0)
-    except Exception:
-        return None
-
-
-def _audio_bytes_len(audio_b64: str | None) -> int:
-    if not audio_b64:
-        return 0
 
 
 def _get_ack_earcon_base64() -> str:
@@ -351,40 +290,6 @@ def _get_ack_earcon_base64() -> str:
     wav.extend(pcm)
     _ACK_EARCON_B64 = base64.b64encode(bytes(wav)).decode("ascii")
     return _ACK_EARCON_B64
-
-
-def _debug_payload(timing: TurnTiming) -> dict[str, Any]:
-    if not PERF_DEBUG_TIMINGS:
-        return {}
-    return {
-        "debug": {
-            "timings_ms": timing.summary_ms(),
-        },
-        "turn_id": timing.turn_id,
-    }
-
-
-def _append_session_history(session: dict[str, Any], role: str, text: str, *, max_turns: int = 3) -> None:
-    cleaned = (text or "").strip()
-    if not cleaned:
-        return
-    history = session.setdefault("history", [])
-    history.append({"role": role, "text": cleaned})
-    max_items = max_turns * 2
-    if len(history) > max_items:
-        del history[:-max_items]
-
-
-def _history_for_llm(session: dict[str, Any]) -> list[dict[str, str]]:
-    """Last 3 conversational turns only (6 messages) to limit context bleed."""
-    out: list[dict[str, str]] = []
-    recent = session.get("history", [])[-6:]
-    for item in recent:
-        role = "assistant" if item.get("role") == "assistant" else "user"
-        text = (item.get("text") or "").strip()
-        if text:
-            out.append({"role": role, "content": text})
-    return out
 
 
 def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
@@ -421,16 +326,6 @@ def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
         return False
 
 
-def _log_turn_metrics(timing: TurnTiming, **extra: Any) -> None:
-    payload = timing.structured_log(**extra)
-    logger.info(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
-
-
-def _normalize_tts_pronunciation(text: str) -> str:
-    # Normalize known brand-name pronunciation for TTS voices.
-    return re.sub(r"\bCLARA\b", "Clara", text or "", flags=re.IGNORECASE)
-
-
 async def tts_to_base64_cached(
     text: str,
     language_code: str,
@@ -438,14 +333,14 @@ async def tts_to_base64_cached(
     turn_id: str | None = None,
     utterance_kind: str = "reply",
 ) -> tuple[str | None, bool]:
-    tts_text = _normalize_tts_pronunciation(text)
+    tts_text = normalize_tts_pronunciation(text)
     key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(tts_text)}"
     logger.info(
         "TTS_REQUEST turn_id=%s kind=%s text_len=%d preview=%r",
         turn_id or "-",
         utterance_kind,
         len(tts_text or ""),
-        _text_preview(tts_text),
+        text_preview(tts_text),
     )
     cached = TTS_CACHE.get(key)
     if cached:
@@ -453,8 +348,8 @@ async def tts_to_base64_cached(
             "TTS_RESULT turn_id=%s kind=%s source=cache audio_bytes=%d wav_duration_s=%.3f",
             turn_id or "-",
             utterance_kind,
-            _audio_bytes_len(cached),
-            ((_estimate_wav_duration_ms(cached) or 0.0) / 1000.0),
+            audio_bytes_len(cached),
+            ((estimate_wav_duration_ms(cached) or 0.0) / 1000.0),
         )
         return cached, True
 
@@ -466,8 +361,8 @@ async def tts_to_base64_cached(
                 "TTS_RESULT turn_id=%s kind=%s source=cache_after_wait audio_bytes=%d wav_duration_s=%.3f",
                 turn_id or "-",
                 utterance_kind,
-                _audio_bytes_len(cached),
-                ((_estimate_wav_duration_ms(cached) or 0.0) / 1000.0),
+                audio_bytes_len(cached),
+                ((estimate_wav_duration_ms(cached) or 0.0) / 1000.0),
             )
             return cached, True
 
@@ -488,8 +383,8 @@ async def tts_to_base64_cached(
             "TTS_RESULT turn_id=%s kind=%s source=network audio_bytes=%d wav_duration_s=%.3f",
             turn_id or "-",
             utterance_kind,
-            _audio_bytes_len(audio),
-            ((_estimate_wav_duration_ms(audio or "") or 0.0) / 1000.0),
+            audio_bytes_len(audio),
+            ((estimate_wav_duration_ms(audio or "") or 0.0) / 1000.0),
         )
         return audio, False
 
@@ -561,7 +456,7 @@ async def maybe_auto_detect_session_language(
     if greeting_audio_b64:
         event_payload["greetingAudioBase64"] = greeting_audio_b64
 
-    event_payload.update(_debug_payload(timing))
+    event_payload.update(debug_payload(timing))
     await websocket.send_json({"state": 5, "payload": event_payload})
 
 
@@ -579,7 +474,7 @@ async def _stream_groq_reply(
         return "", ""
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(_history_for_llm(session))
+    messages.extend(history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
 
     timing.mark("llm_start")
@@ -619,12 +514,12 @@ async def _stream_groq_reply(
                 "text": partial_text,
                 "isProcessing": True,
             }
-            payload.update(_debug_payload(timing))
+            payload.update(debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": payload})
             last_partial_sent = now_ms
 
         if not first_sentence:
-            s1, _ = _split_first_sentence(partial_text)
+            s1, _ = split_first_sentence(partial_text)
             if s1 and s1.endswith((".", "!", "?")):
                 first_sentence = s1
                 if not timing.has("llm_first_sentence"):
@@ -650,7 +545,7 @@ async def _complete_groq_reply(
     if not client:
         return "", ""
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(_history_for_llm(session))
+    messages.extend(history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
     timing.mark("llm_start")
     completion = await client.chat.completions.create(
@@ -663,7 +558,7 @@ async def _complete_groq_reply(
     timing.mark("llm_first_token")
     timing.set_if_missing("first_feedback")
     out = (completion.choices[0].message.content or "").strip()
-    s1, _ = _split_first_sentence(out)
+    s1, _ = split_first_sentence(out)
     if s1 and s1.endswith((".", "!", "?")) and not timing.has("llm_first_sentence"):
         timing.mark("llm_first_sentence")
     timing.mark("llm_end")
@@ -679,10 +574,10 @@ async def process_user_text_and_reply(
     local_intent: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
-    _append_session_history(session, "user", text, max_turns=3)
+    append_session_history(session, "user", text, max_turns=3)
     try:
         processing_payload = {"isProcessing": True}
-        processing_payload.update(_debug_payload(timing))
+        processing_payload.update(debug_payload(timing))
         await websocket.send_json({"state": 5, "payload": processing_payload})
         if ENABLE_EARLY_PARTIAL_TEXT and not timing.has("first_feedback"):
             timing.mark("first_feedback")
@@ -692,13 +587,13 @@ async def process_user_text_and_reply(
                 "isProcessing": True,
                 "turn_id": timing.turn_id,
             }
-            early_partial_payload.update(_debug_payload(timing))
+            early_partial_payload.update(debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": early_partial_payload})
         if ENABLE_ACK_EARCON:
             ack_audio_b64 = _get_ack_earcon_base64()
             if not timing.has("play_start"):
                 timing.mark("play_start")
-                est = _estimate_wav_duration_ms(ack_audio_b64)
+                est = estimate_wav_duration_ms(ack_audio_b64)
                 if est is not None and not timing.has("play_end"):
                     timing.marks["play_end"] = timing.marks["play_start"] + est
             ack_payload = {
@@ -708,7 +603,7 @@ async def process_user_text_and_reply(
                 "isProcessing": True,
                 "turn_id": timing.turn_id,
             }
-            ack_payload.update(_debug_payload(timing))
+            ack_payload.update(debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": ack_payload})
     except Exception as exc:
         logger.warning("Could not send isProcessing: %s", exc)
@@ -964,7 +859,7 @@ async def process_user_text_and_reply(
             first_sentence_sent = True
             if not timing.has("play_start"):
                 timing.mark("play_start")
-                est = _estimate_wav_duration_ms(first_audio_b64)
+                est = estimate_wav_duration_ms(first_audio_b64)
                 if est is not None and not timing.has("play_end"):
                     timing.marks["play_end"] = timing.marks["play_start"] + est
             first_payload = {
@@ -977,7 +872,7 @@ async def process_user_text_and_reply(
                 "segment_index": 0,
                 "is_final_segment": False,
             }
-            first_payload.update(_debug_payload(timing))
+            first_payload.update(debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": first_payload})
 
         def _maybe_start_first_sentence_tts(sentence: str) -> None:
@@ -993,7 +888,7 @@ async def process_user_text_and_reply(
             timing.mark("llm_start")
             timing.mark("llm_first_token")
             timing.mark("llm_end")
-            first_sentence, _ = _split_first_sentence(reply_text)
+            first_sentence, _ = split_first_sentence(reply_text)
             timing.set_if_missing("first_feedback")
             _maybe_start_first_sentence_tts(first_sentence)
         elif reply_text:
@@ -1001,7 +896,7 @@ async def process_user_text_and_reply(
             timing.mark("llm_start")
             timing.mark("llm_first_token")
             timing.mark("llm_end")
-            first_sentence, _ = _split_first_sentence(reply_text)
+            first_sentence, _ = split_first_sentence(reply_text)
             timing.set_if_missing("first_feedback")
             _maybe_start_first_sentence_tts(first_sentence)
         else:
@@ -1070,7 +965,7 @@ async def process_user_text_and_reply(
 
         if not llm_cache_hit:
             LLM_REPLY_CACHE.set(cache_key, reply_text)
-        _append_session_history(session, "assistant", reply_text, max_turns=3)
+        append_session_history(session, "assistant", reply_text, max_turns=3)
 
         if first_sentence and first_sentence != reply_text:
             logger.info(
@@ -1078,8 +973,8 @@ async def process_user_text_and_reply(
                 timing.turn_id,
                 len(first_sentence),
                 len(reply_text),
-                _text_preview(first_sentence),
-                _text_preview(reply_text),
+                text_preview(first_sentence),
+                text_preview(reply_text),
             )
 
         if (
@@ -1184,7 +1079,7 @@ async def process_user_text_and_reply(
             and first_sentence
             and first_sentence != reply_text
         ):
-            _, remainder_text = _split_first_sentence(reply_text)
+            _, remainder_text = split_first_sentence(reply_text)
             remainder_text = remainder_text.strip()
             if remainder_text:
                 tts_text = remainder_text
@@ -1223,7 +1118,7 @@ async def process_user_text_and_reply(
         timing.mark("tts_end")
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")
-            est = _estimate_wav_duration_ms(full_audio_b64)
+            est = estimate_wav_duration_ms(full_audio_b64)
             if est is not None:
                 timing.marks["play_end"] = timing.marks["play_start"] + est
 
@@ -1232,9 +1127,9 @@ async def process_user_text_and_reply(
             timing.turn_id,
             tts_ms,
             len(tts_text),
-            _text_preview(tts_text),
-            _audio_bytes_len(full_audio_b64) if full_audio_b64 else 0,
-            decoded_duration_ms=_estimate_wav_duration_ms(full_audio_b64) if full_audio_b64 else None,
+            text_preview(tts_text),
+            audio_bytes_len(full_audio_b64) if full_audio_b64 else 0,
+            decoded_duration_ms=estimate_wav_duration_ms(full_audio_b64) if full_audio_b64 else None,
         )
 
         timing.mark("turn_end")
@@ -1256,12 +1151,12 @@ async def process_user_text_and_reply(
         if full_audio_b64:
             payload["audioBase64"] = full_audio_b64
 
-        payload.update(_debug_payload(timing))
+        payload.update(debug_payload(timing))
         await websocket.send_json({"state": 5, "payload": payload})
 
         log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=True)
 
-        _log_turn_metrics(
+        log_turn_metrics(
             timing,
             llm_cache_hit=llm_cache_hit,
             tts_cache_hit=tts_cache_hit,
@@ -1271,17 +1166,17 @@ async def process_user_text_and_reply(
         logger.exception("process_user_text_and_reply failed: %s", exc)
         timing.mark("turn_end")
         try:
-            err_payload = _build_error_payload(
+            err_payload = build_error_payload(
                 "PROCESS_FAILED",
                 "Something went wrong. Please try again.",
                 timing.turn_id,
                 recoverable=True,
             )
-            err_payload.update(_debug_payload(timing))
+            err_payload.update(debug_payload(timing))
             await websocket.send_json({"state": 5, "payload": err_payload})
         except Exception:
             pass
-        _log_turn_metrics(timing, error="process_failed")
+        log_turn_metrics(timing, error="process_failed")
         log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="PROCESS_FAILED")
 
 
@@ -1324,7 +1219,7 @@ async def lifespan(app: object):
     except asyncio.TimeoutError:
         logger.warning("AUDIO validation timed out after %.1fs; continuing", AUDIO_DEVICE_VALIDATE_TIMEOUT_S)
 
-    log_ws_auth_configuration_warnings(logger)
+    log_ws_auth_configuration_warnings()
     asyncio.create_task(warmup_clients())
     yield
     await close_clients()
@@ -1384,12 +1279,12 @@ VALID_LANGUAGES = frozenset(LANGUAGE_NAME_TO_CODE_KEY.keys())
 
 @app.websocket("/ws/clara")
 async def websocket_clara(websocket: WebSocket):
-    auth_ok, auth_reason = validate_websocket_handshake(websocket)
-    if not auth_ok:
-        logger.warning("WebSocket handshake rejected: %s", auth_reason)
-        await websocket.close(code=1008)
+    is_valid, reason = validate_websocket_handshake(websocket)
+    if not is_valid:
+        logger.warning("Rejected websocket handshake: reason=%s", reason)
+        # 1008: policy violation (safe close code for auth/origin failures)
+        await websocket.close(code=1008, reason=reason)
         return
-
     await websocket.accept()
     logger.info("WebSocket client connected")
     session: dict[str, Any] = {
@@ -1412,17 +1307,16 @@ async def websocket_clara(websocket: WebSocket):
             data = await websocket.receive_text()
             msg, msg_error = parse_inbound_ws_message(data)
             if msg_error:
-                await websocket.send_json(
-                    {
-                        "state": 5,
-                        "payload": {
-                            "error": "Invalid message payload.",
-                            "code": "INVALID_MESSAGE",
-                        },
-                    }
+                invalid_turn_id = uuid.uuid4().hex[:12]
+                payload = build_error_payload(
+                    "INVALID_MESSAGE",
+                    "Invalid request payload.",
+                    invalid_turn_id,
+                    recoverable=True,
                 )
+                await websocket.send_json({"state": 5, "payload": payload})
                 continue
-            action = msg.get("action") or msg.get("event")
+            action = msg.get("action")
 
             if action == "wake":
                 await websocket.send_json({"state": 3, "payload": None})
@@ -1497,9 +1391,9 @@ async def websocket_clara(websocket: WebSocket):
                 if not text:
                     timing.mark("turn_end")
                     payload = {"error": "Missing text", "isProcessing": False}
-                    payload.update(_debug_payload(timing))
+                    payload.update(debug_payload(timing))
                     await websocket.send_json({"state": 5, "payload": payload})
-                    _log_turn_metrics(timing, error="missing_text")
+                    log_turn_metrics(timing, error="missing_text")
                 else:
                     await process_user_text_and_reply(
                         session,
@@ -1514,7 +1408,7 @@ async def websocket_clara(websocket: WebSocket):
             if action in ("toggle_mic", "mic_start"):
                 timing = TurnTiming()
                 processing_payload = {"isProcessing": True, "turn_id": timing.turn_id}
-                processing_payload.update(_debug_payload(timing))
+                processing_payload.update(debug_payload(timing))
                 await websocket.send_json({"state": 5, "payload": processing_payload})
 
                 dev_idx, dev_name = get_input_device_info()
@@ -1551,11 +1445,11 @@ async def websocket_clara(websocket: WebSocket):
                 if not wav_bytes:
                     timing.mark("turn_end")
                     code = capture_error_code or "MIC_CAPTURE_FAILED"
-                    msg = ERROR_RECOVERABLE_HINTS.get(code, "No speech heard.")
-                    payload = _build_error_payload(code, msg, timing.turn_id)
-                    payload.update(_debug_payload(timing))
+                    msg = error_hint(code, "No speech heard.")
+                    payload = build_error_payload(code, msg, timing.turn_id)
+                    payload.update(debug_payload(timing))
                     await websocket.send_json({"state": 5, "payload": payload})
-                    _log_turn_metrics(timing, error=code)
+                    log_turn_metrics(timing, error=code)
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code=code)
                     continue
 
@@ -1574,20 +1468,20 @@ async def websocket_clara(websocket: WebSocket):
                 except Exception as exc:
                     logger.exception("Sarvam STT failed: %s", exc)
                     timing.mark("turn_end")
-                    payload = _build_error_payload("STT_FAILED", "Speech recognition failed. Please try again.", timing.turn_id)
-                    payload.update(_debug_payload(timing))
+                    payload = build_error_payload("STT_FAILED", "Speech recognition failed. Please try again.", timing.turn_id)
+                    payload.update(debug_payload(timing))
                     await websocket.send_json({"state": 5, "payload": payload})
-                    _log_turn_metrics(timing, error="stt_failed")
+                    log_turn_metrics(timing, error="stt_failed")
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="STT_FAILED")
                     continue
 
                 if not (transcript or "").strip():
                     timing.mark("turn_end")
                     logger.warning("STT returned empty for %d-byte WAV", len(wav_bytes))
-                    payload = _build_error_payload("STT_EMPTY", "No speech detected.", timing.turn_id)
-                    payload.update(_debug_payload(timing))
+                    payload = build_error_payload("STT_EMPTY", "No speech detected.", timing.turn_id)
+                    payload.update(debug_payload(timing))
                     await websocket.send_json({"state": 5, "payload": payload})
-                    _log_turn_metrics(timing, error="stt_empty")
+                    log_turn_metrics(timing, error="stt_empty")
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="STT_EMPTY")
                     continue
 
