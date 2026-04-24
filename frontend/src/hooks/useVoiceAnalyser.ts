@@ -23,7 +23,7 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 export function useVoiceFrequencyAnalyser(enabled: boolean) {
-  const frequencyDataRef = useRef<Uint8Array>(new Uint8Array(FREQUENCY_BIN_COUNT));
+  const frequencyDataRef = useRef<Uint8Array>(new Uint8Array(new ArrayBuffer(FREQUENCY_BIN_COUNT)));
   const [result, setResult] = useState<VoiceAnalyserResult>({
     rms: 0,
     frequencyIntensity: 0,
@@ -100,7 +100,7 @@ export function useVoiceFrequencyAnalyser(enabled: boolean) {
         source.connect(analyser);
         analyserRef.current = analyser;
         enabledAtRef.current = Date.now();
-        const timeData = new Uint8Array(analyser.fftSize);
+        const timeData = new Uint8Array(new ArrayBuffer(analyser.fftSize));
 
         const tick = () => {
           if (cancelled || !analyserRef.current) return;

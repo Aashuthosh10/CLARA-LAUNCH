@@ -27,6 +27,9 @@ jobs:
       - name: Typecheck
         run: npm run lint
 
+      - name: Build
+        run: npm run build
+
       - name: NPM audit (high+)
         run: npm audit --audit-level=high
 
