@@ -2,10 +2,17 @@
 
 ## Pre-Deploy Verification
 
+- Classification: `backend.tools.voice_smoketest` is a **manual hardware/runtime** smoke check (non-CI-blocking).
 - [ ] Run smoke test 5 times: `for /L %i in (1,1,5) do python -m backend.tools.voice_smoketest`
 - [ ] All 5 runs show PASS
 - [ ] Backend starts without audio validation error
 - [ ] Mic probe lists devices: `python -m backend.tools.mic_probe`
+
+## Deterministic Companion Coverage
+
+- Planned companion check: `backend.tools.voice_smoketest_sample` (sample WAV, no live capture).
+- CI should run deterministic sample-audio smoke checks only.
+- Manual release checklist must still include live mic/speaker smoke runs from this document.
 
 ## Voice Flow Verification
 

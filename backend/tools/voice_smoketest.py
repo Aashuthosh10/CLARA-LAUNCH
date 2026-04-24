@@ -2,6 +2,10 @@
 """
 Voice pipeline smoke test: record 4s → STT → LLM → TTS → playback.
 Runs independently of UI/WebSocket. Validates capture, STT, LLM, TTS, and playback.
+
+Classification:
+- Manual hardware/runtime smoke check (requires real input/output devices).
+- Not CI-blocking; use deterministic sample-audio smoke script for CI coverage.
 """
 
 from __future__ import annotations

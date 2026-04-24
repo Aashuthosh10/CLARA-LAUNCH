@@ -3,7 +3,7 @@
 ## Quick Commands
 
 ```bash
-# Run voice smoke test 5 times
+# Run manual hardware voice smoke test 5 times (non-CI)
 cd clara-deploy-frontend
 for /L %i in (1,1,5) do python -m backend.tools.voice_smoketest
 
@@ -13,6 +13,12 @@ python -m backend.tools.mic_probe
 # Test Sarvam TTS voice
 python -m backend.tools.sarvam_voice_test
 ```
+
+## Classification
+
+- `python -m backend.tools.voice_smoketest` requires real mic/speaker + runtime API access.
+- Treat `STT_EMPTY` failures as hardware/environment signal first, not CI regression by default.
+- CI should rely on deterministic sample-audio smoke coverage (planned `voice_smoketest_sample.py`).
 
 ## Smoke Test Pass Criteria
 
