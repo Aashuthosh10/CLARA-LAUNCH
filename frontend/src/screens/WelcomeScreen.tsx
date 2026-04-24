@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, AudioLines } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { Variants } from 'motion/react';
 import SiriOrb from '../components/SiriOrb';
 import fullTextBgImage from '../assets/full_text_bg.png';
 
@@ -10,7 +11,7 @@ const WelcomeScreen: React.FC = () => {
   const words = greeting.split(' ');
 
   // Animation variants for word-by-word reveal
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -21,7 +22,7 @@ const WelcomeScreen: React.FC = () => {
     },
   };
 
-  const wordVariants = {
+  const wordVariants: Variants = {
     hidden: { opacity: 0, y: 15, scale: 0.95 },
     visible: {
       opacity: 1,
@@ -29,7 +30,7 @@ const WelcomeScreen: React.FC = () => {
       scale: 1,
       transition: {
         duration: 0.8,
-        ease: [0.16, 1, 0.3, 1], // Smooth cinematic ease
+        ease: [0.16, 1, 0.3, 1] as const, // Smooth cinematic ease
       },
     },
   };
