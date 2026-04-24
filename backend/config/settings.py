@@ -105,6 +105,17 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "6969"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 KIOSK_TIMEZONE = os.getenv("KIOSK_TIMEZONE", "Asia/Kolkata").strip() or "Asia/Kolkata"
+WS_AUTH_REQUIRED = os.getenv("WS_AUTH_REQUIRED", "true").strip().lower() in ("1", "true", "yes", "on")
+# Shared secret for simple bearer token auth (minimum safe baseline).
+WS_AUTH_TOKEN = os.getenv("WS_AUTH_TOKEN", "").strip()
+# Optional HMAC secret for signed, short-lived ws tokens.
+WS_TOKEN_SIGNING_SECRET = os.getenv("WS_TOKEN_SIGNING_SECRET", "").strip()
+_ws_allowed_origins_env = os.getenv("WS_ALLOWED_ORIGINS", "").strip()
+WS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in (_ws_allowed_origins_env.split(",") if _ws_allowed_origins_env else [FRONTEND_URL])
+    if origin.strip()
+]
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "400"))

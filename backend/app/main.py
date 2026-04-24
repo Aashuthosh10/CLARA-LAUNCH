@@ -61,6 +61,10 @@ from backend.config.settings import (
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
+from backend.security.ws_auth import (
+    log_ws_auth_configuration_warnings,
+    validate_websocket_handshake,
+)
 from backend.services.greetings import get_greeting
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
@@ -1319,6 +1323,7 @@ async def lifespan(app: object):
     except asyncio.TimeoutError:
         logger.warning("AUDIO validation timed out after %.1fs; continuing", AUDIO_DEVICE_VALIDATE_TIMEOUT_S)
 
+    log_ws_auth_configuration_warnings(logger)
     asyncio.create_task(warmup_clients())
     yield
     await close_clients()
@@ -1378,6 +1383,12 @@ VALID_LANGUAGES = frozenset(LANGUAGE_NAME_TO_CODE_KEY.keys())
 
 @app.websocket("/ws/clara")
 async def websocket_clara(websocket: WebSocket):
+    auth_ok, auth_reason = validate_websocket_handshake(websocket)
+    if not auth_ok:
+        logger.warning("WebSocket handshake rejected: %s", auth_reason)
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     logger.info("WebSocket client connected")
     session: dict[str, Any] = {
@@ -1584,7 +1595,7 @@ async def websocket_clara(websocket: WebSocket):
     except Exception as exc:
         logger.exception("WebSocket error: %s", exc)
         try:
-            await websocket.send_json({"state": -1, "payload": {"error": str(exc)}})
+            await websocket.send_json({"state": -1, "payload": {"error": "Connection error."}})
         except Exception:
             pass
     finally:

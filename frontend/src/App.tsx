@@ -8,7 +8,11 @@ import SleepScreen from './screens/SleepScreen';
 import LanguageSelect from './screens/LanguageSelect';
 import ChatScreen from './screens/ChatScreen';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
+const WS_TOKEN = (import.meta.env.VITE_WS_TOKEN || '').trim();
+const WS_URL = WS_TOKEN
+  ? `${WS_BASE_URL}${WS_BASE_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(WS_TOKEN)}`
+  : WS_BASE_URL;
 const VOICE_INPUT_MODE = (import.meta.env.VITE_VOICE_INPUT_MODE || 'browser').toLowerCase() === 'backend' ? 'backend' : 'browser';
 
 export default function App() {
