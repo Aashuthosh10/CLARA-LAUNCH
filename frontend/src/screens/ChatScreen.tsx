@@ -3,6 +3,7 @@ import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
 import { Sparkles, Volume2, Home } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
+import fullTextBgImage from '../assets/full_text_bg.png';
 import {
   type ChatMessage,
   type OrbState,
@@ -10,7 +11,7 @@ import {
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import VoiceOrb from '../components/VoiceOrb';
+import SiriOrb from '../components/SiriOrb';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
@@ -806,7 +807,7 @@ export default function ChatScreen({
       setIsDocumentsStage(true);
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
-      setSuppressedTurnId(turnId);
+      setSuppressedTurnId(null);
       if (audioBase64) {
         setPendingAudio({
           audioBase64,
@@ -1024,14 +1025,11 @@ export default function ChatScreen({
   );
 
   const filteredMessages = useMemo(() => {
-    if (isDocumentsStage) {
-      return [];
-    }
     return displayMessages.filter(m => {
        const isHidden = (m as any).isHidden || (m as any).isCardData;
        return !isHidden && (m.id !== suppressedTurnId);
     });
-  }, [displayMessages, suppressedTurnId, isDocumentsStage]);
+  }, [displayMessages, suppressedTurnId]);
 
   const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
     ? visuallyFocusedMessage
@@ -1083,22 +1081,52 @@ export default function ChatScreen({
         <Home className="w-6 h-6" />
       </motion.button>
 
+      {/* Global Audio Button */}
+      <motion.button
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="premium-audio-button"
+        title="Voice Input"
+        onClick={() => {
+          if (orbState === 'idle' || orbState === 'ready' || orbState === 'completed') {
+             handleOrbTap();
+          }
+        }}
+      >
+        <div className="flex gap-[3px] items-end justify-center h-[18px]">
+          <div className="w-[3px] bg-current rounded-full h-[60%] animate-[pulse_1s_ease-in-out_infinite_alternate]" />
+          <div className="w-[3px] bg-current rounded-full h-[100%] animate-[pulse_1.2s_ease-in-out_infinite_alternate]" />
+          <div className="w-[3px] bg-current rounded-full h-[40%] animate-[pulse_0.8s_ease-in-out_infinite_alternate]" />
+          <div className="w-[3px] bg-current rounded-full h-[80%] animate-[pulse_1.5s_ease-in-out_infinite_alternate]" />
+        </div>
+      </motion.button>
+
+      {/* ─── GLOBAL CINEMATIC BACKGROUND ─── */}
+      <div 
+        className="absolute inset-0 w-full h-full z-0 pointer-events-none"
+        style={{ 
+          backgroundImage: `url(${fullTextBgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+
       <LayoutGroup>
         <AnimatePresence mode="wait">
           {/* ─── FULL TEXT MODE ─── */}
           {layoutMode === 'FULL_TEXT' ? (
             <motion.div key="full-text" layoutId="main" className="full-text-layout">
+
               {/* Clean top — no debug labels */}
-              <div className="full-text-message-stage">
+              <div className="full-text-message-stage relative z-10">
                 {isProcessing ? (
                   <div className="clara-thinking-stage">
                     <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
                     <div className="clara-thinking-title">{thinkingTitle}</div>
                     <div className="clara-thinking-tagline">{thinkingTagline}</div>
                     <div className="clara-thinking-dots" aria-hidden>...</div>
-                    <motion.div layoutId="orb" className="orb-thinking-container">
-                      <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} label="THINKING..." />
-                    </motion.div>
                   </div>
                 ) : (
                   lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
@@ -1112,34 +1140,34 @@ export default function ChatScreen({
                     </div>
                   )
                 )}
+
+                {/* Orb in Full Text - Center Bottom */}
+                <motion.div 
+                  layoutId="orb-container" 
+                  className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-[100]"
+                >
+                  <div className="relative flex flex-col items-center group cursor-pointer" onClick={handleOrbTap}>
+                    <SiriOrb 
+                      isListening={orbState === 'listening' || isProcessing} 
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)} 
+                    />
+                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center">
+                      <span className={`text-[11px] font-bold tracking-[0.3em] uppercase transition-colors whitespace-nowrap ${orbState === 'listening' || isProcessing ? 'text-indigo-500 animate-pulse' : 'text-slate-400 group-hover:text-indigo-500'}`}>
+                        {isProcessing ? 'Thinking...' : (orbState === 'listening' ? 'Listening...' : 'Tap to speak')}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
               
-              {!isProcessing && (
-                <motion.div layoutId="orb" className="orb-float-bottom relative">
-                  {showUnmuteHint && (
-                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-800 text-white px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-lg">
-                      <Volume2 size={14} /> Tap to Unmute
-                    </div>
-                  )}
-                  <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
-                </motion.div>
-              )}
+
+
             </motion.div>
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
           ) : (
             <motion.div key="split" layoutId="main" className="split-cards-layout">
               <div className="visual-stage-70 flex flex-col items-center">
-                {/* Custom WhatsApp Watermark Overlay */}
-                <div 
-                  className="absolute inset-0 z-0 opacity-100 pointer-events-none"
-                  style={{
-                    backgroundImage: `url(${whatsappBgImage})`,
-                    backgroundSize: '250px 250px',
-                    backgroundRepeat: 'repeat',
-                  }}
-                />
-
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 
@@ -1203,15 +1231,31 @@ export default function ChatScreen({
                           className="bubble-clara" 
                         />
                   ))}
-                  {isProcessing && !isDocumentsStage && (
+                  {isProcessing && (
                     <div className="bubble-clara bubble-thinking">
                       <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
                     </div>
                   )}
                 </div>
-                <div className="orb-float-panel">
-                  <VoiceOrb state={orbState} amplitude={voiceAnalyser.amplitude} onTap={handleOrbTap} />
-                </div>
+                <div className="flex-1" /> {/* Push messages up */}
+                
+                {/* Orb in Split Mode - Panel Bottom */}
+                <motion.div 
+                  layoutId="orb-container" 
+                  className="w-full flex justify-center pb-12"
+                >
+                  <div className="relative flex flex-col items-center group cursor-pointer" onClick={handleOrbTap}>
+                    <SiriOrb 
+                      isListening={orbState === 'listening' || isProcessing} 
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)} 
+                    />
+                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center">
+                      <span className={`text-[11px] font-bold tracking-[0.3em] uppercase transition-colors whitespace-nowrap ${orbState === 'listening' || isProcessing ? 'text-indigo-500 animate-pulse' : 'text-slate-400 group-hover:text-indigo-500'}`}>
+                        {isProcessing ? 'Thinking...' : (orbState === 'listening' ? 'Listening...' : 'Tap to speak')}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.aside>
             </motion.div>
           )}

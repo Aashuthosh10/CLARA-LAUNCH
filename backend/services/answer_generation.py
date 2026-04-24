@@ -1289,7 +1289,9 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         return False
 
     is_course_query = _matches_course_intent(token_and_phrase_units, course_keywords)
-    is_documents_query = _matches_documents_intent(token_and_phrase_units, documents_keywords)
+    documents_flag = is_documents_query(raw) or _matches_documents_intent(
+        token_and_phrase_units, documents_keywords
+    )
 
     return QueryFeatures(
         has_department=has_department,
@@ -1297,7 +1299,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         is_hod_query=is_hod_query,
         is_fee_query=is_fee_query or _is_fee_query(normalized),
         is_course_query=is_course_query,
-        is_documents_query=is_documents_query,
+        is_documents_query=documents_flag,
         is_placement_query=_is_placements_query(normalized),
         is_overview_query=_is_college_overview_query(normalized),
     )
@@ -1813,9 +1815,88 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
     return None
 
 
+def is_documents_query(text: str) -> bool:
+    """
+    Deterministic multilingual documents intent detector.
+    Uses raw text (any language / mixed) with punctuation removed and spaces collapsed.
+    Applies substring + fuzzy matching (>= 0.7) over compacted tokens.
+    """
+    raw = str(text or "").strip().lower()
+    if not raw:
+        return False
+    # Keep non-Latin glyphs; remove common punctuation and collapse spaces.
+    t = re.sub(r"[.,!?;:'\"()\[\]{}<>|/\\@#$%^&*_+=~`-]", " ", raw)
+    t = re.sub(r"\s+", " ", t).strip()
+    compact = re.sub(r"\s+", "", t)
+
+    core_doc_words = [
+        "document",
+        "documents",
+        "doc",
+        "doucment",
+        "documnts",
+        "doccuments",
+        "doucments",
+        "dakhale",
+        "dakhalegalu",
+        "dastavej",
+        "kagaz",
+    ]
+
+    doc_context_words = [
+        "aavasyam",
+        "venum",
+        "entha",
+        "beku",
+        "bekagutte",
+        "chahiye",
+    ]
+
+    admission_words = [
+        "admission",
+        "college",
+        "joining",
+        "ge",
+        "beku",
+        "yaav",
+        "bekagutte",
+        "chahiye",
+        "ka",
+        "ke",
+        "venum",
+        "seyyanum",
+        "kavali",
+        "venam",
+    ]
+
+    def fuzzy_any(words: list[str], haystack: str) -> bool:
+        for w in words:
+            w_norm = re.sub(r"\s+", "", str(w or "").strip().lower())
+            if not w_norm:
+                continue
+            if w_norm in haystack:
+                return True
+            if SequenceMatcher(None, w_norm, haystack).ratio() >= 0.7:
+                return True
+        return False
+
+    # Direct doc-signal wins (must contain a core document marker).
+    if fuzzy_any(core_doc_words, compact):
+        return True
+    # Context-only words must not accidentally trigger documents.
+    # Require both admission context and some document-context cue (still no core marker).
+    if fuzzy_any(doc_context_words, compact) and fuzzy_any(admission_words, compact):
+        return True
+    return False
+
+
 def detect_intent(text: str) -> str:
     """Public API: normalize → ``extract_features`` → ``resolve_intent_from_features``."""
+    if is_documents_query(text):
+        return INTENT_DOCUMENTS
     query_en = normalize_user_input(text)
+    if is_documents_query(query_en):
+        return INTENT_DOCUMENTS
     features = extract_features(query_en)
     return resolve_intent_from_features(features)
 

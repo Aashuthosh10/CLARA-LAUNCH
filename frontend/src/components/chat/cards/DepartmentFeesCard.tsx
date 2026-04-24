@@ -221,24 +221,28 @@ export default function DepartmentFeesCard({ departmentId }: DepartmentFeesCardP
   const selectedKey = normalizeDepartmentKey(departmentId ?? '');
 
   return (
-    <div className="w-full max-w-5xl rounded-3xl border border-[#d8d0c3] bg-[#f8f5ee] p-8 shadow-md">
-      <div className="text-[12px] tracking-[0.18em] text-[#9b8e6c] uppercase mb-1">{copy.title}</div>
-      <h2 className="text-[44px] leading-[1.05] font-semibold text-[#1f1f1f] mb-3">{copy.title}</h2>
-      <p className="text-[#2d2d2d] text-[18px] leading-relaxed mb-4">{copy.description}</p>
-      {DEPARTMENT_ORDER.includes(selectedKey) && (
-        <div className="mb-5 text-[16px] text-[#222]">
-          <span className="font-semibold">{copy.selectedDepartment}:</span>{' '}
-          {labelsByLanguage[selectedKey] ?? selectedKey}
-        </div>
-      )}
+    <div className="w-full max-w-5xl premium-glass-card p-10 overflow-hidden relative">
+      {/* Accent Glow inside card */}
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none" />
+      
+      <div className="relative z-10">
+        <div className="text-[12px] tracking-[0.2em] text-indigo-500 font-bold uppercase mb-2">{copy.title}</div>
+        <h2 className="text-[48px] leading-[1.05] font-bold text-[#0F172A] mb-4 tracking-tight">{copy.title}</h2>
+        <p className="text-[#334155] text-[18px] leading-relaxed mb-6 max-w-2xl">{copy.description}</p>
+        {DEPARTMENT_ORDER.includes(selectedKey) && (
+          <div className="mb-6 px-4 py-2 bg-white/40 backdrop-blur-md rounded-full inline-flex items-center gap-2 border border-white/40 shadow-sm">
+            <span className="text-[14px] font-semibold text-indigo-600 uppercase tracking-wide">{copy.selectedDepartment}:</span>
+            <span className="text-[16px] font-bold text-slate-800">{labelsByLanguage[selectedKey] ?? selectedKey}</span>
+          </div>
+        )}
 
-      <div className="max-h-[420px] overflow-y-auto rounded-xl border border-[#bcb6ab]">
-        <table className="w-full border-collapse text-[16px]">
-          <thead className="sticky top-0 bg-[#f3f0e9] z-10">
+      <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm no-scrollbar">
+        <table className="w-full border-collapse text-[15px]">
+          <thead className="sticky top-0 bg-white/20 backdrop-blur-md z-10">
             <tr>
-              <th className="border border-[#bcb6ab] px-4 py-3 text-left font-semibold text-[#191919]">{copy.department}</th>
-              <th className="border border-[#bcb6ab] px-4 py-3 text-left font-semibold text-[#191919]">{copy.managementQuotaFee}</th>
-              <th className="border border-[#bcb6ab] px-4 py-3 text-left font-semibold text-[#191919]">{copy.otherQuotas}</th>
+              <th className="border-b border-white/20 px-6 py-4 text-left font-bold text-[#0F172A] uppercase tracking-wider text-[11px]">{copy.department}</th>
+              <th className="border-b border-white/20 px-6 py-4 text-left font-bold text-[#0F172A] uppercase tracking-wider text-[11px]">{copy.managementQuotaFee}</th>
+              <th className="border-b border-white/20 px-6 py-4 text-left font-bold text-[#0F172A] uppercase tracking-wider text-[11px]">{copy.otherQuotas}</th>
             </tr>
           </thead>
           <tbody>
@@ -246,12 +250,12 @@ export default function DepartmentFeesCard({ departmentId }: DepartmentFeesCardP
               const isSelected = deptKey === selectedKey;
               const amount = formatInr(MANAGEMENT_QUOTA_FEE_BY_KEY[deptKey]);
               return (
-                <tr key={deptKey} className={isSelected ? 'bg-[#efe9dc]' : ''}>
-                  <td className="border border-[#bcb6ab] px-4 py-3 text-[#1f1f1f]">
+                <tr key={deptKey} className={`transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-white/5'}`}>
+                  <td className="border-b border-white/10 px-6 py-4 text-[#334155] font-medium">
                     {labelsByLanguage[deptKey] ?? deptKey}
                   </td>
-                  <td className="border border-[#bcb6ab] px-4 py-3 text-[#1f1f1f]">{amount || copy.officeContact}</td>
-                  <td className="border border-[#bcb6ab] px-4 py-3 text-[#1f1f1f]">{copy.officeContact}</td>
+                  <td className="border-b border-white/10 px-6 py-4 text-[#334155]">{amount || copy.officeContact}</td>
+                  <td className="border-b border-white/10 px-6 py-4 text-[#334155] italic opacity-70">{copy.officeContact}</td>
                 </tr>
               );
             })}
@@ -259,7 +263,8 @@ export default function DepartmentFeesCard({ departmentId }: DepartmentFeesCardP
         </table>
       </div>
 
-      <div className="mt-4 text-[14px] text-[#3f3f3f]">{copy.officeContact}</div>
+      <div className="mt-4 text-[14px] text-[#334155]/70 font-medium">{copy.officeContact}</div>
+      </div>
     </div>
   );
 }

@@ -737,7 +737,9 @@ async def process_user_text_and_reply(
         english_translation = str((preprocess or {}).get("english_translation") or "").strip()
         department_hint = (preprocess or {}).get("target_department")
         query_en = english_translation or text.strip()
-        features = extract_features(query_en, department_hint=department_hint)
+        # Documents and other mixed-language triggers must work on raw + translated text.
+        merged_for_features = f"{query_en} {text}".strip()
+        features = extract_features(merged_for_features, department_hint=department_hint)
         intent = resolve_intent_from_features(features)
         detected_department = features.department_name
 

@@ -120,13 +120,24 @@ class TestIntentPipeline(unittest.TestCase):
 
     def test_documents_intent_multilingual(self) -> None:
         phrases = [
-            "documents required",
+            # Kannada
+            "college admission ge yaav documents beku",
+            "yaav documents admission ge bekagutte",
             "documents bagge helu",
-            "doccuments kaunse",
-            "documents enna venum",
-            "documents enti",
-            "documents entha",
-            "documents kurich parayu",
+            # Hindi
+            "admission ke liye kya documents chahiye",
+            "college documents kya hai",
+            # Tamil
+            "admission ku enna documents venum",
+            # Telugu
+            "admission ki documents enti",
+            # Malayalam
+            "admissioninu documents entha",
+            # Mixed / broken
+            "documents beku for admission",
+            "college ge documents kya chahiye",
+            "doccuments",
+            "documnts",
         ]
         for p in phrases:
             with self.subTest(phrase=p):

@@ -133,14 +133,17 @@
   margin-bottom: 5vh;
 }
 
-/* Voice Orb Positioning */
+/* Voice Orb Positioning - Bullet Proof Fixed Center Bottom */
 .voice-orb-fixed-bottom {
-  position: absolute;
+  position: fixed !important;
   bottom: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important;
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .chat-header-minimal {

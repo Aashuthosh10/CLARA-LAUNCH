@@ -78,8 +78,14 @@ export default function AnimatedAiMessage({
 
         // For actual words, render letters
         const isAsciiToken = /^[\x00-\x7F]+$/.test(token);
+        const isClara = token.includes('CLARA');
+        const tokenClass = isClara 
+          ? 'font-bold text-[#0F172A]' 
+          : 'text-[#0F172A]';
+
+
         return (
-          <span key={`word-${tIdx}`} className={isAsciiToken ? 'inline-block whitespace-nowrap' : 'inline-block'}>
+          <span key={`word-${tIdx}`} className={`${isAsciiToken ? 'inline-block whitespace-nowrap' : 'inline-block'} ${tokenClass}`}>
             {toGraphemes(token).map((char, cIdx) => {
               if (!animate) {
                 return <span key={`char-${cIdx}`} className="inline-block">{char}</span>;
