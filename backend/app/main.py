@@ -61,6 +61,7 @@ from backend.config.settings import (
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
+from backend.app.ws_schemas import parse_inbound_ws_message
 from backend.security.ws_auth import (
     log_ws_auth_configuration_warnings,
     validate_websocket_handshake,
@@ -1409,7 +1410,18 @@ async def websocket_clara(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
-            msg = json.loads(data) if data else {}
+            msg, msg_error = parse_inbound_ws_message(data)
+            if msg_error:
+                await websocket.send_json(
+                    {
+                        "state": 5,
+                        "payload": {
+                            "error": "Invalid message payload.",
+                            "code": "INVALID_MESSAGE",
+                        },
+                    }
+                )
+                continue
             action = msg.get("action") or msg.get("event")
 
             if action == "wake":
