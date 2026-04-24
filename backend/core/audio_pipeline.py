@@ -6,8 +6,13 @@ import time
 from typing import Optional
 
 import numpy as np
-import sounddevice as sd
 import webrtcvad
+try:
+    import sounddevice as sd
+    _SOUNDDEVICE_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # pragma: no cover - depends on host audio libs
+    sd = None  # type: ignore[assignment]
+    _SOUNDDEVICE_IMPORT_ERROR = exc
 
 from backend.config.settings import (
     AUDIO_CHANNELS,
@@ -33,8 +38,15 @@ SAMPLES_PER_FRAME = (AUDIO_SAMPLE_RATE * _VAD_FRAME_MS) // 1000
 BYTES_PER_FRAME = SAMPLES_PER_FRAME * 2  # int16
 
 
+def _require_sounddevice() -> None:
+    if sd is None:
+        detail = f": {_SOUNDDEVICE_IMPORT_ERROR}" if _SOUNDDEVICE_IMPORT_ERROR else ""
+        raise RuntimeError(f"sounddevice unavailable{detail}")
+
+
 def _resolve_input_device() -> int:
     """Resolve input device index from config (name substring or explicit index)."""
+    _require_sounddevice()
     devices = sd.query_devices()
     default_in = sd.default.device[0]
     if default_in is None:
@@ -60,6 +72,7 @@ def _resolve_input_device() -> int:
 
 def get_input_device_info() -> tuple[int, str]:
     """Return (device_index, device_name) for logging."""
+    _require_sounddevice()
     device_id = _resolve_input_device()
     devices = sd.query_devices()
     dev = devices[device_id] if device_id < len(devices) else {}
@@ -72,6 +85,7 @@ def validate_audio_devices() -> tuple[bool, str]:
     Returns (ok, message). If not ok, message describes the issue.
     """
     try:
+        _require_sounddevice()
         devices = sd.query_devices()
         if not devices:
             return False, "No audio devices found on this system."
