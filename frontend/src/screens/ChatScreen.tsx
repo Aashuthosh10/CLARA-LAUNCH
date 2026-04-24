@@ -29,7 +29,6 @@ import {
   menuLabelToJsonKey,
 } from '../lib/collegeLocaleUtils';
 import { useCollegeData } from '../hooks/useCollegeData';
-import { normalizeIntent, type NormalizedIntent } from '../lib/intentNormalizer';
 
 const THINKING_TAGLINES: Record<Language, string[]> = {
   English: [
@@ -197,9 +196,6 @@ export default function ChatScreen({
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   const [isDocumentsStage, setIsDocumentsStage] = useState(false);
   
-  // Multilingual Intent Map overriding
-  const [pendingLocalIntent, setPendingLocalIntent] = useState<NormalizedIntent | null>(null);
-
   // Response Priority Lock (CARD > UI > TEXT)
   const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
 
@@ -224,21 +220,14 @@ export default function ChatScreen({
         currentUiLockRef.current = 'IDLE'; // Release the lock
       }
       
-      const intent = normalizeIntent(msg.text);
-
-      // ── TASK 1: FULL PIPELINE TRACE (MANDATORY) ──────────────────────────
-      console.log(
-        `%c[CLARA_PIPELINE] User Input: "${msg.text}" | ` +
-        `Trigger: ${intent.trigger ?? 'NONE'} | ` +
-        `Department: ${intent.departmentLabel ?? 'NONE'} | ` +
-        `Source: ${source} | ` +
-        `Fallback: ${intent.trigger === null}`,
-        intent.trigger ? 'color: #51cf66; font-weight: bold;' : 'color: #ff6b6b; font-weight: bold;'
-      );
-
-      if (intent.trigger) {
-        setPendingLocalIntent(intent);
-        msg.localIntent = intent;
+      // Backend is authoritative for intent routing on voice turns.
+      // Frontend localIntent is allowed only for explicit UI command flows.
+      if (source === 'UI' && msg?.localIntent) {
+        if (import.meta.env.DEV) {
+          console.log(
+            `[CLARA_PIPELINE] UI localIntent forwarded type=${msg.localIntent?.type ?? 'unknown'} dept=${msg.localIntent?.departmentLabel ?? 'none'}`
+          );
+        }
       }
     }
     sendMessage(msg);
@@ -462,13 +451,13 @@ export default function ChatScreen({
     
     // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
     const nativeTrigger = payload?.showCard;
-    const cardTrigger = normalizeCardTrigger(nativeTrigger || pendingLocalIntent?.trigger);
+    const cardTrigger = normalizeCardTrigger(nativeTrigger);
     const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
     const isResponseReady = payload?.isProcessing !== true && payloadMessageList.length > 0;
     
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
-    const localDeptLabel = pendingLocalIntent?.departmentLabel ?? null;
+    const localDeptLabel = null;
     // Click-driven department flows must always trust the locally clicked department.
     const shouldPreferLocalDepartment =
       Boolean(localDeptLabel) &&
@@ -486,12 +475,6 @@ export default function ChatScreen({
         setActiveDepartmentId(targetDepartment);
       }
     }
-
-    // Ensure we clear the pending intent so subsequent replies don't loop the previous card
-    if (pendingLocalIntent && (!nativeTrigger || isResponseReady)) {
-      setPendingLocalIntent(null);
-    }
-
 
     const menuOptionsFromPayload = Array.isArray(payload?.options)
       ? payload.options.filter((x: unknown) => typeof x === 'string')
@@ -769,13 +752,12 @@ export default function ChatScreen({
       setActiveCards(null);
       setSuppressedTurnId(null);
       const resolvedDept = normalizeDepartmentMenuKey(
-        String(departmentIdFromPayload || targetDepartment || pendingLocalIntent?.departmentLabel || ''),
+        String(departmentIdFromPayload || targetDepartment || ''),
       );
       const feeDeptKey =
         menuLabelToJsonKey(resolvedDept ?? '') ??
         menuLabelToJsonKey(String(targetDepartment || '')) ??
         menuLabelToJsonKey(String(departmentIdFromPayload || '')) ??
-        menuLabelToJsonKey(String(pendingLocalIntent?.departmentLabel || '')) ??
         null;
       setIsFeesStage(true);
       setActiveFeesDepartmentId(feeDeptKey);
