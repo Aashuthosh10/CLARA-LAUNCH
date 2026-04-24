@@ -1,9 +1,8 @@
 -- Run once after first docker compose up.
 -- Example: PGPASSWORD=yourpass psql -h 127.0.0.1 -U clara_user -d clara_db -f scripts/db/init_pgvector.sql
+-- Non-destructive init: safe to re-run.
 
 CREATE EXTENSION IF NOT EXISTS vector;
-
-DROP TABLE IF EXISTS college_knowledge;
 
 CREATE TABLE IF NOT EXISTS college_knowledge (
     id UUID PRIMARY KEY,

@@ -78,8 +78,8 @@ Start the **backend first**, then the frontend. The frontend connects to the bac
 ## Configuration
 
 - Copy `.env.example` to `.env` in the project root and set API keys (e.g. `GROQ_API_KEY`, `SARVAM_*`) and **`POSTGRES_PASSWORD`** for RAG. See **docs/POSTGRES_SETUP.md** for PostgreSQL + pgvector (Ubuntu) and env details.
-- **College knowledge (RAG):** Start PostgreSQL (e.g. `docker compose up -d`), run schema once (`scripts/db/init_pgvector.sql`), then run: `python -m backend.tools.ingest_college_knowledge_pg` when `college_knowledge.txt` is ready.
-- Frontend: optional `frontend/.env.local` (e.g. `GEMINI_API_KEY`, `VITE_WS_URL` for a different backend WebSocket URL such as `ws://localhost:8002/ws/clara`).
+- **College knowledge (RAG):** Start PostgreSQL (e.g. `docker compose up -d`), run schema init (`scripts/db/init_pgvector.sql`, safe to re-run), then run: `python -m backend.tools.ingest_college_knowledge_pg` when `college_knowledge.txt` is ready.
+- Frontend: optional `frontend/.env.local` (e.g. `VITE_WS_URL` for a different backend WebSocket URL such as `ws://localhost:8002/ws/clara`, `VITE_WS_TOKEN` for WS auth).
 
 ### Voice / TTS (CLARA speaks in your language)
 

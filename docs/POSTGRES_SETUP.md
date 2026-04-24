@@ -57,9 +57,9 @@ docker compose up -d
 
 Container name: `clara-postgres`. Port: `127.0.0.1:5432` only.
 
-### 4. Create schema (run once)
+### 4. Create schema (idempotent, safe to re-run)
 
-Apply the pgvector extension and `college_knowledge` table:
+Apply the pgvector extension and `college_knowledge` table. This script is non-destructive and can be re-run safely:
 
 ```bash
 PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -p 5432 -U clara_user -d clara_db -f scripts/db/init_pgvector.sql
