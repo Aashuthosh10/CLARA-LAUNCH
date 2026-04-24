@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useAnimationFrame } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { AuroraText } from '@/components/ui/aurora-text';
@@ -303,7 +303,9 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
           {containerWidth > 0 && (
             <div className="flex h-full items-center">
               {[...NEWS_ITEMS, ...NEWS_ITEMS, ...NEWS_ITEMS].map((item, idx) => (
-                <NewsCard key={`${item.id}-${idx}`} item={item} index={idx} />
+                <Fragment key={`${item.id}-${idx}`}>
+                  <NewsCard item={item} index={idx} />
+                </Fragment>
               ))}
             </div>
           )}
@@ -356,7 +358,9 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pb-32">
                 {NEWS_ITEMS.map((item, idx) => (
-                  <NewsCard key={item.id} item={item} index={idx} isOverlay={true} />
+                  <Fragment key={item.id}>
+                    <NewsCard item={item} index={idx} isOverlay={true} />
+                  </Fragment>
                 ))}
               </div>
             </div>
