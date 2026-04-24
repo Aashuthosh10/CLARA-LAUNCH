@@ -126,6 +126,11 @@ RAG_DOC_COUNT_TIMEOUT_S = 3.0
 AUDIO_DEVICE_VALIDATE_TIMEOUT_S = 3.0
 
 
+def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
+    """Compatibility shim for legacy tests that patch this symbol."""
+    log_turn_metrics(*args, **kwargs)
+
+
 def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
     dept = (department or "").strip()
     if not dept:
@@ -292,13 +297,13 @@ def _get_ack_earcon_base64() -> str:
     return _ACK_EARCON_B64
 
 
-def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
+async def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
     """
     LLM classifier for broad course/department-list questions across mixed languages.
     Returns True only when the query asks for a broad list/menu of courses or departments.
     """
     try:
-        client = get_groq_client()
+        client = await get_groq_client()
         if not client:
             return False
         system_prompt = (
@@ -310,7 +315,7 @@ def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
             "If the user asks about one specific department, return OTHER."
         )
         user_prompt = f"Language context: {language_name}\nQuery: {text.strip()}"
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             model=RAG_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -703,7 +708,7 @@ async def process_user_text_and_reply(
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
             try:
                 is_broad_course_menu = await asyncio.wait_for(
-                    asyncio.to_thread(_llm_detect_broad_course_intent, rag_query, lang_name),
+                    _llm_detect_broad_course_intent(rag_query, lang_name),
                     timeout=1.6,
                 )
             except asyncio.TimeoutError:
@@ -826,7 +831,22 @@ async def process_user_text_and_reply(
             ).hexdigest()[:12]
         else:
             context_sig = hashlib.sha256((context or "").encode("utf-8")).hexdigest()[:12]
-        cache_key = f"v2-direct|{intent}|{lang_key}|{_normalized_cache_text(rag_query)}|{context_sig}"
+        query_norm = _normalized_cache_text(rag_query)
+        raw_norm = _normalized_cache_text(text)
+        cache_key = f"v2-direct|{intent}|{lang_key}|{query_norm}|{context_sig}"
+        cache_key_candidates = [cache_key]
+        if raw_norm and raw_norm != query_norm:
+            cache_key_candidates.append(f"v2-direct|{intent}|{lang_key}|{raw_norm}|{context_sig}")
+        if intent != INTENT_NORMAL_QUERY:
+            # Backward-compatible fallback: if intent routing changes between turns,
+            # still allow retrieval of a prior normal-query cache entry for same text/context.
+            cache_key_candidates.append(
+                f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{query_norm}|{context_sig}"
+            )
+            if raw_norm and raw_norm != query_norm:
+                cache_key_candidates.append(
+                    f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{raw_norm}|{context_sig}"
+                )
         direct_reply = off_topic_direct_reply
         if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
             # Deterministic guard: never default to CSE for ambiguous HOD requests.
@@ -839,7 +859,13 @@ async def process_user_text_and_reply(
             direct_reply = _fees_card_direct_reply(lang_key, detected_department)
         elif not is_narrator_intent(intent):
             direct_reply = direct_reply or get_profile_direct_reply(intent, lang_name)
-        reply_text = direct_reply or LLM_REPLY_CACHE.get(cache_key)
+        reply_text = direct_reply
+        if reply_text is None:
+            for candidate_key in cache_key_candidates:
+                cached = LLM_REPLY_CACHE.get(candidate_key)
+                if cached:
+                    reply_text = cached
+                    break
         first_sentence = ""
 
         async def _emit_first_sentence_audio(sentence: str) -> None:
