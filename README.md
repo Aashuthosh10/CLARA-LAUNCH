@@ -46,12 +46,12 @@ Then run with one of the options below. On systems without Node in `PATH`, you c
 └── .env.example      # Backend env template (copy to .env)
 ```
 
-- Backend: http://localhost:8000  
-- Frontend: http://localhost:5173  
+- Backend: http://localhost:6969  
+- Frontend: http://localhost:5176  
 
 ### Option 2: Run separately
 
-Start the **backend first**, then the frontend. The frontend connects to the backend WebSocket (default `ws://localhost:8001/ws/clara`; override with `VITE_WS_URL` in `frontend/.env.local`) and retries every 3 seconds if the backend is not running. If the backend reports "address already in use", free the port (e.g. `netstat -ano | findstr :8001` then `taskkill /PID <pid> /F`) or set `PORT=8002` in `.env` and `VITE_WS_URL=ws://localhost:8002/ws/clara` in `frontend/.env.local`.
+Start the **backend first**, then the frontend. The frontend connects to the backend WebSocket (default `ws://localhost:6969/ws/clara`; override with `VITE_WS_URL` in `frontend/.env.local`) and retries with backoff if the backend is not running. If the backend reports "address already in use", free the port (e.g. `netstat -ano | findstr :6969` then `taskkill /PID <pid> /F`) or set `PORT=<free_port>` in `.env` and `VITE_WS_URL=ws://localhost:<free_port>/ws/clara` in `frontend/.env.local`.
 
 **Backend**
 
@@ -78,8 +78,8 @@ Start the **backend first**, then the frontend. The frontend connects to the bac
 ## Configuration
 
 - Copy `.env.example` to `.env` in the project root and set API keys (e.g. `GROQ_API_KEY`, `SARVAM_*`) and **`POSTGRES_PASSWORD`** for RAG. See **docs/POSTGRES_SETUP.md** for PostgreSQL + pgvector (Ubuntu) and env details.
-- **College knowledge (RAG):** Start PostgreSQL (e.g. `docker compose up -d`), run schema init (`scripts/db/init_pgvector.sql`, safe to re-run), then run: `python -m backend.tools.ingest_college_knowledge_pg` when `college_knowledge.txt` is ready.
-- Frontend: optional `frontend/.env.local` (e.g. `VITE_WS_URL` for a different backend WebSocket URL such as `ws://localhost:8002/ws/clara`, `VITE_WS_TOKEN` for WS auth).
+- **College knowledge (RAG):** Start PostgreSQL (e.g. `docker compose up -d`), run schema init (`scripts/db/init_pgvector.sql`, safe to re-run), then run: `python -m backend.tools.ingest_college_knowledge_pg`. This now ingests both `college_knowledge.txt` and locale JSON (`en.json`, `hi.json`) into `college_knowledge`.
+- Frontend: optional `frontend/.env.local` (e.g. `VITE_WS_URL` if your backend is not on the default `ws://localhost:6969/ws/clara`, `VITE_WS_TOKEN` for WS auth).
 
 ### Voice / TTS (CLARA speaks in your language)
 
@@ -96,7 +96,7 @@ Run the backend with **full** dependencies (not minimal): `pip install -r backen
 | -------- | ----- |
 | Frontend | React 19, Vite 6, TypeScript, Tailwind CSS, Motion |
 | Backend  | FastAPI, Uvicorn, WebSockets |
-| Protocol | WebSocket at `ws://localhost:8000/ws/clara` (state + payload) |
+| Protocol | WebSocket at `ws://localhost:6969/ws/clara` (state + payload) |
 
 ## Pushing to GitHub (FB-Clara)
 
@@ -116,7 +116,7 @@ If Git prompts for credentials, use your GitHub username and a [Personal Access 
 ## Development
 
 - Backend: `backend/main.py` (compat entrypoint), `backend/app/main.py` (FastAPI app), `backend/config/settings.py` (env from `.env`).
-- Frontend: `frontend/` (Vite + React); WebSocket URL in `frontend/src/App.tsx` (`ws://localhost:8000/ws/clara`).
+- Frontend: `frontend/` (Vite + React); WebSocket URL in `frontend/src/App.tsx` (defaults to `ws://localhost:6969/ws/clara`, override with `VITE_WS_URL`).
 
 ## License
 
@@ -195,6 +195,20 @@ Quick PowerShell extraction example (from backend log file):
 ├── docs/             # Setup and baseline documentation
 └── .env.example      # Backend env template (copy to .env)
 ```
+
+## RAG Ingestion Verification (Multilingual)
+
+Run these from project root after DB is up:
+
+```bash
+python -m backend.tools.ingest_college_knowledge_pg
+python -c "from backend.clients.database import get_document_count; print(get_document_count())"
+python -m backend.tools.rag_multilingual_check
+```
+
+Expected:
+- document count is non-zero
+- each language (`en`, `hi`, `kn`, `ta`, `te`, `ml`) shows `has_context: true` for admissions/fees/documents/hod/placements/overview checks.
 
 
 

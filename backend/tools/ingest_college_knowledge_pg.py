@@ -1,7 +1,8 @@
-"""Ingest English-indexed locale JSON into pgvector (leaf chunks).
+"""Ingest college knowledge and locale leaves into pgvector.
 
-RAG stays English-indexed: the universal pre-processor normalizes queries to English before search.
-Only en.json (and optionally hi.json) are ingested. kn/ta/te/ml JSON are for UI + Narrator only — never vector DB.
+Dual source ingestion:
+1) college_knowledge.txt chunked for broad institution facts (language=en)
+2) en/hi locale JSON flattened into context-rich leaf chunks
 """
 
 import json
@@ -15,10 +16,13 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from backend.clients.database import get_connection, insert_college_chunk, put_connection
+from backend.config.settings import COLLEGE_KNOWLEDGE_PATH
 from backend.core.rag import EMBEDDING_DIM, EMBEDDING_MODEL_NAME, generate_embedding
 
 LOCALES_DIR = _PROJECT_ROOT / "backend" / "data" / "locales"
 LOCALE_FILES = ("en.json", "hi.json")
+DEFAULT_CHUNK_SIZE = 700
+DEFAULT_CHUNK_OVERLAP = 80
 
 
 def _clean(value: Any) -> str:
@@ -76,6 +80,73 @@ def build_leaf_chunks_from_locale(data: dict[str, Any]) -> list[str]:
         return out
     _walk(data, [], out)
     return out
+
+
+def build_text_chunks(text: str, *, chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[str]:
+    cleaned_lines = [line.strip() for line in text.splitlines() if line.strip()]
+    cleaned = "\n".join(cleaned_lines).strip()
+    if not cleaned:
+        return []
+    if chunk_size <= 0:
+        chunk_size = DEFAULT_CHUNK_SIZE
+    if overlap < 0:
+        overlap = 0
+    if overlap >= chunk_size:
+        overlap = max(0, chunk_size // 5)
+
+    chunks: list[str] = []
+    start = 0
+    step = max(1, chunk_size - overlap)
+    n = len(cleaned)
+    while start < n:
+        end = min(n, start + chunk_size)
+        chunk = cleaned[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+        if end >= n:
+            break
+        start += step
+    return chunks
+
+
+def build_text_fact_chunks(text: str) -> list[str]:
+    """
+    Build fine-grained retrieval chunks from heading+fact style lines.
+    This improves precision for queries like location/address/HOD/fees.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    out: list[str] = []
+    section = ""
+    for line in lines:
+        upper = line.upper()
+        if upper.startswith("PART ") or (line.endswith(":") and len(line) < 80):
+            section = line.rstrip(":")
+            continue
+        # Bullet/fact lines
+        if line.startswith("•"):
+            fact = line.lstrip("•").strip()
+            if fact:
+                if section:
+                    out.append(f"Section: {section}. Fact: {fact}.")
+                else:
+                    out.append(f"Fact: {fact}.")
+            continue
+        # Key: value style lines
+        if ":" in line and len(line) <= 200:
+            if section:
+                out.append(f"Section: {section}. Fact: {line}.")
+            else:
+                out.append(f"Fact: {line}.")
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for chunk in out:
+        key = chunk.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(chunk)
+    return deduped
 
 
 def _prepare_and_truncate_college_knowledge_table() -> bool:
@@ -139,6 +210,49 @@ def main() -> None:
 
     inserted = 0
     inserted_per_locale: dict[str, int] = {}
+    inserted_per_source: dict[str, int] = {"college_txt": 0, "locale_json": 0}
+
+    txt_path = Path(COLLEGE_KNOWLEDGE_PATH)
+    if not txt_path.is_file():
+        print(f"Error: college knowledge text file not found: {txt_path}")
+        sys.exit(1)
+    try:
+        txt_data = txt_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Error: Could not read college knowledge file {txt_path}: {e}")
+        sys.exit(1)
+    txt_window_chunks = build_text_chunks(txt_data)
+    txt_fact_chunks = build_text_fact_chunks(txt_data)
+    txt_chunks = txt_window_chunks + txt_fact_chunks
+    if not txt_chunks:
+        print(f"Error: No text chunks produced from {txt_path}.")
+        sys.exit(1)
+
+    inserted_per_locale.setdefault("en", 0)
+    for idx, chunk in enumerate(txt_chunks, start=1):
+        doc_id = str(uuid.uuid4())
+        try:
+            embedding = generate_embedding(chunk)
+        except Exception as e:
+            print(f"Error: Embedding failed for college_knowledge chunk={idx}: {e}")
+            sys.exit(1)
+        metadata = {
+            "language": "en",
+            "source": "college_txt",
+            "source_file": str(txt_path.name),
+            "chunk_index": idx,
+            "chunk_size": DEFAULT_CHUNK_SIZE,
+            "chunk_overlap": DEFAULT_CHUNK_OVERLAP,
+            "chunk_kind": "fact" if idx > len(txt_window_chunks) else "window",
+        }
+        if insert_college_chunk(doc_id, chunk, embedding, metadata=metadata):
+            inserted += 1
+            inserted_per_locale["en"] += 1
+            inserted_per_source["college_txt"] += 1
+        else:
+            print(f"Error: Insert failed for college_knowledge chunk={idx}")
+            sys.exit(1)
+
     for path in paths:
         locale = path.stem.strip().lower()
         if locale not in {"en", "hi"}:
@@ -165,17 +279,20 @@ def main() -> None:
             except Exception as e:
                 print(f"Error: Embedding failed for locale={locale}: {e}")
                 sys.exit(1)
-            if insert_college_chunk(doc_id, chunk, embedding, metadata={"language": locale}):
+            metadata = {"language": locale, "source": "locale_json", "source_file": str(path.name)}
+            if insert_college_chunk(doc_id, chunk, embedding, metadata=metadata):
                 inserted += 1
                 inserted_per_locale[locale] += 1
+                inserted_per_source["locale_json"] += 1
             else:
                 print(f"Error: Insert failed for locale={locale}, chunk={inserted_per_locale[locale] + 1}")
                 sys.exit(1)
 
     per_locale_text = ", ".join(f"{k}={v}" for k, v in sorted(inserted_per_locale.items()))
+    per_source_text = ", ".join(f"{k}={v}" for k, v in sorted(inserted_per_source.items()))
     print(
         f"Ingested {inserted} leaf chunks from {len(paths)} locale files into PostgreSQL (college_knowledge). "
-        f"Breakdown: {per_locale_text}"
+        f"Breakdown by locale: {per_locale_text}. Breakdown by source: {per_source_text}"
     )
 
 

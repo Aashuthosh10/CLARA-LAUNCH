@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('CLARA chat flow', () => {
-  test('Sleep -> Chat -> inline language -> greeting and orb', async ({ page }) => {
-    await page.goto('http://localhost:5173/');
+  test('Sleep -> Language -> Chat (no menu) shows greeting and orb', async ({ page }) => {
+    await page.goto('http://localhost:5176/');
 
     await expect(page.getByTestId('sleep-screen')).toBeVisible();
     await page.getByTestId('sleep-screen').click({ position: { x: 100, y: 100 } });
@@ -18,7 +18,7 @@ test.describe('CLARA chat flow', () => {
   });
 
   test('URL ?state=5 shows chat screen with greeting and orb', async ({ page }) => {
-    await page.goto('http://localhost:5173/?state=5', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5176/?state=5', { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
 
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 10000 });
@@ -29,8 +29,8 @@ test.describe('CLARA chat flow', () => {
     await page.screenshot({ path: 'test-results/chat-screen-verified.png', fullPage: true });
   });
 
-  test('Debug key 3: chat with inline language gate', async ({ page }) => {
-    await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+  test('Debug key 3 then 5: language then chat', async ({ page }) => {
+    await page.goto('http://localhost:5176/', { waitUntil: 'networkidle' });
     await expect(page.getByTestId('sleep-screen')).toBeVisible();
 
     const sendKey = (key: string) =>

@@ -132,10 +132,30 @@ RAG_WARMUP_TIMEOUT_S = 5.0
 RAG_DOC_COUNT_TIMEOUT_S = 3.0
 AUDIO_DEVICE_VALIDATE_TIMEOUT_S = 3.0
 
+_LOCATION_QUERY_TERMS = (
+    "where is",
+    "location",
+    "address",
+    "campus location",
+    "located",
+    "kaha",
+    "elli",
+    "enga",
+    "ekkada",
+    "evide",
+)
+
 
 def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
     """Compatibility shim for legacy tests that patch this symbol."""
     log_turn_metrics(*args, **kwargs)
+
+
+def _is_location_query(text: str | None) -> bool:
+    q = (text or "").strip().lower()
+    if not q:
+        return False
+    return any(term in q for term in _LOCATION_QUERY_TERMS)
 
 
 def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
@@ -229,6 +249,18 @@ def _documents_card_direct_reply(language_key: str) -> str:
     }
     items = spoken_lists.get(language_key, docs_en)
     return "Required documents are: " + "; ".join(items) + "."
+
+
+def _location_direct_reply(language_key: str) -> str:
+    mapping = {
+        "en": "SVIT is located in Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064.",
+        "hi": "SVIT का स्थान Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064 है।",
+        "kn": "SVIT Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064ರಲ್ಲಿ ಇದೆ.",
+        "ta": "SVIT Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064-ல் அமைந்துள்ளது.",
+        "te": "SVIT Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064లో ఉంది.",
+        "ml": "SVIT Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064-ൽ സ്ഥിതിചെയ്യുന്നു.",
+    }
+    return mapping.get(language_key, mapping["en"])
 
 
 LLM_REPLY_CACHE = TTLRUCache[str, str](max_size=256, ttl_seconds=600.0)
@@ -714,6 +746,11 @@ async def process_user_text_and_reply(
         logger.info("[NLP_TRACE] FINAL_INTENT=%s", intent)
         logger.info("[NLP_TRACE] FINAL_DEPARTMENT=%s", detected_department)
 
+        # Force location/address questions through vector RAG context instead of narrator-only flow.
+        # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
+        if _is_location_query(text) or _is_location_query(query_en):
+            intent = INTENT_NORMAL_QUERY
+
         is_broad_course_menu = False
         if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
             try:
@@ -858,6 +895,8 @@ async def process_user_text_and_reply(
                     f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{raw_norm}|{context_sig}"
                 )
         direct_reply = off_topic_direct_reply
+        if _is_location_query(text) or _is_location_query(query_en):
+            direct_reply = _location_direct_reply(lang_key)
         if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
             # Deterministic guard: never default to CSE for ambiguous HOD requests.
             direct_reply = "Please specify the department to know the HOD."
@@ -1267,32 +1306,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         FRONTEND_URL,
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
         "http://localhost:5176",
-        "http://localhost:5177",
-        "http://localhost:5178",
-        "http://localhost:5179",
-        "http://localhost:5180",
-        "http://localhost:5181",
-        "http://localhost:5182",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:5175",
         "http://127.0.0.1:5176",
-        "http://127.0.0.1:5177",
-        "http://127.0.0.1:5178",
-        "http://127.0.0.1:5179",
-        "http://127.0.0.1:5180",
-        "http://127.0.0.1:5181",
-        "http://127.0.0.1:5182",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8001",
-        "http://localhost:8001",
-        "http://127.0.0.1:8002",
-        "http://localhost:8002",
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -83,9 +83,17 @@ def get_relevant_context(
         query_embedding = generate_embedding(query)
         raw = (lang_key if lang_key is not None else language) or ""
         lang = raw.strip().lower()
-        if lang != "hi":
-            lang = "en"
-        contents = get_similar_contents(query_embedding, top_k, language=lang)
+        # Use English corpus as canonical ground truth for all languages.
+        # For Hindi sessions, augment with Hindi rows (if available) without replacing English grounding.
+        contents = get_similar_contents(query_embedding, top_k, language="en")
+        if lang == "hi":
+            hi_contents = get_similar_contents(query_embedding, max(1, top_k // 2), language="hi")
+            if hi_contents:
+                seen = set(contents)
+                for c in hi_contents:
+                    if c not in seen:
+                        contents.append(c)
+                        seen.add(c)
         if not contents:
             logger.warning("RAG: context empty (no documents for query)")
             return ""

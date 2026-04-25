@@ -105,30 +105,41 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "6969"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5176")
 KIOSK_TIMEZONE = os.getenv("KIOSK_TIMEZONE", "Asia/Kolkata").strip() or "Asia/Kolkata"
-WS_AUTH_REQUIRED = os.getenv("WS_AUTH_REQUIRED", "true").strip().lower() in ("1", "true", "yes", "on")
 # Shared secret for simple bearer token auth (minimum safe baseline).
 WS_AUTH_TOKEN = os.getenv("WS_AUTH_TOKEN", "").strip()
 # Optional HMAC secret for signed, short-lived ws tokens.
 WS_TOKEN_SIGNING_SECRET = os.getenv("WS_TOKEN_SIGNING_SECRET", "").strip()
-# If auth is enabled in .env but no verifier is configured, do not reject every handshake (local dev).
-if WS_AUTH_REQUIRED and not WS_AUTH_TOKEN and not WS_TOKEN_SIGNING_SECRET:
-    WS_AUTH_REQUIRED = False
-
-_ws_allowed_origins_env = os.getenv("WS_ALLOWED_ORIGINS", "").strip()
-if _ws_allowed_origins_env:
-    WS_ALLOWED_ORIGINS = [
-        origin.strip() for origin in _ws_allowed_origins_env.split(",") if origin.strip()
-    ]
+# If WS_AUTH_REQUIRED is unset: require auth only when a credential exists. This avoids a
+# broken default (auth "on" but no token can ever verify) which breaks local WS connects.
+_ws_auth_required_env = os.getenv("WS_AUTH_REQUIRED", "").strip()
+_has_ws_credential = bool(WS_AUTH_TOKEN or WS_TOKEN_SIGNING_SECRET)
+if _ws_auth_required_env:
+    WS_AUTH_REQUIRED = _ws_auth_required_env.lower() in ("1", "true", "yes", "on")
 else:
-    # Default dev origins: Vite uses 5176 in package.json; 5173 is common; include 127.0.0.1 variants.
-    _default_origins = (
-        FRONTEND_URL,
-        "http://localhost:5173",
-        "http://localhost:5176",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5176",
-    )
-    WS_ALLOWED_ORIGINS = list(dict.fromkeys(o for o in _default_origins if o))
+    WS_AUTH_REQUIRED = _has_ws_credential
+_ws_allowed_origins_env = os.getenv("WS_ALLOWED_ORIGINS", "").strip()
+_ws_allowed_origins_from_env = [
+    origin.strip()
+    for origin in (_ws_allowed_origins_env.split(",") if _ws_allowed_origins_env else [])
+    if origin.strip()
+]
+# If WS_ALLOWED_ORIGINS is unset, default to FRONTEND_URL plus a localhost/127.0.0.1 twin when applicable.
+_ws_default_origins: list[str] = [FRONTEND_URL]
+try:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(FRONTEND_URL)
+    if parsed.hostname == "localhost" and parsed.port:
+        alt = parsed._replace(netloc=f"127.0.0.1:{parsed.port}").geturl()
+        if alt not in _ws_default_origins:
+            _ws_default_origins.append(alt)
+    elif parsed.hostname == "127.0.0.1" and parsed.port:
+        alt = parsed._replace(netloc=f"localhost:{parsed.port}").geturl()
+        if alt not in _ws_default_origins:
+            _ws_default_origins.append(alt)
+except Exception:
+    pass
+WS_ALLOWED_ORIGINS = _ws_allowed_origins_from_env or _ws_default_origins
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))

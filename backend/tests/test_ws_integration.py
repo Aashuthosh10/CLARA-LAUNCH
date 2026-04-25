@@ -10,18 +10,18 @@ from backend.security import ws_auth
 
 class TestWebSocketIntegration(unittest.TestCase):
     def test_rejects_unauthorized_handshake(self) -> None:
-        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5173"]), patch.object(
+        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5176"]), patch.object(
             ws_auth, "WS_AUTH_REQUIRED", True
         ), patch.object(ws_auth, "WS_AUTH_TOKEN", "test-token"), patch.object(
             ws_auth, "WS_TOKEN_SIGNING_SECRET", ""
         ):
             client = TestClient(app)
             with self.assertRaises(WebSocketDisconnect):
-                with client.websocket_connect("/ws/clara", headers={"origin": "http://localhost:5173"}):
+                with client.websocket_connect("/ws/clara", headers={"origin": "http://localhost:5176"}):
                     pass
 
     def test_accepts_authorized_handshake_and_sends_initial_state(self) -> None:
-        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5173"]), patch.object(
+        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5176"]), patch.object(
             ws_auth, "WS_AUTH_REQUIRED", True
         ), patch.object(ws_auth, "WS_AUTH_TOKEN", "test-token"), patch.object(
             ws_auth, "WS_TOKEN_SIGNING_SECRET", ""
@@ -29,13 +29,13 @@ class TestWebSocketIntegration(unittest.TestCase):
             client = TestClient(app)
             with client.websocket_connect(
                 "/ws/clara?token=test-token",
-                headers={"origin": "http://localhost:5173"},
+                headers={"origin": "http://localhost:5176"},
             ) as websocket:
                 msg = websocket.receive_json()
                 self.assertEqual(msg.get("state"), 0)
 
     def test_invalid_message_payload_returns_safe_error(self) -> None:
-        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5173"]), patch.object(
+        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5176"]), patch.object(
             ws_auth, "WS_AUTH_REQUIRED", True
         ), patch.object(ws_auth, "WS_AUTH_TOKEN", "test-token"), patch.object(
             ws_auth, "WS_TOKEN_SIGNING_SECRET", ""
@@ -43,7 +43,7 @@ class TestWebSocketIntegration(unittest.TestCase):
             client = TestClient(app)
             with client.websocket_connect(
                 "/ws/clara?token=test-token",
-                headers={"origin": "http://localhost:5173"},
+                headers={"origin": "http://localhost:5176"},
             ) as websocket:
                 websocket.receive_json()  # initial state=0
                 websocket.send_text("not-json")

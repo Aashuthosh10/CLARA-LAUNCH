@@ -80,19 +80,43 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 6969
 # Or use scripts/run-backend.sh
 ```
 
-### 6. Ingest college knowledge (when data is ready)
+### 6. Ingest college knowledge (dual source)
 
-After you have the complete college information in `college_knowledge.txt` (or path set in `COLLEGE_KNOWLEDGE_PATH`):
+The canonical ingestion command now populates `college_knowledge` from:
+- `college_knowledge.txt` (chunked narrative source, language=`en`)
+- `backend/data/locales/en.json` and `backend/data/locales/hi.json` (flattened leaf chunks)
+
+Run:
 
 ```bash
 python -m backend.tools.ingest_college_knowledge_pg
 ```
 
-This chunks the file (700 chars, 80 overlap), generates local embeddings, and inserts into PostgreSQL. Re-run after updating the file.
+This chunks the text file (~700 chars, 80 overlap), generates local embeddings, and inserts all chunks into PostgreSQL with metadata tags (`source`, `language`, `source_file`). Re-run safely after updates.
+
+### 7. Verify ingestion and multilingual retrieval
+
+```bash
+python -c "from backend.clients.database import get_document_count; print(get_document_count())"
+python -m backend.tools.rag_multilingual_check
+```
+
+Expected:
+- document count > 0
+- all target languages (`en`, `hi`, `kn`, `ta`, `te`, `ml`) report `has_context=true` across matrix categories.
+
+### Troubleshooting: Empty table warning still appears
+
+If backend still logs `college_knowledge table is empty` after ingest:
+1. Verify backend is using the same DB endpoint as ingestion (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`).
+2. Print backend-visible count:
+   `python -c "from backend.clients.database import get_document_count; print(get_document_count())"`
+3. Restart backend after ingest so startup checks refresh.
+4. Re-run ingestion command and check for insert errors.
 
 ---
 
 ## Post-migration statement
 
-**ChromaDB has been fully removed. The backend now runs on local PostgreSQL + pgvector with local embeddings. The knowledge base is currently empty. Please provide the complete college information to ingest.**
+**ChromaDB has been fully removed. The backend runs on PostgreSQL + pgvector with local embeddings and supports dual-source ingestion (`college_knowledge.txt` + locale leaves).**
 
