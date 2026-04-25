@@ -1434,6 +1434,38 @@ async def websocket_clara(websocket: WebSocket):
                 await websocket.send_json({"state": 5, "payload": payload})
                 continue
 
+            if action == "campus_navigation_tts":
+                text = (msg.get("text") or "").strip()
+                language = msg.get("language") or session.get("language_name") or "English"
+                if language not in VALID_LANGUAGES:
+                    language = "English"
+                code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
+                lang_code = TARGET_LANGUAGE_CODES[code_key]
+                turn_id = (msg.get("turn_id") or f"campus-nav-{uuid.uuid4().hex[:12]}").strip()
+                audio_b64 = None
+                try:
+                    audio_b64, _ = await tts_to_base64_cached(
+                        text,
+                        lang_code,
+                        turn_id=turn_id,
+                        utterance_kind="campus_navigation_tts",
+                    )
+                except Exception as exc:
+                    logger.exception("Campus navigation TTS failed: %s", exc)
+                payload: dict[str, Any] = {
+                    "type": "campus_navigation_tts",
+                    "isSpeaking": bool(audio_b64),
+                    "isProcessing": False,
+                    "turn_id": turn_id,
+                    "utterance_kind": "campus_navigation_tts",
+                }
+                if audio_b64:
+                    payload["audioBase64"] = audio_b64
+                else:
+                    payload["error"] = "Could not generate campus navigation audio."
+                await websocket.send_json({"state": 5, "payload": payload})
+                continue
+
             if action == "conversation_started":
                 # First visit from sleep: no UI language yet — short English intro only (e.g. Good afternoon… assistant.).
                 if session.get("language_code_key") is None:

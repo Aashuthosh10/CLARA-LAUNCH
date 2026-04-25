@@ -317,9 +317,14 @@ export function useWebSocket(url: string) {
 
   const setManualState = useCallback((newState: number, newPayload?: any) => {
     stateRef.current = newState;
+    const entry = entryRef.current ?? sharedByUrl.get(url);
+    if (entry) {
+      entry.state = newState;
+      if (newPayload !== undefined) entry.payload = newPayload;
+    }
     setState(newState);
     if (newPayload !== undefined) setPayload(newPayload);
-  }, []);
+  }, [url]);
 
   const retryConnect = useCallback(() => {
     const entry = sharedByUrl.get(url);

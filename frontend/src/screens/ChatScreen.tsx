@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
-import { Sparkles, Home, MapPinned, MessageSquareText } from 'lucide-react';
+import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2 } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import fullTextBgImage from '../assets/full_text_bg.png';
@@ -18,6 +18,7 @@ import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/Depa
 import LeadershipOverview from '../components/chat/LeadershipOverview';
 import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
+import CampusNavigationStage from '../components/chat/CampusNavigationStage';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer } from './chat/useChatLayoutReducer';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
@@ -31,6 +32,12 @@ import {
   menuLabelToJsonKey,
 } from '../lib/collegeLocaleUtils';
 import { useCollegeData } from '../hooks/useCollegeData';
+import {
+  CAMPUS_DIRECTIONS,
+  campusLabels,
+  campusSpeechText,
+  localizedCampusSteps,
+} from '../data/campusDirections';
 
 const THINKING_TAGLINES: Record<Language, string[]> = {
   English: [
@@ -257,6 +264,11 @@ export default function ChatScreen({
   const [isFeesStage, setIsFeesStage] = useState(false);
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   const [isDocumentsStage, setIsDocumentsStage] = useState(false);
+  const [isCampusNavigationStage, setIsCampusNavigationStage] = useState(false);
+  const [selectedCampusIndex, setSelectedCampusIndex] = useState(0);
+  const [isCampusSpeaking, setIsCampusSpeaking] = useState(false);
+  const [hasCampusRoomSelection, setHasCampusRoomSelection] = useState(false);
+  const [showCampusReturnSuggestions, setShowCampusReturnSuggestions] = useState(false);
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
 
@@ -271,6 +283,7 @@ export default function ChatScreen({
       if (source === 'VOICE') {
         setLayoutMode('FULL_TEXT');
         setActiveCards(null);
+        setIsCampusNavigationStage(false);
         setIsDepartmentOverviewStage(false);
         setActiveDepartmentId(null);
         setIsInfoSlideStage(false);
@@ -317,6 +330,8 @@ export default function ChatScreen({
   const languagePromptRequestedRef = useRef(false);
   const wasPlayingAudioRef = useRef(false);
   const isPendingListeningRef = useRef(false);
+  const savedChatFocusRef = useRef<ChatMessage | null>(null);
+  const campusTtsSerialRef = useRef(0);
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
@@ -472,8 +487,102 @@ export default function ChatScreen({
         currentAudioRef.current = null;
     }
     setIsPlayingBackendAudio(false);
+    setIsCampusSpeaking(false);
     if (onHome) onHome();
   }, [stopListening, onHome]);
+
+  const clearCardStages = useCallback(() => {
+    setActiveCards(null);
+    setCurrentCardIdx(0);
+    setSuppressedTurnId(null);
+    setCourseMenuOptions([]);
+    setActiveDepartmentId(null);
+    setIsDepartmentOverviewStage(false);
+    setIsInfoSlideStage(false);
+    setInfoSlides([]);
+    setInfoSlideChip('');
+    setIsHodStage(false);
+    setIsFeesStage(false);
+    setActiveFeesDepartmentId(null);
+    setIsDocumentsStage(false);
+  }, []);
+
+  const stopCampusSpeech = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    setIsPlayingBackendAudio(false);
+    setIsCampusSpeaking(false);
+  }, []);
+
+  const requestCampusTts = useCallback((text: string, key: string) => {
+    const cleanText = text.trim();
+    if (!cleanText) return;
+
+    stopCampusSpeech();
+    setIsCampusSpeaking(true);
+    campusTtsSerialRef.current += 1;
+    sendMessage({
+      action: 'campus_navigation_tts',
+      language,
+      text: cleanText,
+      turn_id: `campus-${key}-${language}-${campusTtsSerialRef.current}`,
+    });
+  }, [language, sendMessage, stopCampusSpeech]);
+
+  const speakCampusDirection = useCallback((index = selectedCampusIndex) => {
+    const direction = CAMPUS_DIRECTIONS[index] ?? CAMPUS_DIRECTIONS[0];
+    if (!direction) return;
+
+    requestCampusTts(campusSpeechText(direction, language), `nav-${index}`);
+  }, [language, requestCampusTts, selectedCampusIndex]);
+
+  const promptCampusRoomSelection = useCallback(() => {
+    const labels = campusLabels(language);
+    requestCampusTts(labels.selectRoomPrompt || labels.selectPrompt, 'select-room');
+  }, [language, requestCampusTts]);
+
+  const openCampusNavigation = useCallback(() => {
+    stopListening();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+      setIsPlayingBackendAudio(false);
+    }
+    currentUiLockRef.current = 'CARD';
+    const latestVisibleClara = [...displayMessages]
+      .reverse()
+      .find((m) => isTextMessage(m) && m.role === 'clara' && !(m as any).isHidden && !(m as any).isCardData) as ChatMessage | undefined;
+    const latestUser = [...displayMessages]
+      .reverse()
+      .find((m) => isTextMessage(m) && m.role === 'user') as ChatMessage | undefined;
+    savedChatFocusRef.current =
+      visuallyFocusedMessage ??
+      latestVisibleClara ??
+      (latestUser && isTextMessage(latestUser)
+        ? {
+            id: 'campus-return-last-question',
+            role: 'clara',
+            text: latestUser.text,
+          }
+        : null);
+    clearCardStages();
+    setIsCampusNavigationStage(true);
+    setSelectedCampusIndex(0);
+    setHasCampusRoomSelection(false);
+    setShowCampusReturnSuggestions(false);
+    setLayoutMode('SPLIT_CARDS');
+  }, [clearCardStages, displayMessages, setLayoutMode, stopListening, visuallyFocusedMessage]);
+
+  const returnToChatFromCampus = useCallback(() => {
+    stopCampusSpeech();
+    setIsCampusNavigationStage(false);
+    currentUiLockRef.current = 'IDLE';
+    setLayoutMode('FULL_TEXT');
+    setVisuallyFocusedMessage(savedChatFocusRef.current);
+    setShowCampusReturnSuggestions(true);
+  }, [setLayoutMode, stopCampusSpeech]);
 
   // Sync Card Progression with Backend Audio Duration
   const handleAudioPlayback = useCallback(
@@ -535,6 +644,7 @@ export default function ChatScreen({
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
+        setIsCampusSpeaking(false);
         setHasGreeted(true); // Session is active after any Clara audio completes
         if (isOverview && cardsToSync && cardsToSync.length > 0) {
             setCurrentCardIdx(cardsToSync.length - 1);
@@ -554,6 +664,7 @@ export default function ChatScreen({
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
+        setIsCampusSpeaking(false);
         setHasGreeted(true); // Fallback so they can progress
         setShowUnmuteHint(true);
     });
@@ -643,6 +754,21 @@ export default function ChatScreen({
       if (estimatedDuration) {
         setCurrentAudioDuration(estimatedDuration);
       }
+    }
+
+    if (type === 'campus_navigation_tts') {
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      } else {
+        setIsCampusSpeaking(false);
+      }
+      return;
     }
 
     // Defer all split-card transitions until the turn has finalized messages.
@@ -1053,6 +1179,30 @@ export default function ChatScreen({
     return () => clearTimeout(timer);
   }, [pendingAudio, layoutMode, handleAudioPlayback]);
 
+  useEffect(() => {
+    if (!isCampusNavigationStage) {
+      stopCampusSpeech();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      if (!hasCampusRoomSelection) {
+        promptCampusRoomSelection();
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [
+    hasCampusRoomSelection,
+    isCampusNavigationStage,
+    selectedCampusIndex,
+    language,
+    promptCampusRoomSelection,
+    stopCampusSpeech,
+  ]);
+
+  useEffect(() => {
+    return () => stopCampusSpeech();
+  }, [stopCampusSpeech]);
+
   // Time-based reset UI behavior removed to enforce persistent screen state.
 
   // Orb State — with persistent 'completed' state for post-response guidance
@@ -1062,7 +1212,7 @@ export default function ChatScreen({
     const wasSpeaking = wasPlayingAudioRef.current;
     wasPlayingAudioRef.current = isPlayingBackendAudio;
 
-    if (isPlayingBackendAudio) {
+    if (isPlayingBackendAudio || isCampusSpeaking) {
       setOrbState('speaking');
     } else if (isProcessing) {
       setOrbState('processing');
@@ -1079,7 +1229,7 @@ export default function ChatScreen({
       if (hasGreeted && !showUnmuteHint) setOrbState('ready');
       else setOrbState('idle');
     }
-  }, [propIsListening, isProcessing, isPlayingBackendAudio, hasGreeted, showUnmuteHint]);
+  }, [propIsListening, isProcessing, isPlayingBackendAudio, isCampusSpeaking, hasGreeted, showUnmuteHint]);
 
   // Auto-Start Listening Loop (ONLY ONCE) — skip while inline language gate is active so the mic does not open over the picker.
   useEffect(() => {
@@ -1117,6 +1267,7 @@ export default function ChatScreen({
   const handleOrbTap = () => {
     setShowUnmuteHint(false);
     setHasGreeted(true);
+    setShowCampusReturnSuggestions(false);
     setVisuallyFocusedMessage(null);
     
     // IMMEDIATE VISUAL FEEDBACK: Optimistically set listening state
@@ -1182,7 +1333,7 @@ export default function ChatScreen({
     ? visuallyFocusedMessage
     : null;
   const shouldShowReadySuggestions =
-    lastAssistantMsg?.id === 'ready_prompt' &&
+    (lastAssistantMsg?.id === 'ready_prompt' || showCampusReturnSuggestions) &&
     !isProcessing &&
     !showLanguageOverlay &&
     !isAwaitingReadyPrompt;
@@ -1200,6 +1351,11 @@ export default function ChatScreen({
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
   const thinkingEmoji = THINKING_EMOJIS[thinkingIndex % THINKING_EMOJIS.length];
+  const campusCopy = campusLabels(language);
+  const selectedCampusDirection = CAMPUS_DIRECTIONS[selectedCampusIndex] ?? CAMPUS_DIRECTIONS[0];
+  const selectedCampusSteps = selectedCampusDirection
+    ? localizedCampusSteps(selectedCampusDirection, language)
+    : [];
 
   const departmentSlides = useMemo(() => {
     if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
@@ -1254,17 +1410,24 @@ export default function ChatScreen({
           type="button"
           whileHover={{ scale: 1.04, y: -2, boxShadow: 'none' }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => interceptAndSendMessage({ action: 'user_message', text: 'Campus navigation' }, 'UI')}
+          onClick={isCampusNavigationStage ? returnToChatFromCampus : openCampusNavigation}
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
-          <MapPinned className="h-4 w-4 text-[#2a115c]" />
-          Campus Navigation
+          {isCampusNavigationStage ? (
+            <MessageSquareText className="h-4 w-4 text-[#2a115c]" />
+          ) : (
+            <MapPinned className="h-4 w-4 text-[#2a115c]" />
+          )}
+          {isCampusNavigationStage ? campusCopy.chat : campusCopy.campusNavigation}
         </motion.button>
         <motion.button
           type="button"
           whileHover={{ scale: 1.04, y: -2, boxShadow: 'none' }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => interceptAndSendMessage({ action: 'user_message', text: 'Feedback' }, 'UI')}
+          onClick={() => {
+            if (isCampusNavigationStage) returnToChatFromCampus();
+            interceptAndSendMessage({ action: 'user_message', text: 'Feedback' }, 'UI');
+          }}
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
           <MessageSquareText className="h-4 w-4 text-[#2a115c]" />
@@ -1429,12 +1592,13 @@ export default function ChatScreen({
                               boxShadow: '0 22px 54px rgba(24, 10, 44, 0.34), 0 0 0 1px rgba(255,255,255,0.26) inset',
                             }}
                             whileTap={{ scale: 0.97 }}
-                            onClick={() =>
+                            onClick={() => {
+                              setShowCampusReturnSuggestions(false);
                               interceptAndSendMessage(
                                 { action: 'user_message', text: suggestion.text },
                                 'UI'
-                              )
-                            }
+                              );
+                            }}
                             className="group relative w-fit max-w-[18rem] overflow-hidden rounded-full border border-[#2a115c]/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-center shadow-[0_16px_44px_rgba(24,10,44,0.24),inset_0_1px_0_rgba(255,255,255,0.72),inset_0_0_0_1px_rgba(255,255,255,0.22)] backdrop-blur-xl transition-colors hover:border-[#17072f]/85 hover:bg-white/82"
                           >
                             <span className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
@@ -1468,7 +1632,12 @@ export default function ChatScreen({
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 
-                {isHodStage ? (
+                {isCampusNavigationStage && selectedCampusDirection ? (
+                  <CampusNavigationStage
+                    direction={selectedCampusDirection}
+                    language={language}
+                  />
+                ) : isHodStage ? (
                   <LeadershipOverview
                     cards={[]}
                     currentCardIdx={0}
@@ -1515,40 +1684,97 @@ export default function ChatScreen({
               </div>
               <motion.aside className="interaction-panel-30">
 
-                <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
+                <header className="panel-header">
+                  <div className="panel-title flex items-center gap-2">
+                    <Sparkles size={18} /> {isCampusNavigationStage ? campusCopy.campusNavigation : 'CLARA'}
+                  </div>
+                </header>
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
-                  {recentPanelMessages.map((m, i) => isTextMessage(m) && (
-                    m.role === 'user' 
-                      ? <div key={m.id || i} className="bubble-user">{m.text}</div>
-                      : <AnimatedAiMessage 
-                          key={m.id || i} 
-                          text={m.text} 
-                          animate={i === recentPanelMessages.length - 1}
-                          audioDuration={i === recentPanelMessages.length - 1 ? currentAudioDuration : 0}
-                          className="bubble-clara"
-                          style={m.id === 'greeting' ? greetingFontStyle : undefined}
-                        />
-                  ))}
-                  {isProcessing && (
-                    <div className="bubble-clara bubble-thinking">
-                      <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
+                  {isCampusNavigationStage && selectedCampusDirection ? (
+                    <div className="campus-direction-panel">
+                      <label className="campus-select-label" htmlFor="campus-destination-select">
+                        {campusCopy.chooseDestination}
+                      </label>
+                      <select
+                        id="campus-destination-select"
+                        value={selectedCampusIndex}
+                        onChange={(event) => {
+                          const nextIndex = Number(event.target.value);
+                          setSelectedCampusIndex(nextIndex);
+                          setHasCampusRoomSelection(true);
+                          speakCampusDirection(nextIndex);
+                        }}
+                        className="campus-destination-select"
+                      >
+                        {CAMPUS_DIRECTIONS.map((direction, index) => (
+                          <option key={direction.to} value={index}>
+                            {direction.to}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="campus-direction-card">
+                        <span className="campus-direction-kicker">{campusCopy.destination}</span>
+                        <h3>{selectedCampusDirection.to}</h3>
+                        <div className="campus-direction-meta">
+                          <span>{campusCopy.block} {selectedCampusDirection.block}</span>
+                          <span>{campusCopy.groundFloor}</span>
+                          <span>{selectedCampusDirection.estimated_steps} {campusCopy.steps}</span>
+                          <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
+                        </div>
+                        <ol className="campus-direction-steps">
+                          {selectedCampusSteps.map((step, index) => (
+                            <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={isCampusSpeaking ? stopCampusSpeech : speakCampusDirection}
+                        className="campus-speak-button"
+                      >
+                        {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}
+                        {isCampusSpeaking ? campusCopy.stop : campusCopy.speak}
+                      </button>
                     </div>
+                  ) : (
+                    <>
+                      {recentPanelMessages.map((m, i) => isTextMessage(m) && (
+                        m.role === 'user' 
+                          ? <div key={m.id || i} className="bubble-user">{m.text}</div>
+                          : <AnimatedAiMessage 
+                              key={m.id || i} 
+                              text={m.text} 
+                              animate={i === recentPanelMessages.length - 1}
+                              audioDuration={i === recentPanelMessages.length - 1 ? currentAudioDuration : 0}
+                              className="bubble-clara"
+                              style={m.id === 'greeting' ? greetingFontStyle : undefined}
+                            />
+                      ))}
+                      {isProcessing && (
+                        <div className="bubble-clara bubble-thinking">
+                          <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 
-                {/* Orb in Split Mode - Panel Bottom */}
-                <motion.div 
-                  layoutId="orb-container" 
-                  className="w-full flex justify-center pb-12"
-                >
-                  <ChatOrbControl
-                    orbState={orbState}
-                    isProcessing={isProcessing}
-                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
-                    onTap={handleOrbTap}
-                    bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
-                  />
-                </motion.div>
+                {!isCampusNavigationStage && (
+                  <motion.div 
+                    layoutId="orb-container" 
+                    className="w-full flex justify-center pb-12"
+                  >
+                    <ChatOrbControl
+                      orbState={orbState}
+                      isProcessing={isProcessing}
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
+                      onTap={handleOrbTap}
+                      bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
+                    />
+                  </motion.div>
+                )}
               </motion.aside>
             </motion.div>
           )}
