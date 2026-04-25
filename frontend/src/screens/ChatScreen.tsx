@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
-import { Sparkles, Volume2, Home } from 'lucide-react';
+import { Sparkles, Home, MapPinned, MessageSquareText } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import fullTextBgImage from '../assets/full_text_bg.png';
@@ -20,6 +20,7 @@ import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer } from './chat/useChatLayoutReducer';
+import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAllDepartmentSummaryCardsFromLocale,
@@ -112,12 +113,66 @@ const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
   Malayalam: { placements: 'പ്ലേസ്മെന്റും പരിശീലനവും' },
 };
 
+const READY_SUGGESTIONS: Record<Language, { label: string; text: string }[]> = {
+  English: [
+    { label: 'Which course is best for my child?', text: 'Which course would be best for my child?' },
+    { label: 'Tell me about fees', text: 'Please tell me about the fees.' },
+    { label: 'How are the placements?', text: 'How are the placements?' },
+  ],
+  Kannada: [
+    { label: 'ನನ್ನ ಮಗುವಿಗೆ ಯಾವ ಕೋರ್ಸ್ ಉತ್ತಮ?', text: 'ನನ್ನ ಮಗುವಿಗೆ ಯಾವ ಕೋರ್ಸ್ ಉತ್ತಮ?' },
+    { label: 'ಫೀಸ್ ಬಗ್ಗೆ ಹೇಳಿ', text: 'ಫೀಸ್ ಬಗ್ಗೆ ಹೇಳಿ.' },
+    { label: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಹೇಗಿದೆ?', text: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಹೇಗಿದೆ?' },
+  ],
+  Hindi: [
+    { label: 'मेरे बच्चे के लिए कौन सा कोर्स अच्छा है?', text: 'मेरे बच्चे के लिए कौन सा कोर्स अच्छा रहेगा?' },
+    { label: 'फीस के बारे में बताइए', text: 'कृपया फीस के बारे में बताइए।' },
+    { label: 'प्लेसमेंट कैसे हैं?', text: 'प्लेसमेंट कैसे हैं?' },
+  ],
+  Tamil: [
+    { label: 'என் குழந்தைக்கு எந்த பாடநெறி சிறந்தது?', text: 'என் குழந்தைக்கு எந்த பாடநெறி சிறந்தது?' },
+    { label: 'கட்டண விவரம் சொல்லுங்கள்', text: 'கட்டண விவரம் சொல்லுங்கள்.' },
+    { label: 'பிளேஸ்மென்ட் எப்படி உள்ளது?', text: 'பிளேஸ்மென்ட் எப்படி உள்ளது?' },
+  ],
+  Telugu: [
+    { label: 'నా పిల్లలకి ఏ కోర్స్ మంచిది?', text: 'నా పిల్లలకి ఏ కోర్స్ మంచిది?' },
+    { label: 'ఫీజుల గురించి చెప్పండి', text: 'ఫీజుల గురించి చెప్పండి.' },
+    { label: 'ప్లేస్‌మెంట్స్ ఎలా ఉన్నాయి?', text: 'ప్లేస్‌మెంట్స్ ఎలా ఉన్నాయి?' },
+  ],
+  Malayalam: [
+    { label: 'എന്റെ കുട്ടിക്ക് ഏത് കോഴ്സാണ് നല്ലത്?', text: 'എന്റെ കുട്ടിക്ക് ഏത് കോഴ്സാണ് നല്ലത്?' },
+    { label: 'ഫീസ് വിവരങ്ങൾ പറയൂ', text: 'ഫീസ് വിവരങ്ങൾ പറയൂ.' },
+    { label: 'പ്ലേസ്മെന്റുകൾ എങ്ങനെയാണ്?', text: 'പ്ലേസ്മെന്റുകൾ എങ്ങനെയാണ്?' },
+  ],
+};
+
 type PendingAudio = {
   audioBase64: string;
   segmentKey: string;
   isOverview: boolean;
   cardsToSync: any[] | null;
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
+};
+
+const estimateWavDurationSeconds = (audioBase64: string): number | null => {
+  try {
+    const binary = atob(audioBase64);
+    if (binary.length < 44 || binary.slice(0, 4) !== 'RIFF' || binary.slice(8, 12) !== 'WAVE') {
+      return null;
+    }
+    const view = new DataView(new ArrayBuffer(binary.length));
+    for (let i = 0; i < binary.length; i += 1) {
+      view.setUint8(i, binary.charCodeAt(i));
+    }
+    const sampleRate = view.getUint32(24, true);
+    const byteRate = view.getUint32(28, true);
+    const dataSize = view.getUint32(40, true);
+    const rate = byteRate || sampleRate;
+    if (!rate || !dataSize) return null;
+    return dataSize / rate;
+  } catch {
+    return null;
+  }
 };
 
 const normalizeDepartmentMenuKey = (departmentId: string): string | null => {
@@ -158,6 +213,9 @@ interface ChatScreenProps {
   isConnected?: boolean;
   voiceInputMode?: 'browser' | 'backend';
   payload?: any | null;
+  /** When true, after the first greeting an in-chat language picker is shown. */
+  inlineLanguageGate?: boolean;
+  onInlineLanguageResolved?: () => void;
   onBack: () => void;
   onHome?: () => void;
   onOrbTap: () => void;
@@ -167,16 +225,19 @@ interface ChatScreenProps {
 export default function ChatScreen({
   messages: payloadMessages,
   isListening: propIsListening = false,
+  isSpeaking: propIsSpeaking = false,
   isProcessing = false,
   isConnected = true,
   voiceInputMode = 'browser',
   payload,
+  inlineLanguageGate = false,
+  onInlineLanguageResolved,
   onBack,
   onHome,
   onOrbTap,
   sendMessage,
 }: ChatScreenProps) {
-  const { language } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [displayMessages, setDisplayMessages] = useState<ChatMessage[]>(payloadMessages);
   
@@ -196,7 +257,9 @@ export default function ChatScreen({
   const [isFeesStage, setIsFeesStage] = useState(false);
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   const [isDocumentsStage, setIsDocumentsStage] = useState(false);
-  
+  const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
+  const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
+
   // Response Priority Lock (CARD > UI > TEXT)
   const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
 
@@ -247,9 +310,11 @@ export default function ChatScreen({
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
   const [visuallyFocusedMessage, setVisuallyFocusedMessage] = useState<ChatMessage | null>(null);
+  const [isAwaitingReadyPrompt, setIsAwaitingReadyPrompt] = useState(false);
   const hasStartedRef = useRef(false);
   const prevLayoutModeRef = useRef<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
   const hasAutoStartedRef = useRef(false);
+  const languagePromptRequestedRef = useRef(false);
   const wasPlayingAudioRef = useRef(false);
   const isPendingListeningRef = useRef(false);
 
@@ -282,6 +347,10 @@ export default function ChatScreen({
   useEffect(() => {
     if (Array.isArray(payload?.messages)) {
       const incomingMessages = payload.messages as ChatMessage[];
+      const hasReadyPrompt = incomingMessages.some((m: any) => m?.id === 'ready_prompt');
+      if (hasReadyPrompt || payload?.turn_id === 'ready_after_language_pick') {
+        setIsAwaitingReadyPrompt(false);
+      }
       setDisplayMessages(incomingMessages);
       const isCardTurn = Boolean(payload?.showCard);
       if (isCardTurn) {
@@ -305,6 +374,60 @@ export default function ChatScreen({
     }, 2200);
     return () => clearInterval(ticker);
   }, [isProcessing]);
+
+  useEffect(() => {
+    setLanguageGateSatisfied(!inlineLanguageGate);
+    if (!inlineLanguageGate) {
+      setShowLanguageOverlay(false);
+    } else {
+      setHasGreeted(false);
+      languagePromptRequestedRef.current = false;
+    }
+  }, [inlineLanguageGate]);
+
+  // Keep the wake text visible until local TTS playback has fully ended, then crossfade to the picker.
+  useEffect(() => {
+    if (!inlineLanguageGate || languageGateSatisfied) {
+      if (!inlineLanguageGate) setShowLanguageOverlay(false);
+      return;
+    }
+    const hasAssistant = displayMessages.some(
+      (m) =>
+        m.role === 'clara' &&
+        !(m as { isHidden?: boolean }).isHidden &&
+        typeof (m as { text?: string }).text === 'string'
+    );
+    if (!hasAssistant || isProcessing) return;
+
+    const openingTurn = payload?.turn_id === 'greeting_opening';
+    const hasOpeningAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+    const shouldRevealPicker = hasGreeted || (openingTurn && !hasOpeningAudio);
+    if (!shouldRevealPicker) return;
+
+    const t = window.setTimeout(() => setShowLanguageOverlay(true), hasOpeningAudio ? 850 : 2200);
+    return () => window.clearTimeout(t);
+  }, [
+    inlineLanguageGate,
+    languageGateSatisfied,
+    displayMessages,
+    isProcessing,
+    hasGreeted,
+    payload?.turn_id,
+    payload?.audioBase64,
+  ]);
+
+  const handleInlineLanguagePick = useCallback(
+    (lang: Language) => {
+      setLanguage(lang);
+      setIsAwaitingReadyPrompt(true);
+      setVisuallyFocusedMessage(null);
+      sendMessage({ action: 'language_selected', language: lang });
+      setShowLanguageOverlay(false);
+      setLanguageGateSatisfied(true);
+      onInlineLanguageResolved?.();
+    },
+    [sendMessage, setLanguage, onInlineLanguageResolved]
+  );
 
   const resolveCardsFromTrigger = useCallback((trigger: unknown): CardDataItem[] | null => {
     const mapSingleTrigger = (key: string): CardDataItem[] | null => {
@@ -436,6 +559,32 @@ export default function ChatScreen({
     });
   }, []);
 
+  useEffect(() => {
+    if (!showLanguageOverlay || !inlineLanguageGate || languageGateSatisfied) return;
+    if (languagePromptRequestedRef.current) return;
+
+    // Wait until the 3x2 bubbles have completed their staggered entrance, then speak the prompt.
+    const t = window.setTimeout(() => {
+      if (languagePromptRequestedRef.current) return;
+      languagePromptRequestedRef.current = true;
+      const promptAudio = payload?.languagePromptAudioBase64;
+      if (typeof promptAudio === 'string' && promptAudio.length > 0) {
+        const audioSig = `${promptAudio.length}:${promptAudio.slice(0, 24)}`;
+        handleAudioPlayback(promptAudio, `language_gate_prompt|${audioSig}`, false, null);
+      } else {
+        sendMessage({ action: 'language_gate_prompt' });
+      }
+    }, 1300);
+    return () => window.clearTimeout(t);
+  }, [
+    showLanguageOverlay,
+    inlineLanguageGate,
+    languageGateSatisfied,
+    payload?.languagePromptAudioBase64,
+    handleAudioPlayback,
+    sendMessage,
+  ]);
+
   // Sync from payload
   useEffect(() => {
     if (!payload) return;
@@ -489,6 +638,12 @@ export default function ChatScreen({
     // Small signature so missing metadata cannot cause false collisions.
     const audioSig = `${audioBase64?.length ?? 0}:${audioBase64?.slice(0, 24) ?? ''}`;
     const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
+    if (typeof audioBase64 === 'string' && audioBase64.length > 0) {
+      const estimatedDuration = estimateWavDurationSeconds(audioBase64);
+      if (estimatedDuration) {
+        setCurrentAudioDuration(estimatedDuration);
+      }
+    }
 
     // Defer all split-card transitions until the turn has finalized messages.
     if (cardTrigger && cardTrigger !== 'documents' && !isResponseReady) {
@@ -926,8 +1081,9 @@ export default function ChatScreen({
     }
   }, [propIsListening, isProcessing, isPlayingBackendAudio, hasGreeted, showUnmuteHint]);
 
-  // Auto-Start Listening Loop (ONLY ONCE)
+  // Auto-Start Listening Loop (ONLY ONCE) — skip while inline language gate is active so the mic does not open over the picker.
   useEffect(() => {
+    if (inlineLanguageGate && !languageGateSatisfied) return;
     if (orbState === 'ready' && !propIsListening && voiceInputMode !== 'backend' && !hasAutoStartedRef.current) {
       hasAutoStartedRef.current = true;
       const timer = setTimeout(() => {
@@ -935,7 +1091,14 @@ export default function ChatScreen({
       }, 600); // Sustain the 'ready' visual feedback briefly before engaging mic
       return () => clearTimeout(timer);
     }
-  }, [orbState, propIsListening, voiceInputMode, startSpeechRecognition]);
+  }, [
+    inlineLanguageGate,
+    languageGateSatisfied,
+    orbState,
+    propIsListening,
+    voiceInputMode,
+    startSpeechRecognition,
+  ]);
 
   useEffect(() => {
     if (!hasStartedRef.current) {
@@ -1013,11 +1176,26 @@ export default function ChatScreen({
        return !isHidden && (m.id !== suppressedTurnId);
     });
   }, [displayMessages, suppressedTurnId]);
+  const recentPanelMessages = useMemo(() => filteredMessages.slice(-4), [filteredMessages]);
 
   const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
     ? visuallyFocusedMessage
     : null;
+  const shouldShowReadySuggestions =
+    lastAssistantMsg?.id === 'ready_prompt' &&
+    !isProcessing &&
+    !showLanguageOverlay &&
+    !isAwaitingReadyPrompt;
+  const readySuggestions = READY_SUGGESTIONS[language] ?? READY_SUGGESTIONS.English;
   const fullTextMessageClassName = 'word-by-word-text full-text-readable';
+  /** English greeting uses Didone-style stack from backend (`greetings.py` → `greetingFontFamily`). */
+  const greetingFontStyle = useMemo((): React.CSSProperties | undefined => {
+    const ff = payload?.greetingFontFamily;
+    if (typeof ff !== 'string' || !ff.trim()) return undefined;
+    return { fontFamily: ff };
+  }, [payload?.greetingFontFamily]);
+  const fullTextGreetingStyle =
+    lastAssistantMsg?.id === 'greeting' ? greetingFontStyle : undefined;
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
@@ -1047,11 +1225,12 @@ export default function ChatScreen({
       panel.scrollTo({ top: panel.scrollHeight, behavior: 'smooth' });
     });
     return () => cancelAnimationFrame(raf);
-  }, [layoutMode, filteredMessages, isProcessing, thinkingIndex]);
+  }, [layoutMode, recentPanelMessages, isProcessing, thinkingIndex]);
 
   return (
     <div className="light-chat-container" data-testid="chat-screen">
       <div className="cinematic-overlay" />
+
       {/* Global Home Button */}
       <motion.button
         initial={{ opacity: 0, x: -20 }}
@@ -1064,26 +1243,34 @@ export default function ChatScreen({
         <Home className="w-6 h-6" />
       </motion.button>
 
-      {/* Global Audio Button */}
-      <motion.button
+      {/* Global Quick Actions */}
+      <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="premium-audio-button"
-        title="Voice Input"
-        onClick={() => {
-          if (orbState === 'idle' || orbState === 'ready' || orbState === 'completed') {
-             handleOrbTap();
-          }
-        }}
+        className="absolute right-[30px] top-[30px] z-50 flex flex-wrap justify-end gap-2"
       >
-        <div className="flex gap-[3px] items-end justify-center h-[18px]">
-          <div className="w-[3px] bg-current rounded-full h-[60%] animate-[pulse_1s_ease-in-out_infinite_alternate]" />
-          <div className="w-[3px] bg-current rounded-full h-[100%] animate-[pulse_1.2s_ease-in-out_infinite_alternate]" />
-          <div className="w-[3px] bg-current rounded-full h-[40%] animate-[pulse_0.8s_ease-in-out_infinite_alternate]" />
-          <div className="w-[3px] bg-current rounded-full h-[80%] animate-[pulse_1.5s_ease-in-out_infinite_alternate]" />
-        </div>
-      </motion.button>
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.04, y: -2, boxShadow: 'none' }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => interceptAndSendMessage({ action: 'user_message', text: 'Campus navigation' }, 'UI')}
+          className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
+        >
+          <MapPinned className="h-4 w-4 text-[#2a115c]" />
+          Campus Navigation
+        </motion.button>
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.04, y: -2, boxShadow: 'none' }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => interceptAndSendMessage({ action: 'user_message', text: 'Feedback' }, 'UI')}
+          className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
+        >
+          <MessageSquareText className="h-4 w-4 text-[#2a115c]" />
+          Feedback
+        </motion.button>
+      </motion.div>
 
       {/* ─── GLOBAL CINEMATIC BACKGROUND ─── */}
       <div 
@@ -1102,33 +1289,163 @@ export default function ChatScreen({
           {layoutMode === 'FULL_TEXT' ? (
             <motion.div key="full-text" layoutId="main" className="full-text-layout">
 
-              {/* Clean top — no debug labels */}
-              <div className="full-text-message-stage relative z-10">
-                {isProcessing ? (
-                  <div className="clara-thinking-stage">
-                    <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
-                    <div className="clara-thinking-title">{thinkingTitle}</div>
-                    <div className="clara-thinking-tagline">{thinkingTagline}</div>
-                    <div className="clara-thinking-dots" aria-hidden>...</div>
-                  </div>
-                ) : (
-                  lastAssistantMsg && isTextMessage(lastAssistantMsg) && (
-                    <div className="full-text-message-wrapper full-text-safe-zone">
-                      <AnimatedAiMessage 
-                        text={lastAssistantMsg.text} 
-                        animate={true}
-                        audioDuration={currentAudioDuration}
-                        className={fullTextMessageClassName}
-                      />
-                    </div>
-                  )
-                )}
+              {/* Center content crossfades from greeting to language bubbles; orb stays anchored below. */}
+              <div
+                className="full-text-message-stage relative z-10 flex min-h-0 flex-col"
+                style={{
+                  paddingLeft: '3rem',
+                  paddingRight: '3rem',
+                  paddingBottom: '1.25rem',
+                  paddingTop: 0,
+                }}
+              >
+                <div className="relative flex min-h-0 w-full flex-1 flex-col justify-center">
+                  <AnimatePresence mode="wait">
+                    {showLanguageOverlay &&
+                    inlineLanguageGate &&
+                    !languageGateSatisfied &&
+                    layoutMode === 'FULL_TEXT' &&
+                    !isProcessing ? (
+                      <motion.div
+                        key="inline-lang-panel"
+                        role="region"
+                        aria-labelledby="inline-lang-title"
+                        initial={{ opacity: 0, y: 44, scale: 0.88, filter: 'blur(18px)', rotateX: -18 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', rotateX: 0 }}
+                        exit={{ opacity: 0, y: -24, scale: 0.96, filter: 'blur(12px)' }}
+                        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                        className="mx-auto w-full max-w-5xl px-4"
+                        style={{ perspective: 1200 }}
+                      >
+                        <motion.h2
+                          id="inline-lang-title"
+                          initial={{ opacity: 0, letterSpacing: '0.38em' }}
+                          animate={{ opacity: 1, letterSpacing: '0.12em' }}
+                          transition={{ duration: 0.9, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                          className="mb-8 text-center text-2xl sm:text-3xl font-semibold uppercase text-slate-900/85"
+                          style={{ fontFamily: '"Bodoni Moda", "Libre Bodoni", Didot, "Playfair Display", serif' }}
+                        >
+                          {t('selectLanguage')}
+                        </motion.h2>
+                        <div className="grid grid-cols-3 gap-5 sm:gap-6">
+                          {LANGUAGE_OPTIONS.map((lang, index) => {
+                            const testId = `inline-language-${lang.name.toLowerCase()}`;
+                            return (
+                              <motion.button
+                                key={lang.name}
+                                type="button"
+                                data-testid={testId}
+                                initial={{ opacity: 0, y: 28, scale: 0.86, filter: 'blur(10px)' }}
+                                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                                transition={{
+                                  delay: 0.18 + index * 0.06,
+                                  duration: 0.62,
+                                  ease: [0.16, 1, 0.3, 1],
+                                }}
+                                whileHover={{
+                                  scale: 1.06,
+                                  y: -4,
+                                  boxShadow: '0 18px 48px rgba(55, 24, 112, 0.24)',
+                                }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => handleInlineLanguagePick(lang.name)}
+                                className="group relative min-h-[7rem] overflow-hidden rounded-[1.65rem] border-2 border-[#3b176f]/55 bg-white/55 px-6 py-5 text-center shadow-[0_14px_40px_rgba(55,24,112,0.12)] backdrop-blur-xl transition-colors hover:border-[#2a0f58]/80 hover:bg-white/75"
+                              >
+                                <span className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+                                <span className="block text-2xl sm:text-3xl font-bold text-slate-950">
+                                  {lang.label}
+                                </span>
+                                <span className="mt-2 block text-[11px] sm:text-xs uppercase tracking-[0.22em] text-slate-500 group-hover:text-indigo-500">
+                                  {lang.name}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    ) : isProcessing ? (
+                      <motion.div
+                        key="thinking"
+                        initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: -18, filter: 'blur(10px)' }}
+                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                        className="clara-thinking-stage"
+                      >
+                        <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
+                        <div className="clara-thinking-title">{thinkingTitle}</div>
+                        <div className="clara-thinking-tagline">{thinkingTagline}</div>
+                        <div className="clara-thinking-dots" aria-hidden>...</div>
+                      </motion.div>
+                    ) : lastAssistantMsg && isTextMessage(lastAssistantMsg) && !isAwaitingReadyPrompt ? (
+                      <motion.div
+                        key={lastAssistantMsg.id ?? lastAssistantMsg.text}
+                        initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: -34, scale: 0.96, filter: 'blur(16px)' }}
+                        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                        className="full-text-message-wrapper full-text-safe-zone"
+                      >
+                        <AnimatedAiMessage
+                          text={lastAssistantMsg.text}
+                          animate={true}
+                          audioDuration={currentAudioDuration}
+                          className={fullTextMessageClassName}
+                          style={fullTextGreetingStyle}
+                        />
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
 
-                {/* Orb in Full Text - Center Bottom */}
-                <motion.div 
-                  layoutId="orb-container" 
-                  className="absolute bottom-[8%] left-1/2 -translate-x-1/2 z-[100]"
+                <motion.div
+                  layoutId="orb-container"
+                  className="relative z-40 flex shrink-0 justify-center pb-2 pt-3"
                 >
+                  <AnimatePresence>
+                    {shouldShowReadySuggestions && (
+                      <motion.div
+                        key="ready-suggestions"
+                        initial={{ opacity: 0, y: 24, scale: 0.94, filter: 'blur(10px)' }}
+                        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: 12, scale: 0.96, filter: 'blur(8px)' }}
+                        transition={{ duration: 0.72, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                        className="absolute bottom-[calc(100%+1.2rem)] left-1/2 flex w-[90vw] max-w-5xl -translate-x-1/2 flex-wrap justify-center gap-3 sm:gap-4"
+                      >
+                        {readySuggestions.map((suggestion, index) => (
+                          <motion.button
+                            key={suggestion.text}
+                            type="button"
+                            initial={{ opacity: 0, y: 20, scale: 0.88, filter: 'blur(8px)' }}
+                            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                            transition={{
+                              delay: 0.28 + index * 0.08,
+                              duration: 0.56,
+                              ease: [0.16, 1, 0.3, 1],
+                            }}
+                            whileHover={{
+                              scale: 1.04,
+                              y: -3,
+                              boxShadow: '0 22px 54px rgba(24, 10, 44, 0.34), 0 0 0 1px rgba(255,255,255,0.26) inset',
+                            }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() =>
+                              interceptAndSendMessage(
+                                { action: 'user_message', text: suggestion.text },
+                                'UI'
+                              )
+                            }
+                            className="group relative w-fit max-w-[18rem] overflow-hidden rounded-full border border-[#2a115c]/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-center shadow-[0_16px_44px_rgba(24,10,44,0.24),inset_0_1px_0_rgba(255,255,255,0.72),inset_0_0_0_1px_rgba(255,255,255,0.22)] backdrop-blur-xl transition-colors hover:border-[#17072f]/85 hover:bg-white/82"
+                          >
+                            <span className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+                            <span className="block text-xs sm:text-sm font-bold leading-snug text-slate-900">
+                              {suggestion.label}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <ChatOrbControl
                     orbState={orbState}
                     isProcessing={isProcessing}
@@ -1137,6 +1454,7 @@ export default function ChatScreen({
                     bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
                   />
                 </motion.div>
+
               </div>
               
 
@@ -1199,15 +1517,16 @@ export default function ChatScreen({
 
                 <header className="panel-header"><div className="panel-title flex items-center gap-2"><Sparkles size={18} /> CLARA</div></header>
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
-                  {filteredMessages.map((m, i) => isTextMessage(m) && (
+                  {recentPanelMessages.map((m, i) => isTextMessage(m) && (
                     m.role === 'user' 
                       ? <div key={m.id || i} className="bubble-user">{m.text}</div>
                       : <AnimatedAiMessage 
                           key={m.id || i} 
                           text={m.text} 
-                          animate={i === filteredMessages.length - 1}
-                          audioDuration={i === filteredMessages.length - 1 ? currentAudioDuration : 0}
-                          className="bubble-clara" 
+                          animate={i === recentPanelMessages.length - 1}
+                          audioDuration={i === recentPanelMessages.length - 1 ? currentAudioDuration : 0}
+                          className="bubble-clara"
+                          style={m.id === 'greeting' ? greetingFontStyle : undefined}
                         />
                   ))}
                   {isProcessing && (
@@ -1216,7 +1535,6 @@ export default function ChatScreen({
                     </div>
                   )}
                 </div>
-                <div className="flex-1" /> {/* Push messages up */}
                 
                 {/* Orb in Split Mode - Panel Bottom */}
                 <motion.div 

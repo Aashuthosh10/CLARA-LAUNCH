@@ -5,7 +5,6 @@ import { useLanguage } from './context/LanguageContext';
 
 // Screens
 import SleepScreen from './screens/SleepScreen';
-import LanguageSelect from './screens/LanguageSelect';
 import ChatScreen from './screens/ChatScreen';
 
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
@@ -19,8 +18,16 @@ export default function App() {
   const { language } = useLanguage();
   const { state, payload, isConnected, setManualState, sendMessage, retryConnect, showOfflineBanner } = useWebSocket(WS_URL);
   const [urlOverrideState, setUrlOverrideState] = React.useState<number | null>(null);
+  /** After sleep wake: show language cards inside chat (after greeting). */
+  const [showChatLanguageGate, setShowChatLanguageGate] = useState(false);
 
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
+
+  useEffect(() => {
+    if (effectiveState === 0) {
+      setShowChatLanguageGate(false);
+    }
+  }, [effectiveState]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -33,11 +40,16 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const key = parseInt(e.key);
-      if (key >= 0 && key <= 8) {
-        setUrlOverrideState(null);
-        setManualState(key);
+      const key = parseInt(e.key, 10);
+      if (Number.isNaN(key) || key < 0 || key > 8) return;
+      setUrlOverrideState(null);
+      if (key === 3) {
+        setManualState(5);
+        setShowChatLanguageGate(true);
+        return;
       }
+      setShowChatLanguageGate(false);
+      setManualState(key);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -51,23 +63,13 @@ export default function App() {
             <SleepScreen
               onWake={() => {
                 sendMessage({ action: 'wake' });
-                setManualState(3);
+                setManualState(5);
+                setShowChatLanguageGate(true);
               }}
             />
           </motion.div>
         );
       case 3:
-        return (
-          <motion.div key="lang" className="w-full h-full">
-            <LanguageSelect
-              onSelect={(language) => {
-                sendMessage({ action: 'language_selected', language });
-                setManualState(5);
-              }}
-              onHome={() => setManualState(0)}
-            />
-          </motion.div>
-        );
       case 4:
       case 5:
         return (
@@ -80,8 +82,14 @@ export default function App() {
               payload={payload}
               isConnected={isConnected}
               voiceInputMode={VOICE_INPUT_MODE}
-              onBack={() => setManualState(3)}
-              onHome={() => setManualState(0)}
+              inlineLanguageGate={showChatLanguageGate}
+              onInlineLanguageResolved={() => setShowChatLanguageGate(false)}
+              onBack={() => setManualState(0)}
+              onHome={() => {
+                sendMessage({ action: 'reset_session' });
+                setShowChatLanguageGate(false);
+                setManualState(0, null);
+              }}
               onOrbTap={() => sendMessage({ action: 'mic_start' })}
               sendMessage={sendMessage}
             />

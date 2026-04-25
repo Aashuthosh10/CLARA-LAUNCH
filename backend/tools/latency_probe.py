@@ -57,7 +57,7 @@ async def run_probe(url: str, turns: int, language: str, timeout_s: float) -> in
     async with websockets.connect(url, ping_interval=20, ping_timeout=20, max_size=2**23) as ws:
         await ws.recv()  # state 0
         await ws.send(json.dumps({"action": "wake"}))
-        await ws.recv()  # state 3
+        await ws.recv()  # state 5 (chat after wake)
         await ws.send(json.dumps({"action": "language_selected", "language": language}))
         await ws.recv()  # ack
         await ws.send(json.dumps({"action": "conversation_started"}))

@@ -1,4 +1,9 @@
-"""Time-aware greeting text per language for CLARA."""
+"""Time-aware greeting text + wake opening copy for CLARA.
+
+Edit order:
+  1) WAKE_OPENING_GREETING_ENGLISH — first thing users hear/read (before language pick).
+  2) _GREETINGS_BY_PERIOD — full greeting after they choose a language.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,92 @@ from zoneinfo import ZoneInfo
 from backend.config.settings import KIOSK_TIMEZONE
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
-_GREETINGS_BY_PERIOD = {
+
+# ---------------------------------------------------------------------------
+# Wake / first paint (English only, before language is chosen)
+# ---------------------------------------------------------------------------
+WAKE_OPENING_GREETING_ENGLISH: dict[str, str] = {
+    "morning": "Good morning. I am CLARA, your campus assistant.",
+    "afternoon": "Good afternoon. I am CLARA, your campus assistant.",
+    "evening": "Good evening. I am CLARA, your campus assistant.",
+}
+
+LANGUAGE_GATE_NUDGE_ENGLISH: str = (
+    "Please choose the language that feels most comfortable."
+)
+
+# Optional CSS stack for the first greeting bubble (sent on WS payload as greetingFontFamily).
+GREETING_FONT_STACK: str = '"Bodoni Moda", "Libre Bodoni", Didot, "Playfair Display", serif'
+
+
+def _time_period(now: datetime | None = None) -> str:
+    if now is not None:
+        ts = now
+    else:
+        try:
+            ts = datetime.now(ZoneInfo(KIOSK_TIMEZONE))
+        except Exception:
+            ts = datetime.now()
+    if ts.hour < 12:
+        return "morning"
+    if ts.hour < 17:
+        return "afternoon"
+    return "evening"
+
+
+def get_short_opening_greeting_english(now: datetime | None = None) -> str:
+    """First-line intro only (no “How may I help you today?”)."""
+    period = _time_period(now)
+    return WAKE_OPENING_GREETING_ENGLISH.get(
+        period,
+        WAKE_OPENING_GREETING_ENGLISH["evening"],
+    )
+
+
+def get_wakeup_opening_display_text(now: datetime | None = None) -> str:
+    return get_short_opening_greeting_english(now)
+
+
+def get_wakeup_opening_tts_text(now: datetime | None = None) -> str:
+    return get_wakeup_opening_display_text(now)
+
+
+def get_wakeup_language_gate_display_text(now: datetime | None = None) -> str:
+    """Opening greeting shown before the picker fades in."""
+    return get_wakeup_opening_display_text(now)
+
+
+def get_wakeup_language_gate_tts_text(now: datetime | None = None) -> str:
+    """Wake TTS that exactly matches the displayed wake greeting."""
+    return get_wakeup_language_gate_display_text(now)
+
+
+def get_language_required_nudge_english() -> str:
+    return LANGUAGE_GATE_NUDGE_ENGLISH.strip()
+
+
+def greeting_font_family_css(language: str | None) -> str | None:
+    _ = language
+    return GREETING_FONT_STACK
+
+
+# ---------------------------------------------------------------------------
+# After user picks a language — readiness prompt (not a second greeting)
+# ---------------------------------------------------------------------------
+_READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
+    "English": "Wonderful. I am ready to help you with care. What would you like to explore today?",
+    "Kannada": "ಅದ್ಭುತ. ನಿಮಗೆ ಆತ್ಮೀಯವಾಗಿ ಸಹಾಯ ಮಾಡಲು ನಾನು ಸಿದ್ಧವಾಗಿದ್ದೇನೆ. ಇಂದು ನೀವು ಏನನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
+    "Hindi": "बहुत अच्छा। मैं पूरे ध्यान से आपकी मदद के लिए तैयार हूँ। आज आप क्या जानना चाहेंगे?",
+    "Tamil": "மிக நன்று. உங்களுக்கு அக்கறையுடன் உதவ நான் தயார். இன்று நீங்கள் என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
+    "Telugu": "చాలా మంచిది. మీకు శ్రద్ధగా సహాయం చేయడానికి నేను సిద్ధంగా ఉన్నాను. ఈరోజు మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
+    "Malayalam": "വളരെ നന്നായി. നിങ്ങളെ ശ്രദ്ധയോടെ സഹായിക്കാൻ ഞാൻ തയ്യാറാണ്. ഇന്ന് നിങ്ങൾ എന്താണ് അറിയാൻ ആഗ്രഹിക്കുന്നത്?",
+}
+
+
+# ---------------------------------------------------------------------------
+# Time-aware greeting translations retained for non-language-gate flows
+# ---------------------------------------------------------------------------
+_GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     "morning": {
         "English": "Good morning. I am CLARA, your campus assistant. How may I help you today?",
         "Kannada": "ಶುಭೋದಯ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
@@ -37,31 +127,27 @@ _GREETINGS_BY_PERIOD = {
 
 
 def _validate_language_parity() -> None:
+    missing_prompts = [lang for lang in SUPPORTED_LANGUAGES if lang not in _READY_PROMPTS_BY_LANGUAGE]
+    if missing_prompts:
+        raise RuntimeError(f"Missing ready prompt translations: {', '.join(missing_prompts)}")
     for period, mapping in _GREETINGS_BY_PERIOD.items():
         missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
         if missing:
             raise RuntimeError(f"Missing greeting translations for {period}: {', '.join(missing)}")
-
-
-def _time_period(now: datetime | None = None) -> str:
-    if now is not None:
-        ts = now
-    else:
-        try:
-            ts = datetime.now(ZoneInfo(KIOSK_TIMEZONE))
-        except Exception:
-            ts = datetime.now()
-    if ts.hour < 12:
-        return "morning"
-    if ts.hour < 17:
-        return "afternoon"
-    return "evening"
+    for period in _GREETINGS_BY_PERIOD:
+        if period not in WAKE_OPENING_GREETING_ENGLISH:
+            raise RuntimeError(f"Missing wake opening for period: {period}")
 
 
 def get_greeting(language: str | None, now: datetime | None = None) -> str:
     period = _time_period(now)
     lang = language if language in _GREETINGS_BY_PERIOD[period] else "English"
     return _GREETINGS_BY_PERIOD[period].get(lang, _GREETINGS_BY_PERIOD[period]["English"])
+
+
+def get_ready_prompt(language: str | None) -> str:
+    lang = language if language in _READY_PROMPTS_BY_LANGUAGE else "English"
+    return _READY_PROMPTS_BY_LANGUAGE.get(lang, _READY_PROMPTS_BY_LANGUAGE["English"])
 
 
 # Backward-compatible default snapshot (evening English).

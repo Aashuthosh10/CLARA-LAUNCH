@@ -70,7 +70,14 @@ from backend.config.settings import (
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
 from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
-from backend.services.greetings import get_greeting
+from backend.services.greetings import (
+    get_greeting,
+    get_language_required_nudge_english,
+    get_ready_prompt,
+    get_wakeup_language_gate_display_text,
+    get_wakeup_language_gate_tts_text,
+    greeting_font_family_css,
+)
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
@@ -458,6 +465,9 @@ async def maybe_auto_detect_session_language(
         "is_language_auto": True,
         "greetingText": greeting_text,
     }
+    _greeting_ff = greeting_font_family_css(lang_name)
+    if _greeting_ff:
+        event_payload["greetingFontFamily"] = _greeting_ff
     if greeting_audio_b64:
         event_payload["greetingAudioBase64"] = greeting_audio_b64
 
@@ -1344,35 +1354,121 @@ async def websocket_clara(websocket: WebSocket):
                 continue
             action = msg.get("action")
 
+            if action in {"reset_session", "home"}:
+                session.update(
+                    {
+                        "language": None,
+                        "language_code": None,
+                        "language_name": None,
+                        "language_code_key": None,
+                        "is_language_auto": None,
+                        "language_detection": None,
+                        "messages": [],
+                        "history": [],
+                        "cached_greeting_audio": None,
+                        "cached_greeting_message": None,
+                    }
+                )
+                await websocket.send_json({"state": 0, "payload": None})
+                continue
+
             if action == "wake":
-                await websocket.send_json({"state": 3, "payload": None})
+                # Client goes straight to chat; language is chosen inline after the first greeting.
+                await websocket.send_json({"state": 5, "payload": None})
+                continue
+
+            if action == "language_gate_prompt":
+                audio_b64 = None
+                try:
+                    audio_b64, _ = await tts_to_base64_cached(
+                        get_language_required_nudge_english(),
+                        TARGET_LANGUAGE_CODES["en"],
+                        utterance_kind="language_gate_prompt",
+                    )
+                except Exception as exc:
+                    logger.exception("Language gate prompt TTS failed: %s", exc)
+                payload: dict[str, Any] = {
+                    "isSpeaking": bool(audio_b64),
+                    "isProcessing": False,
+                    "turn_id": "language_gate_prompt",
+                }
+                if audio_b64:
+                    payload["audioBase64"] = audio_b64
+                else:
+                    payload["error"] = "Could not generate language prompt audio."
+                await websocket.send_json({"state": 5, "payload": payload})
                 continue
 
             if action == "language_selected":
                 language = msg.get("language")
-                if language in VALID_LANGUAGES:
-                    code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
-                    set_session_language(session, code_key, is_auto=False)
-                    session["language_detection"] = None
-                    try:
-                        greeting_text = get_greeting(language)
-                        audio_b64, _ = await tts_to_base64_cached(
-                            greeting_text,
-                            session["language_code"],
-                            utterance_kind="language_selected_greeting",
-                        )
-                        if audio_b64:
-                            session["cached_greeting_audio"] = audio_b64
-                            greeting_msg = {"id": "greeting", "role": "clara", "text": greeting_text}
-                            session["cached_greeting_message"] = greeting_msg
-                            if not session.get("messages"):
-                                session["messages"] = [greeting_msg]
-                    except Exception as exc:
-                        logger.exception("Preload greeting TTS failed: %s", exc)
-                await websocket.send_json({"state": 5, "payload": None})
+                if language not in VALID_LANGUAGES:
+                    await websocket.send_json({"state": 5, "payload": None})
+                    continue
+                code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
+                set_session_language(session, code_key, is_auto=False)
+                session["language_detection"] = None
+                ready_text = get_ready_prompt(language)
+                ready_msg = {"id": "ready_prompt", "role": "clara", "text": ready_text}
+                audio_b64 = None
+                try:
+                    audio_b64, _ = await tts_to_base64_cached(
+                        ready_text,
+                        session["language_code"],
+                        utterance_kind="language_selected_ready_prompt",
+                    )
+                except Exception as exc:
+                    logger.exception("Language ready prompt TTS failed: %s", exc)
+                session["messages"] = [ready_msg]
+                session["cached_greeting_audio"] = None
+                session["cached_greeting_message"] = None
+                payload: dict[str, Any] = {
+                    "messages": session["messages"],
+                    "isSpeaking": bool(audio_b64),
+                    "isProcessing": False,
+                }
+                if audio_b64:
+                    payload["audioBase64"] = audio_b64
+                    payload["turn_id"] = "ready_after_language_pick"
+                else:
+                    payload["error"] = "Could not generate ready prompt audio."
+                await websocket.send_json({"state": 5, "payload": payload})
                 continue
 
             if action == "conversation_started":
+                # First visit from sleep: no UI language yet — short English intro only (e.g. Good afternoon… assistant.).
+                if session.get("language_code_key") is None:
+                    opening_display = get_wakeup_language_gate_display_text()
+                    opening_message = {"id": "greeting", "role": "clara", "text": opening_display}
+                    en_tts = TARGET_LANGUAGE_CODES["en"]
+                    audio_b64, _ = await tts_to_base64_cached(
+                        get_wakeup_language_gate_tts_text(),
+                        en_tts,
+                        utterance_kind="conversation_started_opening",
+                    )
+                    language_prompt_audio_b64, _ = await tts_to_base64_cached(
+                        get_language_required_nudge_english(),
+                        en_tts,
+                        utterance_kind="language_gate_prompt",
+                    )
+                    session["messages"] = [opening_message]
+                    payload_open: dict[str, Any] = {
+                        "messages": session["messages"],
+                        "isSpeaking": bool(audio_b64),
+                        "isProcessing": False,
+                    }
+                    if audio_b64:
+                        payload_open["audioBase64"] = audio_b64
+                        payload_open["turn_id"] = "greeting_opening"
+                    else:
+                        payload_open["error"] = "Could not generate opening audio."
+                    if language_prompt_audio_b64:
+                        payload_open["languagePromptAudioBase64"] = language_prompt_audio_b64
+                    _gff_open = greeting_font_family_css("English")
+                    if _gff_open:
+                        payload_open["greetingFontFamily"] = _gff_open
+                    await websocket.send_json({"state": 5, "payload": payload_open})
+                    continue
+
                 _, lang_name, lang_code = resolve_session_language(session)
                 greeting_text = get_greeting(lang_name)
                 greeting_message = {"id": "greeting", "role": "clara", "text": greeting_text}
@@ -1385,6 +1481,9 @@ async def websocket_clara(websocket: WebSocket):
                         "audioBase64": audio_b64,
                         "turn_id": "greeting_selected"
                     }
+                    _gff_c = greeting_font_family_css(lang_name)
+                    if _gff_c:
+                        payload["greetingFontFamily"] = _gff_c
                     session["cached_greeting_audio"] = None
                     session["cached_greeting_message"] = None
                     await websocket.send_json({"state": 5, "payload": payload})
@@ -1405,6 +1504,9 @@ async def websocket_clara(websocket: WebSocket):
                         payload["turn_id"] = "greeting_started"
                     else:
                         payload["error"] = "Could not generate greeting audio."
+                    _gff2 = greeting_font_family_css(lang_name)
+                    if _gff2:
+                        payload["greetingFontFamily"] = _gff2
                     await websocket.send_json({"state": 5, "payload": payload})
                 continue
 
@@ -1420,6 +1522,26 @@ async def websocket_clara(websocket: WebSocket):
                     payload.update(debug_payload(timing))
                     await websocket.send_json({"state": 5, "payload": payload})
                     log_turn_metrics(timing, error="missing_text")
+                elif session.get("language_code_key") is None:
+                    timing.mark("turn_end")
+                    if "BACKGROUND_NOISE" in text or "**BACKGROUND_NOISE**" in text:
+                        await websocket.send_json(
+                            {
+                                "state": 5,
+                                "payload": {"isProcessing": False, "turn_id": timing.turn_id},
+                            }
+                        )
+                        log_turn_metrics(timing, error="language_gate_noise")
+                    else:
+                        nudge = get_language_required_nudge_english()
+                        gate_payload: dict[str, Any] = {
+                            "isProcessing": False,
+                            "messages": [{"id": "lang_gate", "role": "clara", "text": nudge}],
+                            "turn_id": timing.turn_id,
+                        }
+                        gate_payload.update(debug_payload(timing))
+                        await websocket.send_json({"state": 5, "payload": gate_payload})
+                        log_turn_metrics(timing, error="language_not_selected")
                 else:
                     await process_user_text_and_reply(
                         session,

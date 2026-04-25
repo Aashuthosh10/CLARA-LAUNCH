@@ -14,7 +14,8 @@ const CAMPUS_IMAGES = [
   '/assets/campus_hd_8.jpg',
 ];
 
-const LANGUAGES: { name: Language; label: string }[] = [
+/** Shared with in-chat language gate (ChatScreen). */
+export const LANGUAGE_OPTIONS: { name: Language; label: string }[] = [
   { name: 'English', label: 'English' },
   { name: 'Kannada', label: 'ಕನ್ನಡ' },
   { name: 'Hindi', label: 'हिन्दी' },
@@ -105,7 +106,7 @@ export default function LanguageSelect({
         </motion.h2>
 
         <div className="grid grid-cols-3 gap-10 w-full max-w-5xl px-8">
-          {LANGUAGES.map((lang, index) => {
+          {LANGUAGE_OPTIONS.map((lang, index) => {
             const isSelected = selectedLang === lang.name;
             const isAnySelected = selectedLang !== null;
 

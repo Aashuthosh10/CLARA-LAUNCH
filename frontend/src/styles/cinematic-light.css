@@ -13,7 +13,7 @@
 }
 
 /* Global Home Button - Repositioned to top-left of screen */
-.premium-home-button, .premium-audio-button {
+.premium-home-button {
   position: absolute;
   top: 30px;
   z-index: 1000;
@@ -23,26 +23,25 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-  color: #6366F1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(252, 231, 243, 0.58), rgba(167, 139, 250, 0.36));
+  backdrop-filter: blur(18px);
+  border: 2px solid rgba(42, 17, 92, 0.8);
+  box-shadow: none;
+  color: #2a115c;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .premium-home-button { left: 30px; }
-.premium-audio-button { right: 30px; }
 
-.premium-home-button:hover, .premium-audio-button:hover {
-  background: rgba(255, 255, 255, 0.7);
+.premium-home-button:hover {
+  border-color: rgba(23, 7, 47, 0.9);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  color: #3B82F6;
+  box-shadow: none;
+  color: #2a115c;
 }
 
-.premium-home-button:active, .premium-audio-button:active {
+.premium-home-button:active {
   transform: scale(0.95);
 }
 
@@ -389,6 +388,7 @@
   height: 100%;
   z-index: 10;
   background: transparent;
+  position: relative;
 }
 
 .visual-stage-70 {
@@ -404,8 +404,10 @@
 
 .interaction-panel-30 {
   width: 32%;
-  height: calc(100% - 4rem);
-  margin: 2rem;
+  position: absolute;
+  top: 82px;
+  right: 30px;
+  bottom: 24px;
   background: rgba(255, 255, 255, 0.08); /* More translucent */
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
@@ -413,7 +415,6 @@
   border-radius: 2.25rem;
   display: flex;
   flex-direction: column;
-  position: relative;
   box-shadow: 
     0 30px 80px rgba(0, 0, 0, 0.2),
     0 15px 40px rgba(46, 16, 101, 0.15);
@@ -443,7 +444,8 @@
 
 .panel-messages {
   flex: 1;
-  padding: 1.5rem;
+  min-height: 0;
+  padding: 1.5rem 1.5rem 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

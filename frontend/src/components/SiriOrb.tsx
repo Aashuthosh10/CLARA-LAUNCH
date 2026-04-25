@@ -198,69 +198,64 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
                 </filter>
               </defs>
               
-              {/* Primary Waveform 1 - Tapered Ribbon */}
-              <motion.path
-                d="M 15 50 Q 50 10 85 50 Q 50 25 15 50 Z"
-                fill="url(#wave1)"
-                filter="url(#waveGlow)"
+              {/* Primary Waveform 1 — static path; motion on <g> avoids undefined `d` from path morphing */}
+              <motion.g
                 animate={{
-                  d: [
-                    "M 15 50 Q 50 10 85 50 Q 50 25 15 50 Z",
-                    "M 15 50 Q 50 75 85 50 Q 50 90 15 50 Z",
-                    "M 15 50 Q 50 10 85 50 Q 50 25 15 50 Z"
-                  ],
                   rotate: 360,
                   scale: isListening ? [1, 1.2, 1] : 1,
-                  opacity: [0.9, 1, 0.9]
+                  opacity: [0.9, 1, 0.9],
                 }}
                 transition={{
-                  d: { duration: isListening ? 1.5 : 3, repeat: Infinity, ease: "easeInOut" },
-                  rotate: { duration: isListening ? 4 : 10, repeat: Infinity, ease: "linear" },
-                  scale: { duration: 1, repeat: Infinity, ease: "easeInOut" },
-                  opacity: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                  rotate: { duration: isListening ? 4 : 10, repeat: Infinity, ease: 'linear' },
+                  scale: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
+                  opacity: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                style={{ originX: '50px', originY: '50px' }}
-              />
+                style={{ transformOrigin: '50px 50px' }}
+              >
+                <path
+                  d="M 15 50 Q 50 10 85 50 Q 50 25 15 50 Z"
+                  fill="url(#wave1)"
+                  filter="url(#waveGlow)"
+                />
+              </motion.g>
 
-              {/* Primary Waveform 2 - Tapered Ribbon */}
-              <motion.path
-                d="M 20 30 Q 80 50 20 70 Q 50 50 20 30 Z"
-                fill="url(#wave2)"
-                filter="url(#waveGlow)"
+              <motion.g
                 animate={{
-                  d: [
-                    "M 20 30 Q 80 50 20 70 Q 50 50 20 30 Z",
-                    "M 80 30 Q 20 50 80 70 Q 50 50 80 30 Z",
-                    "M 20 30 Q 80 50 20 70 Q 50 50 20 30 Z"
-                  ],
                   rotate: -360,
                   scale: isListening ? [1, 1.15, 1] : 1,
-                  opacity: [0.8, 1, 0.8]
+                  opacity: [0.8, 1, 0.8],
                 }}
                 transition={{
-                  d: { duration: isListening ? 2 : 4, repeat: Infinity, ease: "easeInOut" },
-                  rotate: { duration: isListening ? 6 : 14, repeat: Infinity, ease: "linear" },
-                  scale: { duration: 1.2, repeat: Infinity, ease: "easeInOut" },
-                  opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                  rotate: { duration: isListening ? 6 : 14, repeat: Infinity, ease: 'linear' },
+                  scale: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+                  opacity: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                style={{ originX: '50px', originY: '50px' }}
-              />
+                style={{ transformOrigin: '50px 50px' }}
+              >
+                <path
+                  d="M 20 30 Q 80 50 20 70 Q 50 50 20 30 Z"
+                  fill="url(#wave2)"
+                  filter="url(#waveGlow)"
+                />
+              </motion.g>
 
-              {/* Shimmer Accent - Tapered */}
-              <motion.path
-                d="M 10 50 Q 50 0 90 50 Q 50 5 10 50 Z"
-                fill="#FFFFFF"
-                filter="url(#waveGlow)"
+              <motion.g
                 animate={{
                   rotate: 360,
-                  opacity: [0.5, 0.9, 0.5]
+                  opacity: [0.5, 0.9, 0.5],
                 }}
                 transition={{
-                  rotate: { duration: isListening ? 3 : 8, repeat: Infinity, ease: "linear" },
-                  opacity: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                  rotate: { duration: isListening ? 3 : 8, repeat: Infinity, ease: 'linear' },
+                  opacity: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                style={{ originX: '50px', originY: '50px' }}
-              />
+                style={{ transformOrigin: '50px 50px' }}
+              >
+                <path
+                  d="M 10 50 Q 50 0 90 50 Q 50 5 10 50 Z"
+                  fill="#FFFFFF"
+                  filter="url(#waveGlow)"
+                />
+              </motion.g>
             </svg>
           </div>
 

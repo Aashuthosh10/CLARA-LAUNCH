@@ -68,9 +68,9 @@ RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 # Must be a valid Groq chat model id; if API returns 404, set in .env (see https://console.groq.com/docs/models)
 RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
-RAG_TOP_K = int(os.getenv("RAG_TOP_K", "4"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
 # Low-latency Groq model for mixed-language query normalization (Hinglish / regional + English).
-MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama-3.1-8b-instant")
+MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama3-8b-8192")
 MULTILINGUAL_PREPROCESSOR_MAX_TOKENS = int(os.getenv("MULTILINGUAL_PREPROCESSOR_MAX_TOKENS", "320"))
 MULTILINGUAL_PREPROCESSOR_TIMEOUT_S = float(os.getenv("MULTILINGUAL_PREPROCESSOR_TIMEOUT_S", "2.8"))
 
@@ -103,22 +103,35 @@ AUDIO_SILENT_RMS_THRESHOLD = float(os.getenv("AUDIO_SILENT_RMS_THRESHOLD", "0.00
 # Server Configuration
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "6969"))
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5176")
 KIOSK_TIMEZONE = os.getenv("KIOSK_TIMEZONE", "Asia/Kolkata").strip() or "Asia/Kolkata"
 WS_AUTH_REQUIRED = os.getenv("WS_AUTH_REQUIRED", "true").strip().lower() in ("1", "true", "yes", "on")
 # Shared secret for simple bearer token auth (minimum safe baseline).
 WS_AUTH_TOKEN = os.getenv("WS_AUTH_TOKEN", "").strip()
 # Optional HMAC secret for signed, short-lived ws tokens.
 WS_TOKEN_SIGNING_SECRET = os.getenv("WS_TOKEN_SIGNING_SECRET", "").strip()
+# If auth is enabled in .env but no verifier is configured, do not reject every handshake (local dev).
+if WS_AUTH_REQUIRED and not WS_AUTH_TOKEN and not WS_TOKEN_SIGNING_SECRET:
+    WS_AUTH_REQUIRED = False
+
 _ws_allowed_origins_env = os.getenv("WS_ALLOWED_ORIGINS", "").strip()
-WS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in (_ws_allowed_origins_env.split(",") if _ws_allowed_origins_env else [FRONTEND_URL])
-    if origin.strip()
-]
+if _ws_allowed_origins_env:
+    WS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in _ws_allowed_origins_env.split(",") if origin.strip()
+    ]
+else:
+    # Default dev origins: Vite uses 5176 in package.json; 5173 is common; include 127.0.0.1 variants.
+    _default_origins = (
+        FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:5176",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5176",
+    )
+    WS_ALLOWED_ORIGINS = list(dict.fromkeys(o for o in _default_origins if o))
 
 # Performance/latency tuning
-LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "400"))
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS", "80"))
 LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "12.0"))
