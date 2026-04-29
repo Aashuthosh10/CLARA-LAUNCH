@@ -13,7 +13,7 @@ import hodDsImg from '../../assets/hod_datascience.png';
 import hodChemImg from '../../assets/hod_chemistry.jpg';
 import hodPhysicsImg from '../../assets/hod_physics.jpeg';
 import hodMathsImg from '../../assets/hod_maths.jpg';
-import placeholderImg from '../../assets/logo/svit_logo_clean.png';
+import { collegeLogoMark as placeholderImg } from '../../assets/logo';
 
 const HOD_PORTRAITS: Record<string, string> = {
   cse: hodCseImg,

@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const ECE_IMAGES = [
-  "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
-  "https://images.unsplash.com/photo-1518770660439-4636190af475",
-  "https://images.unsplash.com/photo-1516321497487-e288fb19713f",
-  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b"
-];
 
 const ECE_ICONS = [<Settings />, <MessageSquare />, <Award />, <Globe />, <Cpu />];
 
@@ -27,7 +20,8 @@ export default function ECECard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,7 +67,7 @@ export default function ECECard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={ECE_IMAGES[currentIdx % ECE_IMAGES.length]}
+      departmentId={departmentId}
       icon={ECE_ICONS[currentIdx % ECE_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}

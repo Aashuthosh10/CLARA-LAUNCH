@@ -386,6 +386,8 @@ export const translations: Translations = {
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
+  /** Hard session reset: kiosk default language (fresh boot). */
+  resetToDefaultLanguage: () => void;
   t: (key: string) => string;
 }
 
@@ -398,8 +400,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return translations[key]?.[language] || key;
   };
 
+  const resetToDefaultLanguage = React.useCallback(() => {
+    setLanguage('English');
+  }, []);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={{ language, setLanguage, resetToDefaultLanguage, t }}
+    >
       {children}
     </LanguageContext.Provider>
   );

@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const CIVIL_IMAGES = [
-  "https://images.unsplash.com/photo-1503387762-592dea58ef21",
-  "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7",
-  "https://images.unsplash.com/photo-1581092160562-40aa08e78837",
-  "https://images.unsplash.com/photo-1541888946425-d81bb19240f5",
-  "https://images.unsplash.com/photo-1504307651254-35680f356dfd"
-];
 
 const CIVIL_ICONS = [<Building2 />, <MessageSquare />, <Settings />, <Users />, <TrendingUp />];
 
@@ -27,7 +20,8 @@ export default function CivilCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function CivilCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={CIVIL_IMAGES[currentIdx % CIVIL_IMAGES.length]}
       icon={CIVIL_ICONS[currentIdx % CIVIL_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

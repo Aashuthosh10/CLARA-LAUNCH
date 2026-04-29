@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const PHYSICS_IMAGES = [
-  "https://images.unsplash.com/photo-1636466484292-713cf130838b",
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa",
-  "https://images.unsplash.com/photo-1532094349884-543bc11b234d",
-  "https://images.unsplash.com/photo-1544006659-f0b21884cb1d",
-  "https://images.unsplash.com/photo-1507413245164-6160d8298b31"
-];
 
 const PHYSICS_ICONS = [<Atom />, <MessageSquare />, <Award />, <Globe />, <Rocket />];
 
@@ -27,7 +20,8 @@ export default function PhysicsCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function PhysicsCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={PHYSICS_IMAGES[currentIdx % PHYSICS_IMAGES.length]}
       icon={PHYSICS_ICONS[currentIdx % PHYSICS_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

@@ -25,7 +25,7 @@ const COMPONENT_MAP: Record<string, any> = {
   'Mathematics': MathematicsCard,
   'Physics': PhysicsCard,
   'Chemistry': ChemistryCard,
-  'Basic Sciences': (props: any) => <PhysicsCard {...props} />, // Fallback or summary
+  'Basic Sciences': (props: any) => <PhysicsCard {...props} departmentId={props.departmentId} />, // Fallback or summary
 };
 
 export default function DepartmentCardFactory({ 
@@ -36,5 +36,5 @@ export default function DepartmentCardFactory({
   [key: string]: any;
 }) {
   const Component = COMPONENT_MAP[departmentId] || COMPONENT_MAP['CSE'];
-  return <Component {...props} />;
+  return <Component {...props} departmentId={departmentId} />;
 }

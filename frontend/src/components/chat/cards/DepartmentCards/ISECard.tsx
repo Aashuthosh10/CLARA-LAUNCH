@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const ISE_IMAGES = [
-  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-  "https://images.unsplash.com/photo-1580489944761-15a19d654956",
-  "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
-  "https://images.unsplash.com/photo-1515187029135-18ee286d815b",
-  "https://images.unsplash.com/photo-1460925895917-afdab827c52f"
-];
 
 const ISE_ICONS = [<BookOpen />, <MessageSquare />, <Lightbulb />, <Users />, <TrendingUp />];
 
@@ -27,7 +20,8 @@ export default function ISECard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function ISECard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={ISE_IMAGES[currentIdx % ISE_IMAGES.length]}
       icon={ISE_ICONS[currentIdx % ISE_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const MATH_IMAGES = [
-  "https://images.unsplash.com/photo-1509228468518-180dd4864904",
-  "https://images.unsplash.com/photo-1596495573105-d14658c10993",
-  "https://images.unsplash.com/photo-1518152006812-edab29b069ac",
-  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb",
-  "https://images.unsplash.com/photo-1509228627152-72ae9ae68466"
-];
 
 const MATH_ICONS = [<Calculator />, <MessageSquare />, <Award />, <Globe />, <Rocket />];
 
@@ -27,7 +20,8 @@ export default function MathematicsCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,7 +67,7 @@ export default function MathematicsCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={MATH_IMAGES[currentIdx % MATH_IMAGES.length]}
+      departmentId={departmentId}
       icon={MATH_ICONS[currentIdx % MATH_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}

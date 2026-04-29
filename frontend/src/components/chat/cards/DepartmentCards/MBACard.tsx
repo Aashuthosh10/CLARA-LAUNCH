@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const MBA_IMAGES = [
-  "https://images.unsplash.com/photo-1507679799987-c73779587ccf",
-  "https://images.unsplash.com/photo-1556157382-97dee2dcb748",
-  "https://images.unsplash.com/photo-1556761175-b413da4baf72",
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
-  "https://images.unsplash.com/photo-1521791136064-7986c2959213"
-];
 
 const MBA_ICONS = [<Briefcase />, <MessageSquare />, <Lightbulb />, <Users />, <TrendingUp />];
 
@@ -27,7 +20,8 @@ export default function MBACard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function MBACard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={MBA_IMAGES[currentIdx % MBA_IMAGES.length]}
       icon={MBA_ICONS[currentIdx % MBA_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

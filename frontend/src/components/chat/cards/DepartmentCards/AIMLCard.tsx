@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const AIML_IMAGES = [
-  "https://images.unsplash.com/photo-1677442136019-21780ecad995",
-  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-  "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c",
-  "https://images.unsplash.com/photo-1523050335456-c38a89b7d28b"
-];
 
 const AIML_ICONS = [<Cpu />, <MessageSquare />, <Award />, <Rocket />, <Globe />];
 
@@ -27,7 +20,8 @@ export default function AIMLCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function AIMLCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={AIML_IMAGES[currentIdx % AIML_IMAGES.length]}
       icon={AIML_ICONS[currentIdx % AIML_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

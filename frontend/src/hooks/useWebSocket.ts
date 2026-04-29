@@ -16,6 +16,38 @@ const RECONNECT_DEBOUNCE_MS = 2000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 8000;
 
+function readSessionGen(payload: unknown): number | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const raw = (payload as { session_gen?: unknown }).session_gen;
+  if (typeof raw === 'number' && !Number.isNaN(raw)) return raw;
+  if (typeof raw === 'string') {
+    const n = parseInt(raw, 10);
+    return Number.isNaN(n) ? undefined : n;
+  }
+  return undefined;
+}
+
+function readWireSeq(payload: unknown): number | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const raw = (payload as { wire_seq?: unknown }).wire_seq;
+  if (typeof raw === 'number' && !Number.isNaN(raw)) return raw;
+  if (typeof raw === 'string') {
+    const n = parseInt(raw, 10);
+    return Number.isNaN(n) ? undefined : n;
+  }
+  return undefined;
+}
+
+/** Survives disconnect: Home must advance even if WebSocket singleton is not mounted yet. */
+const minAppliedBackendGenFloorByUrl = new Map<string, number>();
+
+function bumpClientSessionFloor(url: string): number {
+  const prev = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+  const next = prev + 1;
+  minAppliedBackendGenFloorByUrl.set(url, next);
+  return next;
+}
+
 // Singleton per URL: cleanup never closes the socket so Strict Mode re-run always reuses it.
 interface SharedEntry {
   socket: WebSocket;
@@ -24,6 +56,12 @@ interface SharedEntry {
   onMessage: (state: number, payload: any) => void;
   state: number;
   payload: any;
+  /** Mirrors backend session_generation; stale WS payloads are dropped when older. */
+  appliedBackendGen: number;
+  stalePayloadDrops: number;
+  wireStaleDrops: number;
+  /** Monotonic per-connection server wire_seq; rejects duplicate / late ordering. */
+  lastAppliedWireSeq: number;
   connectionPhase: ConnectionPhase;
   setPhase: (phase: ConnectionPhase) => void;
 }
@@ -49,6 +87,9 @@ export function useWebSocket(url: string) {
     connectionPhaseByUrl.get(url) ?? 'initial_connecting'
   );
   const [reconnectTrigger, setReconnectTrigger] = useState(0);
+  const [appliedSessionGen, setAppliedSessionGen] = useState(0);
+  const [stalePayloadDropCount, setStalePayloadDropCount] = useState(0);
+  const [wireStaleDropCount, setWireStaleDropCount] = useState(0);
   const stateRef = useRef<number>(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,13 +99,37 @@ export function useWebSocket(url: string) {
 
   const showOfflineBanner = connectionPhase === 'offline';
 
+  const bumpSessionGenForReset = useCallback(() => {
+    const floor = bumpClientSessionFloor(url);
+    setAppliedSessionGen(floor);
+    const entry = entryRef.current ?? sharedByUrl.get(url);
+    if (entry) {
+      entry.appliedBackendGen = Math.max(entry.appliedBackendGen, floor);
+      // Logical new session while TCP stays open — allow next inbound ordering to start fresh so we
+      // never deadlock on stale wire_seq vs missing-wire_seq edge cases across a hard reset.
+      entry.lastAppliedWireSeq = 0;
+    }
+  }, [url]);
+
+  const isStalePayloadGen = useCallback(
+    (p: { session_gen?: number } | null | undefined): boolean => {
+      const g = readSessionGen(p);
+      if (g === undefined) return false;
+      const entry = entryRef.current ?? sharedByUrl.get(url);
+      if (!entry) return false;
+      const floor = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+      const effective = Math.max(entry.appliedBackendGen, floor);
+      return g < effective;
+    },
+    [url]
+  );
+
   useEffect(() => {
     setHasAttemptedConnect(true);
 
     let entry = sharedByUrl.get(url);
     const needNewSocket = !entry || entry.socket.readyState === WebSocket.CLOSED;
 
-    // Subscribe to phase changes for this URL so we re-render when phase updates
     const phaseListener = () =>
       setConnectionPhase(connectionPhaseByUrl.get(url) ?? 'initial_connecting');
     if (!phaseListenersByUrl.has(url)) phaseListenersByUrl.set(url, new Set());
@@ -76,14 +141,18 @@ export function useWebSocket(url: string) {
 
     if (entry && !needNewSocket) {
       entry.refCount++;
+      const floor = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+      entry.appliedBackendGen = Math.max(entry.appliedBackendGen, floor);
       entry.onConnected = (connected) => setIsConnected(connected);
       entry.onMessage = (s, p) => {
         stateRef.current = s;
         setState(s);
         setPayload(p ?? null);
+        setAppliedSessionGen(entry!.appliedBackendGen);
       };
       entryRef.current = entry;
       setConnectionPhase(entry.connectionPhase);
+      setAppliedSessionGen(entry.appliedBackendGen);
       if (entry.socket.readyState === WebSocket.OPEN) {
         setIsConnecting(false);
         setIsConnected(true);
@@ -99,6 +168,7 @@ export function useWebSocket(url: string) {
             setState(entryRef.current.state);
             setPayload(entryRef.current.payload);
             stateRef.current = entryRef.current.state;
+            setAppliedSessionGen(entryRef.current.appliedBackendGen);
           }
         };
         const t = setTimeout(syncWhenOpen, 100);
@@ -142,19 +212,17 @@ export function useWebSocket(url: string) {
       socket = new WebSocket(url);
     } catch (err) {
       setIsConnecting(false);
-      if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) console.debug('WebSocket connection error, retrying…', err);
+      if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV)
+        console.debug('WebSocket connection error, retrying…', err);
       const delay = Math.min(
         INITIAL_BACKOFF_MS * 2 ** backoffAttemptRef.current,
         MAX_BACKOFF_MS
       );
       backoffAttemptRef.current = Math.min(backoffAttemptRef.current + 1, 10);
-      reconnectTimerRef.current = setTimeout(
-        () => {
-          reconnectTimerRef.current = null;
-          setReconnectTrigger((t) => t + 1);
-        },
-        delay
-      );
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        setReconnectTrigger((t) => t + 1);
+      }, delay);
       return () => {
         removePhaseListener();
         if (reconnectTimerRef.current) {
@@ -164,6 +232,7 @@ export function useWebSocket(url: string) {
       };
     }
 
+    const floorAtCreate = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
     entry = {
       socket,
       refCount: 1,
@@ -172,9 +241,14 @@ export function useWebSocket(url: string) {
         stateRef.current = s;
         setState(s);
         setPayload(p ?? null);
+        setAppliedSessionGen(entry!.appliedBackendGen);
       },
       state: 0,
       payload: null,
+      appliedBackendGen: floorAtCreate,
+      stalePayloadDrops: 0,
+      wireStaleDrops: 0,
+      lastAppliedWireSeq: 0,
       connectionPhase: initialPhase,
       setPhase: (phase: ConnectionPhase) => {
         connectionPhaseByUrl.set(url, phase);
@@ -207,6 +281,11 @@ export function useWebSocket(url: string) {
 
     socket.onopen = () => {
       hasConnectedOnceByUrl.set(url, true);
+      // New TCP connection ⇒ new backend session dict (session_generation/wire_seq reset).
+      // Clearing the floor avoids dropping every message as "stale" vs a pre-reconnect Home bump.
+      minAppliedBackendGenFloorByUrl.set(url, 0);
+      entry!.appliedBackendGen = 0;
+      entry!.lastAppliedWireSeq = 0;
       if (graceTimerRef.current) {
         clearTimeout(graceTimerRef.current);
         graceTimerRef.current = null;
@@ -218,7 +297,9 @@ export function useWebSocket(url: string) {
       backoffAttemptRef.current = 0;
       entry!.setPhase('connected');
       entry!.onConnected(true);
-      if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) console.debug('CLARA WebSocket connected');
+      setAppliedSessionGen(0);
+      if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV)
+        console.debug('CLARA WebSocket connected');
     };
 
     socket.onmessage = (event) => {
@@ -226,12 +307,37 @@ export function useWebSocket(url: string) {
         const data: WSMessage = JSON.parse(event.data);
         if (typeof data.state !== 'number') return;
         const next = data.state;
-        const current = entry!.state;
-        if (next === 0 && current > 0) return;
-        if (next === 4 && current === 5) return;
-        entry!.state = next;
-        entry!.payload = data.payload ?? null;
-        entry!.onMessage(next, entry!.payload);
+        const rawPayload = data.payload ?? null;
+        const g = readSessionGen(rawPayload);
+        const wseq = readWireSeq(rawPayload);
+        const floor = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+        const effectiveGen = Math.max(entry!.appliedBackendGen, floor);
+
+        if (g !== undefined && g < effectiveGen) {
+          entry!.stalePayloadDrops += 1;
+          setStalePayloadDropCount(entry!.stalePayloadDrops);
+          return;
+        }
+
+        // wire_seq: only enforce ordering when the server includes it. Dropping *all* messages
+        // without wire_seq after the first sequenced message deadlocks the kiosk if any path omits it.
+        if (wseq !== undefined && wseq <= entry!.lastAppliedWireSeq) {
+          entry!.wireStaleDrops += 1;
+          setWireStaleDropCount(entry!.wireStaleDrops);
+          return;
+        }
+        if (wseq !== undefined) {
+          entry!.lastAppliedWireSeq = wseq;
+        }
+
+        if (g !== undefined && !Number.isNaN(g)) {
+          entry!.appliedBackendGen = Math.max(entry!.appliedBackendGen, g);
+        }
+
+        const nextAfterGuard = next;
+        entry!.state = nextAfterGuard;
+        entry!.payload = rawPayload ?? null;
+        entry!.onMessage(nextAfterGuard, entry!.payload);
       } catch (err) {
         console.error('Failed to parse WS message:', err);
       }
@@ -347,5 +453,39 @@ export function useWebSocket(url: string) {
     sendMessage,
     setManualState,
     retryConnect,
+    appliedSessionGen,
+    stalePayloadDropCount,
+    bumpSessionGenForReset,
+    isStalePayloadGen,
+    wireStaleDropCount,
+  };
+}
+
+/** Diagnostics for window.claraDebug — read-only singleton snapshot per ws URL */
+/** Imperative escape hatch: singleton route must be sleep before new runtime syncs WS UI. */
+export function forceSingletonWsRouteSleep(url: string) {
+  const e = sharedByUrl.get(url);
+  if (!e) return;
+  e.state = 0;
+  e.payload = null;
+}
+
+export function peekClaraWsDiagnostics(url: string) {
+  const e = sharedByUrl.get(url);
+  if (!e) {
+    return {
+      connected: false as const,
+      floorGen: minAppliedBackendGenFloorByUrl.get(url) ?? 0,
+    };
+  }
+  return {
+    connected: true as const,
+    socketReadyState: e.socket.readyState,
+    entryState: e.state,
+    appliedBackendGen: e.appliedBackendGen,
+    lastAppliedWireSeq: e.lastAppliedWireSeq,
+    stalePayloadDrops: e.stalePayloadDrops,
+    wireStaleDrops: e.wireStaleDrops,
+    floorGen: minAppliedBackendGenFloorByUrl.get(url) ?? 0,
   };
 }

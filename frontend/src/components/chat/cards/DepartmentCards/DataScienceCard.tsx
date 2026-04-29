@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const DS_IMAGES = [
-  "https://images.unsplash.com/photo-1562774053-701939374585",
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2",
-  "https://images.unsplash.com/photo-1523240795612-9a054b0db644",
-  "https://images.unsplash.com/photo-1529390079861-591de354faf5",
-  "https://images.unsplash.com/photo-1460925895917-afdab827c52f"
-];
 
 const DS_ICONS = [<GraduationCap />, <MessageSquare />, <Award />, <Globe />, <TrendingUp />];
 
@@ -27,7 +20,8 @@ export default function DataScienceCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function DataScienceCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={DS_IMAGES[currentIdx % DS_IMAGES.length]}
       icon={DS_ICONS[currentIdx % DS_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

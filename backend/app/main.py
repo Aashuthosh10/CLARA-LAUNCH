@@ -443,6 +443,8 @@ async def maybe_auto_detect_session_language(
     if not AUTO_LANGUAGE_DETECT_ENABLED or not should_run_auto_detect(session):
         return
 
+    turn_marker = int(session.get("session_generation", 0))
+
     detection = detect_language(
         text=text,
         stt_meta=stt_meta,
@@ -504,7 +506,10 @@ async def maybe_auto_detect_session_language(
         event_payload["greetingAudioBase64"] = greeting_audio_b64
 
     event_payload.update(debug_payload(timing))
-    await websocket.send_json({"state": 5, "payload": event_payload})
+    if _turn_stale(session, turn_marker):
+        logger.info("Stale auto-detect turn dropped (session_generation advanced)")
+        return
+    await _ws_send_json(websocket, 5, session, event_payload)
 
 
 async def _stream_groq_reply(
@@ -515,6 +520,7 @@ async def _stream_groq_reply(
     websocket: WebSocket,
     timing: TurnTiming,
     on_first_sentence: Any | None = None,
+    turn_gen_marker: int,
 ) -> tuple[str, str]:
     client = await get_groq_client()
     if not client:
@@ -538,6 +544,10 @@ async def _stream_groq_reply(
     last_partial_sent = 0.0
 
     async for chunk in stream:
+        if _turn_stale(session, turn_gen_marker):
+            logger.info("Stale LLM stream aborted (session_generation advanced)")
+            return "", ""
+
         delta = ""
         try:
             delta = (chunk.choices[0].delta.content or "")
@@ -562,7 +572,7 @@ async def _stream_groq_reply(
                 "isProcessing": True,
             }
             payload.update(debug_payload(timing))
-            await websocket.send_json({"state": 5, "payload": payload})
+            await _ws_send_json(websocket, 5, session, payload)
             last_partial_sent = now_ms
 
         if not first_sentence:
@@ -621,11 +631,12 @@ async def process_user_text_and_reply(
     local_intent: dict[str, Any] | None = None,
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
+    turn_gen_marker = int(session.get("session_generation", 0))
     append_session_history(session, "user", text, max_turns=3)
     try:
         processing_payload = {"isProcessing": True}
         processing_payload.update(debug_payload(timing))
-        await websocket.send_json({"state": 5, "payload": processing_payload})
+        await _ws_send_json(websocket, 5, session, processing_payload)
         if ENABLE_EARLY_PARTIAL_TEXT and not timing.has("first_feedback"):
             timing.mark("first_feedback")
             early_partial_payload = {
@@ -635,7 +646,7 @@ async def process_user_text_and_reply(
                 "turn_id": timing.turn_id,
             }
             early_partial_payload.update(debug_payload(timing))
-            await websocket.send_json({"state": 5, "payload": early_partial_payload})
+            await _ws_send_json(websocket, 5, session, early_partial_payload)
         if ENABLE_ACK_EARCON:
             ack_audio_b64 = _get_ack_earcon_base64()
             if not timing.has("play_start"):
@@ -651,9 +662,13 @@ async def process_user_text_and_reply(
                 "turn_id": timing.turn_id,
             }
             ack_payload.update(debug_payload(timing))
-            await websocket.send_json({"state": 5, "payload": ack_payload})
+            await _ws_send_json(websocket, 5, session, ack_payload)
     except Exception as exc:
         logger.warning("Could not send isProcessing: %s", exc)
+        return
+
+    if _turn_stale(session, turn_gen_marker):
+        logger.info("Stale process_user_text_and_reply after initial outbound (session_generation advanced)")
         return
 
     await maybe_auto_detect_session_language(session, text, websocket, timing, stt_meta=stt_meta)
@@ -948,7 +963,10 @@ async def process_user_text_and_reply(
                 "is_final_segment": False,
             }
             first_payload.update(debug_payload(timing))
-            await websocket.send_json({"state": 5, "payload": first_payload})
+            if _turn_stale(session, turn_gen_marker):
+                logger.info("Stale first-sentence audio send dropped")
+                return
+            await _ws_send_json(websocket, 5, session, first_payload)
 
         def _maybe_start_first_sentence_tts(sentence: str) -> None:
             nonlocal first_sentence_task
@@ -985,6 +1003,7 @@ async def process_user_text_and_reply(
                             websocket=websocket,
                             timing=timing,
                             on_first_sentence=_maybe_start_first_sentence_tts,
+                            turn_gen_marker=turn_gen_marker,
                         ),
                         timeout=LLM_STREAM_TIMEOUT_S,
                     )
@@ -1227,7 +1246,10 @@ async def process_user_text_and_reply(
             payload["audioBase64"] = full_audio_b64
 
         payload.update(debug_payload(timing))
-        await websocket.send_json({"state": 5, "payload": payload})
+        if _turn_stale(session, turn_gen_marker):
+            logger.info("Stale final process_user_text payload dropped (session_generation advanced)")
+            return
+        await _ws_send_json(websocket, 5, session, payload)
 
         log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=True)
 
@@ -1248,7 +1270,7 @@ async def process_user_text_and_reply(
                 recoverable=True,
             )
             err_payload.update(debug_payload(timing))
-            await websocket.send_json({"state": 5, "payload": err_payload})
+            await _ws_send_json(websocket, 5, session, err_payload)
         except Exception:
             pass
         log_turn_metrics(timing, error="process_failed")
@@ -1328,6 +1350,37 @@ def health() -> dict[str, str]:
 VALID_LANGUAGES = frozenset(LANGUAGE_NAME_TO_CODE_KEY.keys())
 
 
+def _attach_session_gen(session: dict[str, Any], payload: dict[str, Any] | None) -> dict[str, Any]:
+    """Every outbound websocket payload carries session_gen for kiosk stale-merge prevention."""
+    # Monotonic per-connection ordering: delayed duplicate resets can share session_gen with a
+    # later wake; clients must discard inbound messages with wire_seq not strictly increasing.
+    session["wire_seq"] = int(session.get("wire_seq", 0)) + 1
+    wseq = session["wire_seq"]
+    g = int(session.get("session_generation", 0))
+    if payload is None:
+        return {"session_gen": g, "wire_seq": wseq}
+    merged = dict(payload)
+    merged["session_gen"] = g
+    merged["wire_seq"] = wseq
+    return merged
+
+
+async def _ws_send_json(
+    websocket: WebSocket,
+    state_out: int,
+    session: dict[str, Any],
+    payload: dict[str, Any] | None,
+) -> None:
+    await websocket.send_json(
+        {"state": state_out, "payload": _attach_session_gen(session, payload)}
+    )
+
+
+def _turn_stale(session: dict[str, Any], turn_marker: int) -> bool:
+    """True if reset_session / home advanced session_generation while this turn was in flight."""
+    return int(session.get("session_generation", 0)) != int(turn_marker)
+
+
 @app.websocket("/ws/clara")
 async def websocket_clara(websocket: WebSocket):
     is_valid, reason = validate_websocket_handshake(websocket)
@@ -1339,6 +1392,8 @@ async def websocket_clara(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket client connected")
     session: dict[str, Any] = {
+        "session_generation": 0,
+        "wire_seq": 0,
         "language": None,
         "language_code": None,
         "language_name": None,
@@ -1352,7 +1407,7 @@ async def websocket_clara(websocket: WebSocket):
     }
 
     try:
-        await websocket.send_json({"state": 0, "payload": None})
+        await _ws_send_json(websocket, 0, session, None)
 
         while True:
             data = await websocket.receive_text()
@@ -1365,11 +1420,12 @@ async def websocket_clara(websocket: WebSocket):
                     invalid_turn_id,
                     recoverable=True,
                 )
-                await websocket.send_json({"state": 5, "payload": payload})
+                await _ws_send_json(websocket, 5, session, payload)
                 continue
             action = msg.get("action")
 
             if action in {"reset_session", "home"}:
+                session["session_generation"] = int(session.get("session_generation", 0)) + 1
                 session.update(
                     {
                         "language": None,
@@ -1384,12 +1440,12 @@ async def websocket_clara(websocket: WebSocket):
                         "cached_greeting_message": None,
                     }
                 )
-                await websocket.send_json({"state": 0, "payload": None})
+                await _ws_send_json(websocket, 0, session, None)
                 continue
 
             if action == "wake":
                 # Client goes straight to chat; language is chosen inline after the first greeting.
-                await websocket.send_json({"state": 5, "payload": None})
+                await _ws_send_json(websocket, 5, session, None)
                 continue
 
             if action == "language_gate_prompt":
@@ -1411,13 +1467,13 @@ async def websocket_clara(websocket: WebSocket):
                     payload["audioBase64"] = audio_b64
                 else:
                     payload["error"] = "Could not generate language prompt audio."
-                await websocket.send_json({"state": 5, "payload": payload})
+                await _ws_send_json(websocket, 5, session, payload)
                 continue
 
             if action == "language_selected":
                 language = msg.get("language")
                 if language not in VALID_LANGUAGES:
-                    await websocket.send_json({"state": 5, "payload": None})
+                    await _ws_send_json(websocket, 5, session, None)
                     continue
                 code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
                 set_session_language(session, code_key, is_auto=False)
@@ -1446,7 +1502,7 @@ async def websocket_clara(websocket: WebSocket):
                     payload["turn_id"] = "ready_after_language_pick"
                 else:
                     payload["error"] = "Could not generate ready prompt audio."
-                await websocket.send_json({"state": 5, "payload": payload})
+                await _ws_send_json(websocket, 5, session, payload)
                 continue
 
             if action == "campus_navigation_tts":
@@ -1478,7 +1534,7 @@ async def websocket_clara(websocket: WebSocket):
                     payload["audioBase64"] = audio_b64
                 else:
                     payload["error"] = "Could not generate campus navigation audio."
-                await websocket.send_json({"state": 5, "payload": payload})
+                await _ws_send_json(websocket, 5, session, payload)
                 continue
 
             if action == "conversation_started":
@@ -1513,7 +1569,7 @@ async def websocket_clara(websocket: WebSocket):
                     _gff_open = greeting_font_family_css("English")
                     if _gff_open:
                         payload_open["greetingFontFamily"] = _gff_open
-                    await websocket.send_json({"state": 5, "payload": payload_open})
+                    await _ws_send_json(websocket, 5, session, payload_open)
                     continue
 
                 _, lang_name, lang_code = resolve_session_language(session)
@@ -1533,7 +1589,7 @@ async def websocket_clara(websocket: WebSocket):
                         payload["greetingFontFamily"] = _gff_c
                     session["cached_greeting_audio"] = None
                     session["cached_greeting_message"] = None
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                 else:
                     audio_b64, _ = await tts_to_base64_cached(
                         greeting_text,
@@ -1554,7 +1610,7 @@ async def websocket_clara(websocket: WebSocket):
                     _gff2 = greeting_font_family_css(lang_name)
                     if _gff2:
                         payload["greetingFontFamily"] = _gff2
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                 continue
 
             if action == "user_message":
@@ -1567,16 +1623,16 @@ async def websocket_clara(websocket: WebSocket):
                     timing.mark("turn_end")
                     payload = {"error": "Missing text", "isProcessing": False}
                     payload.update(debug_payload(timing))
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="missing_text")
                 elif session.get("language_code_key") is None:
                     timing.mark("turn_end")
                     if "BACKGROUND_NOISE" in text or "**BACKGROUND_NOISE**" in text:
-                        await websocket.send_json(
-                            {
-                                "state": 5,
-                                "payload": {"isProcessing": False, "turn_id": timing.turn_id},
-                            }
+                        await _ws_send_json(
+                            websocket,
+                            5,
+                            session,
+                            {"isProcessing": False, "turn_id": timing.turn_id},
                         )
                         log_turn_metrics(timing, error="language_gate_noise")
                     else:
@@ -1587,7 +1643,7 @@ async def websocket_clara(websocket: WebSocket):
                             "turn_id": timing.turn_id,
                         }
                         gate_payload.update(debug_payload(timing))
-                        await websocket.send_json({"state": 5, "payload": gate_payload})
+                        await _ws_send_json(websocket, 5, session, gate_payload)
                         log_turn_metrics(timing, error="language_not_selected")
                 else:
                     await process_user_text_and_reply(
@@ -1604,7 +1660,7 @@ async def websocket_clara(websocket: WebSocket):
                 timing = TurnTiming()
                 processing_payload = {"isProcessing": True, "turn_id": timing.turn_id}
                 processing_payload.update(debug_payload(timing))
-                await websocket.send_json({"state": 5, "payload": processing_payload})
+                await _ws_send_json(websocket, 5, session, processing_payload)
 
                 dev_idx, dev_name = get_input_device_info()
                 log_voice_capture_start(
@@ -1643,7 +1699,7 @@ async def websocket_clara(websocket: WebSocket):
                     msg = error_hint(code, "No speech heard.")
                     payload = build_error_payload(code, msg, timing.turn_id)
                     payload.update(debug_payload(timing))
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error=code)
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code=code)
                     continue
@@ -1665,7 +1721,7 @@ async def websocket_clara(websocket: WebSocket):
                     timing.mark("turn_end")
                     payload = build_error_payload("STT_FAILED", "Speech recognition failed. Please try again.", timing.turn_id)
                     payload.update(debug_payload(timing))
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="stt_failed")
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="STT_FAILED")
                     continue
@@ -1675,7 +1731,7 @@ async def websocket_clara(websocket: WebSocket):
                     logger.warning("STT returned empty for %d-byte WAV", len(wav_bytes))
                     payload = build_error_payload("STT_EMPTY", "No speech detected.", timing.turn_id)
                     payload.update(debug_payload(timing))
-                    await websocket.send_json({"state": 5, "payload": payload})
+                    await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="stt_empty")
                     log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="STT_EMPTY")
                     continue
@@ -1684,19 +1740,19 @@ async def websocket_clara(websocket: WebSocket):
                 continue
 
             if action in ("mic_stop", "mic_cancel"):
-                await websocket.send_json({"state": 5, "payload": {"isProcessing": False}})
+                await _ws_send_json(websocket, 5, session, {"isProcessing": False})
                 continue
 
             if action == "menu_select":
-                await websocket.send_json({"state": 5, "payload": msg})
+                await _ws_send_json(websocket, 5, session, msg if isinstance(msg, dict) else {"data": msg})
                 continue
 
-            await websocket.send_json({"state": 5, "payload": msg})
+            await _ws_send_json(websocket, 5, session, msg if isinstance(msg, dict) else {"data": msg})
 
     except Exception as exc:
         logger.exception("WebSocket error: %s", exc)
         try:
-            await websocket.send_json({"state": -1, "payload": {"error": "Connection error."}})
+            await _ws_send_json(websocket, -1, session, {"error": "Connection error."})
         except Exception:
             pass
     finally:

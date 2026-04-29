@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const CHEMISTRY_IMAGES = [
-  "https://images.unsplash.com/photo-1532187863486-abf2ad240c74",
-  "https://images.unsplash.com/photo-1518152006812-edab29b069ac",
-  "https://images.unsplash.com/photo-1544006659-f0b21884cb1d",
-  "https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5",
-  "https://images.unsplash.com/photo-1628191010210-a59de471f02c"
-];
 
 const CHEMISTRY_ICONS = [<FlaskConical />, <MessageSquare />, <Award />, <Globe />, <Rocket />];
 
@@ -27,7 +20,8 @@ export default function ChemistryCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function ChemistryCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={CHEMISTRY_IMAGES[currentIdx % CHEMISTRY_IMAGES.length]}
       icon={CHEMISTRY_ICONS[currentIdx % CHEMISTRY_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

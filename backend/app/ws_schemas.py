@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 _ALLOWED_ACTIONS = {
     "wake",
+    "reset_session",
+    "home",
     "language_selected",
     "conversation_started",
     "user_message",
@@ -25,8 +27,23 @@ class _BaseWsMessage(BaseModel):
     action: str
 
 
-class WakeMessage(_BaseWsMessage):
+class WakeMessage(BaseModel):
+    """Client may attach diagnostic/meta fields beside action."""
+
+    model_config = ConfigDict(extra="allow")
     action: Literal["wake"]
+
+
+class ResetSessionMessage(BaseModel):
+    """Hard session reset; allow extra diagnostics fields from kiosk clients."""
+
+    model_config = ConfigDict(extra="allow")
+    action: Literal["reset_session"]
+
+
+class HomeActionMessage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    action: Literal["home"]
 
 
 class ConversationStartedMessage(_BaseWsMessage):
@@ -56,6 +73,8 @@ class MenuSelectMessage(_BaseWsMessage):
 
 _ACTION_TO_MODEL = {
     "wake": WakeMessage,
+    "reset_session": ResetSessionMessage,
+    "home": HomeActionMessage,
     "conversation_started": ConversationStartedMessage,
     "language_selected": LanguageSelectedMessage,
     "user_message": UserMessage,

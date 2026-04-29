@@ -1,14 +1,17 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { DepartmentSlotImage } from '../../../../features/departments/images/DepartmentSlotImage';
+import { useDepartmentImages } from '../../../../features/departments/images/useDepartmentImages';
 
 interface BaseDepartmentCardProps {
   department: string;
   deptTagline: string;
+  /** Canonical department identifier used to load department-wise assets. */
+  departmentId: string;
   title: string;
   tagline: string;
   description: string;
-  image: string;
   icon: React.ReactNode;
   isHOD?: boolean;
   hodName?: string;
@@ -23,10 +26,10 @@ interface BaseDepartmentCardProps {
 export default function BaseDepartmentCard({
   department,
   deptTagline,
+  departmentId,
   title,
   tagline,
   description,
-  image,
   icon,
   isHOD,
   hodName,
@@ -37,6 +40,11 @@ export default function BaseDepartmentCard({
   onSelectSlide,
   onClose,
 }: BaseDepartmentCardProps) {
+  const { images } = useDepartmentImages(departmentId);
+  // CARD index mapping:
+  // slide 0 -> slot1, slide 1 -> slot2, ... slide 4 -> slot5.
+  const slotIndex = currentSlide >= 0 && currentSlide <= 4 ? currentSlide : null;
+  const slotSrc = slotIndex === null ? '' : images[slotIndex] ?? '';
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? 50 : -50,
@@ -53,13 +61,13 @@ export default function BaseDepartmentCard({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-bg-beige bg-doodle overflow-hidden">
+    <div className="relative w-full h-full flex flex-col overflow-hidden bg-[linear-gradient(160deg,rgba(243,236,255,0.62)_0%,rgba(235,229,255,0.52)_48%,rgba(226,222,255,0.46)_100%)]">
       {/* Header - Department Info (Sticky/Permanent) */}
       <header className="pt-8 pb-4 text-center z-20 relative">
         {onClose && (
           <button 
             onClick={onClose}
-            className="absolute right-8 top-8 p-2 rounded-full bg-white/50 text-text-accent hover:bg-white hover:text-text-main transition-colors shadow-sm"
+            className="absolute right-8 top-8 rounded-full border border-violet-200/55 bg-white/42 p-2 text-violet-700 shadow-[0_10px_30px_rgba(76,29,149,0.12)] transition-colors hover:bg-white/60 hover:text-violet-900"
           >
             <X size={20} />
           </button>
@@ -89,16 +97,16 @@ export default function BaseDepartmentCard({
             animate="center"
             exit="exit"
             transition={{ y: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.3 } }}
-            className="w-[80%] bg-[#f8f5ee] rounded-[32px] shadow-2xl border border-[#dcd7cc] overflow-hidden flex flex-col md:flex-row min-h-[600px]"
+            className="w-[80%] min-h-[600px] overflow-hidden rounded-[32px] border border-violet-200/55 bg-[linear-gradient(165deg,rgba(248,244,255,0.92)_0%,rgba(240,235,255,0.88)_52%,rgba(232,227,255,0.86)_100%)] shadow-[0_24px_80px_rgba(67,56,202,0.18)] backdrop-blur-xl flex flex-col md:flex-row"
           >
             {/* Left Column: Text */}
             <div className="flex-1 p-10 md:p-16 flex flex-col justify-center">
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-white/50 rounded-2xl shadow-sm text-text-accent">
+                <div className="rounded-2xl border border-violet-200/55 bg-white/50 p-3 text-violet-700 shadow-[0_8px_24px_rgba(76,29,149,0.1)]">
                   {icon}
                 </div>
                 {isHOD && (
-                  <span className="text-[10px] font-bold tracking-widest uppercase bg-text-accent/10 text-text-accent px-3 py-1 rounded-full">
+                  <span className="rounded-full border border-violet-300/45 bg-violet-100/55 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-violet-700">
                     HOD Message
                   </span>
                 )}
@@ -112,31 +120,23 @@ export default function BaseDepartmentCard({
                 {tagline}
               </p>
 
-              <div className="text-base md:text-lg text-[#5a5651] leading-relaxed mb-6 whitespace-pre-line">
+              <div className="mb-6 whitespace-pre-line text-base leading-relaxed text-slate-700 md:text-lg">
                 {description}
               </div>
 
               {isHOD && hodName && (
-                <div className="mt-4 pt-4 border-t border-text-accent/20">
+                <div className="mt-4 border-t border-violet-300/35 pt-4">
                   <p className="text-base font-bold text-text-main">{hodName}</p>
-                  <p className="text-[10px] text-text-accent uppercase tracking-wider font-bold">Head of Department</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Head of Department</p>
                 </div>
               )}
             </div>
 
             {/* Right Column: Image */}
-            <div className="flex-1 relative min-h-[250px] md:min-h-full bg-[#f1ebd9]/30">
-              <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_30px_#f1ebd9]" />
-              <img
-                src={image}
-                alt={title}
-                className="w-full h-full object-cover"
-                style={{
-                   maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-                   WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-                }}
-              />
-              <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#f8f5ee] to-transparent z-10" />
+            <div className="relative min-h-[250px] flex-1 bg-[linear-gradient(160deg,rgba(234,225,255,0.55)_0%,rgba(246,240,255,0.36)_100%)] md:min-h-full">
+              <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_30px_rgba(139,92,246,0.16)]" />
+              <DepartmentSlotImage src={slotSrc} />
+              <div className="absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#f3edff] to-transparent" />
             </div>
           </motion.div>
         </AnimatePresence>
@@ -151,7 +151,7 @@ export default function BaseDepartmentCard({
               key={idx}
               onClick={() => onSelectSlide(idx)}
               className={`h-1.5 transition-all duration-300 rounded-full ${
-                idx === currentSlide ? "w-8 bg-text-main" : "w-1.5 bg-text-accent/30"
+                idx === currentSlide ? "w-8 bg-violet-600" : "w-1.5 bg-violet-300/55"
               }`}
             />
           ))}
@@ -162,14 +162,14 @@ export default function BaseDepartmentCard({
           <button
             onClick={onPrev}
             disabled={currentSlide === 0}
-            className="p-3 rounded-full bg-white border border-[#dcd7cc] text-text-main shadow-md disabled:opacity-30 disabled:pointer-events-none hover:scale-105 active:scale-95 transition-transform"
+            className="rounded-full border border-violet-200/60 bg-white/75 p-3 text-violet-800 shadow-[0_10px_24px_rgba(76,29,149,0.14)] transition-transform hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-30"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={onNext}
             disabled={currentSlide === totalSlides - 1}
-            className="p-3 rounded-full bg-text-main text-white shadow-md disabled:opacity-30 disabled:pointer-events-none hover:scale-105 active:scale-95 transition-transform"
+            className="rounded-full bg-violet-700 p-3 text-white shadow-[0_12px_28px_rgba(76,29,149,0.28)] transition-transform hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-30"
           >
             <ChevronRight size={20} />
           </button>

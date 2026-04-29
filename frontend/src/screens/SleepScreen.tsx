@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useAnimationFrame } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { AuroraText } from '@/components/ui/aurora-text';
+import { agentLog, auditPointerInteraction } from '../debug/interactionDebug';
 import { X, ChevronRight } from 'lucide-react';
-import svitLogo from '../assets/logo/svit_logo_transparent.png';
+import { collegeLogoMark } from '../assets/logo';
 
 const CAMPUS_IMAGES = [
   '/assets/campus_hd_1.jpg',
@@ -57,6 +58,14 @@ const NEWS_ITEMS = [
 export default function SleepScreen({ onWake }: { onWake: () => void }) {
   const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined;
+    agentLog('H5', 'SleepScreen.tsx:lifecycle', 'SleepScreen mounted');
+    return () => {
+      agentLog('H5', 'SleepScreen.tsx:lifecycle', 'SleepScreen unmounted');
+    };
+  }, []);
   const [showAllNews, setShowAllNews] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   
@@ -190,6 +199,16 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
       exit={{ opacity: 0 }}
       className="relative w-full h-full overflow-hidden bg-black"
       onClick={() => onWake()}
+      onPointerDownCapture={(e: React.PointerEvent) => {
+        if (import.meta.env.DEV) {
+          agentLog(
+            'H1',
+            'SleepScreen.tsx:pointer',
+            'pointer tap capture',
+            auditPointerInteraction(e.clientX, e.clientY)
+          );
+        }
+      }}
       data-testid="sleep-screen"
     >
       {/* Background Slideshow */}
@@ -227,14 +246,22 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
           transition={{ delay: 0.5, duration: 1 }}
           className="flex items-center gap-4 lg:gap-5"
         >
-          <img
-            src={svitLogo}
-            alt="Sai Vidya Logo"
-            className="h-[135px] w-[135px] lg:h-[160px] lg:w-[160px] object-contain opacity-95"
+          <div className="flex min-h-[100px] h-[min(20vh,200px)] w-auto max-w-[min(42vw,360px)] shrink-0 items-center justify-start">
+            <img
+              src={collegeLogoMark}
+              alt=""
+              role="presentation"
+              draggable={false}
+              decoding="async"
+              className="pointer-events-none block max-h-full max-w-full w-auto object-contain object-left bg-transparent shadow-none"
+            />
+          </div>
+
+          {/* Vertical Divider — aligned to brand mark tile height */}
+          <div
+            aria-hidden
+            className="h-[min(20vh,200px)] min-h-[100px] w-[4px] shrink-0 rounded-sm bg-[#E85D04]"
           />
-          
-          {/* Vertical Divider */}
-          <div className="h-[135px] lg:h-[160px] w-[4px] bg-[#E85D04] rounded-sm"></div>
 
           <div className="flex flex-col justify-center pt-1">
             <h1 className="text-5xl lg:text-[64px] font-black tracking-[0.12em] text-[#F26522] uppercase leading-none drop-shadow-md" style={{ fontFamily: "Inter, sans-serif" }}>

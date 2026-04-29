@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const CSE_IMAGES = [
-  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b",
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a",
-  "https://images.unsplash.com/photo-1521737711867-e3b97375f902",
-  "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c"
-];
 
 const CSE_ICONS = [<Users />, <MessageSquare />, <TrendingUp />, <Award />, <Rocket />];
 
@@ -27,7 +20,8 @@ export default function CSECard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function CSECard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={CSE_IMAGES[currentIdx % CSE_IMAGES.length]}
       icon={CSE_ICONS[currentIdx % CSE_ICONS.length]}
       isHOD={currentIdx === 1} // Mapping HOD Message to index 1 as per design repo
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const MECH_IMAGES = [
-  "https://images.unsplash.com/photo-1537462715879-360eeb61a0ad",
-  "https://images.unsplash.com/photo-1556157382-97dee2dcb748",
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-  "https://images.unsplash.com/photo-1581092160562-40aa08e78837",
-  "https://images.unsplash.com/photo-1537462715879-360eeb61a0ad"
-];
 
 const MECH_ICONS = [<Settings />, <MessageSquare />, <Rocket />, <BookOpen />, <TrendingUp />];
 
@@ -27,7 +20,8 @@ export default function MechanicalCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function MechanicalCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={MECH_IMAGES[currentIdx % MECH_IMAGES.length]}
       icon={MECH_ICONS[currentIdx % MECH_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}

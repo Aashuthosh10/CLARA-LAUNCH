@@ -227,6 +227,8 @@ interface ChatScreenProps {
   onHome?: () => void;
   onOrbTap: () => void;
   sendMessage: (msg: object) => void;
+  /** When true, discard payload-driven updates (ghost session prevention). */
+  isPayloadStale?: (p: unknown) => boolean;
 }
 
 export default function ChatScreen({
@@ -243,6 +245,7 @@ export default function ChatScreen({
   onHome,
   onOrbTap,
   sendMessage,
+  isPayloadStale,
 }: ChatScreenProps) {
   const { language, setLanguage, t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -314,7 +317,7 @@ export default function ChatScreen({
 
 
   const collegeData = useCollegeData();
-  
+
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
@@ -360,6 +363,7 @@ export default function ChatScreen({
 
   // Keep chat history stable when backend emits partial payloads without `messages`.
   useEffect(() => {
+    if (payload && isPayloadStale?.(payload)) return;
     if (Array.isArray(payload?.messages)) {
       const incomingMessages = payload.messages as ChatMessage[];
       const hasReadyPrompt = incomingMessages.some((m: any) => m?.id === 'ready_prompt');
@@ -377,7 +381,7 @@ export default function ChatScreen({
         setVisuallyFocusedMessage((latestAssistant as ChatMessage) ?? null);
       }
     }
-  }, [payload]);
+  }, [payload, isPayloadStale]);
 
   useEffect(() => {
     if (!isProcessing) {
@@ -402,6 +406,7 @@ export default function ChatScreen({
 
   // Keep the wake text visible until local TTS playback has fully ended, then crossfade to the picker.
   useEffect(() => {
+    if (payload && isPayloadStale?.(payload)) return;
     if (!inlineLanguageGate || languageGateSatisfied) {
       if (!inlineLanguageGate) setShowLanguageOverlay(false);
       return;
@@ -429,6 +434,7 @@ export default function ChatScreen({
     hasGreeted,
     payload?.turn_id,
     payload?.audioBase64,
+    isPayloadStale,
   ]);
 
   const handleInlineLanguagePick = useCallback(
@@ -673,6 +679,7 @@ export default function ChatScreen({
   useEffect(() => {
     if (!showLanguageOverlay || !inlineLanguageGate || languageGateSatisfied) return;
     if (languagePromptRequestedRef.current) return;
+    if (payload && isPayloadStale?.(payload)) return;
 
     // Wait until the 3x2 bubbles have completed their staggered entrance, then speak the prompt.
     const t = window.setTimeout(() => {
@@ -694,11 +701,13 @@ export default function ChatScreen({
     payload?.languagePromptAudioBase64,
     handleAudioPlayback,
     sendMessage,
+    isPayloadStale,
   ]);
 
   // Sync from payload
   useEffect(() => {
     if (!payload) return;
+    if (isPayloadStale?.(payload)) return;
 
     // Helper to detect if the backend is sending us a fallback message ("Go to admissions block")
     const isFallbackMessage = (text: string) => {
@@ -1155,7 +1164,7 @@ export default function ChatScreen({
       });
     }
 
-  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage]);
+  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage, isPayloadStale]);
 
   // Start queued audio only after its target layout is visible.
   useEffect(() => {
@@ -1341,10 +1350,11 @@ export default function ChatScreen({
   const fullTextMessageClassName = 'word-by-word-text full-text-readable';
   /** English greeting uses Didone-style stack from backend (`greetings.py` → `greetingFontFamily`). */
   const greetingFontStyle = useMemo((): React.CSSProperties | undefined => {
+    if (payload && isPayloadStale?.(payload)) return undefined;
     const ff = payload?.greetingFontFamily;
     if (typeof ff !== 'string' || !ff.trim()) return undefined;
     return { fontFamily: ff };
-  }, [payload?.greetingFontFamily]);
+  }, [payload, payload?.greetingFontFamily, isPayloadStale]);
   const fullTextGreetingStyle =
     lastAssistantMsg?.id === 'greeting' ? greetingFontStyle : undefined;
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;

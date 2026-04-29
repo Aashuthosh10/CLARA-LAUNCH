@@ -9,15 +9,8 @@ interface CardProps {
   onPrev: () => void;
   onSelectSlide: (idx: number) => void;
   language: string;
+  departmentId: string;
 }
-
-const CYSEC_IMAGES = [
-  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b",
-  "https://images.unsplash.com/photo-1563986768609-322da13575f3",
-  "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb",
-  "https://images.unsplash.com/photo-1558494949-ef8b565b1d43",
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa"
-];
 
 const CYSEC_ICONS = [<Shield />, <MessageSquare />, <Award />, <Lock />, <Globe />];
 
@@ -27,7 +20,8 @@ export default function CyberSecurityCard({
   onNext, 
   onPrev, 
   onSelectSlide,
-  language 
+  language,
+  departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
 
@@ -73,10 +67,10 @@ export default function CyberSecurityCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      image={CYSEC_IMAGES[currentIdx % CYSEC_IMAGES.length]}
       icon={CYSEC_ICONS[currentIdx % CYSEC_ICONS.length]}
       isHOD={currentIdx === 1}
       hodName={info.hod}
+      departmentId={departmentId}
       currentSlide={currentIdx}
       totalSlides={slides.length}
       onNext={onNext}
