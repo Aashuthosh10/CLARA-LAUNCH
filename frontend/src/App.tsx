@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   forceSingletonWsRouteSleep,
@@ -33,11 +33,12 @@ export default function App() {
   }, []);
 
   return (
-    <ClaraKioskRuntime
-      key={runtimeSessionKey}
-      runtimeSessionKey={runtimeSessionKey}
-      scheduleFullRuntimeRemount={scheduleFullRuntimeRemount}
-    />
+    <Fragment key={runtimeSessionKey}>
+      <ClaraKioskRuntime
+        runtimeSessionKey={runtimeSessionKey}
+        scheduleFullRuntimeRemount={scheduleFullRuntimeRemount}
+      />
+    </Fragment>
   );
 }
 
@@ -222,23 +223,24 @@ function ClaraKioskRuntime({
       case 5:
         return (
           <motion.div key={`chat-branch-${runtimeSessionKey}`} className="w-full h-full">
-            <ChatScreen
-              key={chatScreenIdentity}
-              isPayloadStale={isStalePayloadGen}
-              messages={payload?.messages ?? []}
-              isListening={payload?.isListening ?? false}
-              isSpeaking={payload?.isSpeaking ?? false}
-              isProcessing={payload?.isProcessing ?? false}
-              payload={payload}
-              isConnected={isConnected}
-              voiceInputMode={VOICE_INPUT_MODE}
-              inlineLanguageGate={showChatLanguageGate}
-              onInlineLanguageResolved={() => setShowChatLanguageGate(false)}
-              onBack={() => setManualState(0)}
-              onHome={resetClaraSessionWithTimestamp}
-              onOrbTap={() => sendMessage({ action: 'mic_start' })}
-              sendMessage={sendMessage}
-            />
+            <Fragment key={chatScreenIdentity}>
+              <ChatScreen
+                isPayloadStale={isStalePayloadGen}
+                messages={payload?.messages ?? []}
+                isListening={payload?.isListening ?? false}
+                isSpeaking={payload?.isSpeaking ?? false}
+                isProcessing={payload?.isProcessing ?? false}
+                payload={payload}
+                isConnected={isConnected}
+                voiceInputMode={VOICE_INPUT_MODE}
+                inlineLanguageGate={showChatLanguageGate}
+                onInlineLanguageResolved={() => setShowChatLanguageGate(false)}
+                onBack={() => setManualState(0)}
+                onHome={resetClaraSessionWithTimestamp}
+                onOrbTap={() => sendMessage({ action: 'mic_start' })}
+                sendMessage={sendMessage}
+              />
+            </Fragment>
           </motion.div>
         );
       default:

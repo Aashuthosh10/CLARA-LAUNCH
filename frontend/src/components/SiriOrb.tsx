@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
+
+/** Mounted `<SiriOrb />` instances (diagnostics / kiosk telemetry). */
+let siriOrbMountCount = 0;
+
+export function getActiveOrbLoops(): number {
+  return siriOrbMountCount;
+}
 
 interface SiriOrbProps {
   amplitude?: number;
@@ -7,6 +14,12 @@ interface SiriOrbProps {
 }
 
 const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false }) => {
+  useEffect(() => {
+    siriOrbMountCount += 1;
+    return () => {
+      siriOrbMountCount -= 1;
+    };
+  }, []);
   // Dynamically control speed via inline animationDuration — no class toggling needed
   const idlePulseDur   = isListening ? '1.4s' : '3.5s';
   const flow1Dur       = isListening ? '4s'   : '10s';

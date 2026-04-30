@@ -192,11 +192,15 @@ export function initKioskSync(wsUrl: string) {
         if (mappedState !== currentSnapshot.currentState) {
             kioskStore.dispatchTransition(mappedState);
         }
-        if (wsSnap.payload) {
-            const p = wsSnap.payload;
-            const updates: any = {};
-            if (p.messages) updates.messages = p.messages;
-            if (p.showCard) updates.layoutMode = 'SPLIT_CARDS';
+        if (wsSnap.payload && typeof wsSnap.payload === 'object' && wsSnap.payload !== null) {
+            const p = wsSnap.payload as Record<string, unknown>;
+            const updates: Partial<KioskSnapshot> = {};
+            if ('messages' in p && Array.isArray(p.messages)) {
+                updates.messages = p.messages;
+            }
+            if ('showCard' in p && p.showCard) {
+                updates.layoutMode = 'SPLIT_CARDS';
+            }
             if (Object.keys(updates).length) kioskStore.updateContent(updates);
         }
     });
