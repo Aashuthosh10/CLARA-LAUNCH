@@ -52,10 +52,19 @@ def _require_sounddevice() -> None:
 def _resolve_input_device() -> int:
     """Resolve input device index from config (name substring or explicit index)."""
     _require_sounddevice()
-    devices = sd.query_devices()
-    default_in = sd.default.device[0]
-    if default_in is None:
-        default_in = 0
+    devices = list(sd.query_devices())
+    if not devices:
+        raise RuntimeError("No audio input devices found on this system.")
+
+    default_device = sd.default.device
+    try:
+        default_in = default_device[0]
+    except (TypeError, IndexError):
+        default_in = default_device
+    if default_in is None or default_in < 0 or default_in >= len(devices):
+        default_in = next((i for i, dev in enumerate(devices) if dev.get("max_input_channels", 0) > 0), -1)
+    if default_in < 0:
+        raise RuntimeError("No audio input-capable devices found on this system.")
 
     if AUDIO_INPUT_DEVICE_INDEX is not None:
         if 0 <= AUDIO_INPUT_DEVICE_INDEX < len(devices) and devices[AUDIO_INPUT_DEVICE_INDEX].get("max_input_channels", 0) > 0:
@@ -77,11 +86,15 @@ def _resolve_input_device() -> int:
 
 def get_input_device_info() -> tuple[int, str]:
     """Return (device_index, device_name) for logging."""
-    _require_sounddevice()
-    device_id = _resolve_input_device()
-    devices = sd.query_devices()
-    dev = devices[device_id] if device_id < len(devices) else {}
-    return device_id, dev.get("name", "?")
+    try:
+        _require_sounddevice()
+        device_id = _resolve_input_device()
+        devices = list(sd.query_devices())
+        dev = devices[device_id] if 0 <= device_id < len(devices) else {}
+        return device_id, dev.get("name", "?")
+    except Exception as exc:
+        logger.warning("Audio input device info unavailable: %s", exc)
+        return -1, "No audio input device"
 
 
 def validate_audio_devices() -> tuple[bool, str]:
