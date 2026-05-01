@@ -41,11 +41,17 @@ def main():
 
     n = get_document_count()
     print(f"OK: Document count = {n}")
+    if n <= 0:
+        print("FAIL: college_knowledge is empty. Run: python -m backend.tools.ingest_college_knowledge_pg")
+        return 1
 
     # Vector search: use a zero vector so we don't need sentence-transformers; may return [] if table empty
     dummy_embedding = [0.0] * 768
     results = get_similar_contents(dummy_embedding, top_k=2)
     print(f"OK: get_similar_contents returned {len(results)} chunk(s)")
+    if not results:
+        print("FAIL: vector search returned no chunks.")
+        return 1
 
     print("--- All checks passed ---")
     return 0

@@ -35,6 +35,25 @@ class TestWsSchemas(unittest.TestCase):
         self.assertIsNone(msg)
         self.assertEqual(err, "invalid_payload")
 
+    def test_accepts_reset_session_and_home(self) -> None:
+        for action in ("reset_session", "home"):
+            msg, err = parse_inbound_ws_message(f'{{"action":"{action}"}}')
+            self.assertIsNone(err)
+            self.assertEqual(msg["action"], action)
+
+    def test_accepts_language_gate_prompt(self) -> None:
+        msg, err = parse_inbound_ws_message('{"action":"language_gate_prompt"}')
+        self.assertIsNone(err)
+        self.assertEqual(msg["action"], "language_gate_prompt")
+
+    def test_accepts_campus_navigation_tts_with_extra_fields(self) -> None:
+        msg, err = parse_inbound_ws_message(
+            '{"action":"campus_navigation_tts","text":"Go straight","language":"English","turn_id":"campus-1"}'
+        )
+        self.assertIsNone(err)
+        self.assertEqual(msg["action"], "campus_navigation_tts")
+        self.assertEqual(msg["text"], "Go straight")
+
 
 if __name__ == "__main__":
     unittest.main()

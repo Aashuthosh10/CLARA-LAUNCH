@@ -18,9 +18,9 @@ SUPPORTED_LANGUAGES: tuple[str, ...] = ("English", "Kannada", "Hindi", "Tamil", 
 # Wake / first paint (English only, before language is chosen)
 # ---------------------------------------------------------------------------
 WAKE_OPENING_GREETING_ENGLISH: dict[str, str] = {
-    "morning": "Good morning. I am CLARA, your campus assistant.",
-    "afternoon": "Good afternoon. I am CLARA, your campus assistant.",
-    "evening": "Good evening. I am CLARA, your campus assistant.",
+    "morning": "Good morning. I am CLARA. How can I help you today?",
+    "afternoon": "Good afternoon. I am CLARA. How can I help you today?",
+    "evening": "Good evening. I am CLARA. How can I help you today?",
 }
 
 LANGUAGE_GATE_NUDGE_ENGLISH: str = (
@@ -39,9 +39,10 @@ def _time_period(now: datetime | None = None) -> str:
             ts = datetime.now(ZoneInfo(KIOSK_TIMEZONE))
         except Exception:
             ts = datetime.now()
-    if ts.hour < 12:
+    # Treat late night/early hours as evening for kiosk tone (users reported 1 AM should not be "morning").
+    if 5 <= ts.hour < 12:
         return "morning"
-    if ts.hour < 17:
+    if 12 <= ts.hour < 17:
         return "afternoon"
     return "evening"
 
@@ -100,7 +101,7 @@ _READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
 # ---------------------------------------------------------------------------
 _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     "morning": {
-        "English": "Good morning. I am CLARA, your campus assistant. How may I help you today?",
+        "English": "Good morning. I am CLARA. How may I help you today?",
         "Kannada": "ಶುಭೋದಯ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
         "Hindi": "सुप्रभात। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
         "Tamil": "காலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
@@ -108,7 +109,7 @@ _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
         "Malayalam": "സുപ്രഭാതം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
     },
     "afternoon": {
-        "English": "Good afternoon. I am CLARA, your campus assistant. How may I help you today?",
+        "English": "Good afternoon. I am CLARA. How may I help you today?",
         "Kannada": "ಶುಭ ಮಧ್ಯಾಹ್ನ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
         "Hindi": "शुभ दोपहर। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
         "Tamil": "மதிய வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
@@ -116,7 +117,7 @@ _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
         "Malayalam": "ശുഭ ഉച്ചയ്ക്ക് ശേഷം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
     },
     "evening": {
-        "English": "Good evening. I am CLARA, your campus assistant. How may I help you today?",
+        "English": "Good evening. I am CLARA. How may I help you today?",
         "Kannada": "ಶುಭ ಸಂಜೆ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
         "Hindi": "शुभ संध्या। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
         "Tamil": "மாலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",

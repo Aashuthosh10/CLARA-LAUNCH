@@ -44,6 +44,7 @@ from backend.app.telemetry import debug_payload, log_turn_metrics, text_preview
 from backend.app.ws_schemas import parse_inbound_ws_message
 from backend.config.settings import (
     AUDIO_RECORD_MODE,
+    AUDIO_UPDATE_TIMEOUT_S,
     AUTO_LANGUAGE_DETECT_CONFIDENCE_THRESHOLD,
     AUTO_LANGUAGE_DETECT_ENABLED,
     ENABLE_ACK_EARCON,
@@ -59,13 +60,23 @@ from backend.config.settings import (
     LLM_STREAM_PARTIAL_DEBOUNCE_MS,
     LLM_STREAM_TIMEOUT_S,
     LLM_TEMPERATURE,
+    LOW_LATENCY_VOICE_MODE,
     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
     PORT,
+    PRODUCTION_STRICT_READY,
     FRONTEND_URL,
+    FIRST_SENTENCE_TTS_MAX_CHARS,
     RAG_CONTEXT_TIMEOUT_S,
+    RAG_MIN_DOCUMENTS,
     RAG_MODEL,
     RAG_TOP_K,
+    REQUIRE_WS_AUTH_IN_PRODUCTION,
+    SARVAM_API_KEY,
+    STT_TIMEOUT_S,
     TARGET_LANGUAGE_CODES,
+    TTS_TIMEOUT_S,
+    WS_ALLOWED_ORIGINS,
+    WS_AUTH_REQUIRED,
 )
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
@@ -125,9 +136,9 @@ from backend.utils.voice_logger import (
 logger = logging.getLogger(__name__)
 _SVIT_LOCALES_DIR = _PROJECT_ROOT / "backend" / "data" / "locales"
 _svit_json_context_cache: dict[str, str] = {}
-# Reliability-first mode: only emit final TTS segment.
-# This avoids first-sentence pipeline races that can cause silent turns.
-FORCE_FINAL_TTS_ONLY = True
+# Reliability-first mode is retained as an override, but low-latency mode uses
+# guarded first-sentence/audio-update payloads so visible answers are not held by TTS.
+FORCE_FINAL_TTS_ONLY = not LOW_LATENCY_VOICE_MODE
 RAG_WARMUP_TIMEOUT_S = 5.0
 RAG_DOC_COUNT_TIMEOUT_S = 3.0
 AUDIO_DEVICE_VALIDATE_TIMEOUT_S = 3.0
@@ -145,6 +156,17 @@ _LOCATION_QUERY_TERMS = (
     "evide",
 )
 
+_COURSE_QUERY_TERMS = (
+    "course",
+    "courses",
+    "program",
+    "programs",
+    "branch",
+    "branches",
+    "department",
+    "departments",
+)
+
 
 def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
     """Compatibility shim for legacy tests that patch this symbol."""
@@ -156,6 +178,15 @@ def _is_location_query(text: str | None) -> bool:
     if not q:
         return False
     return any(term in q for term in _LOCATION_QUERY_TERMS)
+
+
+def _looks_clear_english(text: str) -> bool:
+    q = (text or "").strip()
+    if not q:
+        return False
+    ascii_letters = sum(1 for ch in q if ch.isascii() and ch.isalpha())
+    non_ascii_letters = sum(1 for ch in q if (not ch.isascii()) and ch.isalpha())
+    return ascii_letters >= 3 and non_ascii_letters == 0
 
 
 def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
@@ -261,6 +292,27 @@ def _location_direct_reply(language_key: str) -> str:
         "ml": "SVIT Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064-ൽ സ്ഥിതിചെയ്യുന്നു.",
     }
     return mapping.get(language_key, mapping["en"])
+
+
+def _card_direct_reply(intent: str, language_key: str, department: str | None = None) -> str | None:
+    dept = (department or "").strip()
+    if intent == INTENT_ADMISSIONS:
+        return {
+            "hi": "Admission ki jankari screen par dikha rahi hoon.",
+            "kn": "ಪ್ರವೇಶ ಮಾಹಿತಿ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
+        }.get(language_key, "Showing admissions information on screen.")
+    if intent == INTENT_PLACEMENTS:
+        return {
+            "hi": "Placement ki jankari screen par dikha rahi hoon.",
+            "kn": "ಪ್ಲೇಸ್ಮೆಂಟ್ ಮಾಹಿತಿ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
+        }.get(language_key, "Showing placement information on screen.")
+    if intent == INTENT_DEPARTMENT_OVERVIEW:
+        return f"Showing {dept or 'department'} information on screen."
+    if intent == INTENT_HOD_PROFILE and dept:
+        return f"Showing the HOD information for {dept}."
+    if intent in {INTENT_COLLEGE_OVERVIEW, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE}:
+        return "Showing the requested college information on screen."
+    return None
 
 
 LLM_REPLY_CACHE = TTLRUCache[str, str](max_size=256, ttl_seconds=600.0)
@@ -411,7 +463,26 @@ async def tts_to_base64_cached(
             return cached, True
 
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
-        audio = await sarvam_tts_to_base64(tts_text, language_code)
+        try:
+            audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, language_code), timeout=TTS_TIMEOUT_S)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "TTS primary language timed out turn_id=%s kind=%s lang=%s timeout_s=%.2f",
+                turn_id or "-",
+                utterance_kind,
+                language_code,
+                TTS_TIMEOUT_S,
+            )
+            audio = None
+        except Exception as exc:
+            logger.exception(
+                "TTS primary language failed turn_id=%s kind=%s lang=%s err=%s",
+                turn_id or "-",
+                utterance_kind,
+                language_code,
+                exc,
+            )
+            audio = None
         if not audio and language_code != "en-IN":
             logger.warning(
                 "TTS primary language failed turn_id=%s kind=%s lang=%s; retrying en-IN",
@@ -419,7 +490,24 @@ async def tts_to_base64_cached(
                 utterance_kind,
                 language_code,
             )
-            audio = await sarvam_tts_to_base64(tts_text, "en-IN")
+            try:
+                audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, "en-IN"), timeout=TTS_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "TTS fallback language timed out turn_id=%s kind=%s timeout_s=%.2f",
+                    turn_id or "-",
+                    utterance_kind,
+                    TTS_TIMEOUT_S,
+                )
+                audio = None
+            except Exception as exc:
+                logger.exception(
+                    "TTS fallback language failed turn_id=%s kind=%s lang=en-IN err=%s",
+                    turn_id or "-",
+                    utterance_kind,
+                    exc,
+                )
+                audio = None
         logger.info("TTS_HTTP_END turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         if audio:
             TTS_CACHE.set(key, audio)
@@ -641,7 +729,7 @@ async def process_user_text_and_reply(
             timing.mark("first_feedback")
             early_partial_payload = {
                 "type": "assistant_partial",
-                "text": "...",
+                "text": "Got it.",
                 "isProcessing": True,
                 "turn_id": timing.turn_id,
             }
@@ -681,20 +769,23 @@ async def process_user_text_and_reply(
 
     try:
         preprocess: dict[str, Any] | None = None
-        try:
-            preprocess = await asyncio.wait_for(
-                normalize_and_classify_query(text, lang_name),
-                timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
-                MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-            )
+        if lang_key == "en" and _looks_clear_english(text):
             preprocess = None
-        except Exception as exc:
-            logger.warning("Multilingual preprocessor failed: %s", exc)
-            preprocess = None
+        else:
+            try:
+                preprocess = await asyncio.wait_for(
+                    normalize_and_classify_query(text, lang_name),
+                    timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
+                    MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                )
+                preprocess = None
+            except Exception as exc:
+                logger.warning("Multilingual preprocessor failed: %s", exc)
+                preprocess = None
 
         english_translation = str((preprocess or {}).get("english_translation") or "").strip()
         department_hint = (preprocess or {}).get("target_department")
@@ -763,11 +854,16 @@ async def process_user_text_and_reply(
 
         # Force location/address questions through vector RAG context instead of narrator-only flow.
         # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
-        if _is_location_query(text) or _is_location_query(query_en):
+        is_location_turn = _is_location_query(text) or _is_location_query(query_en)
+        if is_location_turn:
             intent = INTENT_NORMAL_QUERY
 
         is_broad_course_menu = False
-        if intent in (INTENT_COURSE_MENU, INTENT_NORMAL_QUERY):
+        should_check_broad_course = (
+            intent == INTENT_COURSE_MENU
+            or (intent == INTENT_NORMAL_QUERY and any(term in merged_for_features.lower() for term in _COURSE_QUERY_TERMS))
+        )
+        if should_check_broad_course:
             try:
                 is_broad_course_menu = await asyncio.wait_for(
                     _llm_detect_broad_course_intent(rag_query, lang_name),
@@ -781,6 +877,7 @@ async def process_user_text_and_reply(
         off_topic_direct_reply: str | None = None
         if intent == INTENT_OFF_TOPIC:
             off_topic_direct_reply = get_off_topic_reply(lang_name)
+        precomputed_card_direct_reply = _card_direct_reply(intent, lang_key, detected_department)
         timing.mark("rag_start")
         narrator_payload: dict[str, Any] | None = None
         context_source = "none"
@@ -788,10 +885,10 @@ async def process_user_text_and_reply(
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
-        elif intent == INTENT_DOCUMENTS:
+        elif intent == INTENT_DOCUMENTS or is_location_turn:
             context = ""
             timing.mark("rag_end")
-        elif is_narrator_intent(intent):
+        elif is_narrator_intent(intent) and precomputed_card_direct_reply is None:
             # Presentation mode: only locale JSON slices that match on-screen cards (no vector RAG).
             narrator_payload = build_target_card_payload(
                 intent,
@@ -910,7 +1007,7 @@ async def process_user_text_and_reply(
                     f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{raw_norm}|{context_sig}"
                 )
         direct_reply = off_topic_direct_reply
-        if _is_location_query(text) or _is_location_query(query_en):
+        if is_location_turn:
             direct_reply = _location_direct_reply(lang_key)
         if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
             # Deterministic guard: never default to CSE for ambiguous HOD requests.
@@ -921,7 +1018,9 @@ async def process_user_text_and_reply(
             direct_reply = _documents_card_direct_reply(lang_key)
         elif intent == INTENT_DEPARTMENT_FEES:
             direct_reply = _fees_card_direct_reply(lang_key, detected_department)
-        elif not is_narrator_intent(intent):
+        else:
+            direct_reply = direct_reply or precomputed_card_direct_reply
+        if direct_reply is None and not is_narrator_intent(intent):
             direct_reply = direct_reply or get_profile_direct_reply(intent, lang_name)
         reply_text = direct_reply
         if reply_text is None:
@@ -955,6 +1054,8 @@ async def process_user_text_and_reply(
             first_payload = {
                 "type": "assistant_first_sentence_audio",
                 "text": sentence,
+                "assistantText": sentence,
+                "spokenText": sentence,
                 "audioBase64": first_audio_b64,
                 "isProcessing": True,
                 "turn_id": timing.turn_id,
@@ -974,8 +1075,17 @@ async def process_user_text_and_reply(
                 return
             if not ENABLE_TTS_PIPELINING or not ENABLE_FIRST_SENTENCE_TTS:
                 return
+            if len(sentence.strip()) > FIRST_SENTENCE_TTS_MAX_CHARS:
+                return
+            if reply_text and sentence.strip() == reply_text.strip():
+                return
             if first_sentence_task is None and sentence and sentence.strip():
                 first_sentence_task = asyncio.create_task(_emit_first_sentence_audio(sentence.strip()))
+                first_sentence_task.add_done_callback(
+                    lambda task: task.exception()
+                    if not task.cancelled()
+                    else None
+                )
 
         if direct_reply:
             timing.mark("llm_start")
@@ -1152,11 +1262,49 @@ async def process_user_text_and_reply(
             
         session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
 
-        if first_sentence_task is not None:
+        visible_payload: dict[str, Any] = {
+            "messages": session["messages"],
+            "isProcessing": False,
+            "isSpeaking": LOW_LATENCY_VOICE_MODE and bool(reply_text.strip()),
+            "audioPending": LOW_LATENCY_VOICE_MODE and bool(reply_text.strip()),
+            "audioUnavailable": False,
+            "turn_id": timing.turn_id,
+            "assistantText": assistant_msg.get("text", ""),
+            "spokenText": reply_text.strip(),
+            "utterance_kind": "assistant_visible_answer",
+            "segment_index": 0,
+            "is_final_segment": False,
+            "showCard": show_card,
+            "intent": intent,
+            "direct_reply": direct_reply is not None,
+            "rag_used": context_source == "rag",
+            "llm_used": direct_reply is None and not llm_cache_hit,
+            "tts_cache_hit": False,
+            "llm_cache_hit": llm_cache_hit,
+        }
+        if department_id:
+            visible_payload["departmentId"] = department_id
+        if course_menu_options:
+            visible_payload["options"] = course_menu_options
+        if LOW_LATENCY_VOICE_MODE:
+            timing.mark("visible_answer")
+            timing.mark("turn_end")
+            visible_payload.update(debug_payload(timing))
+            if _turn_stale(session, turn_gen_marker):
+                logger.info("Stale visible process_user_text payload dropped (session_generation advanced)")
+                return
+            await _ws_send_json(websocket, 5, session, visible_payload)
+
+        async def _await_first_sentence_task() -> None:
+            if first_sentence_task is None:
+                return
             try:
                 await first_sentence_task
             except Exception:
                 logger.exception("First-sentence TTS task failed")
+
+        if (not LOW_LATENCY_VOICE_MODE) and first_sentence_task is not None:
+            await _await_first_sentence_task()
 
         tts_text = reply_text
         utterance_kind = "assistant_full_reply"
@@ -1169,7 +1317,7 @@ async def process_user_text_and_reply(
             segment_index = 1
         elif (
             ENABLE_ONCE_ONLY_TTS_SEGMENTS
-            and first_sentence_sent
+            and (first_sentence_sent or (LOW_LATENCY_VOICE_MODE and first_sentence_task is not None))
             and first_sentence
             and first_sentence != reply_text
         ):
@@ -1187,29 +1335,48 @@ async def process_user_text_and_reply(
         timing.mark("tts_start")
         full_audio_b64 = None
         tts_cache_hit = False
+        tts_timed_out = False
+        tts_budget_s = TTS_TIMEOUT_S + 2.0
+        if LOW_LATENCY_VOICE_MODE:
+            elapsed_before_tts_s = (timing.since_start("tts_start") or 0.0) / 1000.0
+            tts_budget_s = max(0.5, AUDIO_UPDATE_TIMEOUT_S - elapsed_before_tts_s)
         if tts_text:
-            full_audio_b64, tts_cache_hit = await tts_to_base64_cached(
-                tts_text,
-                lang_code,
-                turn_id=timing.turn_id,
-                utterance_kind=utterance_kind,
-            )
+            try:
+                full_audio_b64, tts_cache_hit = await asyncio.wait_for(
+                    tts_to_base64_cached(
+                        tts_text,
+                        lang_code,
+                        turn_id=timing.turn_id,
+                        utterance_kind=utterance_kind,
+                    ),
+                    timeout=tts_budget_s,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Assistant TTS update timed out after %.2fs turn_id=%s kind=%s",
+                    tts_budget_s,
+                    timing.turn_id,
+                    utterance_kind,
+                )
+                tts_timed_out = True
         # Safety fallback: if segmented/final TTS returned nothing, retry once with full reply text.
-        if not full_audio_b64 and reply_text.strip():
+        if not LOW_LATENCY_VOICE_MODE and not full_audio_b64 and reply_text.strip():
             fallback_audio_b64, fallback_cache_hit = await tts_to_base64_cached(
-                reply_text,
-                lang_code,
-                turn_id=timing.turn_id,
-                utterance_kind="assistant_full_reply_fallback",
-            )
+                    reply_text,
+                    lang_code,
+                    turn_id=timing.turn_id,
+                    utterance_kind="assistant_full_reply_fallback",
+                )
             if fallback_audio_b64:
-                full_audio_b64 = fallback_audio_b64
-                tts_cache_hit = tts_cache_hit or fallback_cache_hit
-                utterance_kind = "assistant_full_reply_fallback"
-                segment_index = 0
-                is_final_segment = True
-                tts_text = reply_text
+                    full_audio_b64 = fallback_audio_b64
+                    tts_cache_hit = tts_cache_hit or fallback_cache_hit
+                    utterance_kind = "assistant_full_reply_fallback"
+                    segment_index = 0
+                    is_final_segment = True
+                    tts_text = reply_text
         timing.mark("tts_end")
+        if tts_timed_out and LOW_LATENCY_VOICE_MODE:
+            timing.marks["tts_end"] = timing.started_ms + (AUDIO_UPDATE_TIMEOUT_S * 1000.0)
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")
             est = estimate_wav_duration_ms(full_audio_b64)
@@ -1232,22 +1399,36 @@ async def process_user_text_and_reply(
             "messages": session["messages"],
             "isProcessing": False,
             "isSpeaking": bool(full_audio_b64),
+            "audioPending": False,
             "turn_id": timing.turn_id,
+            "assistantText": assistant_msg.get("text", ""),
+            "spokenText": (tts_text or reply_text).strip(),
             "utterance_kind": utterance_kind,
             "segment_index": segment_index,
             "is_final_segment": is_final_segment,
-            "showCard": show_card
+            "showCard": show_card,
+            "intent": intent,
+            "direct_reply": direct_reply is not None,
+            "rag_used": context_source == "rag",
+            "llm_used": direct_reply is None and not llm_cache_hit,
+            "tts_cache_hit": tts_cache_hit,
+            "llm_cache_hit": llm_cache_hit,
         }
+        if LOW_LATENCY_VOICE_MODE:
+            payload["type"] = "assistant_audio_update"
         if department_id:
             payload["departmentId"] = department_id
         if course_menu_options:
             payload["options"] = course_menu_options
         if full_audio_b64:
             payload["audioBase64"] = full_audio_b64
+            payload["audioUnavailable"] = False
+        else:
+            payload["audioUnavailable"] = True
 
         payload.update(debug_payload(timing))
         if _turn_stale(session, turn_gen_marker):
-            logger.info("Stale final process_user_text payload dropped (session_generation advanced)")
+            logger.info("Stale final/audio process_user_text payload dropped (session_generation advanced)")
             return
         await _ws_send_json(websocket, 5, session, payload)
 
@@ -1326,11 +1507,7 @@ app = FastAPI(title="CLARA Backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_URL,
-        "http://localhost:5176",
-        "http://127.0.0.1:5176",
-    ],
+    allow_origins=WS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1345,6 +1522,47 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.get("/ready")
+def ready() -> dict[str, Any]:
+    """Dependency readiness for production monitors. Does not expose secrets."""
+    origins = [str(origin).strip() for origin in WS_ALLOWED_ORIGINS if str(origin).strip()]
+    wildcard_origins = [origin for origin in origins if origin in {"*", "null"} or origin.endswith("://*")]
+    checks: dict[str, Any] = {
+        "groq_configured": bool(GROQ_API_KEY),
+        "sarvam_configured": bool(SARVAM_API_KEY),
+        "production_strict_ready": PRODUCTION_STRICT_READY,
+        "rag_documents": 0,
+        "rag_min_documents": RAG_MIN_DOCUMENTS,
+        "rag_ready": False,
+        "ws_auth_required": bool(WS_AUTH_REQUIRED),
+        "ws_allowed_origins_count": len(origins),
+        "ws_allowed_origins_locked": bool(origins) and not wildcard_origins,
+    }
+    try:
+        doc_count = get_rag_document_count()
+        checks["rag_documents"] = doc_count
+        checks["rag_ready"] = doc_count >= (RAG_MIN_DOCUMENTS if PRODUCTION_STRICT_READY else 1)
+    except Exception as exc:
+        checks["rag_error"] = type(exc).__name__
+
+    required_checks = [
+        bool(checks["groq_configured"]),
+        bool(checks["sarvam_configured"]),
+        bool(checks["rag_ready"]),
+    ]
+    if PRODUCTION_STRICT_READY:
+        if REQUIRE_WS_AUTH_IN_PRODUCTION:
+            required_checks.append(bool(checks["ws_auth_required"]))
+        required_checks.append(bool(checks["ws_allowed_origins_locked"]))
+
+    ready_ok = all(required_checks)
+    return {
+        "status": "ready" if ready_ok else "degraded",
+        "service": "CLARA",
+        "checks": checks,
+    }
 
 
 VALID_LANGUAGES = frozenset(LANGUAGE_NAME_TO_CODE_KEY.keys())
@@ -1606,7 +1824,7 @@ async def websocket_clara(websocket: WebSocket):
                         payload["audioBase64"] = audio_b64
                         payload["turn_id"] = "greeting_started"
                     else:
-                        payload["error"] = "Could not generate greeting audio."
+                        payload["error"] = "Voice service is temporarily unavailable. Text mode is still available."
                     _gff2 = greeting_font_family_css(lang_name)
                     if _gff2:
                         payload["greetingFontFamily"] = _gff2
@@ -1706,7 +1924,7 @@ async def websocket_clara(websocket: WebSocket):
 
                 try:
                     timing.mark("stt_start")
-                    transcript, stt_meta = await sarvam_stt_from_wav(wav_bytes)
+                    transcript, stt_meta = await asyncio.wait_for(sarvam_stt_from_wav(wav_bytes), timeout=STT_TIMEOUT_S)
                     timing.mark("stt_end")
                     timing.mark("transcript_ready")
                     stt_ms = timing.duration("stt_start", "stt_end") or 0.0
@@ -1716,10 +1934,27 @@ async def websocket_clara(websocket: WebSocket):
                         len(transcript or ""),
                         (transcript or "")[:80],
                     )
+                except asyncio.TimeoutError:
+                    logger.warning("Sarvam STT timed out after %.2fs", STT_TIMEOUT_S)
+                    timing.mark("turn_end")
+                    payload = build_error_payload(
+                        "STT_FAILED",
+                        "Voice recognition timed out. Please try again or type your question.",
+                        timing.turn_id,
+                    )
+                    payload.update(debug_payload(timing))
+                    await websocket.send_json({"state": 5, "payload": payload})
+                    log_turn_metrics(timing, error="stt_timeout")
+                    log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=False, error_code="STT_TIMEOUT")
+                    continue
                 except Exception as exc:
                     logger.exception("Sarvam STT failed: %s", exc)
                     timing.mark("turn_end")
-                    payload = build_error_payload("STT_FAILED", "Speech recognition failed. Please try again.", timing.turn_id)
+                    payload = build_error_payload(
+                        "STT_FAILED",
+                        "I could not understand the audio. Please try again or type your question.",
+                        timing.turn_id,
+                    )
                     payload.update(debug_payload(timing))
                     await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="stt_failed")
@@ -1729,7 +1964,11 @@ async def websocket_clara(websocket: WebSocket):
                 if not (transcript or "").strip():
                     timing.mark("turn_end")
                     logger.warning("STT returned empty for %d-byte WAV", len(wav_bytes))
-                    payload = build_error_payload("STT_EMPTY", "No speech detected.", timing.turn_id)
+                    payload = build_error_payload(
+                        "STT_EMPTY",
+                        "I could not understand the audio. Please try again or type your question.",
+                        timing.turn_id,
+                    )
                     payload.update(debug_payload(timing))
                     await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="stt_empty")
@@ -1752,7 +1991,12 @@ async def websocket_clara(websocket: WebSocket):
     except Exception as exc:
         logger.exception("WebSocket error: %s", exc)
         try:
-            await _ws_send_json(websocket, -1, session, {"error": "Connection error."})
+            await _ws_send_json(
+                websocket,
+                -1,
+                session,
+                {"error": "Voice service is temporarily unavailable. Text mode is still available."},
+            )
         except Exception:
             pass
     finally:

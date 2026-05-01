@@ -1,5 +1,6 @@
-# Start CLARA backend. Run from project root.
-# Frees the backend port if in use, then starts backend so the frontend can connect.
+# Start CLARA backend on port 6969. Run from project root.
+# This script does NOT auto-kill unknown processes on the port.
+# If the port is occupied, run scripts/kill-backend-port.ps1 first.
 
 $ErrorActionPreference = "Stop"
 # Script lives in scripts/; project root is one level up.
@@ -19,11 +20,11 @@ Write-Host "Checking if port $port is in use..."
 $listeners = netstat -ano | Select-String ":\s*$port\s+.*LISTENING"
 if ($listeners) {
     $pids = $listeners | ForEach-Object { ($_ -split '\s+')[-1] } | Sort-Object -Unique
-    foreach ($procId in $pids) {
-        Write-Host "Stopping process $procId holding port $port..."
-        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
-    }
+    Write-Host "Port $port is already in use by PID(s): $($pids -join ', ')"
+    Write-Host "To safely release it with confirmation, run:"
+    Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/kill-backend-port.ps1"
+    Write-Host "Then re-run this script."
+    exit 1
 }
 
 $venvPython = Join-Path $ProjectRoot "backend\.venv\Scripts\python.exe"

@@ -93,6 +93,9 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(final_payload.get("utterance_kind"), "assistant_remaining_reply")
         self.assertEqual(final_payload.get("segment_index"), 1)
         self.assertTrue(final_payload.get("is_final_segment"))
+        self.assertEqual(final_payload.get("assistantText"), full_reply)
+        self.assertEqual(final_payload.get("spokenText"), "On Saturdays it is open from 9 AM to 5 PM.")
+        self.assertFalse(final_payload.get("audioUnavailable"))
         self.assertEqual(final_payload.get("messages", [])[-1].get("text"), full_reply)
         play_ms = timing.summary_ms().get("play_ms")
         self.assertIsNotNone(play_ms)
@@ -135,6 +138,10 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         final_payload = [e.get("payload", {}) for e in ws.events][-1]
         self.assertEqual(final_payload.get("segment_index"), 0)
         self.assertTrue(final_payload.get("is_final_segment"))
+        assistant_text = final_payload.get("assistantText")
+        self.assertEqual(assistant_text, final_payload.get("messages", [])[-1].get("text"))
+        self.assertEqual(final_payload.get("spokenText"), assistant_text)
+        self.assertFalse(final_payload.get("audioUnavailable"))
 
     async def test_cache_hit_path_still_segments_without_overlap(self) -> None:
         session = {"messages": []}

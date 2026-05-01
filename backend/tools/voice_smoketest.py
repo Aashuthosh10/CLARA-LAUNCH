@@ -33,6 +33,7 @@ from backend.config.settings import (
     AUDIO_SAMPLE_RATE,
     AUDIO_CHANNELS,
     AUDIO_FIXED_RECORD_SECONDS,
+    AUDIO_SILENT_RMS_THRESHOLD,
 )
 from backend.core.audio_pipeline import _build_wav_from_mono_bytes, _compute_rms, _resolve_input_device
 
@@ -126,6 +127,7 @@ async def run_smoketest() -> bool:
     print(f"  RMS: {rms:.6f}")
     print(f"  WAV bytes: {len(wav_bytes)}")
     print(f"  Duration: {capture_ms:.0f} ms")
+    print(f"  Silent threshold: {AUDIO_SILENT_RMS_THRESHOLD:.6f}")
 
     # 2. STT
     print("\n=== 2. STT ===")
@@ -135,6 +137,12 @@ async def run_smoketest() -> bool:
     timings["stt_ms"] = stt_ms
     if not (transcript or "").strip():
         print("FAIL: STT returned empty")
+        if rms < AUDIO_SILENT_RMS_THRESHOLD:
+            print("LIKELY CAUSE: Microphone signal is too low (MIC_SILENT conditions).")
+            print("ACTION: Check AUDIO_INPUT_DEVICE_INDEX/NAME, raise mic gain, speak closer to mic.")
+        else:
+            print("LIKELY CAUSE: Provider returned empty transcript despite non-silent capture.")
+            print("ACTION: Retry with clearer speech; verify SARVAM_LANGUAGE_CODE and network quality.")
         return False
     print(f"  Transcript: {transcript[:80]}...")
     print(f"  Length: {len(transcript)}")

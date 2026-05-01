@@ -12,8 +12,10 @@ _ALLOWED_ACTIONS = {
     "reset_session",
     "home",
     "language_selected",
+    "language_gate_prompt",
     "conversation_started",
     "user_message",
+    "campus_navigation_tts",
     "toggle_mic",
     "mic_start",
     "mic_stop",
@@ -34,20 +36,18 @@ class WakeMessage(BaseModel):
     action: Literal["wake"]
 
 
-class ResetSessionMessage(BaseModel):
-    """Hard session reset; allow extra diagnostics fields from kiosk clients."""
-
+class SessionResetMessage(_BaseWsMessage):
+    # Allow kiosk clients to include diagnostic/meta keys.
     model_config = ConfigDict(extra="allow")
-    action: Literal["reset_session"]
-
-
-class HomeActionMessage(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    action: Literal["home"]
+    action: Literal["reset_session", "home"]
 
 
 class ConversationStartedMessage(_BaseWsMessage):
     action: Literal["conversation_started"]
+
+
+class LanguageGatePromptMessage(_BaseWsMessage):
+    action: Literal["language_gate_prompt"]
 
 
 class LanguageSelectedMessage(_BaseWsMessage):
@@ -71,13 +71,21 @@ class MenuSelectMessage(_BaseWsMessage):
     action: Literal["menu_select"]
 
 
+class CampusNavigationTtsMessage(_BaseWsMessage):
+    # Keep extra fields because frontend includes text/language/turn_id metadata.
+    model_config = ConfigDict(extra="allow")
+    action: Literal["campus_navigation_tts"]
+
+
 _ACTION_TO_MODEL = {
     "wake": WakeMessage,
-    "reset_session": ResetSessionMessage,
-    "home": HomeActionMessage,
+    "reset_session": SessionResetMessage,
+    "home": SessionResetMessage,
     "conversation_started": ConversationStartedMessage,
+    "language_gate_prompt": LanguageGatePromptMessage,
     "language_selected": LanguageSelectedMessage,
     "user_message": UserMessage,
+    "campus_navigation_tts": CampusNavigationTtsMessage,
     "toggle_mic": MicControlMessage,
     "mic_start": MicControlMessage,
     "mic_stop": MicControlMessage,

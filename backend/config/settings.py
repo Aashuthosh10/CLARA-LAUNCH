@@ -47,11 +47,18 @@ AUTO_LANGUAGE_DETECT_CONFIDENCE_THRESHOLD = float(
 
 # Hardware Configuration
 CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", "0"))
+# Legacy env key; retained for backward compatibility only.
 MIC_DEVICE_INDEX = int(os.getenv("MIC_DEVICE_INDEX", "0")) if os.getenv("MIC_DEVICE_INDEX") else None
-# Audio input device: by name substring (e.g. "ReSpeaker") or explicit index
+# Audio input device: by name substring (e.g. "ReSpeaker") or explicit index.
+# If AUDIO_INPUT_DEVICE_INDEX is unset, fall back to legacy MIC_DEVICE_INDEX.
 AUDIO_INPUT_DEVICE_NAME = os.getenv("AUDIO_INPUT_DEVICE_NAME", "").strip() or None
 _audio_idx = os.getenv("AUDIO_INPUT_DEVICE_INDEX", "").strip()
-AUDIO_INPUT_DEVICE_INDEX = int(_audio_idx) if _audio_idx.isdigit() else None
+if _audio_idx.isdigit():
+    AUDIO_INPUT_DEVICE_INDEX = int(_audio_idx)
+elif MIC_DEVICE_INDEX is not None:
+    AUDIO_INPUT_DEVICE_INDEX = MIC_DEVICE_INDEX
+else:
+    AUDIO_INPUT_DEVICE_INDEX = None
 
 # Audio output device (for playback in smoke test / backend playback)
 AUDIO_OUTPUT_DEVICE_NAME = os.getenv("AUDIO_OUTPUT_DEVICE_NAME", "").strip() or None
@@ -68,11 +75,12 @@ RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 # Must be a valid Groq chat model id; if API returns 404, set in .env (see https://console.groq.com/docs/models)
 RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
-RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
+RAG_MIN_DOCUMENTS = int(os.getenv("RAG_MIN_DOCUMENTS", "500"))
 # Low-latency Groq model for mixed-language query normalization (Hinglish / regional + English).
-MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama3-8b-8192")
+MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama-3.1-8b-instant")
 MULTILINGUAL_PREPROCESSOR_MAX_TOKENS = int(os.getenv("MULTILINGUAL_PREPROCESSOR_MAX_TOKENS", "320"))
-MULTILINGUAL_PREPROCESSOR_TIMEOUT_S = float(os.getenv("MULTILINGUAL_PREPROCESSOR_TIMEOUT_S", "2.8"))
+MULTILINGUAL_PREPROCESSOR_TIMEOUT_S = float(os.getenv("MULTILINGUAL_PREPROCESSOR_TIMEOUT_S", "1.6"))
 
 # PostgreSQL + pgvector (RAG storage)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
@@ -88,11 +96,11 @@ INACTIVITY_TIMEOUT = float(os.getenv("INACTIVITY_TIMEOUT", "20.0"))
 AUDIO_SAMPLE_RATE = int(os.getenv("AUDIO_SAMPLE_RATE", "16000"))
 AUDIO_CHANNELS = int(os.getenv("AUDIO_CHANNELS", "1"))
 AUDIO_VAD_FRAME_MS = int(os.getenv("AUDIO_VAD_FRAME_MS", "20"))  # 10, 20, or 30 for webrtcvad
-AUDIO_SILENCE_STOP_MS = int(os.getenv("AUDIO_SILENCE_STOP_MS", "600"))  # stop after this much silence
+AUDIO_SILENCE_STOP_MS = int(os.getenv("AUDIO_SILENCE_STOP_MS", "800"))  # stop after this much silence
 AUDIO_SPEECH_TIMEOUT_MS = int(os.getenv("AUDIO_SPEECH_TIMEOUT_MS", "10000"))  # max wait for speech to start
 AUDIO_VAD_AGGRESSIVENESS = int(os.getenv("AUDIO_VAD_AGGRESSIVENESS", "2"))  # 0–3 for webrtcvad
 AUDIO_PREROLL_BUFFER_MS = int(os.getenv("AUDIO_PREROLL_BUFFER_MS", "300"))  # ms of audio before speech start
-AUDIO_MAX_UTTERANCE_MS = int(os.getenv("AUDIO_MAX_UTTERANCE_MS", "7000"))  # hard cap utterance length in VAD mode
+AUDIO_MAX_UTTERANCE_MS = int(os.getenv("AUDIO_MAX_UTTERANCE_MS", "9000"))  # hard cap utterance length in VAD mode
 # Record mode: "fixed" = record N seconds (proves capture on PC mic); "vad" = VAD start/stop
 AUDIO_RECORD_MODE = (os.getenv("AUDIO_RECORD_MODE", "fixed").strip().lower() or "fixed")
 if AUDIO_RECORD_MODE not in ("fixed", "vad"):
@@ -141,14 +149,27 @@ except Exception:
     pass
 WS_ALLOWED_ORIGINS = _ws_allowed_origins_from_env or _ws_default_origins
 
+# Production readiness validation. Strict mode is opt-in so local development remains smooth.
+PRODUCTION_STRICT_READY = os.getenv("PRODUCTION_STRICT_READY", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+REQUIRE_WS_AUTH_IN_PRODUCTION = os.getenv(
+    "REQUIRE_WS_AUTH_IN_PRODUCTION", "true"
+).strip().lower() in ("1", "true", "yes", "on")
+
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS", "80"))
-LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "12.0"))
+LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "8.0"))
 ENABLE_LLM_STREAMING = os.getenv("ENABLE_LLM_STREAMING", "true").strip().lower() in ("1", "true", "yes", "on")
 PERF_DEBUG_TIMINGS = os.getenv("PERF_DEBUG_TIMINGS", "true").strip().lower() in ("1", "true", "yes", "on")
-RAG_CONTEXT_TIMEOUT_S = float(os.getenv("RAG_CONTEXT_TIMEOUT_S", "1.0"))
+RAG_CONTEXT_TIMEOUT_S = float(os.getenv("RAG_CONTEXT_TIMEOUT_S", "0.8"))
+TTS_TIMEOUT_S = float(os.getenv("TTS_TIMEOUT_S", "4.0"))
+STT_TIMEOUT_S = float(os.getenv("STT_TIMEOUT_S", "8.0"))
 ENABLE_FIRST_SENTENCE_TTS = os.getenv("ENABLE_FIRST_SENTENCE_TTS", "true").strip().lower() in (
     "1",
     "true",
@@ -165,6 +186,9 @@ ENABLE_ONCE_ONLY_TTS_SEGMENTS = os.getenv("ENABLE_ONCE_ONLY_TTS_SEGMENTS", "true
 )
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
+LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")
+FIRST_SENTENCE_TTS_MAX_CHARS = int(os.getenv("FIRST_SENTENCE_TTS_MAX_CHARS", "160"))
+AUDIO_UPDATE_TIMEOUT_S = float(os.getenv("AUDIO_UPDATE_TIMEOUT_S", "3.0"))
 
 # Shared HTTP client configuration
 HTTP_TIMEOUT_CONNECT_S = float(os.getenv("HTTP_TIMEOUT_CONNECT_S", "2.0"))

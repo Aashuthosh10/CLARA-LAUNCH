@@ -388,7 +388,14 @@ export function useWebSocket(url: string) {
       }, delay);
     };
 
-    socket.onerror = () => {};
+    socket.onerror = (event) => {
+      if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
+        console.error('CLARA WebSocket error event:', event);
+      }
+      // Keep UI responsive: mark disconnected/reconnecting until close/backoff path settles.
+      entry!.onConnected(false);
+      entry!.setPhase('reconnecting');
+    };
 
     return () => {
       removePhaseListener();

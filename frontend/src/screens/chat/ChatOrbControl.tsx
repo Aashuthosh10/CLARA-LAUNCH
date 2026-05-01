@@ -17,7 +17,20 @@ export default function ChatOrbControl({
   bottomClassName,
 }: ChatOrbControlProps) {
   return (
-    <div className="relative flex flex-col items-center group cursor-pointer" onClick={onTap}>
+    <div
+      className="relative flex flex-col items-center group cursor-pointer"
+      onClick={onTap}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onTap();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={isProcessing ? 'Voice input thinking' : orbState === 'listening' ? 'Voice input listening' : 'Tap to speak'}
+      data-testid="chat-orb"
+    >
       <SiriOrb
         isListening={orbState === 'listening' || isProcessing}
         amplitude={amplitude}

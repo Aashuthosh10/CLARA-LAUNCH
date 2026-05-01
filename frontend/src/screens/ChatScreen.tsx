@@ -39,6 +39,12 @@ import {
   localizedCampusSteps,
 } from '../data/campusDirections';
 
+declare global {
+  interface Window {
+    __CLARA_TEST_SEND_MESSAGE?: (text: string) => void;
+  }
+}
+
 const THINKING_TAGLINES: Record<Language, string[]> = {
   English: [
     'Reading your question and gathering the right details...',
@@ -95,8 +101,8 @@ const THINKING_TITLE: Record<Language, string> = {
 
 const THINKING_EMOJIS = ['🤔', '🧠', '✨', '⚡', '💡'];
 const SPLIT_IDLE_TIMEOUT_MS = 30_000;
-const CARD_AUDIO_START_DELAY_MS = 450;
-const FULL_TEXT_AUDIO_START_DELAY_MS = 140;
+const CARD_AUDIO_START_DELAY_MS = 220;
+const FULL_TEXT_AUDIO_START_DELAY_MS = 0;
 const DEFAULT_COURSE_MENU_OPTIONS = [
   'CSE',
   'ISE',
@@ -156,6 +162,7 @@ const READY_SUGGESTIONS: Record<Language, { label: string; text: string }[]> = {
 type PendingAudio = {
   audioBase64: string;
   segmentKey: string;
+  turnId: string;
   isOverview: boolean;
   cardsToSync: any[] | null;
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
@@ -274,6 +281,10 @@ export default function ChatScreen({
   const [showCampusReturnSuggestions, setShowCampusReturnSuggestions] = useState(false);
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
+  const isE2EFlow = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).has('e2e');
+  }, []);
 
   // Response Priority Lock (CARD > UI > TEXT)
   const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
@@ -313,6 +324,16 @@ export default function ChatScreen({
     sendMessage(msg);
   }, [sendMessage]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__CLARA_TEST_SEND_MESSAGE = (text: string) => {
+      interceptAndSendMessage({ action: 'user_message', text }, 'UI');
+    };
+    return () => {
+      delete window.__CLARA_TEST_SEND_MESSAGE;
+    };
+  }, [interceptAndSendMessage]);
+
   const [activeTargetDepartment, setActiveTargetDepartment] = useState<string | null>(null);
 
 
@@ -333,13 +354,43 @@ export default function ChatScreen({
   const languagePromptRequestedRef = useRef(false);
   const wasPlayingAudioRef = useRef(false);
   const isPendingListeningRef = useRef(false);
+  const deferredMessagesRef = useRef<ChatMessage[] | null>(null);
+  const deferredTurnIdRef = useRef<string | null>(null);
   const savedChatFocusRef = useRef<ChatMessage | null>(null);
   const campusTtsSerialRef = useRef(0);
+  const audioPrimedRef = useRef(false);
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const cardProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Prime browser audio on first user gesture to reduce autoplay blocks in demos/kiosk.
+  useEffect(() => {
+    const primeAudio = () => {
+      if (audioPrimedRef.current) return;
+      audioPrimedRef.current = true;
+      const probe = new Audio(
+        'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+      );
+      probe.muted = true;
+      probe
+        .play()
+        .then(() => {
+          probe.pause();
+          probe.currentTime = 0;
+        })
+        .catch(() => {
+          // Best effort only; fallback hint remains in regular playback path.
+        });
+    };
+    window.addEventListener('pointerdown', primeAudio, { once: true });
+    window.addEventListener('keydown', primeAudio, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', primeAudio);
+      window.removeEventListener('keydown', primeAudio);
+    };
+  }, []);
+
 
   // Intent Classifier & Speech Hooks
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
@@ -354,11 +405,28 @@ export default function ChatScreen({
      });
   }, [interceptAndSendMessage]);
 
+  const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
+    if (import.meta.env.DEV) {
+      console.warn('[CLARA_SPEECH] browser speech error', { errorCode, userMessage });
+    }
+    // Ensure UI can recover immediately from browser speech failures.
+    setIsCampusSpeaking(false);
+    setIsPlayingBackendAudio(false);
+    setHasGreeted(true);
+    const errorBubble: ChatMessage = {
+      id: `speech-error-${Date.now()}`,
+      role: 'clara',
+      text: userMessage || 'Voice input failed. Try again or type your question.',
+    };
+    setDisplayMessages((prev) => [...prev, errorBubble]);
+    setVisuallyFocusedMessage(errorBubble);
+  }, []);
+
   const { startListening: startSpeechRecognition, stopListening } = useSpeechRecognition(
     interceptAndSendMessage,
     language,
-    () => {},
-    () => {}
+    handleSpeechError,
+    handleEmptyTranscript
   );
 
   // Keep chat history stable when backend emits partial payloads without `messages`.
@@ -370,7 +438,17 @@ export default function ChatScreen({
       if (hasReadyPrompt || payload?.turn_id === 'ready_after_language_pick') {
         setIsAwaitingReadyPrompt(false);
       }
-      setDisplayMessages(incomingMessages);
+      const hasAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+      const isTerminalTurn = payload?.isProcessing === false;
+      if (isTerminalTurn && hasAudio) {
+        // Defer message commit until playback kickoff for tighter text-audio sync.
+        deferredMessagesRef.current = incomingMessages;
+        deferredTurnIdRef.current = payload?.turn_id ?? null;
+      } else {
+        deferredMessagesRef.current = null;
+        deferredTurnIdRef.current = null;
+        setDisplayMessages(incomingMessages);
+      }
       const isCardTurn = Boolean(payload?.showCard);
       if (isCardTurn) {
         setVisuallyFocusedMessage(null);
@@ -413,7 +491,7 @@ export default function ChatScreen({
     }
     const hasAssistant = displayMessages.some(
       (m) =>
-        m.role === 'clara' &&
+        ('role' in m && m.role === 'clara') &&
         !(m as { isHidden?: boolean }).isHidden &&
         typeof (m as { text?: string }).text === 'string'
     );
@@ -421,7 +499,7 @@ export default function ChatScreen({
 
     const openingTurn = payload?.turn_id === 'greeting_opening';
     const hasOpeningAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
-    const shouldRevealPicker = hasGreeted || (openingTurn && !hasOpeningAudio);
+    const shouldRevealPicker = isE2EFlow || hasGreeted || (openingTurn && !hasOpeningAudio);
     if (!shouldRevealPicker) return;
 
     const t = window.setTimeout(() => setShowLanguageOverlay(true), hasOpeningAudio ? 850 : 2200);
@@ -432,6 +510,7 @@ export default function ChatScreen({
     displayMessages,
     isProcessing,
     hasGreeted,
+    isE2EFlow,
     payload?.turn_id,
     payload?.audioBase64,
     isPayloadStale,
@@ -757,7 +836,9 @@ export default function ChatScreen({
     const isFinalSegment = payload?.is_final_segment ?? true;
     // Small signature so missing metadata cannot cause false collisions.
     const audioSig = `${audioBase64?.length ?? 0}:${audioBase64?.slice(0, 24) ?? ''}`;
-    const segmentKey = [turnId, type, utteranceKind, segmentIndex, isFinalSegment, audioSig].join('|');
+    // Dedupe key intentionally ignores optional streaming metadata that can drift between retries.
+    // Keeping this keyed to turn + actual audio bytes avoids duplicate playback for repeated frames.
+    const segmentKey = [turnId, audioSig].join('|');
     if (typeof audioBase64 === 'string' && audioBase64.length > 0) {
       const estimatedDuration = estimateWavDurationSeconds(audioBase64);
       if (estimatedDuration) {
@@ -770,14 +851,22 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
         });
       } else {
         setIsCampusSpeaking(false);
+        setIsPlayingBackendAudio(false);
       }
       return;
+    }
+
+    // If backend explicitly says it is not speaking and gives no audio, force-release local speaking flags.
+    if (!audioBase64 && payload?.isSpeaking === false) {
+      setIsCampusSpeaking(false);
+      setIsPlayingBackendAudio(false);
     }
 
     // Defer all split-card transitions until the turn has finalized messages.
@@ -786,6 +875,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'FULL_TEXT',
@@ -803,6 +893,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -830,6 +921,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -856,6 +948,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'FULL_TEXT',
@@ -885,6 +978,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: true,
           cardsToSync: slides.map(s => ({ title: s.title, content: s.content, type: 'dept' })),
           targetLayout: 'SPLIT_CARDS',
@@ -946,6 +1040,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: true,
           cardsToSync: syncCards,
           targetLayout: 'SPLIT_CARDS',
@@ -984,6 +1079,7 @@ export default function ChatScreen({
           setPendingAudio({
             audioBase64,
             segmentKey,
+            turnId: turnId,
             isOverview: true,
             cardsToSync: allDeptCards,
             targetLayout: 'SPLIT_CARDS',
@@ -1022,6 +1118,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: true,
           cardsToSync: syncCards,
           targetLayout: 'SPLIT_CARDS',
@@ -1058,6 +1155,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1085,6 +1183,7 @@ export default function ChatScreen({
         setPendingAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1117,6 +1216,7 @@ export default function ChatScreen({
           setPendingAudio({
             audioBase64,
             segmentKey,
+            turnId: turnId,
             isOverview: true,
             cardsToSync: cardsForTrigger,
             targetLayout: 'SPLIT_CARDS',
@@ -1141,6 +1241,7 @@ export default function ChatScreen({
           setPendingAudio({
             audioBase64,
             segmentKey,
+            turnId: turnId,
             isOverview: false,
             cardsToSync: null,
             targetLayout: 'SPLIT_CARDS', // Play audio gracefully in background alongside locked card
@@ -1158,6 +1259,7 @@ export default function ChatScreen({
       setPendingAudio({
         audioBase64,
         segmentKey,
+        turnId: turnId,
         isOverview: false,
         cardsToSync: null,
         targetLayout: 'FULL_TEXT',
@@ -1175,6 +1277,14 @@ export default function ChatScreen({
         ? CARD_AUDIO_START_DELAY_MS
         : FULL_TEXT_AUDIO_START_DELAY_MS;
     const timer = setTimeout(() => {
+      if (
+        deferredMessagesRef.current &&
+        (!deferredTurnIdRef.current || deferredTurnIdRef.current === pendingAudio.turnId)
+      ) {
+        setDisplayMessages(deferredMessagesRef.current);
+        deferredMessagesRef.current = null;
+        deferredTurnIdRef.current = null;
+      }
       handleAudioPlayback(
         pendingAudio.audioBase64,
         pendingAudio.segmentKey,
@@ -1219,16 +1329,20 @@ export default function ChatScreen({
   useEffect(() => {
     // Detect speaking → finished transition
     const wasSpeaking = wasPlayingAudioRef.current;
-    wasPlayingAudioRef.current = isPlayingBackendAudio;
+    const audioPending = Boolean(payload?.audioPending);
+    const backendSaysSpeaking = Boolean(propIsSpeaking) && !audioPending;
+    wasPlayingAudioRef.current = isPlayingBackendAudio || backendSaysSpeaking;
 
-    if (isPlayingBackendAudio || isCampusSpeaking) {
+    if (isPlayingBackendAudio || isCampusSpeaking || backendSaysSpeaking) {
       setOrbState('speaking');
+    } else if (audioPending) {
+      setOrbState('processing');
     } else if (isProcessing) {
       setOrbState('processing');
     } else if (propIsListening || isPendingListeningRef.current) {
       // User started speaking or explicitly tapped the orb (optimistic listening)
       setOrbState('listening');
-    } else if (wasSpeaking && !isPlayingBackendAudio) {
+    } else if (wasSpeaking && !isPlayingBackendAudio && !backendSaysSpeaking) {
       // CLARA just finished speaking → show 'completed' with "Tap to Speak"
       // This state persists indefinitely — NO auto-timeout.
       // Only cleared when: user taps orb OR listening begins.
@@ -1238,7 +1352,7 @@ export default function ChatScreen({
       if (hasGreeted && !showUnmuteHint) setOrbState('ready');
       else setOrbState('idle');
     }
-  }, [propIsListening, isProcessing, isPlayingBackendAudio, isCampusSpeaking, hasGreeted, showUnmuteHint]);
+  }, [propIsListening, propIsSpeaking, payload?.audioPending, isProcessing, isPlayingBackendAudio, isCampusSpeaking, hasGreeted, showUnmuteHint]);
 
   // Auto-Start Listening Loop (ONLY ONCE) — skip while inline language gate is active so the mic does not open over the picker.
   useEffect(() => {
@@ -1403,6 +1517,7 @@ export default function ChatScreen({
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         onClick={handleHomeClick}
+        data-testid="home-button"
         className="premium-home-button"
         title="Go Home"
       >
@@ -1741,7 +1856,7 @@ export default function ChatScreen({
 
                       <button
                         type="button"
-                        onClick={isCampusSpeaking ? stopCampusSpeech : speakCampusDirection}
+                        onClick={() => (isCampusSpeaking ? stopCampusSpeech() : speakCampusDirection())}
                         className="campus-speak-button"
                       >
                         {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}

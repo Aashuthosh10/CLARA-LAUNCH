@@ -61,6 +61,9 @@ class TurnTiming:
             "t_tts_audio_ready_ms": self.since_start("tts_first_end") or self.since_start("tts_end"),
             "t_play_start_ms": self.since_start("play_start"),
             "t_play_end_ms": self.since_start("play_end"),
+            "visible_answer_ms": self.since_start("visible_answer"),
+            "audio_first_ready_ms": self.since_start("tts_first_end") or self.since_start("tts_end"),
+            "audio_play_start_ms": self.since_start("play_start"),
 
             # Stage durations
             "record_end_ms": self.since_start("record_end"),

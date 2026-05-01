@@ -40,7 +40,7 @@ async def _recv_until_turn_done(ws: websockets.WebSocketClientProtocol, timeout_
             return payload
 
 
-async def run_probe(url: str, turns: int, language: str, timeout_s: float) -> int:
+async def run_probe(url: str, turns: int, language: str, timeout_s: float, origin: str | None) -> int:
     prompts = [
         "fees",
         "library timing",
@@ -54,7 +54,15 @@ async def run_probe(url: str, turns: int, language: str, timeout_s: float) -> in
     total_values: list[float] = []
     first_turn_breakdown: dict[str, Any] | None = None
 
-    async with websockets.connect(url, ping_interval=20, ping_timeout=20, max_size=2**23) as ws:
+    connect_kwargs: dict[str, Any] = {
+        "ping_interval": 20,
+        "ping_timeout": 20,
+        "max_size": 2**23,
+    }
+    if origin:
+        connect_kwargs["origin"] = origin
+
+    async with websockets.connect(url, **connect_kwargs) as ws:
         await ws.recv()  # state 0
         await ws.send(json.dumps({"action": "wake"}))
         await ws.recv()  # state 5 (chat after wake)
@@ -115,8 +123,9 @@ def main() -> int:
     parser.add_argument("--turns", type=int, default=20)
     parser.add_argument("--language", default="English")
     parser.add_argument("--timeout", type=float, default=20.0)
+    parser.add_argument("--origin", default="http://localhost:5176")
     args = parser.parse_args()
-    return asyncio.run(run_probe(args.url, args.turns, args.language, args.timeout))
+    return asyncio.run(run_probe(args.url, args.turns, args.language, args.timeout, args.origin))
 
 
 if __name__ == "__main__":

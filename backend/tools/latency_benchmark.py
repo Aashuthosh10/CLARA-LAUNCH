@@ -38,11 +38,11 @@ async def _run_turn(text: str, process_user_text_and_reply: Any, TurnTiming: Any
     timing = TurnTiming()
     timing.mark("transcript_ready")
     session: dict[str, Any] = {
-        "language": None,
-        "language_code": None,
-        "language_name": None,
-        "language_code_key": None,
-        "is_language_auto": None,
+        "language": "English",
+        "language_code": "en-IN",
+        "language_name": "English",
+        "language_code_key": "en",
+        "is_language_auto": False,
         "language_detection": None,
         "messages": [],
         "cached_greeting_audio": None,
@@ -66,13 +66,19 @@ def _stage_row(results: list[dict[str, float | None]], key: str) -> tuple[float,
 
 async def _run(args: argparse.Namespace) -> dict[str, Any]:
     from backend.app.main import TurnTiming, process_user_text_and_reply
+    from backend.clients.provider_clients import warmup_clients
+    from backend.core.rag import warmup_rag
+
+    await asyncio.gather(asyncio.to_thread(warmup_rag), warmup_clients(), return_exceptions=True)
 
     texts = [
-        "What are library timings?",
-        "Where is the canteen?",
-        "What is the fee?",
-        "Where is the admissions office?",
+        "What is the admission process?",
+        "What is the fee structure?",
+        "What documents are required for admission?",
+        "Who is the ECE HOD?",
         "Tell me about placements.",
+        "Where is the college located?",
+        "What courses are available?",
     ]
     corpus = (texts * ((args.turns + len(texts) - 1) // len(texts)))[: args.turns]
     results: list[dict[str, float | None]] = []
@@ -86,10 +92,14 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
         results.append(timings)
         print(
             f"Turn {idx:02d} ttft={timings.get('ttft_ms'):.0f}ms "
+            f"visible={timings.get('visible_answer_ms'):.0f}ms "
+            f"audio_ready={timings.get('audio_first_ready_ms'):.0f}ms "
             f"ttfs={timings.get('ttfs_ms'):.0f}ms total={timings.get('total_ms'):.0f}ms"
         )
 
     stages = [
+        ("Visible answer", "visible_answer_ms"),
+        ("Audio first ready", "audio_first_ready_ms"),
         ("RAG", "rag_ms"),
         ("LLM", "llm_ms"),
         ("TTS(first)", "tts_first_ms"),
@@ -115,6 +125,8 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
             "ENABLE_FIRST_SENTENCE_TTS": os.getenv("ENABLE_FIRST_SENTENCE_TTS"),
             "ENABLE_ACK_EARCON": os.getenv("ENABLE_ACK_EARCON"),
             "ENABLE_EARLY_PARTIAL_TEXT": os.getenv("ENABLE_EARLY_PARTIAL_TEXT"),
+            "LOW_LATENCY_VOICE_MODE": os.getenv("LOW_LATENCY_VOICE_MODE"),
+            "AUDIO_UPDATE_TIMEOUT_S": os.getenv("AUDIO_UPDATE_TIMEOUT_S"),
             "RAG_CONTEXT_TIMEOUT_S": os.getenv("RAG_CONTEXT_TIMEOUT_S"),
             "LLM_MAX_TOKENS": os.getenv("LLM_MAX_TOKENS"),
         },
@@ -141,6 +153,7 @@ def main() -> int:
     os.environ["ENABLE_FIRST_SENTENCE_TTS"] = args.first_sentence_tts
     os.environ["ENABLE_ACK_EARCON"] = args.ack_earcon
     os.environ["ENABLE_EARLY_PARTIAL_TEXT"] = args.early_partial
+    os.environ.setdefault("LOW_LATENCY_VOICE_MODE", "true")
 
     result = asyncio.run(_run(args))
     if args.output:

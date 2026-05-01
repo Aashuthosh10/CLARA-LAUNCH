@@ -111,7 +111,7 @@ export default function DocumentsBlock() {
   );
 
   return (
-    <div className="w-full max-w-5xl rounded-3xl border border-[#d8d0c3] bg-[#f8f5ee] p-8 shadow-md">
+    <div data-testid="documents-block" className="w-full max-w-5xl rounded-3xl border border-[#d8d0c3] bg-[#f8f5ee] p-8 shadow-md">
       <div className="text-[12px] tracking-[0.18em] text-[#9b8e6c] uppercase mb-2">📄 Documents</div>
       <h2 className="text-[42px] leading-[1.06] font-semibold text-[#1f1f1f] mb-6">{title}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

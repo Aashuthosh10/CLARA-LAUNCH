@@ -130,17 +130,21 @@ async def sarvam_tts_to_base64(text: str, target_language_code: str) -> str | No
     )
 
     for endpoint in endpoint_candidates:
-        for _ in range(max(1, HTTP_RETRY_ATTEMPTS + 1)):
+        for attempt in range(1, max(1, HTTP_RETRY_ATTEMPTS + 1) + 1):
             try:
                 resp = await client.post(endpoint, json=payload, headers=headers)
                 if resp.status_code >= 500:
+                    logger.warning("Sarvam TTS transient server error status=%s endpoint=%s attempt=%d", resp.status_code, endpoint, attempt)
                     continue
                 if resp.is_success:
                     body = resp.json()
                     audio = _parse_sarvam_audio(body if isinstance(body, dict) else {})
                     if audio:
                         return audio
+                else:
+                    logger.warning("Sarvam TTS request failed status=%s endpoint=%s attempt=%d", resp.status_code, endpoint, attempt)
             except Exception:
+                logger.warning("Sarvam TTS request exception endpoint=%s attempt=%d", endpoint, attempt, exc_info=True)
                 continue
 
     # SDK fallback for compatibility with existing deployments.
@@ -194,11 +198,12 @@ async def sarvam_stt_from_wav(wav_bytes: bytes) -> tuple[str | None, dict[str, A
     )
 
     for endpoint in endpoint_candidates:
-        for _ in range(max(1, HTTP_RETRY_ATTEMPTS + 1)):
+        for attempt in range(1, max(1, HTTP_RETRY_ATTEMPTS + 1) + 1):
             try:
                 files = {"file": ("audio.wav", wav_bytes, "audio/wav")}
                 resp = await client.post(endpoint, data=data, files=files, headers=headers)
                 if resp.status_code >= 500:
+                    logger.warning("Sarvam STT transient server error status=%s endpoint=%s attempt=%d", resp.status_code, endpoint, attempt)
                     continue
                 if resp.is_success:
                     body = resp.json()
@@ -218,7 +223,10 @@ async def sarvam_stt_from_wav(wav_bytes: bytes) -> tuple[str | None, dict[str, A
                             if body.get(k) is not None
                         }
                         return (text or None), meta
+                else:
+                    logger.warning("Sarvam STT request failed status=%s endpoint=%s attempt=%d", resp.status_code, endpoint, attempt)
             except Exception:
+                logger.warning("Sarvam STT request exception endpoint=%s attempt=%d", endpoint, attempt, exc_info=True)
                 continue
 
     # SDK fallback

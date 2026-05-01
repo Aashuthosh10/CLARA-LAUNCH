@@ -58,6 +58,12 @@ const NEWS_ITEMS = [
 export default function SleepScreen({ onWake }: { onWake: () => void }) {
   const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const wakeRequestedRef = useRef(false);
+  const requestWake = () => {
+    if (wakeRequestedRef.current) return;
+    wakeRequestedRef.current = true;
+    onWake();
+  };
 
   useEffect(() => {
     if (!import.meta.env.DEV) return undefined;
@@ -198,7 +204,14 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="relative w-full h-full overflow-hidden bg-black"
-      onClick={() => onWake()}
+      onPointerDown={requestWake}
+      onClick={requestWake}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          requestWake();
+        }
+      }}
       onPointerDownCapture={(e: React.PointerEvent) => {
         if (import.meta.env.DEV) {
           agentLog(
@@ -209,6 +222,9 @@ export default function SleepScreen({ onWake }: { onWake: () => void }) {
           );
         }
       }}
+      role="button"
+      tabIndex={0}
+      aria-label="Wake CLARA"
       data-testid="sleep-screen"
     >
       {/* Background Slideshow */}

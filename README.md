@@ -1,215 +1,282 @@
-# CLARA – AI Receptionist Kiosk System
+# CLARA - AI Receptionist Kiosk System
 
-Full-stack application: **React (Vite)** frontend + **FastAPI** backend with WebSocket for the CLARA AI receptionist kiosk.
+CLARA is a full-stack multilingual AI receptionist kiosk for SVIT. It uses a React/Vite frontend, a FastAPI backend, WebSocket state sync, optional PostgreSQL/pgvector RAG, and voice I/O through browser speech recognition or backend STT/TTS providers.
 
-**Repository:** [FB-Clara](https://github.com/thequantumbugs-coder/FB-Clara)
+Repository: https://github.com/thequantumbugs-coder/FB-Clara
 
-## Repository structure
+## Production Readiness Snapshot
 
+Current automated gates expected before release:
+
+- Frontend typecheck: `npm run lint`
+- Frontend production build: `npm run build`
+- Frontend security audit: `npm audit --audit-level=high`
+- Frontend E2E kiosk flow: `npm run test:e2e`
+- Backend tests: `python -m pytest backend/tests -q`
+- RAG database smoke: `python backend/tools/test_db_rag.py`
+- Multilingual RAG smoke: `python -m backend.tools.rag_multilingual_check`
+- Optional latency benchmark: `python -m backend.tools.latency_benchmark --turns 20 --label low-latency-receptionist`
+
+On Windows, run the release check bundle:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\production-check.ps1
 ```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+
+To include the low-latency benchmark gate:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\production-check.ps1 -RunLatencyGate
+```
+
+Manual gates still required on target kiosk hardware:
+
+- Microphone capture quality
+- Speaker output quality
+- STT/TTS provider latency
+- Wake -> language -> chat -> voice reply -> reset flow
+- All six supported languages
+
+## Repository Structure
+
+```text
+backend/          FastAPI app, WebSocket endpoint, RAG, voice, tests
+frontend/         React 19 + Vite + TypeScript kiosk UI
+config/           Runtime UI configuration
+scripts/          Startup, DB, and deployment helpers
+docs/             Setup, status, latency, and troubleshooting notes
+college_knowledge.txt
+docker-compose.yml
+.env.example      Backend environment template
 ```
 
 ## Prerequisites
 
-- **Node.js** 20+ (for frontend)
-- **Python** 3.8+ (for backend)
+- Node.js 20+
+- Python 3.11 recommended
+- Docker Desktop, for local PostgreSQL/pgvector
+- Provider keys for production voice/LLM:
+  - `GROQ_API_KEY`
+  - `SARVAM_API_KEY`
 
-## Clone and setup
+## Environment Setup
 
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
-```
+Copy the backend environment template:
 
-Then run with one of the options below. On systems without Node in `PATH`, you can extract a Node binary into `.node/` (see frontend README); `scripts/run-dev.sh` will use `.node/bin` if present.
-
-## Quick start
-
-### Option 1: Run both (backend + frontend)
-
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+```powershell
+Copy-Item .env.example .env
 ```
 
-- Backend: http://localhost:6969  
-- Frontend: http://localhost:5176  
+Set at least:
 
-### Option 2: Run separately
-
-Start the **backend first**, then the frontend. The frontend connects to the backend WebSocket (default `ws://localhost:6969/ws/clara`; override with `VITE_WS_URL` in `frontend/.env.local`) and retries with backoff if the backend is not running. If the backend reports "address already in use", free the port (e.g. `netstat -ano | findstr :6969` then `taskkill /PID <pid> /F`) or set `PORT=<free_port>` in `.env` and `VITE_WS_URL=ws://localhost:<free_port>/ws/clara` in `frontend/.env.local`.
-
-**Backend**
-
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+```text
+GROQ_API_KEY=...
+SARVAM_API_KEY=...
+POSTGRES_PASSWORD=...
 ```
 
-**Frontend** (in another terminal)
+For production WebSocket auth, also set:
 
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
-```
-
-## Configuration
-
-- Copy `.env.example` to `.env` in the project root and set API keys (e.g. `GROQ_API_KEY`, `SARVAM_*`) and **`POSTGRES_PASSWORD`** for RAG. See **docs/POSTGRES_SETUP.md** for PostgreSQL + pgvector (Ubuntu) and env details.
-- **College knowledge (RAG):** Start PostgreSQL (e.g. `docker compose up -d`), run schema init (`scripts/db/init_pgvector.sql`, safe to re-run), then run: `python -m backend.tools.ingest_college_knowledge_pg`. This now ingests both `college_knowledge.txt` and locale JSON (`en.json`, `hi.json`) into `college_knowledge`.
-- Frontend: optional `frontend/.env.local` (e.g. `VITE_WS_URL` if your backend is not on the default `ws://localhost:6969/ws/clara`, `VITE_WS_TOKEN` for WS auth).
-
-### Voice / TTS (CLARA speaks in your language)
-
-For full voice (greeting and replies spoken in the selected language), set in `.env`:
-
-- `GROQ_API_KEY` – for LLM replies (e.g. from [Groq Console](https://console.groq.com/keys)).
-- `SARVAM_API_KEY` – for text-to-speech (or `SARVAM_ASR_API_KEY` / `SARVAM_TTS_API_KEY`; get keys at [Sarvam AI](https://dashboard.sarvam.ai/)).
-
-Run the backend with **full** dependencies (not minimal): `pip install -r backend/requirements/requirements.txt`. Supported languages: English, Kannada, Hindi, Tamil, Telugu, Malayalam. The frontend sends the selected language with `language_selected`; user speech is sent as `user_message` with `text` (from the browser’s speech recognition).
-
-## Tech stack
-
-| Layer    | Stack |
-| -------- | ----- |
-| Frontend | React 19, Vite 6, TypeScript, Tailwind CSS, Motion |
-| Backend  | FastAPI, Uvicorn, WebSockets |
-| Protocol | WebSocket at `ws://localhost:6969/ws/clara` (state + payload) |
-
-## Pushing to GitHub (FB-Clara)
-
-This repo is set up to push to **https://github.com/thequantumbugs-coder/FB-Clara**. From the project root:
-
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+```text
+WS_AUTH_REQUIRED=true
+WS_AUTH_TOKEN=<strong-shared-token>
+PRODUCTION_STRICT_READY=true
+RAG_MIN_DOCUMENTS=500
+REQUIRE_WS_AUTH_IN_PRODUCTION=true
 ```
 
-If Git prompts for credentials, use your GitHub username and a [Personal Access Token](https://github.com/settings/tokens) (scope `repo`). Or use SSH: `git remote set-url fb-clara git@github.com:thequantumbugs-coder/FB-Clara.git` then run the script again.
+For low-latency visible answers with audio attached after TTS completes, keep:
 
-## Development
-
-- Backend: `backend/main.py` (compat entrypoint), `backend/app/main.py` (FastAPI app), `backend/config/settings.py` (env from `.env`).
-- Frontend: `frontend/` (Vite + React); WebSocket URL in `frontend/src/App.tsx` (defaults to `ws://localhost:6969/ws/clara`, override with `VITE_WS_URL`).
-
-## License
-
-See repository defaults.
-
-## Automatic Language Detection
-
-- Keep `SARVAM_LANGUAGE_CODE=unknown` (or unset) to allow STT auto-detection at ASR level.
-- Backend performs one-time text-level language detection on the first meaningful transcript and persists it in session.
-- Supported auto-detect targets: `en`, `hi`, `kn`, `ta`, `te`, `ml`.
-- If confidence is below threshold, CLARA falls back to English.
-- Manual selection from LanguageSelect is always an override for that session.
-
-Environment knobs:
-
-- `AUTO_LANGUAGE_DETECT_ENABLED=true`
-- `AUTO_LANGUAGE_DETECT_CONFIDENCE_THRESHOLD=0.70`
-
-WebSocket notification (backward compatible `state=5` payload):
-
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+```text
+LOW_LATENCY_VOICE_MODE=true
+FIRST_SENTENCE_TTS_MAX_CHARS=160
+AUDIO_UPDATE_TIMEOUT_S=3.0
+ENABLE_FIRST_SENTENCE_TTS=true
+ENABLE_TTS_PIPELINING=true
 ```
 
-## Voice Latency Runbook
+Then set the same frontend token in `frontend/.env.local`:
 
-CLARA now emits per-turn structured latency metrics and WS debug timings.
-
-### What is measured per turn
-
-- `record_end_ms` or `transcript_ready_ms`
-- `stt_ms`
-- `llm_first_token_ms`
-- `llm_ms`
-- `tts_ms`
-- `play_ms`
-- `ttff_ms` (time to first feedback)
-- `total_ms`
-
-Metrics are emitted in:
-
-- Backend JSON logs (`{"type":"turn_metrics", ...}`)
-- WS payload as `payload.debug.timings_ms` (when `PERF_DEBUG_TIMINGS=true`)
-
-### Performance controls
-
-- `AUDIO_SILENCE_STOP_MS` (default `600`)
-- `AUDIO_MAX_UTTERANCE_MS` (default `7000`)
-- `LLM_MAX_TOKENS` (default `100`)
-- `LLM_TEMPERATURE` (default `0.2`)
-- `LLM_STREAM_PARTIAL_DEBOUNCE_MS` (default `120`)
-
-### Warmups
-
-At startup, CLARA runs best-effort background warmups for Groq and Sarvam (non-blocking).
-
-### How to validate latency (20 turns)
-
-1. Start backend and frontend.
-2. Run 20 short turns (<=6 words each).
-3. Collect backend logs and extract `turn_metrics` JSON lines.
-4. Compute p50/p95 for `ttff_ms` and `total_ms`.
-
-Quick PowerShell extraction example (from backend log file):
-
-```
-├── backend/          # FastAPI API + WebSocket (/ws/clara)
-├── frontend/         # React 19 + Vite + TypeScript UI
-├── config/           # Runtime UI config
-├── scripts/          # Launch and deployment helpers
-├── docs/             # Setup and baseline documentation
-└── .env.example      # Backend env template (copy to .env)
+```text
+VITE_WS_URL=ws://localhost:6969/ws/clara
+VITE_WS_TOKEN=<same-token>
 ```
 
-## RAG Ingestion Verification (Multilingual)
+## Backend Setup
 
-Run these from project root after DB is up:
+Create and install dependencies:
 
-```bash
-python -m backend.tools.ingest_college_knowledge_pg
-python -c "from backend.clients.database import get_document_count; print(get_document_count())"
-python -m backend.tools.rag_multilingual_check
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements\requirements.txt
 ```
 
-Expected:
-- document count is non-zero
-- each language (`en`, `hi`, `kn`, `ta`, `te`, `ml`) shows `has_context: true` for admissions/fees/documents/hod/placements/overview checks.
+Start or repair the local RAG database:
 
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\db\init-rag-db.ps1
+```
 
+Ingest knowledge into PostgreSQL:
 
+```powershell
+.\.venv\Scripts\python.exe -m backend.tools.ingest_college_knowledge_pg
+```
 
+Verify RAG:
+
+```powershell
+.\.venv\Scripts\python.exe backend\tools\test_db_rag.py
+.\.venv\Scripts\python.exe -m backend.tools.rag_multilingual_check
+```
+
+Run the backend:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start-backend.ps1
+```
+
+Default backend URL: `http://localhost:6969`
+
+Production monitor endpoints:
+
+- `GET /health`: process liveness
+- `GET /ready`: dependency readiness. In strict mode, it requires provider keys, RAG document count >= `RAG_MIN_DOCUMENTS`, WebSocket auth when required, and locked-down allowed origins.
+
+## Frontend Setup
+
+Install dependencies:
+
+```powershell
+Set-Location frontend
+npm ci
+```
+
+Run development UI:
+
+```powershell
+npm run dev
+```
+
+Default frontend URL: `http://localhost:5176`
+
+Build production UI:
+
+```powershell
+npm run build
+```
+
+Run mocked E2E kiosk flow after backend/frontend are running:
+
+```powershell
+npm run test:e2e
+```
+
+The E2E suite uses a local-safe mocked WebSocket and does not require microphone, Sarvam, or Groq access.
+
+## Running Both Locally
+
+Terminal 1:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start-backend.ps1
+```
+
+Terminal 2:
+
+```powershell
+Set-Location frontend
+npm run dev
+```
+
+If port `6969` is already in use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\kill-backend-port.ps1
+```
+
+## Voice Modes
+
+Recommended demo mode:
+
+```text
+VITE_VOICE_INPUT_MODE=browser
+```
+
+Backend microphone capture is supported, but should be validated on the exact kiosk hardware before demos or production use.
+
+Supported languages:
+
+- English
+- Kannada
+- Hindi
+- Tamil
+- Telugu
+- Malayalam
+
+Keep `SARVAM_LANGUAGE_CODE=unknown` or unset to allow STT auto-detection. Manual language selection from the UI overrides detection for that session.
+
+Low-latency behavior:
+
+- CLARA sends text/cards first and does not wait for TTS.
+- Audio arrives later through an `assistant_audio_update` WebSocket payload on the same `turn_id`.
+- Deterministic receptionist intents use local fast paths when data is available.
+- The current software target is visible answer p95 <= 1,000ms and first audio-ready p95 <= 3,000ms for common receptionist questions.
+
+## RAG Notes
+
+The RAG path uses:
+
+- Docker service: `clara-postgres`
+- Database defaults: `clara_db`, `clara_user`
+- Table: `college_knowledge`
+- Schema: `scripts/db/init_pgvector.sql`
+- Ingestion: `python -m backend.tools.ingest_college_knowledge_pg`
+
+If `.env` was changed after the Docker volume was created, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\db\init-rag-db.ps1
+```
+
+This aligns the running database role password with `.env`, creates the configured database if needed, and applies the pgvector schema.
+
+## Production Checklist
+
+Before declaring a release production-ready:
+
+- `git status --short` contains only intentional release changes
+- `.env` and `frontend/.env.local` are not committed
+- `WS_AUTH_REQUIRED=true` is enabled for non-local deployments
+- `WS_ALLOWED_ORIGINS` is locked to the real frontend origin
+- PostgreSQL is healthy and RAG returns non-empty context
+- Knowledge ingestion has been run after content changes
+- Backend tests pass
+- Frontend typecheck/build pass
+- Security audits pass
+- Mocked Playwright kiosk E2E passes
+- Optional latency gate passes with `scripts\production-check.ps1 -RunLatencyGate`
+- Full kiosk hardware smoke passes
+- Logs are collected for backend startup, WebSocket turns, provider failures, and latency metrics
+- `/ready` reports `status: ready` on the production machine
+
+## Useful Files
+
+- Agent instructions: `AGENTS.md`
+- Persistent project context: `docs/CLARA_PROJECT_MEMORY.md`
+- Current status: `docs/CURRENT_STATUS.md`
+- PostgreSQL setup: `docs/POSTGRES_SETUP.md`
+- Voice latency runbook: `backend/tools/audio_latency_runbook.md`
+- WebSocket schemas: `backend/app/ws_schemas.py`
+- Main backend app: `backend/app/main.py`
+- Main frontend app: `frontend/src/App.tsx`
+
+## CI
+
+GitHub Actions runs:
+
+- Frontend install, typecheck, build, and `npm audit --audit-level=high`
+- Backend dependency install, unit tests, and Python dependency audit
+
+See `.github/workflows/ci.yml`.
