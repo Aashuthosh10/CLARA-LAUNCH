@@ -292,6 +292,24 @@ def build_target_card_payload(
             "leadership": data.get("leadership"),
         }
 
+    if intent == INTENT_PRINCIPAL_PROFILE:
+        role_holders = _role_holders_block_with_en_fallback(data)
+        return {
+            "presentation_type": "principal_profile",
+            "locale": locale_id,
+            "principal": role_holders.get("principal"),
+            "leadership": data.get("leadership"),
+        }
+
+    if intent == INTENT_VICE_PRINCIPAL_PROFILE:
+        role_holders = _role_holders_block_with_en_fallback(data)
+        return {
+            "presentation_type": "vice_principal_profile",
+            "locale": locale_id,
+            "vice_principal": role_holders.get("vice_principal"),
+            "leadership": data.get("leadership"),
+        }
+
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
         role_holders = _role_holders_block_with_en_fallback(data)
         hod_rows_b = _build_hod_rows_from_role_holders(data, deps)
@@ -375,6 +393,8 @@ INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_DEPARTMENT_FEES = "DEPARTMENT_FEES"
 INTENT_DOCUMENTS = "DOCUMENTS"
 INTENT_DEPARTMENT_COMPARISON = "DEPARTMENT_COMPARISON"
+INTENT_PRINCIPAL_PROFILE = "PRINCIPAL_PROFILE"
+INTENT_VICE_PRINCIPAL_PROFILE = "VICE_PRINCIPAL_PROFILE"
 # Backward-compatible alias for legacy imports.
 INTENT_FEES = INTENT_DEPARTMENT_FEES
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
@@ -389,6 +409,8 @@ NARRATOR_INTENTS: frozenset[str] = frozenset(
         INTENT_HOD_PROFILE,
         INTENT_TRUSTEES_PROFILE,
         INTENT_HOD_TRUSTEES_PROFILE,
+        INTENT_PRINCIPAL_PROFILE,
+        INTENT_VICE_PRINCIPAL_PROFILE,
     }
 )
 
@@ -848,8 +870,11 @@ def _comparison_intent_substrings_hits(normalized_joined: str) -> bool:
         "better than",
         "which is better",
         "which is best",
-        "which course",
-        "which branch",
+        # Avoid matching "which courses are available" → use explicit contrast phrasing instead.
+        "which course is better",
+        "which course is best",
+        "which branch is better",
+        "which branch is best",
         "what is better",
         "side by side",
         "between ",
@@ -1077,6 +1102,59 @@ PROFILE_GENERIC_KEYWORDS = [
     "maahiti",
 ]
 
+# Match before generic "principal" word checks (covers "vice principal", etc.).
+VICE_PRINCIPAL_PROFILE_KEYWORDS = [
+    "vice principal",
+    "vice-principal",
+    "associate principal",
+    "deputy principal",
+    "ಉಪ ಪ್ರಾಂಶುಪಾಲರು",
+]
+
+# Principal leadership queries (explicit phrases + multilingual snippets from regression tests).
+PRINCIPAL_PROFILE_KEYWORDS = [
+    "who is the principal",
+    "principal details",
+    "who runs this college",
+    "college head",
+    "principal of",
+    "tell me about the principal",
+    "who is the principle",
+    "principal of svit",
+    "ಪ್ರಿನ್ಸಿಪಾಲ್ ತಿಳಿಸಿ",
+    "കോളേജിന് പ്രിൻസിപ്പൽ ആർ",
+]
+
+
+def normalized_text_for_executive_keyword_scan(text: str | None) -> str:
+    """Normalize free text for deterministic executive-profile keyword scans (multilingual-safe)."""
+    if not text or not isinstance(text, str):
+        return ""
+    return re.sub(r"\s+", " ", str(text).strip()).lower()
+
+
+def maybe_override_intent_with_executive_profile(base_intent: str, raw_text: str | None) -> str:
+    """If executive cues are present in user text, return the sharper profile intent."""
+    scanned = normalized_text_for_executive_keyword_scan(raw_text)
+    detected = _detect_profile_intent(scanned)
+    if detected:
+        return detected
+    return base_intent
+
+
+def _principal_word_intent_positive(normalized: str) -> bool:
+    """English STT slips: principle/principal — never match when vice-principal wording won."""
+    if not normalized:
+        return False
+    if _matches_any_phrase(normalized, VICE_PRINCIPAL_PROFILE_KEYWORDS):
+        return False
+    if re.search(r"\bprincipal\b", normalized):
+        return True
+    if re.search(r"\bprinciple\b", normalized):
+        return True
+    return False
+
+
 def _default_profile_names() -> tuple[str, list[str]]:
     return (
         "Dr. Shashikumar D R",
@@ -1165,6 +1243,10 @@ def _detect_profile_intent(normalized: str) -> str | None:
     # Fee queries should not be re-routed to profile cards.
     if any(_contains_phrase(normalized, k) for k in FEE_QUERY_KEYWORDS):
         return None
+    if _matches_any_phrase(normalized, VICE_PRINCIPAL_PROFILE_KEYWORDS):
+        return INTENT_VICE_PRINCIPAL_PROFILE
+    if _matches_any_phrase(normalized, PRINCIPAL_PROFILE_KEYWORDS) or _principal_word_intent_positive(normalized):
+        return INTENT_PRINCIPAL_PROFILE
     has_hod = _matches_any_phrase(normalized, HOD_PROFILE_KEYWORDS)
     has_trustees = _matches_any_phrase(normalized, TRUSTEES_PROFILE_KEYWORDS)
     # Common STT/typing slip: "trusted" instead of "trustees".
@@ -1297,6 +1379,10 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
             return False
         if w == k:
             return True
+        # Short department abbreviations ("ise", "ece", "cse"): token fuzzy match otherwise
+        # false-positives on stopwords ("is" → "ise" at ratio 0.8).
+        if len(k) <= 4:
+            return False
         return _sim(w, k) > 0.7
 
     def _any_token_fuzzy_match(word_tokens: list[str], keywords: list[str]) -> bool:
@@ -1512,13 +1598,20 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
     is_comp_hit = bool(spaced_nx and _comparison_intent_substrings_hits(spaced_nx))
     is_rec_hit = _comparison_recommendation_cue(spaced_nx, lowered)
 
-    is_comparison_query = len(comp_labels) >= 2 or is_comp_hit or is_rec_hit
+    fee_like = is_fee_query or _is_fee_query(normalized)
+    # Multi-label scraps + plain fee/course listings are not comparisons without explicit contrast cues.
+    explicit_comparison_cue = is_comp_hit or is_rec_hit
+    lex_multi = len(comp_labels) >= 2
+    lexical_or_cue = lex_multi or explicit_comparison_cue
+    is_comparison_query = lexical_or_cue and not (
+        (fee_like or is_course_query) and not explicit_comparison_cue
+    )
 
     return QueryFeatures(
         has_department=has_department,
         department_name=detected_department,
         is_hod_query=is_hod_query,
-        is_fee_query=is_fee_query or _is_fee_query(normalized),
+        is_fee_query=fee_like,
         is_course_query=is_course_query,
         is_documents_query=documents_flag,
         is_placement_query=_is_placements_query(normalized),
@@ -1959,6 +2052,10 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
         return {"showCard": "course_menu", "departmentId": None}
     if intent == INTENT_DOCUMENTS:
         return {"showCard": "documents", "departmentId": None}
+    if intent == INTENT_PRINCIPAL_PROFILE:
+        return {"showCard": "principal_profile", "departmentId": None}
+    if intent == INTENT_VICE_PRINCIPAL_PROFILE:
+        return {"showCard": "vice_principal_profile", "departmentId": None}
     if intent == INTENT_TRUSTEES_PROFILE:
         return {"showCard": "trustees", "departmentId": None}
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
@@ -2013,6 +2110,8 @@ def resolve_card_intent_and_department(
         dept,
         entities,
     )
+    routed = maybe_override_intent_with_executive_profile(intent, merged_query)
+    intent = routed
     logger.info("[INTENT_PRIORITY] card_hints=%s", card_trigger_hints(intent, entities))
 
     return intent, dept, query_en, entities, features
@@ -2042,6 +2141,10 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
         return "documents"
     if intent == INTENT_DEPARTMENT_COMPARISON:
         return "department_comparison"
+    if intent == INTENT_PRINCIPAL_PROFILE:
+        return "principal_profile"
+    if intent == INTENT_VICE_PRINCIPAL_PROFILE:
+        return "vice_principal_profile"
     return None
 
 
@@ -2128,7 +2231,9 @@ def detect_intent(text: str) -> str:
     if is_documents_query(query_en):
         return INTENT_DOCUMENTS
     features = extract_features(query_en)
-    return resolve_intent_from_features(features)
+    base = resolve_intent_from_features(features)
+    # Same executive routing as multimodal kiosk path (`maybe_override_intent_with_executive_profile`).
+    return maybe_override_intent_with_executive_profile(base, text)
 
 
 def _strip_json_fence(text: str) -> str:

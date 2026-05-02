@@ -111,7 +111,9 @@ from backend.services.answer_generation import (
     INTENT_NORMAL_QUERY,
     INTENT_OFF_TOPIC,
     INTENT_PLACEMENTS,
+    INTENT_PRINCIPAL_PROFILE,
     INTENT_TRUSTEES_PROFILE,
+    INTENT_VICE_PRINCIPAL_PROFILE,
     build_narrator_system_prompt,
     build_system_prompt,
     build_target_card_payload,
@@ -125,6 +127,7 @@ from backend.services.answer_generation import (
     get_unavailable_reply,
     is_narrator_intent,
     locale_file_id_for_lang_key,
+    maybe_override_intent_with_executive_profile,
     multilingual_rag_reply_directive,
     normalize_and_classify_query,
     rag_language_enforcement_directive,
@@ -331,6 +334,16 @@ def _card_direct_reply(intent: str, language_key: str, department: str | None = 
         return f"Showing the HOD information for {dept}."
     if intent in {INTENT_COLLEGE_OVERVIEW, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE}:
         return "Showing the requested college information on screen."
+    if intent == INTENT_PRINCIPAL_PROFILE:
+        return {
+            "hi": "Principal profile screen par dikha raha hoon.",
+            "kn": "ಪ್ರಾಂಶುಪಾಲರ ಪ್ರೊಫೈಲ್ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
+        }.get(language_key, "Showing the Principal profile on screen.")
+    if intent == INTENT_VICE_PRINCIPAL_PROFILE:
+        return {
+            "hi": "Vice principal profile screen par dikha raha hoon.",
+            "kn": "ಉಪ ಪ್ರಾಂಶುಪಾಲರ ಪ್ರೊಫೈಲ್ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
+        }.get(language_key, "Showing the Vice Principal profile on screen.")
     return None
 
 
@@ -1052,6 +1065,10 @@ async def process_user_text_and_reply(
                     intent = INTENT_DEPARTMENT_FEES
                 elif frontend_trigger == "documents":
                     intent = INTENT_DOCUMENTS
+                elif frontend_trigger in {"principal_profile", "principal"}:
+                    intent = INTENT_PRINCIPAL_PROFILE
+                elif frontend_trigger in {"vice_principal_profile", "vice_principal"}:
+                    intent = INTENT_VICE_PRINCIPAL_PROFILE
                 frontend_dept = local_intent.get("departmentLabel")
                 if frontend_dept and not detected_department:
                     detected_department = str(frontend_dept)
@@ -1065,6 +1082,8 @@ async def process_user_text_and_reply(
                     intent = INTENT_DEPARTMENT_FEES if detected_department else INTENT_ADMISSIONS
                 elif frontend_trigger == "documents" and intent == INTENT_NORMAL_QUERY:
                     intent = INTENT_DOCUMENTS
+
+            intent = maybe_override_intent_with_executive_profile(intent, merged_for_features)
 
         rag_query = query_en
         llm_user_text = query_en
@@ -1572,6 +1591,10 @@ async def process_user_text_and_reply(
             show_card = "documents"
             assistant_msg["text"] = _documents_card_direct_reply(lang_key)
             assistant_msg["isHidden"] = True
+        elif intent == INTENT_PRINCIPAL_PROFILE:
+            show_card = "principal_profile"
+        elif intent == INTENT_VICE_PRINCIPAL_PROFILE:
+            show_card = "vice_principal_profile"
         elif intent == INTENT_DEPARTMENT_COMPARISON:
             show_card = "department_comparison"
 

@@ -9,9 +9,11 @@ from backend.services.answer_generation import (
     INTENT_HOD_PROFILE,
     INTENT_NORMAL_QUERY,
     INTENT_PLACEMENTS,
+    INTENT_PRINCIPAL_PROFILE,
     card_trigger_hints,
     extract_features,
     get_off_topic_reply,
+    maybe_override_intent_with_executive_profile,
     resolve_intent_from_features,
 )
 
@@ -26,13 +28,17 @@ class GoldenQueryMatrixTests(unittest.TestCase):
         ("placement details", INTENT_PLACEMENTS, None, "placements"),
         ("what are the courses", INTENT_COURSE_MENU, None, "course_menu"),
         ("college location", INTENT_NORMAL_QUERY, None, None),
+        ("who is the principal", INTENT_PRINCIPAL_PROFILE, None, "principal_profile"),
     ]
 
     def test_common_receptionist_intents_route_to_expected_cards(self) -> None:
         for text, expected_intent, expected_dept, expected_card in self.CASES:
             with self.subTest(text=text):
                 features = extract_features(text)
-                intent = resolve_intent_from_features(features)
+                intent = maybe_override_intent_with_executive_profile(
+                    resolve_intent_from_features(features),
+                    text,
+                )
                 hints = card_trigger_hints(intent, {"department": features.department_name})
 
                 self.assertEqual(intent, expected_intent)
