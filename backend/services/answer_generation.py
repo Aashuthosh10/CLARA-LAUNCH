@@ -790,6 +790,8 @@ _COMPARISON_DEPT_ALIASES: dict[str, list[str]] = {
         "cse ai ml",
         "ai ml",
         "aiml",
+        "aml",
+        "a i m l",
         "artificial intelligence",
     ],
     "CSE (Cyber Security)": [
@@ -915,6 +917,8 @@ def _comparison_intent_substrings_hits(normalized_joined: str) -> bool:
         "ಯಾವುದು ಉತ್ತಮ",
         "ಯಾವ ಕೋರ್ಸ್",
         "ಉತ್ತಮ",
+        "ನನ್ನ ಮಗುವಿಗೆ",
+        "ಯಾವುದು ತಗೆದುಕೊಳ್ಳಬೇಕು",
         # Hindi
         "antar",
         "फर्क",
@@ -923,18 +927,28 @@ def _comparison_intent_substrings_hits(normalized_joined: str) -> bool:
         "कौन सा बेहतर",
         "कौन सा अच्छा",
         "मेरे बच्चे",
+        "कौन सा कोर्स",
+        "अंतर बताओ",
         # Tamil
         "வித்தியாசம்",
         "ஒப்பிடு",
         "எது சிறந்த",
+        "என் குழந்தைக்கு",
+        "எது சிறந்தது",
         # Telugu
         "తేడా",
         "పోల్చు",
         "ఏది మంచిది",
+        "నా పిల్లలకు",
+        "ఏ కోర్సు మంచిది",
         # Malayalam
         "വ്യത്യാസം",
         "താരതമ്യം",
         "ഏതാണ് നല്ലത്",
+        "എന്റെ കുട്ടിക്ക്",
+        "ഏത് കോഴ്സ് നല്ലത്",
+        "സ്‌കോപ്പ്",
+        "ഭാവി മൂല്യം",
     ]
     return any(c in n for c in cues)
 
@@ -1451,9 +1465,11 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         "course",
         "courses",
         "program",
+        "programs",
         "branch",
-        "department",
-        "departments",
+        "branches",
+        # Omit bare "department(s)" — it matches exploratory lines like “tell me about the data …
+        # department”, which must route to DEPARTMENT_OVERVIEW, not course menu (see comparator tests).
         "course enu",
         "courses en ide",
         "course kya",
@@ -1499,6 +1515,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
             "cse ai ml",
             "ai ml",
             "aiml",
+            "aml",
         ],
         "CSE (Cyber Security)": [
             "cse cyber security",
@@ -1587,6 +1604,9 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         return False
 
     is_course_query = _matches_course_intent(token_and_phrase_units, course_keywords)
+    # Phrase-level course menu (listings) without relying on the token "department" alone.
+    if not is_course_query and _is_course_menu_query(normalized):
+        is_course_query = True
     documents_flag = is_documents_query(raw) or _matches_documents_intent(
         token_and_phrase_units, documents_keywords
     )
@@ -2441,15 +2461,15 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
             + "\n\n"
             + rag_language_enforcement_directive(language)
             + "\n\n"
-            "A rich department comparison table is on screen (2–3 programs). "
-            "You are a concise admissions counselor. In 2–3 short sentences ONLY, summarize the sharpest contrasts "
-            "that answer the user's question, using STRICTLY the FACTS in the comparison sheet below. "
-            "Do NOT invent salary numbers or placement statistics not present in the sheet. "
-            "If recommend_focus suggests placements, future growth, ease, or fit for a younger student, lean gently "
-            "toward the highlight_id program when the data supports it—otherwise stay neutral. "
-            "Plain text only. No markdown or bullets.\n"
+            "A friendly 3-topic comparison is on screen for 2–3 programs (what students learn in four years; future job directions; outlook for roughly the next five to ten years). "
+            "You sound like CLARA helping a family choose a path — warm, plain language, zero spreadsheet tone. "
+            "In two or three SHORT sentences ONLY, contrast the programs using STRICTLY the facts below. "
+            "Do NOT invent salaries, percentages, rankings, or placement numbers. "
+            "If recommend_focus suggests placements, future growth, ease, or fit for a younger student, lean gently toward the highlight "
+            "when the insights support it; otherwise stay neutral. "
+            "Plain text only. No markdown or bullet lists.\n"
             + MULTI_ENTITY_RULE
-            + "\n\nDepartment comparison sheet:\n"
+            + "\n\nProgram comparison insights:\n"
         )
         return f"{prefix}{ctx}" if ctx else prefix.rstrip()
     # NORMAL_QUERY

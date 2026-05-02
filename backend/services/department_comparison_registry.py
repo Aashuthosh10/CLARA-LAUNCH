@@ -61,40 +61,61 @@ def validate_department_ids(ids: list[str]) -> list[str]:
 
 
 def build_comparison_context_for_llm(department_ids: list[str], *, lang_key: str | None = None) -> str:
-    """Compact English-oriented facts for the LLM (cells.en preferred)."""
+    """Structured insight context for the LLM: three sections × N programs (schema v2)."""
     reg = load_comparison_registry()
     deps = reg.get("departments")
     row_order = reg.get("row_order")
+    row_labels = reg.get("row_labels")
     if not isinstance(deps, dict) or not department_ids:
         return ""
     rows = row_order if isinstance(row_order, list) else []
-    lines: list[str] = []
     lk = (lang_key or "en").strip().lower()
     if lk not in ("en", "kn", "hi", "ta", "te", "ml"):
         lk = "en"
 
-    for did in department_ids:
+    labels_map = row_labels if isinstance(row_labels, dict) else {}
+
+    lines: list[str] = [
+        "On-screen comparison uses three short parent-friendly insight sections per program (learning, jobs, 5–10 year scope). "
+        "Use ONLY these facts; do not invent placements or salaries.",
+    ]
+
+    def dept_title(did: str) -> str:
         block = deps.get(did)
         if not isinstance(block, dict):
-            continue
+            return did
         title = did
         dn = block.get("display_names")
         if isinstance(dn, dict):
             tv = dn.get(lk) or dn.get("en")
             if isinstance(tv, str) and tv.strip():
                 title = tv.strip()
-        lines.append(f"=== {title} ({did}) ===")
-        cells = block.get("cells")
-        if not isinstance(cells, dict):
-            continue
-        for rk in rows:
-            rkey = str(rk)
+        return title
+
+    for rk in rows:
+        rkey = str(rk)
+        lab_entry = labels_map.get(rkey)
+        lab_row = lab_entry if isinstance(lab_entry, dict) else {}
+        section_title = ""
+        if isinstance(lab_row, dict):
+            section_title = str(lab_row.get(lk) or lab_row.get("en") or "").strip()
+        if not section_title:
+            section_title = rkey.replace("_", " ").title()
+        lines.append("")
+        lines.append(f"## {section_title}")
+        for did in department_ids:
+            block = deps.get(did)
+            if not isinstance(block, dict):
+                continue
+            cells = block.get("cells")
+            if not isinstance(cells, dict):
+                continue
             cell = cells.get(rkey)
             if not isinstance(cell, dict):
                 continue
             val = cell.get(lk) or cell.get("en") or ""
             if not isinstance(val, str) or not val.strip():
                 continue
-            lines.append(f"- {rkey}: {val.strip()}")
-        lines.append("")
+            lines.append(f"- {dept_title(did)}: {val.strip()}")
+
     return "\n".join(lines).strip()

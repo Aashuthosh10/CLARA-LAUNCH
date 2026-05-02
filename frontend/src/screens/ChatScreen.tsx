@@ -4,6 +4,7 @@ import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import fullTextBgImage from '../assets/full_text_bg.png';
+import collegeBrochurePdfUrl from '../assets/College brochure/svit_brochure.pdf?url';
 import {
   type ChatMessage,
   type OrbState,
@@ -330,6 +331,8 @@ interface ChatScreenProps {
   onOrbTap: () => void;
   /** Kiosk: reset 1-minute inactivity-to-sleep timer on real user intent. */
   onChatUserActivity?: () => void;
+  /** When true, App pauses chat→sleep idle countdown (e.g. college brochure overlay). */
+  onChatIdleOverlayChange?: (active: boolean) => void;
   sendMessage: (msg: object) => void;
   /** When true, discard payload-driven updates (ghost session prevention). */
   isPayloadStale?: (p: unknown) => boolean;
@@ -349,6 +352,7 @@ export default function ChatScreen({
   onHome,
   onOrbTap,
   onChatUserActivity,
+  onChatIdleOverlayChange,
   sendMessage,
   isPayloadStale,
 }: ChatScreenProps) {
@@ -404,6 +408,17 @@ export default function ChatScreen({
   const [faqCarouselIndex, setFaqCarouselIndex] = useState(0);
   const [isFaqCarouselPaused, setIsFaqCarouselPaused] = useState(false);
   const [isBrochureOpen, setIsBrochureOpen] = useState(false);
+
+  useEffect(() => {
+    onChatIdleOverlayChange?.(isBrochureOpen);
+  }, [isBrochureOpen, onChatIdleOverlayChange]);
+
+  useEffect(
+    () => () => {
+      onChatIdleOverlayChange?.(false);
+    },
+    [onChatIdleOverlayChange],
+  );
   const tickerX = useMotionValue(0);
   const isResponsePending = isProcessing || Boolean(payload?.audioPending);
   const ensureSuggestions = useCallback(
@@ -1110,7 +1125,7 @@ export default function ChatScreen({
     ) {
       cardTrigger = 'department_comparison';
     }
-    
+
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
     const localDeptLabel = null;
@@ -1744,16 +1759,23 @@ export default function ChatScreen({
   }, [payload, language, isPayloadStale, ensureSuggestions]);
 
   useEffect(() => {
-    if (faqSuggestions.length <= 1 || isFaqCarouselPaused || isBrochureOpen) return;
+    if (departmentComparisonOpen || faqSuggestions.length <= 1 || isFaqCarouselPaused || isBrochureOpen)
+      return;
     const maxIndex = Math.max(0, faqSuggestions.length - 1);
     const timer = setInterval(() => {
       setFaqCarouselIndex((index) => (index >= maxIndex ? 0 : index + 1));
     }, FAQ_CAROUSEL_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [faqSuggestions.length, isFaqCarouselPaused, isBrochureOpen]);
+  }, [
+    departmentComparisonOpen,
+    faqSuggestions.length,
+    isFaqCarouselPaused,
+    isBrochureOpen,
+  ]);
 
   useAnimationFrame((_time, delta) => {
     if (
+      departmentComparisonOpen ||
       !faqSuggestions.length ||
       isFaqCarouselPaused ||
       isBrochureOpen ||
@@ -1986,8 +2008,7 @@ export default function ChatScreen({
       : latestTextAssistantMsg;
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
-    isLanguageGateOpen ||
-    isResponsePending;
+    isLanguageGateOpen || isResponsePending || departmentComparisonOpen;
   const submitFaqSuggestion = useCallback(
     (_id: string, question: string) => {
       stopListening();
@@ -2104,6 +2125,7 @@ export default function ChatScreen({
   }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
 
   const renderFaqCarousel = (placement: 'full' | 'panel') => {
+    if (placement === 'full' && departmentComparisonOpen) return null;
     if (placement === 'panel') {
       const activeSuggestion = faqSuggestions[faqCarouselIndex % faqSuggestions.length];
       if (!activeSuggestion) return null;
@@ -2217,6 +2239,7 @@ export default function ChatScreen({
           whileTap={{ scale: 0.97 }}
           onClick={() => {
             if (isCampusNavigationStage) returnToChatFromCampus();
+            onChatUserActivity?.();
             setIsBrochureOpen(true);
           }}
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
@@ -2225,59 +2248,6 @@ export default function ChatScreen({
           College Brochure
         </motion.button>
       </motion.div>
-
-      <AnimatePresence>
-        {isBrochureOpen && (
-          <motion.div
-            key="college-brochure-modal"
-            className="brochure-modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsBrochureOpen(false)}
-          >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="brochure-title"
-              className="brochure-modal-card"
-              initial={{ opacity: 0, y: 34, scale: 0.94, filter: 'blur(12px)' }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, y: 18, scale: 0.96, filter: 'blur(10px)' }}
-              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                className="brochure-modal-close"
-                onClick={() => setIsBrochureOpen(false)}
-                aria-label="Close college brochure"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <div className="brochure-modal-icon">
-                <FileText className="h-8 w-8" />
-              </div>
-              <h2 id="brochure-title">College Brochure</h2>
-              <p>
-                Preview the latest SVIT college brochure here.
-              </p>
-              <object
-                aria-label="College Brochure PDF Viewer"
-                data="/college-brochure.pdf"
-                type="application/pdf"
-                className="brochure-modal-frame"
-              >
-                <div className="brochure-modal-fallback">
-                  <FileText className="h-10 w-10" />
-                  <strong>Brochure preview</strong>
-                  <span>The PDF viewer is ready for /college-brochure.pdf.</span>
-                </div>
-              </object>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ─── GLOBAL CINEMATIC BACKGROUND ─── */}
       <div 
@@ -2422,20 +2392,6 @@ export default function ChatScreen({
                 recommendFocus={comparisonRecommendFocus}
                 onClose={handleCloseDepartmentComparison}
               />
-
-              {departmentComparisonOpen ? (
-                <motion.div layoutId="orb-container" className="full-text-orb-dock">
-                  {renderFaqCarousel('full')}
-                  <ChatOrbControl
-                    orbState={orbState}
-                    isProcessing={isResponsePending}
-                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
-                    onTap={handleOrbTap}
-                    comparisonMode
-                    bottomClassName="absolute -bottom-9 left-1/2 -translate-x-1/2 w-full text-center"
-                  />
-                </motion.div>
-              ) : null}
             </motion.div>
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
@@ -2595,6 +2551,90 @@ export default function ChatScreen({
               </motion.aside>
             </motion.div>
           )}
+      </AnimatePresence>
+
+      {/* Comparison mode: orb lives outside the FULL_TEXT motion wrapper so position:fixed is viewport-anchored
+          (transform on layoutId/main would otherwise trap fixed positioning and overlap the panel). */}
+      {layoutMode === 'FULL_TEXT' && departmentComparisonOpen ? (
+        <div className="full-text-comparison-orb-layer">
+          <ChatOrbControl
+            orbState={orbState}
+            isProcessing={isResponsePending}
+            amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+            onTap={handleOrbTap}
+            comparisonMode
+            bottomClassName="pointer-events-none mt-1 w-full text-center"
+          />
+        </div>
+      ) : null}
+
+      <AnimatePresence>
+        {isBrochureOpen && (
+          <motion.div
+            key="college-brochure-modal"
+            className="brochure-modal-backdrop"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+            onClick={() => {
+              onChatUserActivity?.();
+              setIsBrochureOpen(false);
+            }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="brochure-title"
+              className="brochure-modal-card"
+              initial={{ opacity: 0, y: 28, scale: 0.94, filter: 'blur(12px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: 14, scale: 0.97, filter: 'blur(8px)' }}
+              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="brochure-modal-close"
+                onClick={() => {
+                  onChatUserActivity?.();
+                  setIsBrochureOpen(false);
+                }}
+                aria-label="Close college brochure"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <header className="brochure-modal-head">
+                <div className="brochure-modal-head-row">
+                  <FileText className="brochure-modal-head-icon" aria-hidden />
+                  <div className="brochure-modal-head-text">
+                    <h2 id="brochure-title">College Brochure</h2>
+                    <p className="brochure-modal-sub">Latest SVIT brochure — use viewer controls to zoom.</p>
+                  </div>
+                </div>
+              </header>
+              <object
+                aria-label="College Brochure PDF Viewer"
+                data={`${collegeBrochurePdfUrl}#view=FitH`}
+                type="application/pdf"
+                className="brochure-modal-frame"
+              >
+                <div className="brochure-modal-fallback">
+                  <FileText className="h-10 w-10" />
+                  <strong>Brochure preview</strong>
+                  <span>
+                    Open{' '}
+                    <a href={collegeBrochurePdfUrl} download className="text-[#2a115c] underline">
+                      svit_brochure.pdf
+                    </a>
+                    .
+                  </span>
+                </div>
+              </object>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

@@ -17,7 +17,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'Remove',
     compareHeading: 'Program comparison',
     pickDept: 'Select program',
-    swipeHint: 'Swipe horizontally on smaller screens.',
+    swipeHint: 'Insight cards scroll if needed.',
     highlighted: 'Recommended focus',
   },
   Kannada: {
@@ -26,7 +26,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'ತೆಗೆ',
     compareHeading: 'ಕಾರ್ಯಕ್ರಮ ಹೋಲಿಕೆ',
     pickDept: 'ಕಾರ್ಯಕ್ರಮ ಆರಿಸಿ',
-    swipeHint: 'ಲಂಬವಾದ ಪರದೆಯಲ್ಲಿ ಅಡ್ಡಸಾಲಿಗೆ ಸ్వೈಪ್ ಮಾಡಿ.',
+    swipeHint: 'ಅಗತ್ಯವಿದ್ದಲ್ಲಿ ಇನ್‍ಸೈಟ್ ಕಾರ್ಡ್‍ಗಳನ್ನು ಸ್ಕ್ರೋಲ್ ಮಾಡಿ.',
     highlighted: 'ಶಿಫಾರಸು',
   },
   Hindi: {
@@ -35,7 +35,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'हटाएँ',
     compareHeading: 'कार्यक्रम तुलना',
     pickDept: 'कार्यक्रम चुनें',
-    swipeHint: 'छोटी स्क्रीन पर क्षैतिज स्वाइप करें।',
+    swipeHint: 'ज़रूरत हो तो कार्ड्स स्क्रॉल करें।',
     highlighted: 'सिफारिश',
   },
   Tamil: {
@@ -44,7 +44,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'அகற்று',
     compareHeading: 'திட்ட ஒப்பீடு',
     pickDept: 'திட்டத்தைத் தேர்வு செய்',
-    swipeHint: 'சிறிய திரையில் கிடைமட்டமாக ஸ்வைப் செய்யவும்.',
+    swipeHint: 'தேவைப்பட்டால் அட்டைகளை உருளவும்.',
     highlighted: 'பரிந்துரை',
   },
   Telugu: {
@@ -53,7 +53,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'తొలగించు',
     compareHeading: 'ప్రొగ్రాం పోలిక',
     pickDept: 'ప్రొగ్రాం ఎంచుకోండి',
-    swipeHint: 'చిన్న స్క్రీన్‌లో అడ్డంగా స్వైప్ చేయండి.',
+    swipeHint: 'అవసరమైతే కార్డులను స్క్రోల్ చేయండి.',
     highlighted: 'సిఫార్సు',
   },
   Malayalam: {
@@ -62,7 +62,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'നീക്കം ചെയ്യുക',
     compareHeading: 'പ്രോഗ്രാം താരതമ്യം',
     pickDept: 'പ്രോഗ്രാം തിരഞ്ഞെടുക്കുക',
-    swipeHint: 'ചെറിയ സ്ക്രീനിൽ തിരശ്ചീനമായി സ്വൈപ്പ് ചെയ്യുക.',
+    swipeHint: 'ആവശ്യമുണ്ടെങ്കിൽ കാർഡുകൾ സ്ക്രോൾ ചെയ്യുക.',
     highlighted: 'നിർദ്ദേശം',
   },
 };

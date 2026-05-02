@@ -95,6 +95,8 @@ function ClaraKioskRuntime({
 
   const chatIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatInactivityGenerationRef = useRef(0);
+  /** Brochure (and similar overlays) suppress kiosk sleep — PDF viewing is intentional activity. */
+  const [suppressChatIdleForOverlay, setSuppressChatIdleForOverlay] = useState(false);
 
   const clearChatUserInactivityTimer = useCallback(() => {
     if (chatIdleTimerRef.current !== null) {
@@ -157,9 +159,18 @@ function ClaraKioskRuntime({
       clearChatUserInactivityTimer();
       return;
     }
+    if (suppressChatIdleForOverlay) {
+      clearChatUserInactivityTimer();
+      return clearChatUserInactivityTimer;
+    }
     scheduleChatUserInactivityTimer();
     return clearChatUserInactivityTimer;
-  }, [effectiveState, scheduleChatUserInactivityTimer, clearChatUserInactivityTimer]);
+  }, [
+    effectiveState,
+    suppressChatIdleForOverlay,
+    scheduleChatUserInactivityTimer,
+    clearChatUserInactivityTimer,
+  ]);
 
   useEffect(() => {
     if (effectiveState === 0) {
@@ -297,6 +308,7 @@ function ClaraKioskRuntime({
                   sendMessage({ action: 'mic_start' });
                 }}
                 onChatUserActivity={reportChatUserActivity}
+                onChatIdleOverlayChange={setSuppressChatIdleForOverlay}
                 sendMessage={sendMessage}
               />
             </Fragment>

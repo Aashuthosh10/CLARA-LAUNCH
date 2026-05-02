@@ -21,6 +21,18 @@ const COMPARISON_CUE_SUBSTRINGS = [
   'side by side',
   'between ',
   ' placements ',
+  'best course for',
+  'for my child',
+  'good for my child',
+  'hosadu',
+  'honadu',
+  'ಹೋಲಿಕೆ',
+  'ವ್ಯತ್ಯಾಸ',
+  'तुलना',
+  'फर्क',
+  'ஒப்பிடு',
+  'తేడా',
+  'വ്യത്യാസം',
 ];
 
 const DEPT_TRIGGERS: [string, DepartmentJsonKey][] = [
@@ -32,6 +44,7 @@ const DEPT_TRIGGERS: [string, DepartmentJsonKey][] = [
   ['ai and ml', 'cse_aiml'],
   ['ai & ml', 'cse_aiml'],
   ['aiml', 'cse_aiml'],
+  ['aml', 'cse_aiml'],
   ['artificial intelligence', 'cse_aiml'],
   ['machine learning', 'cse_aiml'],
   ['cse cyber security', 'cse_cysec'],

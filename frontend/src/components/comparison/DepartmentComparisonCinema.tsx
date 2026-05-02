@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Plus, X } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Language } from '../../context/LanguageContext';
 import { DEPARTMENT_JSON_KEY_ORDER } from '../../lib/collegeLocaleUtils';
 import comparisonRegistry from '../../data/departmentComparison.json';
@@ -142,7 +142,7 @@ export default function DepartmentComparisonCinema({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="comparison-embed-slot z-20 flex w-full flex-1 flex-col items-stretch px-1 sm:px-2.5"
+          className="comparison-embed-slot flex w-full flex-1 flex-col items-stretch px-1 sm:px-3"
         >
           {/* Absorb upper flex space so the panel sits low above the orb */}
           <div className="comparison-embed-leading-filler" aria-hidden />
@@ -152,19 +152,19 @@ export default function DepartmentComparisonCinema({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.52, ease: [0.16, 1, 0.3, 1] }}
-            className="comparison-embed-panel-shell mx-auto flex w-full max-w-[min(99vw,calc(80rem+18rem))] min-h-0 shrink-0 flex-col"
+            className="comparison-embed-panel-shell flex min-h-0 shrink-0 flex-col"
           >
-            <div className="department-comparison-panel relative mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[1.75rem]">
+            <div className="department-comparison-panel relative mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[2rem]">
             <div className="department-comparison-panel-glow pointer-events-none absolute inset-0" aria-hidden />
 
-            <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-4 px-7 pb-6 pt-7 sm:px-12 sm:pb-7 sm:pt-9">
+            <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-5 px-8 pb-7 pt-8 sm:gap-6 sm:px-14 sm:pb-8 sm:pt-10">
               <div className="min-w-0 pr-2">
                 <p className="department-comparison-eyebrow">{chrome.compareHeading}</p>
                 <h2 id="comparison-cinema-title" className="department-comparison-title mt-2 text-balance">
                   {dynamicTitle}
                 </h2>
                 {recommendFocus && recommendFocus !== 'generic' ? (
-                  <p className="department-comparison-focus mt-2 text-sm capitalize text-slate-600">
+                  <p className="department-comparison-focus mt-2.5 capitalize text-slate-600">
                     {chrome.highlighted}: {recommendFocus}
                   </p>
                 ) : null}
@@ -177,12 +177,12 @@ export default function DepartmentComparisonCinema({
                 aria-label={chrome.close}
                 className="department-comparison-close"
               >
-                <X className="h-5 w-5 text-slate-500" strokeWidth={2} aria-hidden />
+                <X className="h-6 w-6 text-slate-500" strokeWidth={2} aria-hidden />
               </motion.button>
             </header>
 
-            <div className="relative flex flex-wrap items-center gap-4 px-7 pb-5 sm:px-12 sm:pb-5">
-              <div className="flex flex-wrap gap-3.5 sm:gap-4">
+            <div className="relative flex flex-wrap items-center gap-5 px-8 pb-6 sm:gap-6 sm:px-14 sm:pb-6">
+              <div className="flex flex-wrap gap-4 sm:gap-5">
                 {selectedIds.map((id, idx) => (
                   <div key={`${id}-${idx}`} className="flex items-center gap-2">
                     <label className="sr-only">
@@ -192,7 +192,6 @@ export default function DepartmentComparisonCinema({
                       value={id}
                       onChange={(e) => setDeptAt(idx, e.target.value)}
                       className="department-comparison-select"
-                      style={{ fontSize: 'max(13px,min(2.1vmin,17px))' }}
                     >
                       {validDeptIds.map((did) => (
                         <option key={did} value={did}>
@@ -206,9 +205,9 @@ export default function DepartmentComparisonCinema({
                         whileTap={{ scale: 0.95 }}
                         aria-label={`${chrome.removeDept} ${deptLabel(id)}`}
                         onClick={() => removeDept(idx)}
-                        className="rounded-lg border border-rose-200/80 bg-rose-50/90 p-2 text-rose-600 shadow-sm transition-colors hover:bg-rose-100/95"
+                        className="department-comparison-remove-slot rounded-xl border border-rose-200/80 bg-rose-50/90 text-rose-600 shadow-sm transition-colors hover:bg-rose-100/95"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-5 w-5" aria-hidden />
                       </motion.button>
                     ) : null}
                   </div>
@@ -222,86 +221,94 @@ export default function DepartmentComparisonCinema({
                   onClick={addDept}
                   className="department-comparison-add-dept inline-flex items-center gap-2"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5 shrink-0" aria-hidden />
                   {chrome.addDept}
                 </motion.button>
               ) : null}
             </div>
 
-            <div className="department-comparison-scroll relative min-h-0 flex-1 overflow-auto px-5 pb-9 sm:px-12 sm:pb-11 [-webkit-overflow-scrolling:touch]">
-              <div className="mx-auto pb-6">
-                <p className="department-comparison-hint mb-6 text-center text-xs sm:text-[13px]">{chrome.swipeHint}</p>
+            <div className="department-comparison-scroll relative min-h-0 flex-1 overflow-auto px-6 sm:px-14 [-webkit-overflow-scrolling:touch]">
+              <div className="comparison-insight-stack mx-auto pb-8 sm:pb-10">
+                <p className="department-comparison-hint mb-6 text-center sm:mb-7">{chrome.swipeHint}</p>
+
                 <div
-                  className="department-comparison-matrix grid gap-x-6 gap-y-3.5 sm:gap-x-10 sm:gap-y-5"
+                  className="comparison-insight-colheaders-grid mb-4 grid gap-6 sm:mb-5 sm:gap-8"
                   style={{
-                    gridTemplateColumns: `minmax(158px,0.52fr) repeat(${selectedIds.length}, minmax(184px,1fr))`,
+                    gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
                   }}
                 >
-                  <div />
                   {selectedIds.map((id, colIdx) => {
                     const isHi = highlightId === id;
                     return (
                       <motion.div
-                        key={id + colIdx}
-                        initial={{ opacity: 0, y: 8 }}
+                        key={`head-${id}-${colIdx}`}
+                        initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.04 * colIdx, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                        className={`department-comparison-col-head rounded-xl px-4 py-4 text-center sm:px-6 sm:py-6 ${
+                        transition={{ delay: 0.03 * colIdx, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                        className={`department-comparison-col-head rounded-xl px-5 py-4 text-center sm:px-6 sm:py-5 ${
                           isHi ? 'department-comparison-col-head--highlight' : ''
                         }`}
                       >
-                        <span
-                          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-800 sm:text-sm sm:tracking-[0.16em]"
-                          style={{ fontSize: 'max(11px,min(1.9vmin,16px))' }}
-                        >
-                          {deptLabel(id)}
-                        </span>
+                        <span className="department-comparison-col-head-title">{deptLabel(id)}</span>
                         {isHi ? (
-                          <div className="department-comparison-highlight-badge mt-2 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                            {chrome.highlighted}
-                          </div>
+                          <div className="department-comparison-highlight-badge uppercase">{chrome.highlighted}</div>
                         ) : null}
                       </motion.div>
                     );
                   })}
-                  {REG.row_order.map((rowKey, rowIdx) => (
-                    <Fragment key={rowKey}>
-                      <motion.div
-                        initial={{ opacity: 0, x: -4 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.02 * rowIdx, duration: 0.32 }}
-                        className="department-comparison-row-label sticky left-0 z-[2]"
-                        style={{
-                          alignSelf: 'stretch',
-                          fontSize: 'max(11px,min(2vmin,13px))',
-                        }}
+                </div>
+
+                <div className="comparison-insight-section-list flex flex-col gap-12 sm:gap-[3.75rem]">
+                  {REG.row_order.map((rowKey, sectionIdx) => (
+                    <motion.section
+                      key={rowKey}
+                      aria-labelledby={`comparison-section-${rowKey}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.04 * sectionIdx, duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                      className="comparison-insight-section rounded-[1.35rem] border border-white/55 bg-white/35 px-5 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-md sm:px-9 sm:py-10"
+                    >
+                      <h3
+                        id={`comparison-section-${rowKey}`}
+                        className="comparison-insight-section-title text-balance"
                       >
                         {localizedCell(REG.row_labels[rowKey], lc)}
-                      </motion.div>
-                      {selectedIds.map((did, ci) => {
-                        const dept = REG.departments[did];
-                        const cells = dept?.cells ?? {};
-                        const isHiCol = highlightId === did;
-                        return (
-                          <motion.div
-                            key={`${rowKey}-${did}-${ci}`}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.03 + 0.012 * rowIdx + 0.035 * ci, duration: 0.34 }}
-                            className={`department-comparison-cell rounded-lg px-4 py-5 sm:px-6 sm:py-6 ${
-                              isHiCol ? 'department-comparison-cell--highlight' : ''
-                            }`}
-                            style={{
-                              fontSize: 'max(13px,min(2.08vmin,17px))',
-                              lineHeight: 1.55,
-                              minHeight: '5rem',
-                            }}
-                          >
-                            {localizedCell(cells[rowKey] as Partial<Record<ComparisonLangCode, string>> | undefined, lc)}
-                          </motion.div>
-                        );
-                      })}
-                    </Fragment>
+                      </h3>
+                      <div
+                        className="comparison-insight-grid mt-6 grid gap-5 sm:mt-8 sm:gap-7"
+                        style={{
+                          gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
+                        }}
+                      >
+                        {selectedIds.map((did, ci) => {
+                          const dept = REG.departments[did];
+                          const cells = dept?.cells ?? {};
+                          const isHiCol = highlightId === did;
+                          const body = localizedCell(
+                            cells[rowKey] as Partial<Record<ComparisonLangCode, string>> | undefined,
+                            lc,
+                          );
+                          return (
+                            <motion.div
+                              key={`${rowKey}-${did}-${ci}`}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{
+                                delay: 0.04 + 0.02 * sectionIdx + 0.03 * ci,
+                                duration: 0.36,
+                                ease: [0.22, 1, 0.36, 1],
+                              }}
+                              className={`comparison-insight-card rounded-[1rem] px-5 py-6 sm:px-7 sm:py-8 ${
+                                isHiCol ? 'comparison-insight-card--highlight' : ''
+                              }`}
+                            >
+                              <p className="comparison-insight-card-dept">{deptLabel(did)}</p>
+                              <div className="comparison-insight-card-body whitespace-pre-line">{body}</div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.section>
                   ))}
                 </div>
               </div>

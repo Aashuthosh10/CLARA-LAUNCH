@@ -1123,9 +1123,9 @@ async def process_user_text_and_reply(
             if is_broad_course_menu:
                 intent = INTENT_COURSE_MENU
 
-        # Recover comparison when broad routing (e.g. course-menu heuristics / location downgrade)
-        # masks a clear two-program contrast; single-department "tell me about …" flows stay unaffected.
-        if intent in (INTENT_NORMAL_QUERY, INTENT_COURSE_MENU):
+        # Recover comparison when routing heuristics wrongly leave intent as NORMAL/COURSE_MENU or
+        # even DEPARTMENT_OVERVIEW (first matched program). Contrast cue + ≥2 programs ⇒ table, not a single card.
+        if intent in (INTENT_NORMAL_QUERY, INTENT_COURSE_MENU, INTENT_DEPARTMENT_OVERVIEW):
             comp_recover_labels = extract_comparison_department_canonical_labels(merged_for_features)
             if len(comp_recover_labels) >= 2 and (
                 text_has_department_comparison_cue(merged_for_features)
