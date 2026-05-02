@@ -29,11 +29,20 @@ export type CampusFloor = {
   blocks: CampusBlock[];
 };
 
+/** Optional kiosk / default map origin marker in map pixel space. */
+export type CampusMapKiosk = {
+  floor_id: string;
+  x: number;
+  y: number;
+  label?: string;
+};
+
 export type CampusMapData = {
   version: string;
   institution: string;
   address?: string;
   coordinate_space?: { unit: string; note?: string };
+  kiosk?: CampusMapKiosk;
   floors: CampusFloor[];
 };
 
