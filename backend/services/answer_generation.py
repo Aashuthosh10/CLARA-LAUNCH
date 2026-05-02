@@ -374,6 +374,7 @@ INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_DEPARTMENT_FEES = "DEPARTMENT_FEES"
 INTENT_DOCUMENTS = "DOCUMENTS"
+INTENT_DEPARTMENT_COMPARISON = "DEPARTMENT_COMPARISON"
 # Backward-compatible alias for legacy imports.
 INTENT_FEES = INTENT_DEPARTMENT_FEES
 INTENT_NORMAL_QUERY = "NORMAL_QUERY"
@@ -748,6 +749,221 @@ class QueryFeatures:
     is_documents_query: bool
     is_placement_query: bool
     is_overview_query: bool
+    is_comparison_query: bool
+    is_comparison_recommendation: bool
+    comparison_department_names: tuple[str, ...]
+
+
+# Mirrors extract_features alias map — used to collect ALL department mentions in order.
+_COMPARISON_DEPT_ALIASES: dict[str, list[str]] = {
+    "CSE (Data Science)": [
+        "cse data science",
+        "cse datascience",
+        "data science",
+        "datascience",
+        "dtascience",
+        "ds",
+    ],
+    "CSE (AI & ML)": [
+        "cse ai ml",
+        "ai ml",
+        "aiml",
+        "artificial intelligence",
+    ],
+    "CSE (Cyber Security)": [
+        "cse cyber security",
+        "cyber security",
+        "cybersecurity",
+        "cyber",
+    ],
+    "CSE (Business Systems)": [
+        "cse business systems",
+        "business systems",
+    ],
+    "ISE": ["information science", "ise"],
+    "ECE": ["electronics", "ece"],
+    "Civil": ["civil"],
+    "Mechanical": ["mechanical", "mech"],
+    "MBA": ["mba", "business administration", "business studies"],
+    "Basic Sciences": ["basic sciences"],
+    "CSE": ["computer science", "computer science engineering", "cse", "csse"],
+}
+
+
+def extract_comparison_department_canonical_labels(text: str | None) -> list[str]:
+    """Return ordered unique canonical department labels (e.g. CSE (AI & ML)) mentioned in text."""
+    if not text or not isinstance(text, str):
+        return []
+    n = normalize_user_input(_inject_regional_department_tokens(text))
+    joined = f" {n} " if n else ""
+    dept_candidates: list[tuple[str, str]] = []
+    for dept_name, aliases in _COMPARISON_DEPT_ALIASES.items():
+        for alias in aliases:
+            dept_candidates.append((alias, dept_name))
+    dept_candidates.sort(key=lambda x: len(x[0]), reverse=True)
+    hits: list[tuple[int, str]] = []
+    for alias, dept_name in dept_candidates:
+        a = alias.strip()
+        if not a:
+            continue
+        start = 0
+        needle = f" {a} "
+        while joined and needle in joined[start:]:
+            idx = joined.find(needle, start)
+            if idx < 0:
+                break
+            hits.append((idx, dept_name))
+            start = idx + max(len(needle) // 2, 1)
+
+    hits.sort(key=lambda x: x[0])
+    out: list[str] = []
+    seen: set[str] = set()
+    for _, dept in hits:
+        if dept not in seen:
+            seen.add(dept)
+            out.append(dept)
+    lone = detect_department_name(text)
+    if lone and lone not in seen:
+        out.append(lone)
+    return out[:3]
+
+
+def _comparison_intent_substrings_hits(normalized_joined: str) -> bool:
+    """Substring cues for comparison / contrast / suitability (Latin + scripts)."""
+    n = normalized_joined
+    if not n:
+        return False
+    cues = [
+        # English
+        "compare",
+        "comparison",
+        "versus",
+        " vs ",
+        "difference",
+        "differnce",
+        "diffrence",
+        "differnec",
+        "different between",
+        "diff between",
+        "better than",
+        "which is better",
+        "which is best",
+        "which course",
+        "which branch",
+        "what is better",
+        "side by side",
+        "between ",
+        " v ",
+        "harder branch",
+        "easier branch",
+        "easier ",
+        "harder ",
+        "future scope",
+        " placements ",
+        "placement wise",
+        "salary",
+        " coding vs ",
+        " vs coding",
+        " ai vs ",
+        "security vs",
+        "analytics vs",
+        "good for my child",
+        "for my child",
+        "for my kid",
+        "suitability",
+        "suitable for",
+        "recommend you",
+        "which should i",
+        "which one should",
+        "confused between",
+        "help me choose",
+        "which stream",
+        "compare engineering",
+        # Kannada (Romanized + script snippets)
+        "hosadu",
+        "honadu",
+        "compare",
+        "difference",
+        "vyatyasa",
+        "ವ್ಯತ್ಯಾಸ",
+        "ಹೋಲಿಕೆ",
+        "ಯಾವುದು ಉತ್ತಮ",
+        "ಯಾವ ಕೋರ್ಸ್",
+        "ಉತ್ತಮ",
+        # Hindi
+        "antar",
+        "फर्क",
+        "अंतर",
+        "तुलना",
+        "कौन सा बेहतर",
+        "कौन सा अच्छा",
+        "मेरे बच्चे",
+        # Tamil
+        "வித்தியாசம்",
+        "ஒப்பிடு",
+        "எது சிறந்த",
+        # Telugu
+        "తేడా",
+        "పోల్చు",
+        "ఏది మంచిది",
+        # Malayalam
+        "വ്യത്യാസം",
+        "താരതമ്യം",
+        "ഏതാണ് നല്ലത്",
+    ]
+    return any(c in n for c in cues)
+
+
+def text_has_department_comparison_cue(text: str | None) -> bool:
+    """
+    True when user text clearly asks for contrast / comparison between options.
+    Used to recover DEPARTMENT_COMPARISON if earlier pipeline steps collapse intent to NORMAL/COURSE_MENU.
+    """
+    if not text or not isinstance(text, str):
+        return False
+    s = text.strip()
+    if not s:
+        return False
+    nx = normalize_user_input(s)
+    if nx and _comparison_intent_substrings_hits(f" {nx} "):
+        return True
+    low = s.lower()
+    return bool(
+        re.search(
+            r"\b(differences?|differen[tc]ce|differnce|diffrence|differnec|compares?|comparison|contrasts?|versus)\b",
+            low,
+        )
+        or re.search(r"\bvs\.?\b", low)
+        or (re.search(r"\bdiff\b", low) and re.search(r"\bbetween\b", low))
+    )
+
+
+def _comparison_recommendation_cue(normalized_joined: str, raw_lower: str) -> bool:
+    n = normalized_joined
+    r = raw_lower
+    phrases = [
+        "best for",
+        "which is best",
+        "which course is best",
+        "which branch is best",
+        "recommend a",
+        "recommend the",
+        "recommend me",
+        "should i choose",
+        "what would you recommend",
+        "career growth",
+        "more money",
+        "higher package",
+        "easy branch",
+        "difficult branch",
+        "ನನ್ನ ಮಗು",
+        "ಮಗುವಿಗೆ",
+        "बच्चे के लिए",
+        "குழந்தைக்கு",
+        "పిల్లలకు",
+        "കുട്ടിക്ക്",
+    ]
+    return any(p in n for p in phrases) or any(p in r for p in phrases)
 
 
 def _normalize_department_match_text(text: str | None) -> str:
@@ -831,10 +1047,6 @@ TRUSTEES_PROFILE_KEYWORDS = [
     "board of trustees",
     "founder trustee",
     "founder trustees",
-    "principal",
-    "principal name",
-    "who is principal",
-    "college principal",
 ]
 
 BOTH_PROFILE_KEYWORDS = [
@@ -1293,6 +1505,15 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         token_and_phrase_units, documents_keywords
     )
 
+    nx = normalize_user_input(raw)
+    comp_labels = extract_comparison_department_canonical_labels(raw)
+    comp_tuple = tuple(comp_labels[:3])
+    spaced_nx = f" {nx} " if nx else ""
+    is_comp_hit = bool(spaced_nx and _comparison_intent_substrings_hits(spaced_nx))
+    is_rec_hit = _comparison_recommendation_cue(spaced_nx, lowered)
+
+    is_comparison_query = len(comp_labels) >= 2 or is_comp_hit or is_rec_hit
+
     return QueryFeatures(
         has_department=has_department,
         department_name=detected_department,
@@ -1302,6 +1523,9 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         is_documents_query=documents_flag,
         is_placement_query=_is_placements_query(normalized),
         is_overview_query=_is_college_overview_query(normalized),
+        is_comparison_query=is_comparison_query,
+        is_comparison_recommendation=is_rec_hit,
+        comparison_department_names=comp_tuple,
     )
 
 
@@ -1697,6 +1921,8 @@ def resolve_intent_from_features(features: QueryFeatures) -> str:
         return INTENT_HOD_PROFILE
     if features.is_documents_query:
         return INTENT_DOCUMENTS
+    if features.is_comparison_query:
+        return INTENT_DEPARTMENT_COMPARISON
     if features.is_fee_query and features.has_department:
         return INTENT_DEPARTMENT_FEES
     if features.is_course_query:
@@ -1737,6 +1963,8 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
         return {"showCard": "trustees", "departmentId": None}
     if intent == INTENT_HOD_TRUSTEES_PROFILE:
         return {"showCard": ["hod", "trustees"], "departmentId": dept}
+    if intent == INTENT_DEPARTMENT_COMPARISON:
+        return {"showCard": "department_comparison", "departmentId": None}
     return {"showCard": None, "departmentId": dept}
 
 
@@ -1812,6 +2040,8 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
         return "course_menu"
     if intent == INTENT_DOCUMENTS:
         return "documents"
+    if intent == INTENT_DEPARTMENT_COMPARISON:
+        return "department_comparison"
     return None
 
 
@@ -1929,6 +2159,7 @@ def _coerce_preprocessor_intent(raw: str | None) -> str:
         "HOD_TRUSTEES_PROFILE": INTENT_HOD_TRUSTEES_PROFILE,
         "NORMAL_QUERY": INTENT_NORMAL_QUERY,
         "OFF_TOPIC": INTENT_OFF_TOPIC,
+        "DEPARTMENT_COMPARISON": INTENT_DEPARTMENT_COMPARISON,
     }
     return aliases.get(s, INTENT_NORMAL_QUERY)
 
@@ -2097,6 +2328,23 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
             "Reply in 2-3 very short sentences using only the context. No markdown or bullets.\n"
             + MULTI_ENTITY_RULE
             + "\n\nPlacements and training information:\n"
+        )
+        return f"{prefix}{ctx}" if ctx else prefix.rstrip()
+    if intent == INTENT_DEPARTMENT_COMPARISON:
+        prefix = (
+            CONCISE_VOICE_RULE
+            + "\n\n"
+            + rag_language_enforcement_directive(language)
+            + "\n\n"
+            "A rich department comparison table is on screen (2–3 programs). "
+            "You are a concise admissions counselor. In 2–3 short sentences ONLY, summarize the sharpest contrasts "
+            "that answer the user's question, using STRICTLY the FACTS in the comparison sheet below. "
+            "Do NOT invent salary numbers or placement statistics not present in the sheet. "
+            "If recommend_focus suggests placements, future growth, ease, or fit for a younger student, lean gently "
+            "toward the highlight_id program when the data supports it—otherwise stay neutral. "
+            "Plain text only. No markdown or bullets.\n"
+            + MULTI_ENTITY_RULE
+            + "\n\nDepartment comparison sheet:\n"
         )
         return f"{prefix}{ctx}" if ctx else prefix.rstrip()
     # NORMAL_QUERY

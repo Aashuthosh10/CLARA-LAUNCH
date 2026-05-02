@@ -1,5 +1,14 @@
 # CLARA Coding Agent Instructions
 
+## Mandatory context (read before substantive work)
+
+Treat the following as **authoritative narrative and invariants** for this repo. Read them **fully** at the start of a task session (not skimmed, not replaced by chat summaries alone):
+
+1. `AGENTS.md` (this document)
+2. `docs/CLARA_PROJECT_MEMORY.md`
+
+After that, use `README.md` and the file map in the sections below for the specific area you are changing.
+
 ## Project Identity
 
 - CLARA is a multilingual AI receptionist kiosk.

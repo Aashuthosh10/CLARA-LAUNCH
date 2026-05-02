@@ -263,7 +263,7 @@ Before declaring a release production-ready:
 
 ## Useful Files
 
-- Agent instructions: `AGENTS.md`
+- Agent instructions (read first): `AGENTS.md` — then full project context in `docs/CLARA_PROJECT_MEMORY.md`
 - Persistent project context: `docs/CLARA_PROJECT_MEMORY.md`
 - Current status: `docs/CURRENT_STATUS.md`
 - PostgreSQL setup: `docs/POSTGRES_SETUP.md`

@@ -1,5 +1,7 @@
 # CLARA Project Memory (Persistent Context)
 
+Coding agents should pair this document with **`AGENTS.md`** at the repo root (read both fully at task start).
+
 ## Project Identity
 
 - **Project:** CLARA - AI Receptionist Kiosk System

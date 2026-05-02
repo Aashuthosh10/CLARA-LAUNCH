@@ -1,0 +1,1803 @@
+{
+  "schema_version": 1,
+  "row_order": [
+    "main_focus",
+    "core_subjects",
+    "coding_intensity",
+    "ai_exposure",
+    "security_exposure",
+    "math_level",
+    "career_paths",
+    "placement_domains",
+    "higher_studies",
+    "industry_demand",
+    "real_world_applications",
+    "future_scope",
+    "best_suited_personality",
+    "innovation_scope",
+    "startup_opportunities",
+    "average_student_preference",
+    "recommended_for"
+  ],
+  "row_labels": {
+    "main_focus": {
+      "en": "Main focus",
+      "kn": "Main focus",
+      "hi": "Main focus",
+      "ta": "Main focus",
+      "te": "Main focus",
+      "ml": "Main focus"
+    },
+    "core_subjects": {
+      "en": "Core subjects",
+      "kn": "Core subjects",
+      "hi": "Core subjects",
+      "ta": "Core subjects",
+      "te": "Core subjects",
+      "ml": "Core subjects"
+    },
+    "coding_intensity": {
+      "en": "Coding intensity",
+      "kn": "Coding intensity",
+      "hi": "Coding intensity",
+      "ta": "Coding intensity",
+      "te": "Coding intensity",
+      "ml": "Coding intensity"
+    },
+    "ai_exposure": {
+      "en": "AI exposure",
+      "kn": "AI exposure",
+      "hi": "AI exposure",
+      "ta": "AI exposure",
+      "te": "AI exposure",
+      "ml": "AI exposure"
+    },
+    "security_exposure": {
+      "en": "Security exposure",
+      "kn": "Security exposure",
+      "hi": "Security exposure",
+      "ta": "Security exposure",
+      "te": "Security exposure",
+      "ml": "Security exposure"
+    },
+    "math_level": {
+      "en": "Math level",
+      "kn": "Math level",
+      "hi": "Math level",
+      "ta": "Math level",
+      "te": "Math level",
+      "ml": "Math level"
+    },
+    "career_paths": {
+      "en": "Career paths",
+      "kn": "Career paths",
+      "hi": "Career paths",
+      "ta": "Career paths",
+      "te": "Career paths",
+      "ml": "Career paths"
+    },
+    "placement_domains": {
+      "en": "Placement domains",
+      "kn": "Placement domains",
+      "hi": "Placement domains",
+      "ta": "Placement domains",
+      "te": "Placement domains",
+      "ml": "Placement domains"
+    },
+    "higher_studies": {
+      "en": "Higher studies",
+      "kn": "Higher studies",
+      "hi": "Higher studies",
+      "ta": "Higher studies",
+      "te": "Higher studies",
+      "ml": "Higher studies"
+    },
+    "industry_demand": {
+      "en": "Industry demand",
+      "kn": "Industry demand",
+      "hi": "Industry demand",
+      "ta": "Industry demand",
+      "te": "Industry demand",
+      "ml": "Industry demand"
+    },
+    "real_world_applications": {
+      "en": "Real-world applications",
+      "kn": "Real-world applications",
+      "hi": "Real-world applications",
+      "ta": "Real-world applications",
+      "te": "Real-world applications",
+      "ml": "Real-world applications"
+    },
+    "future_scope": {
+      "en": "Future scope",
+      "kn": "Future scope",
+      "hi": "Future scope",
+      "ta": "Future scope",
+      "te": "Future scope",
+      "ml": "Future scope"
+    },
+    "best_suited_personality": {
+      "en": "Best suited personality",
+      "kn": "Best suited personality",
+      "hi": "Best suited personality",
+      "ta": "Best suited personality",
+      "te": "Best suited personality",
+      "ml": "Best suited personality"
+    },
+    "innovation_scope": {
+      "en": "Innovation scope",
+      "kn": "Innovation scope",
+      "hi": "Innovation scope",
+      "ta": "Innovation scope",
+      "te": "Innovation scope",
+      "ml": "Innovation scope"
+    },
+    "startup_opportunities": {
+      "en": "Startup opportunities",
+      "kn": "Startup opportunities",
+      "hi": "Startup opportunities",
+      "ta": "Startup opportunities",
+      "te": "Startup opportunities",
+      "ml": "Startup opportunities"
+    },
+    "average_student_preference": {
+      "en": "Average student preference",
+      "kn": "Average student preference",
+      "hi": "Average student preference",
+      "ta": "Average student preference",
+      "te": "Average student preference",
+      "ml": "Average student preference"
+    },
+    "recommended_for": {
+      "en": "Recommended for",
+      "kn": "Recommended for",
+      "hi": "Recommended for",
+      "ta": "Recommended for",
+      "te": "Recommended for",
+      "ml": "Recommended for"
+    }
+  },
+  "department_order": [
+    "cse",
+    "cse_aiml",
+    "cse_ds",
+    "cse_cysec",
+    "ise",
+    "ece",
+    "cse_bs",
+    "mba",
+    "civil",
+    "mechanical",
+    "basic_sciences"
+  ],
+  "departments": {
+    "cse": {
+      "display_names": {
+        "en": "Computer Science & Engineering",
+        "kn": "Computer Science & Engineering",
+        "hi": "Computer Science & Engineering",
+        "ta": "Computer Science & Engineering",
+        "te": "Computer Science & Engineering",
+        "ml": "Computer Science & Engineering"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Core computer science, algorithms, software engineering, systems.",
+          "kn": "Core computer science, algorithms, software engineering, systems.",
+          "hi": "Core computer science, algorithms, software engineering, systems.",
+          "ta": "Core computer science, algorithms, software engineering, systems.",
+          "te": "Core computer science, algorithms, software engineering, systems.",
+          "ml": "Core computer science, algorithms, software engineering, systems."
+        },
+        "core_subjects": {
+          "en": "DSA, OS, DBMS, CN, Software Engineering.",
+          "kn": "DSA, OS, DBMS, CN, Software Engineering.",
+          "hi": "DSA, OS, DBMS, CN, Software Engineering.",
+          "ta": "DSA, OS, DBMS, CN, Software Engineering.",
+          "te": "DSA, OS, DBMS, CN, Software Engineering.",
+          "ml": "DSA, OS, DBMS, CN, Software Engineering."
+        },
+        "coding_intensity": {
+          "en": "Very high — daily programming and projects.",
+          "kn": "Very high — daily programming and projects.",
+          "hi": "Very high — daily programming and projects.",
+          "ta": "Very high — daily programming and projects.",
+          "te": "Very high — daily programming and projects.",
+          "ml": "Very high — daily programming and projects."
+        },
+        "ai_exposure": {
+          "en": "Moderate; elective AI/ML tracks available.",
+          "kn": "Moderate; elective AI/ML tracks available.",
+          "hi": "Moderate; elective AI/ML tracks available.",
+          "ta": "Moderate; elective AI/ML tracks available.",
+          "te": "Moderate; elective AI/ML tracks available.",
+          "ml": "Moderate; elective AI/ML tracks available."
+        },
+        "security_exposure": {
+          "en": "Moderate via electives and secure coding practices.",
+          "kn": "Moderate via electives and secure coding practices.",
+          "hi": "Moderate via electives and secure coding practices.",
+          "ta": "Moderate via electives and secure coding practices.",
+          "te": "Moderate via electives and secure coding practices.",
+          "ml": "Moderate via electives and secure coding practices."
+        },
+        "math_level": {
+          "en": "Strong discrete math, linear algebra basics.",
+          "kn": "Strong discrete math, linear algebra basics.",
+          "hi": "Strong discrete math, linear algebra basics.",
+          "ta": "Strong discrete math, linear algebra basics.",
+          "te": "Strong discrete math, linear algebra basics.",
+          "ml": "Strong discrete math, linear algebra basics."
+        },
+        "career_paths": {
+          "en": "SDE, backend, full-stack, systems, cloud.",
+          "kn": "SDE, backend, full-stack, systems, cloud.",
+          "hi": "SDE, backend, full-stack, systems, cloud.",
+          "ta": "SDE, backend, full-stack, systems, cloud.",
+          "te": "SDE, backend, full-stack, systems, cloud.",
+          "ml": "SDE, backend, full-stack, systems, cloud."
+        },
+        "placement_domains": {
+          "en": "Product companies, IT services, startups.",
+          "kn": "Product companies, IT services, startups.",
+          "hi": "Product companies, IT services, startups.",
+          "ta": "Product companies, IT services, startups.",
+          "te": "Product companies, IT services, startups.",
+          "ml": "Product companies, IT services, startups."
+        },
+        "higher_studies": {
+          "en": "M.Tech, MS in CS, GATE.",
+          "kn": "M.Tech, MS in CS, GATE.",
+          "hi": "M.Tech, MS in CS, GATE.",
+          "ta": "M.Tech, MS in CS, GATE.",
+          "te": "M.Tech, MS in CS, GATE.",
+          "ml": "M.Tech, MS in CS, GATE."
+        },
+        "industry_demand": {
+          "en": "Consistently high across sectors.",
+          "kn": "Consistently high across sectors.",
+          "hi": "Consistently high across sectors.",
+          "ta": "Consistently high across sectors.",
+          "te": "Consistently high across sectors.",
+          "ml": "Consistently high across sectors."
+        },
+        "real_world_applications": {
+          "en": "Web, mobile, enterprise software, cloud infra.",
+          "kn": "Web, mobile, enterprise software, cloud infra.",
+          "hi": "Web, mobile, enterprise software, cloud infra.",
+          "ta": "Web, mobile, enterprise software, cloud infra.",
+          "te": "Web, mobile, enterprise software, cloud infra.",
+          "ml": "Web, mobile, enterprise software, cloud infra."
+        },
+        "future_scope": {
+          "en": "Broad; digital transformation sustains demand.",
+          "kn": "Broad; digital transformation sustains demand.",
+          "hi": "Broad; digital transformation sustains demand.",
+          "ta": "Broad; digital transformation sustains demand.",
+          "te": "Broad; digital transformation sustains demand.",
+          "ml": "Broad; digital transformation sustains demand."
+        },
+        "best_suited_personality": {
+          "en": "Problem-solvers who enjoy building software.",
+          "kn": "Problem-solvers who enjoy building software.",
+          "hi": "Problem-solvers who enjoy building software.",
+          "ta": "Problem-solvers who enjoy building software.",
+          "te": "Problem-solvers who enjoy building software.",
+          "ml": "Problem-solvers who enjoy building software."
+        },
+        "innovation_scope": {
+          "en": "High — hackathons, OSS, product ideas.",
+          "kn": "High — hackathons, OSS, product ideas.",
+          "hi": "High — hackathons, OSS, product ideas.",
+          "ta": "High — hackathons, OSS, product ideas.",
+          "te": "High — hackathons, OSS, product ideas.",
+          "ml": "High — hackathons, OSS, product ideas."
+        },
+        "startup_opportunities": {
+          "en": "Strong for tech-first startups.",
+          "kn": "Strong for tech-first startups.",
+          "hi": "Strong for tech-first startups.",
+          "ta": "Strong for tech-first startups.",
+          "te": "Strong for tech-first startups.",
+          "ml": "Strong for tech-first startups."
+        },
+        "average_student_preference": {
+          "en": "Often first choice for coding-oriented students.",
+          "kn": "Often first choice for coding-oriented students.",
+          "hi": "Often first choice for coding-oriented students.",
+          "ta": "Often first choice for coding-oriented students.",
+          "te": "Often first choice for coding-oriented students.",
+          "ml": "Often first choice for coding-oriented students."
+        },
+        "recommended_for": {
+          "en": "Students who want a classic CS engineering depth.",
+          "kn": "Students who want a classic CS engineering depth.",
+          "hi": "Students who want a classic CS engineering depth.",
+          "ta": "Students who want a classic CS engineering depth.",
+          "te": "Students who want a classic CS engineering depth.",
+          "ml": "Students who want a classic CS engineering depth."
+        }
+      }
+    },
+    "cse_aiml": {
+      "display_names": {
+        "en": "CSE (AI & ML)",
+        "kn": "CSE (AI & ML)",
+        "hi": "CSE (AI & ML)",
+        "ta": "CSE (AI & ML)",
+        "te": "CSE (AI & ML)",
+        "ml": "CSE (AI & ML)"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Machine learning, deep learning, intelligent systems.",
+          "kn": "Machine learning, deep learning, intelligent systems.",
+          "hi": "Machine learning, deep learning, intelligent systems.",
+          "ta": "Machine learning, deep learning, intelligent systems.",
+          "te": "Machine learning, deep learning, intelligent systems.",
+          "ml": "Machine learning, deep learning, intelligent systems."
+        },
+        "core_subjects": {
+          "en": "ML, DL, NLP, CV, statistics, Python ecosystems.",
+          "kn": "ML, DL, NLP, CV, statistics, Python ecosystems.",
+          "hi": "ML, DL, NLP, CV, statistics, Python ecosystems.",
+          "ta": "ML, DL, NLP, CV, statistics, Python ecosystems.",
+          "te": "ML, DL, NLP, CV, statistics, Python ecosystems.",
+          "ml": "ML, DL, NLP, CV, statistics, Python ecosystems."
+        },
+        "coding_intensity": {
+          "en": "High — model training, pipelines, deployment.",
+          "kn": "High — model training, pipelines, deployment.",
+          "hi": "High — model training, pipelines, deployment.",
+          "ta": "High — model training, pipelines, deployment.",
+          "te": "High — model training, pipelines, deployment.",
+          "ml": "High — model training, pipelines, deployment."
+        },
+        "ai_exposure": {
+          "en": "Very high — core of the programme.",
+          "kn": "Very high — core of the programme.",
+          "hi": "Very high — core of the programme.",
+          "ta": "Very high — core of the programme.",
+          "te": "Very high — core of the programme.",
+          "ml": "Very high — core of the programme."
+        },
+        "security_exposure": {
+          "en": "ML security, privacy-aware AI (varies by curriculum).",
+          "kn": "ML security, privacy-aware AI (varies by curriculum).",
+          "hi": "ML security, privacy-aware AI (varies by curriculum).",
+          "ta": "ML security, privacy-aware AI (varies by curriculum).",
+          "te": "ML security, privacy-aware AI (varies by curriculum).",
+          "ml": "ML security, privacy-aware AI (varies by curriculum)."
+        },
+        "math_level": {
+          "en": "High — statistics, optimization, linear algebra.",
+          "kn": "High — statistics, optimization, linear algebra.",
+          "hi": "High — statistics, optimization, linear algebra.",
+          "ta": "High — statistics, optimization, linear algebra.",
+          "te": "High — statistics, optimization, linear algebra.",
+          "ml": "High — statistics, optimization, linear algebra."
+        },
+        "career_paths": {
+          "en": "AI engineer, MLOps, data/ML scientist, research engineer.",
+          "kn": "AI engineer, MLOps, data/ML scientist, research engineer.",
+          "hi": "AI engineer, MLOps, data/ML scientist, research engineer.",
+          "ta": "AI engineer, MLOps, data/ML scientist, research engineer.",
+          "te": "AI engineer, MLOps, data/ML scientist, research engineer.",
+          "ml": "AI engineer, MLOps, data/ML scientist, research engineer."
+        },
+        "placement_domains": {
+          "en": "AI labs, product AI teams, analytics-heavy roles.",
+          "kn": "AI labs, product AI teams, analytics-heavy roles.",
+          "hi": "AI labs, product AI teams, analytics-heavy roles.",
+          "ta": "AI labs, product AI teams, analytics-heavy roles.",
+          "te": "AI labs, product AI teams, analytics-heavy roles.",
+          "ml": "AI labs, product AI teams, analytics-heavy roles."
+        },
+        "higher_studies": {
+          "en": "MS/PhD in AI, specialized PG diplomas.",
+          "kn": "MS/PhD in AI, specialized PG diplomas.",
+          "hi": "MS/PhD in AI, specialized PG diplomas.",
+          "ta": "MS/PhD in AI, specialized PG diplomas.",
+          "te": "MS/PhD in AI, specialized PG diplomas.",
+          "ml": "MS/PhD in AI, specialized PG diplomas."
+        },
+        "industry_demand": {
+          "en": "Rapidly growing in AI adoption.",
+          "kn": "Rapidly growing in AI adoption.",
+          "hi": "Rapidly growing in AI adoption.",
+          "ta": "Rapidly growing in AI adoption.",
+          "te": "Rapidly growing in AI adoption.",
+          "ml": "Rapidly growing in AI adoption."
+        },
+        "real_world_applications": {
+          "en": "Assistants, recommendation, vision, automation.",
+          "kn": "Assistants, recommendation, vision, automation.",
+          "hi": "Assistants, recommendation, vision, automation.",
+          "ta": "Assistants, recommendation, vision, automation.",
+          "te": "Assistants, recommendation, vision, automation.",
+          "ml": "Assistants, recommendation, vision, automation."
+        },
+        "future_scope": {
+          "en": "Strong long-term with responsible AI demand.",
+          "kn": "Strong long-term with responsible AI demand.",
+          "hi": "Strong long-term with responsible AI demand.",
+          "ta": "Strong long-term with responsible AI demand.",
+          "te": "Strong long-term with responsible AI demand.",
+          "ml": "Strong long-term with responsible AI demand."
+        },
+        "best_suited_personality": {
+          "en": "Curious, math-comfortable builders of intelligent systems.",
+          "kn": "Curious, math-comfortable builders of intelligent systems.",
+          "hi": "Curious, math-comfortable builders of intelligent systems.",
+          "ta": "Curious, math-comfortable builders of intelligent systems.",
+          "te": "Curious, math-comfortable builders of intelligent systems.",
+          "ml": "Curious, math-comfortable builders of intelligent systems."
+        },
+        "innovation_scope": {
+          "en": "Very high — papers, products, competitions.",
+          "kn": "Very high — papers, products, competitions.",
+          "hi": "Very high — papers, products, competitions.",
+          "ta": "Very high — papers, products, competitions.",
+          "te": "Very high — papers, products, competitions.",
+          "ml": "Very high — papers, products, competitions."
+        },
+        "startup_opportunities": {
+          "en": "High in AI tooling and vertical AI.",
+          "kn": "High in AI tooling and vertical AI.",
+          "hi": "High in AI tooling and vertical AI.",
+          "ta": "High in AI tooling and vertical AI.",
+          "te": "High in AI tooling and vertical AI.",
+          "ml": "High in AI tooling and vertical AI."
+        },
+        "average_student_preference": {
+          "en": "Popular with students targeting AI careers.",
+          "kn": "Popular with students targeting AI careers.",
+          "hi": "Popular with students targeting AI careers.",
+          "ta": "Popular with students targeting AI careers.",
+          "te": "Popular with students targeting AI careers.",
+          "ml": "Popular with students targeting AI careers."
+        },
+        "recommended_for": {
+          "en": "Students passionate about AI beyond generic programming.",
+          "kn": "Students passionate about AI beyond generic programming.",
+          "hi": "Students passionate about AI beyond generic programming.",
+          "ta": "Students passionate about AI beyond generic programming.",
+          "te": "Students passionate about AI beyond generic programming.",
+          "ml": "Students passionate about AI beyond generic programming."
+        }
+      }
+    },
+    "cse_ds": {
+      "display_names": {
+        "en": "CSE (Data Science)",
+        "kn": "CSE (Data Science)",
+        "hi": "CSE (Data Science)",
+        "ta": "CSE (Data Science)",
+        "te": "CSE (Data Science)",
+        "ml": "CSE (Data Science)"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Data engineering, analytics, statistical decision-making.",
+          "kn": "Data engineering, analytics, statistical decision-making.",
+          "hi": "Data engineering, analytics, statistical decision-making.",
+          "ta": "Data engineering, analytics, statistical decision-making.",
+          "te": "Data engineering, analytics, statistical decision-making.",
+          "ml": "Data engineering, analytics, statistical decision-making."
+        },
+        "core_subjects": {
+          "en": "Statistics, Big Data, SQL, visualization, ML basics.",
+          "kn": "Statistics, Big Data, SQL, visualization, ML basics.",
+          "hi": "Statistics, Big Data, SQL, visualization, ML basics.",
+          "ta": "Statistics, Big Data, SQL, visualization, ML basics.",
+          "te": "Statistics, Big Data, SQL, visualization, ML basics.",
+          "ml": "Statistics, Big Data, SQL, visualization, ML basics."
+        },
+        "coding_intensity": {
+          "en": "High — SQL, Python/R, ETL, notebooks.",
+          "kn": "High — SQL, Python/R, ETL, notebooks.",
+          "hi": "High — SQL, Python/R, ETL, notebooks.",
+          "ta": "High — SQL, Python/R, ETL, notebooks.",
+          "te": "High — SQL, Python/R, ETL, notebooks.",
+          "ml": "High — SQL, Python/R, ETL, notebooks."
+        },
+        "ai_exposure": {
+          "en": "Moderate–high through applied ML.",
+          "kn": "Moderate–high through applied ML.",
+          "hi": "Moderate–high through applied ML.",
+          "ta": "Moderate–high through applied ML.",
+          "te": "Moderate–high through applied ML.",
+          "ml": "Moderate–high through applied ML."
+        },
+        "security_exposure": {
+          "en": "Data governance and privacy basics.",
+          "kn": "Data governance and privacy basics.",
+          "hi": "Data governance and privacy basics.",
+          "ta": "Data governance and privacy basics.",
+          "te": "Data governance and privacy basics.",
+          "ml": "Data governance and privacy basics."
+        },
+        "math_level": {
+          "en": "High — statistics & probability core.",
+          "kn": "High — statistics & probability core.",
+          "hi": "High — statistics & probability core.",
+          "ta": "High — statistics & probability core.",
+          "te": "High — statistics & probability core.",
+          "ml": "High — statistics & probability core."
+        },
+        "career_paths": {
+          "en": "Data analyst, data engineer, BI, analytics consultant.",
+          "kn": "Data analyst, data engineer, BI, analytics consultant.",
+          "hi": "Data analyst, data engineer, BI, analytics consultant.",
+          "ta": "Data analyst, data engineer, BI, analytics consultant.",
+          "te": "Data analyst, data engineer, BI, analytics consultant.",
+          "ml": "Data analyst, data engineer, BI, analytics consultant."
+        },
+        "placement_domains": {
+          "en": "Analytics units, fintech, consulting, e-commerce.",
+          "kn": "Analytics units, fintech, consulting, e-commerce.",
+          "hi": "Analytics units, fintech, consulting, e-commerce.",
+          "ta": "Analytics units, fintech, consulting, e-commerce.",
+          "te": "Analytics units, fintech, consulting, e-commerce.",
+          "ml": "Analytics units, fintech, consulting, e-commerce."
+        },
+        "higher_studies": {
+          "en": "MS Analytics, applied statistics, MBA analytics.",
+          "kn": "MS Analytics, applied statistics, MBA analytics.",
+          "hi": "MS Analytics, applied statistics, MBA analytics.",
+          "ta": "MS Analytics, applied statistics, MBA analytics.",
+          "te": "MS Analytics, applied statistics, MBA analytics.",
+          "ml": "MS Analytics, applied statistics, MBA analytics."
+        },
+        "industry_demand": {
+          "en": "High for data-driven organisations.",
+          "kn": "High for data-driven organisations.",
+          "hi": "High for data-driven organisations.",
+          "ta": "High for data-driven organisations.",
+          "te": "High for data-driven organisations.",
+          "ml": "High for data-driven organisations."
+        },
+        "real_world_applications": {
+          "en": "Dashboards, forecasting, experimentation.",
+          "kn": "Dashboards, forecasting, experimentation.",
+          "hi": "Dashboards, forecasting, experimentation.",
+          "ta": "Dashboards, forecasting, experimentation.",
+          "te": "Dashboards, forecasting, experimentation.",
+          "ml": "Dashboards, forecasting, experimentation."
+        },
+        "future_scope": {
+          "en": "Broad as data volumes and compliance grow.",
+          "kn": "Broad as data volumes and compliance grow.",
+          "hi": "Broad as data volumes and compliance grow.",
+          "ta": "Broad as data volumes and compliance grow.",
+          "te": "Broad as data volumes and compliance grow.",
+          "ml": "Broad as data volumes and compliance grow."
+        },
+        "best_suited_personality": {
+          "en": "Detail-oriented thinkers who like evidence-based answers.",
+          "kn": "Detail-oriented thinkers who like evidence-based answers.",
+          "hi": "Detail-oriented thinkers who like evidence-based answers.",
+          "ta": "Detail-oriented thinkers who like evidence-based answers.",
+          "te": "Detail-oriented thinkers who like evidence-based answers.",
+          "ml": "Detail-oriented thinkers who like evidence-based answers."
+        },
+        "innovation_scope": {
+          "en": "Medium–high — storytelling with data products.",
+          "kn": "Medium–high — storytelling with data products.",
+          "hi": "Medium–high — storytelling with data products.",
+          "ta": "Medium–high — storytelling with data products.",
+          "te": "Medium–high — storytelling with data products.",
+          "ml": "Medium–high — storytelling with data products."
+        },
+        "startup_opportunities": {
+          "en": "Medium — vertical analytics products.",
+          "kn": "Medium — vertical analytics products.",
+          "hi": "Medium — vertical analytics products.",
+          "ta": "Medium — vertical analytics products.",
+          "te": "Medium — vertical analytics products.",
+          "ml": "Medium — vertical analytics products."
+        },
+        "average_student_preference": {
+          "en": "Chosen by analytics-minded students.",
+          "kn": "Chosen by analytics-minded students.",
+          "hi": "Chosen by analytics-minded students.",
+          "ta": "Chosen by analytics-minded students.",
+          "te": "Chosen by analytics-minded students.",
+          "ml": "Chosen by analytics-minded students."
+        },
+        "recommended_for": {
+          "en": "Students who prefer insights and modeling over low-level systems.",
+          "kn": "Students who prefer insights and modeling over low-level systems.",
+          "hi": "Students who prefer insights and modeling over low-level systems.",
+          "ta": "Students who prefer insights and modeling over low-level systems.",
+          "te": "Students who prefer insights and modeling over low-level systems.",
+          "ml": "Students who prefer insights and modeling over low-level systems."
+        }
+      }
+    },
+    "cse_cysec": {
+      "display_names": {
+        "en": "CSE (Cyber Security)",
+        "kn": "CSE (Cyber Security)",
+        "hi": "CSE (Cyber Security)",
+        "ta": "CSE (Cyber Security)",
+        "te": "CSE (Cyber Security)",
+        "ml": "CSE (Cyber Security)"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Network security, cryptography, secure systems, ethical hacking basics.",
+          "kn": "Network security, cryptography, secure systems, ethical hacking basics.",
+          "hi": "Network security, cryptography, secure systems, ethical hacking basics.",
+          "ta": "Network security, cryptography, secure systems, ethical hacking basics.",
+          "te": "Network security, cryptography, secure systems, ethical hacking basics.",
+          "ml": "Network security, cryptography, secure systems, ethical hacking basics."
+        },
+        "core_subjects": {
+          "en": "Security protocols, OS hardening, ethical hacking, crypto.",
+          "kn": "Security protocols, OS hardening, ethical hacking, crypto.",
+          "hi": "Security protocols, OS hardening, ethical hacking, crypto.",
+          "ta": "Security protocols, OS hardening, ethical hacking, crypto.",
+          "te": "Security protocols, OS hardening, ethical hacking, crypto.",
+          "ml": "Security protocols, OS hardening, ethical hacking, crypto."
+        },
+        "coding_intensity": {
+          "en": "High — scripting and secure development.",
+          "kn": "High — scripting and secure development.",
+          "hi": "High — scripting and secure development.",
+          "ta": "High — scripting and secure development.",
+          "te": "High — scripting and secure development.",
+          "ml": "High — scripting and secure development."
+        },
+        "ai_exposure": {
+          "en": "Growing — security for AI/ML pipelines.",
+          "kn": "Growing — security for AI/ML pipelines.",
+          "hi": "Growing — security for AI/ML pipelines.",
+          "ta": "Growing — security for AI/ML pipelines.",
+          "te": "Growing — security for AI/ML pipelines.",
+          "ml": "Growing — security for AI/ML pipelines."
+        },
+        "security_exposure": {
+          "en": "Very high — specialization focus.",
+          "kn": "Very high — specialization focus.",
+          "hi": "Very high — specialization focus.",
+          "ta": "Very high — specialization focus.",
+          "te": "Very high — specialization focus.",
+          "ml": "Very high — specialization focus."
+        },
+        "math_level": {
+          "en": "Moderate–high — crypto math.",
+          "kn": "Moderate–high — crypto math.",
+          "hi": "Moderate–high — crypto math.",
+          "ta": "Moderate–high — crypto math.",
+          "te": "Moderate–high — crypto math.",
+          "ml": "Moderate–high — crypto math."
+        },
+        "career_paths": {
+          "en": "SOC analyst, security engineer, GRC roles, pen-testing (with certs).",
+          "kn": "SOC analyst, security engineer, GRC roles, pen-testing (with certs).",
+          "hi": "SOC analyst, security engineer, GRC roles, pen-testing (with certs).",
+          "ta": "SOC analyst, security engineer, GRC roles, pen-testing (with certs).",
+          "te": "SOC analyst, security engineer, GRC roles, pen-testing (with certs).",
+          "ml": "SOC analyst, security engineer, GRC roles, pen-testing (with certs)."
+        },
+        "placement_domains": {
+          "en": "Cybersecurity firms, banking, cloud security teams.",
+          "kn": "Cybersecurity firms, banking, cloud security teams.",
+          "hi": "Cybersecurity firms, banking, cloud security teams.",
+          "ta": "Cybersecurity firms, banking, cloud security teams.",
+          "te": "Cybersecurity firms, banking, cloud security teams.",
+          "ml": "Cybersecurity firms, banking, cloud security teams."
+        },
+        "higher_studies": {
+          "en": "M.Tech cybersecurity, CEH/GIAC-style certifications.",
+          "kn": "M.Tech cybersecurity, CEH/GIAC-style certifications.",
+          "hi": "M.Tech cybersecurity, CEH/GIAC-style certifications.",
+          "ta": "M.Tech cybersecurity, CEH/GIAC-style certifications.",
+          "te": "M.Tech cybersecurity, CEH/GIAC-style certifications.",
+          "ml": "M.Tech cybersecurity, CEH/GIAC-style certifications."
+        },
+        "industry_demand": {
+          "en": "Strong and rising with threat landscape.",
+          "kn": "Strong and rising with threat landscape.",
+          "hi": "Strong and rising with threat landscape.",
+          "ta": "Strong and rising with threat landscape.",
+          "te": "Strong and rising with threat landscape.",
+          "ml": "Strong and rising with threat landscape."
+        },
+        "real_world_applications": {
+          "en": "Zero-trust, IAM, appsec, cloud security.",
+          "kn": "Zero-trust, IAM, appsec, cloud security.",
+          "hi": "Zero-trust, IAM, appsec, cloud security.",
+          "ta": "Zero-trust, IAM, appsec, cloud security.",
+          "te": "Zero-trust, IAM, appsec, cloud security.",
+          "ml": "Zero-trust, IAM, appsec, cloud security."
+        },
+        "future_scope": {
+          "en": "Structural demand for defenders.",
+          "kn": "Structural demand for defenders.",
+          "hi": "Structural demand for defenders.",
+          "ta": "Structural demand for defenders.",
+          "te": "Structural demand for defenders.",
+          "ml": "Structural demand for defenders."
+        },
+        "best_suited_personality": {
+          "en": "Patient, ethical, puzzle-solvers under pressure.",
+          "kn": "Patient, ethical, puzzle-solvers under pressure.",
+          "hi": "Patient, ethical, puzzle-solvers under pressure.",
+          "ta": "Patient, ethical, puzzle-solvers under pressure.",
+          "te": "Patient, ethical, puzzle-solvers under pressure.",
+          "ml": "Patient, ethical, puzzle-solvers under pressure."
+        },
+        "innovation_scope": {
+          "en": "Medium–high — novel defenses and tools.",
+          "kn": "Medium–high — novel defenses and tools.",
+          "hi": "Medium–high — novel defenses and tools.",
+          "ta": "Medium–high — novel defenses and tools.",
+          "te": "Medium–high — novel defenses and tools.",
+          "ml": "Medium–high — novel defenses and tools."
+        },
+        "startup_opportunities": {
+          "en": "Medium — security SaaS and consulting.",
+          "kn": "Medium — security SaaS and consulting.",
+          "hi": "Medium — security SaaS and consulting.",
+          "ta": "Medium — security SaaS and consulting.",
+          "te": "Medium — security SaaS and consulting.",
+          "ml": "Medium — security SaaS and consulting."
+        },
+        "average_student_preference": {
+          "en": "Niche but committed cohort.",
+          "kn": "Niche but committed cohort.",
+          "hi": "Niche but committed cohort.",
+          "ta": "Niche but committed cohort.",
+          "te": "Niche but committed cohort.",
+          "ml": "Niche but committed cohort."
+        },
+        "recommended_for": {
+          "en": "Students drawn to defense, risk, and resilience.",
+          "kn": "Students drawn to defense, risk, and resilience.",
+          "hi": "Students drawn to defense, risk, and resilience.",
+          "ta": "Students drawn to defense, risk, and resilience.",
+          "te": "Students drawn to defense, risk, and resilience.",
+          "ml": "Students drawn to defense, risk, and resilience."
+        }
+      }
+    },
+    "ise": {
+      "display_names": {
+        "en": "Information Science & Engineering",
+        "kn": "Information Science & Engineering",
+        "hi": "Information Science & Engineering",
+        "ta": "Information Science & Engineering",
+        "te": "Information Science & Engineering",
+        "ml": "Information Science & Engineering"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Information systems, full-stack, data structures with applications focus.",
+          "kn": "Information systems, full-stack, data structures with applications focus.",
+          "hi": "Information systems, full-stack, data structures with applications focus.",
+          "ta": "Information systems, full-stack, data structures with applications focus.",
+          "te": "Information systems, full-stack, data structures with applications focus.",
+          "ml": "Information systems, full-stack, data structures with applications focus."
+        },
+        "core_subjects": {
+          "en": "DSA, Web, DBMS, software engineering, IoT interfaces.",
+          "kn": "DSA, Web, DBMS, software engineering, IoT interfaces.",
+          "hi": "DSA, Web, DBMS, software engineering, IoT interfaces.",
+          "ta": "DSA, Web, DBMS, software engineering, IoT interfaces.",
+          "te": "DSA, Web, DBMS, software engineering, IoT interfaces.",
+          "ml": "DSA, Web, DBMS, software engineering, IoT interfaces."
+        },
+        "coding_intensity": {
+          "en": "High — application-centric development.",
+          "kn": "High — application-centric development.",
+          "hi": "High — application-centric development.",
+          "ta": "High — application-centric development.",
+          "te": "High — application-centric development.",
+          "ml": "High — application-centric development."
+        },
+        "ai_exposure": {
+          "en": "Moderate via electives.",
+          "kn": "Moderate via electives.",
+          "hi": "Moderate via electives.",
+          "ta": "Moderate via electives.",
+          "te": "Moderate via electives.",
+          "ml": "Moderate via electives."
+        },
+        "security_exposure": {
+          "en": "App security and secure SDLC exposure.",
+          "kn": "App security and secure SDLC exposure.",
+          "hi": "App security and secure SDLC exposure.",
+          "ta": "App security and secure SDLC exposure.",
+          "te": "App security and secure SDLC exposure.",
+          "ml": "App security and secure SDLC exposure."
+        },
+        "math_level": {
+          "en": "Moderate–strong.",
+          "kn": "Moderate–strong.",
+          "hi": "Moderate–strong.",
+          "ta": "Moderate–strong.",
+          "te": "Moderate–strong.",
+          "ml": "Moderate–strong."
+        },
+        "career_paths": {
+          "en": "Software engineer, consultant, business-tech roles.",
+          "kn": "Software engineer, consultant, business-tech roles.",
+          "hi": "Software engineer, consultant, business-tech roles.",
+          "ta": "Software engineer, consultant, business-tech roles.",
+          "te": "Software engineer, consultant, business-tech roles.",
+          "ml": "Software engineer, consultant, business-tech roles."
+        },
+        "placement_domains": {
+          "en": "Similar to CSE with blended product focus.",
+          "kn": "Similar to CSE with blended product focus.",
+          "hi": "Similar to CSE with blended product focus.",
+          "ta": "Similar to CSE with blended product focus.",
+          "te": "Similar to CSE with blended product focus.",
+          "ml": "Similar to CSE with blended product focus."
+        },
+        "higher_studies": {
+          "en": "MS in CS/IS, MCA paths.",
+          "kn": "MS in CS/IS, MCA paths.",
+          "hi": "MS in CS/IS, MCA paths.",
+          "ta": "MS in CS/IS, MCA paths.",
+          "te": "MS in CS/IS, MCA paths.",
+          "ml": "MS in CS/IS, MCA paths."
+        },
+        "industry_demand": {
+          "en": "Healthy across IT services and product.",
+          "kn": "Healthy across IT services and product.",
+          "hi": "Healthy across IT services and product.",
+          "ta": "Healthy across IT services and product.",
+          "te": "Healthy across IT services and product.",
+          "ml": "Healthy across IT services and product."
+        },
+        "real_world_applications": {
+          "en": "Enterprise apps, integration, information systems.",
+          "kn": "Enterprise apps, integration, information systems.",
+          "hi": "Enterprise apps, integration, information systems.",
+          "ta": "Enterprise apps, integration, information systems.",
+          "te": "Enterprise apps, integration, information systems.",
+          "ml": "Enterprise apps, integration, information systems."
+        },
+        "future_scope": {
+          "en": "Broad with digital services growth.",
+          "kn": "Broad with digital services growth.",
+          "hi": "Broad with digital services growth.",
+          "ta": "Broad with digital services growth.",
+          "te": "Broad with digital services growth.",
+          "ml": "Broad with digital services growth."
+        },
+        "best_suited_personality": {
+          "en": "Collaborative builders who bridge users and tech.",
+          "kn": "Collaborative builders who bridge users and tech.",
+          "hi": "Collaborative builders who bridge users and tech.",
+          "ta": "Collaborative builders who bridge users and tech.",
+          "te": "Collaborative builders who bridge users and tech.",
+          "ml": "Collaborative builders who bridge users and tech."
+        },
+        "innovation_scope": {
+          "en": "Medium–high.",
+          "kn": "Medium–high.",
+          "hi": "Medium–high.",
+          "ta": "Medium–high.",
+          "te": "Medium–high.",
+          "ml": "Medium–high."
+        },
+        "startup_opportunities": {
+          "en": "Moderate–strong.",
+          "kn": "Moderate–strong.",
+          "hi": "Moderate–strong.",
+          "ta": "Moderate–strong.",
+          "te": "Moderate–strong.",
+          "ml": "Moderate–strong."
+        },
+        "average_student_preference": {
+          "en": "Balanced choice versus pure CSE branding.",
+          "kn": "Balanced choice versus pure CSE branding.",
+          "hi": "Balanced choice versus pure CSE branding.",
+          "ta": "Balanced choice versus pure CSE branding.",
+          "te": "Balanced choice versus pure CSE branding.",
+          "ml": "Balanced choice versus pure CSE branding."
+        },
+        "recommended_for": {
+          "en": "Students wanting CS strength with IS flavor.",
+          "kn": "Students wanting CS strength with IS flavor.",
+          "hi": "Students wanting CS strength with IS flavor.",
+          "ta": "Students wanting CS strength with IS flavor.",
+          "te": "Students wanting CS strength with IS flavor.",
+          "ml": "Students wanting CS strength with IS flavor."
+        }
+      }
+    },
+    "ece": {
+      "display_names": {
+        "en": "Electronics & Communication",
+        "kn": "Electronics & Communication",
+        "hi": "Electronics & Communication",
+        "ta": "Electronics & Communication",
+        "te": "Electronics & Communication",
+        "ml": "Electronics & Communication"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Electronics, embedded, communications, signal processing.",
+          "kn": "Electronics, embedded, communications, signal processing.",
+          "hi": "Electronics, embedded, communications, signal processing.",
+          "ta": "Electronics, embedded, communications, signal processing.",
+          "te": "Electronics, embedded, communications, signal processing.",
+          "ml": "Electronics, embedded, communications, signal processing."
+        },
+        "core_subjects": {
+          "en": "Analog/digital, communication theory, microcontrollers, VLSI intro.",
+          "kn": "Analog/digital, communication theory, microcontrollers, VLSI intro.",
+          "hi": "Analog/digital, communication theory, microcontrollers, VLSI intro.",
+          "ta": "Analog/digital, communication theory, microcontrollers, VLSI intro.",
+          "te": "Analog/digital, communication theory, microcontrollers, VLSI intro.",
+          "ml": "Analog/digital, communication theory, microcontrollers, VLSI intro."
+        },
+        "coding_intensity": {
+          "en": "Moderate–high — RTL, embedded C, MATLAB/Python.",
+          "kn": "Moderate–high — RTL, embedded C, MATLAB/Python.",
+          "hi": "Moderate–high — RTL, embedded C, MATLAB/Python.",
+          "ta": "Moderate–high — RTL, embedded C, MATLAB/Python.",
+          "te": "Moderate–high — RTL, embedded C, MATLAB/Python.",
+          "ml": "Moderate–high — RTL, embedded C, MATLAB/Python."
+        },
+        "ai_exposure": {
+          "en": "Via edge AI and DSP overlap.",
+          "kn": "Via edge AI and DSP overlap.",
+          "hi": "Via edge AI and DSP overlap.",
+          "ta": "Via edge AI and DSP overlap.",
+          "te": "Via edge AI and DSP overlap.",
+          "ml": "Via edge AI and DSP overlap."
+        },
+        "security_exposure": {
+          "en": "Hardware trust, secure embedded (elective).",
+          "kn": "Hardware trust, secure embedded (elective).",
+          "hi": "Hardware trust, secure embedded (elective).",
+          "ta": "Hardware trust, secure embedded (elective).",
+          "te": "Hardware trust, secure embedded (elective).",
+          "ml": "Hardware trust, secure embedded (elective)."
+        },
+        "math_level": {
+          "en": "High — signals, transforms, EM basics.",
+          "kn": "High — signals, transforms, EM basics.",
+          "hi": "High — signals, transforms, EM basics.",
+          "ta": "High — signals, transforms, EM basics.",
+          "te": "High — signals, transforms, EM basics.",
+          "ml": "High — signals, transforms, EM basics."
+        },
+        "career_paths": {
+          "en": "Embedded, VLSI design, telecom hardware, IoT.",
+          "kn": "Embedded, VLSI design, telecom hardware, IoT.",
+          "hi": "Embedded, VLSI design, telecom hardware, IoT.",
+          "ta": "Embedded, VLSI design, telecom hardware, IoT.",
+          "te": "Embedded, VLSI design, telecom hardware, IoT.",
+          "ml": "Embedded, VLSI design, telecom hardware, IoT."
+        },
+        "placement_domains": {
+          "en": "Semiconductor, telecom, automotive electronics.",
+          "kn": "Semiconductor, telecom, automotive electronics.",
+          "hi": "Semiconductor, telecom, automotive electronics.",
+          "ta": "Semiconductor, telecom, automotive electronics.",
+          "te": "Semiconductor, telecom, automotive electronics.",
+          "ml": "Semiconductor, telecom, automotive electronics."
+        },
+        "higher_studies": {
+          "en": "M.Tech ECE/ES, MS abroad specializations.",
+          "kn": "M.Tech ECE/ES, MS abroad specializations.",
+          "hi": "M.Tech ECE/ES, MS abroad specializations.",
+          "ta": "M.Tech ECE/ES, MS abroad specializations.",
+          "te": "M.Tech ECE/ES, MS abroad specializations.",
+          "ml": "M.Tech ECE/ES, MS abroad specializations."
+        },
+        "industry_demand": {
+          "en": "Cyclical but strong in core electronics hiring.",
+          "kn": "Cyclical but strong in core electronics hiring.",
+          "hi": "Cyclical but strong in core electronics hiring.",
+          "ta": "Cyclical but strong in core electronics hiring.",
+          "te": "Cyclical but strong in core electronics hiring.",
+          "ml": "Cyclical but strong in core electronics hiring."
+        },
+        "real_world_applications": {
+          "en": "5G infra, consumer electronics, robotics.",
+          "kn": "5G infra, consumer electronics, robotics.",
+          "hi": "5G infra, consumer electronics, robotics.",
+          "ta": "5G infra, consumer electronics, robotics.",
+          "te": "5G infra, consumer electronics, robotics.",
+          "ml": "5G infra, consumer electronics, robotics."
+        },
+        "future_scope": {
+          "en": "Solid with chips, EV, and connectivity.",
+          "kn": "Solid with chips, EV, and connectivity.",
+          "hi": "Solid with chips, EV, and connectivity.",
+          "ta": "Solid with chips, EV, and connectivity.",
+          "te": "Solid with chips, EV, and connectivity.",
+          "ml": "Solid with chips, EV, and connectivity."
+        },
+        "best_suited_personality": {
+          "en": "Hands-on tinkerers liking hardware+math.",
+          "kn": "Hands-on tinkerers liking hardware+math.",
+          "hi": "Hands-on tinkerers liking hardware+math.",
+          "ta": "Hands-on tinkerers liking hardware+math.",
+          "te": "Hands-on tinkerers liking hardware+math.",
+          "ml": "Hands-on tinkerers liking hardware+math."
+        },
+        "innovation_scope": {
+          "en": "High in R&D-heavy paths.",
+          "kn": "High in R&D-heavy paths.",
+          "hi": "High in R&D-heavy paths.",
+          "ta": "High in R&D-heavy paths.",
+          "te": "High in R&D-heavy paths.",
+          "ml": "High in R&D-heavy paths."
+        },
+        "startup_opportunities": {
+          "en": "Hardware/IoT startups.",
+          "kn": "Hardware/IoT startups.",
+          "hi": "Hardware/IoT startups.",
+          "ta": "Hardware/IoT startups.",
+          "te": "Hardware/IoT startups.",
+          "ml": "Hardware/IoT startups."
+        },
+        "average_student_preference": {
+          "en": "Students preferring circuits over pure software.",
+          "kn": "Students preferring circuits over pure software.",
+          "hi": "Students preferring circuits over pure software.",
+          "ta": "Students preferring circuits over pure software.",
+          "te": "Students preferring circuits over pure software.",
+          "ml": "Students preferring circuits over pure software."
+        },
+        "recommended_for": {
+          "en": "Hardware-curious engineers.",
+          "kn": "Hardware-curious engineers.",
+          "hi": "Hardware-curious engineers.",
+          "ta": "Hardware-curious engineers.",
+          "te": "Hardware-curious engineers.",
+          "ml": "Hardware-curious engineers."
+        }
+      }
+    },
+    "cse_bs": {
+      "display_names": {
+        "en": "CSE (Business Systems)",
+        "kn": "CSE (Business Systems)",
+        "hi": "CSE (Business Systems)",
+        "ta": "CSE (Business Systems)",
+        "te": "CSE (Business Systems)",
+        "ml": "CSE (Business Systems)"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Computing with business process, ERP, analytics for management.",
+          "kn": "Computing with business process, ERP, analytics for management.",
+          "hi": "Computing with business process, ERP, analytics for management.",
+          "ta": "Computing with business process, ERP, analytics for management.",
+          "te": "Computing with business process, ERP, analytics for management.",
+          "ml": "Computing with business process, ERP, analytics for management."
+        },
+        "core_subjects": {
+          "en": "DBMS, ERP concepts, business analytics, software engineering.",
+          "kn": "DBMS, ERP concepts, business analytics, software engineering.",
+          "hi": "DBMS, ERP concepts, business analytics, software engineering.",
+          "ta": "DBMS, ERP concepts, business analytics, software engineering.",
+          "te": "DBMS, ERP concepts, business analytics, software engineering.",
+          "ml": "DBMS, ERP concepts, business analytics, software engineering."
+        },
+        "coding_intensity": {
+          "en": "Moderate — business applications and integration.",
+          "kn": "Moderate — business applications and integration.",
+          "hi": "Moderate — business applications and integration.",
+          "ta": "Moderate — business applications and integration.",
+          "te": "Moderate — business applications and integration.",
+          "ml": "Moderate — business applications and integration."
+        },
+        "ai_exposure": {
+          "en": "Analytics/AI for business use-cases.",
+          "kn": "Analytics/AI for business use-cases.",
+          "hi": "Analytics/AI for business use-cases.",
+          "ta": "Analytics/AI for business use-cases.",
+          "te": "Analytics/AI for business use-cases.",
+          "ml": "Analytics/AI for business use-cases."
+        },
+        "security_exposure": {
+          "en": "Enterprise security awareness.",
+          "kn": "Enterprise security awareness.",
+          "hi": "Enterprise security awareness.",
+          "ta": "Enterprise security awareness.",
+          "te": "Enterprise security awareness.",
+          "ml": "Enterprise security awareness."
+        },
+        "math_level": {
+          "en": "Moderate — business statistics.",
+          "kn": "Moderate — business statistics.",
+          "hi": "Moderate — business statistics.",
+          "ta": "Moderate — business statistics.",
+          "te": "Moderate — business statistics.",
+          "ml": "Moderate — business statistics."
+        },
+        "career_paths": {
+          "en": "Business analyst, techno-functional, IT consulting.",
+          "kn": "Business analyst, techno-functional, IT consulting.",
+          "hi": "Business analyst, techno-functional, IT consulting.",
+          "ta": "Business analyst, techno-functional, IT consulting.",
+          "te": "Business analyst, techno-functional, IT consulting.",
+          "ml": "Business analyst, techno-functional, IT consulting."
+        },
+        "placement_domains": {
+          "en": "Consulting, BPM, enterprise IT.",
+          "kn": "Consulting, BPM, enterprise IT.",
+          "hi": "Consulting, BPM, enterprise IT.",
+          "ta": "Consulting, BPM, enterprise IT.",
+          "te": "Consulting, BPM, enterprise IT.",
+          "ml": "Consulting, BPM, enterprise IT."
+        },
+        "higher_studies": {
+          "en": "MBA, MS IS.",
+          "kn": "MBA, MS IS.",
+          "hi": "MBA, MS IS.",
+          "ta": "MBA, MS IS.",
+          "te": "MBA, MS IS.",
+          "ml": "MBA, MS IS."
+        },
+        "industry_demand": {
+          "en": "Steady for enterprise digital roles.",
+          "kn": "Steady for enterprise digital roles.",
+          "hi": "Steady for enterprise digital roles.",
+          "ta": "Steady for enterprise digital roles.",
+          "te": "Steady for enterprise digital roles.",
+          "ml": "Steady for enterprise digital roles."
+        },
+        "real_world_applications": {
+          "en": "CRM, ERP workflows, operations dashboards.",
+          "kn": "CRM, ERP workflows, operations dashboards.",
+          "hi": "CRM, ERP workflows, operations dashboards.",
+          "ta": "CRM, ERP workflows, operations dashboards.",
+          "te": "CRM, ERP workflows, operations dashboards.",
+          "ml": "CRM, ERP workflows, operations dashboards."
+        },
+        "future_scope": {
+          "en": "Strong as enterprises digitize processes.",
+          "kn": "Strong as enterprises digitize processes.",
+          "hi": "Strong as enterprises digitize processes.",
+          "ta": "Strong as enterprises digitize processes.",
+          "te": "Strong as enterprises digitize processes.",
+          "ml": "Strong as enterprises digitize processes."
+        },
+        "best_suited_personality": {
+          "en": "Communication + technology blend.",
+          "kn": "Communication + technology blend.",
+          "hi": "Communication + technology blend.",
+          "ta": "Communication + technology blend.",
+          "te": "Communication + technology blend.",
+          "ml": "Communication + technology blend."
+        },
+        "innovation_scope": {
+          "en": "Medium — process innovation.",
+          "kn": "Medium — process innovation.",
+          "hi": "Medium — process innovation.",
+          "ta": "Medium — process innovation.",
+          "te": "Medium — process innovation.",
+          "ml": "Medium — process innovation."
+        },
+        "startup_opportunities": {
+          "en": "SaaS ops and vertical solutions.",
+          "kn": "SaaS ops and vertical solutions.",
+          "hi": "SaaS ops and vertical solutions.",
+          "ta": "SaaS ops and vertical solutions.",
+          "te": "SaaS ops and vertical solutions.",
+          "ml": "SaaS ops and vertical solutions."
+        },
+        "average_student_preference": {
+          "en": "Students interested in tech in business context.",
+          "kn": "Students interested in tech in business context.",
+          "hi": "Students interested in tech in business context.",
+          "ta": "Students interested in tech in business context.",
+          "te": "Students interested in tech in business context.",
+          "ml": "Students interested in tech in business context."
+        },
+        "recommended_for": {
+          "en": "Tech-minded students targeting business-facing roles.",
+          "kn": "Tech-minded students targeting business-facing roles.",
+          "hi": "Tech-minded students targeting business-facing roles.",
+          "ta": "Tech-minded students targeting business-facing roles.",
+          "te": "Tech-minded students targeting business-facing roles.",
+          "ml": "Tech-minded students targeting business-facing roles."
+        }
+      }
+    },
+    "mba": {
+      "display_names": {
+        "en": "MBA / Business Studies",
+        "kn": "MBA / Business Studies",
+        "hi": "MBA / Business Studies",
+        "ta": "MBA / Business Studies",
+        "te": "MBA / Business Studies",
+        "ml": "MBA / Business Studies"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Management, marketing, finance, HR, strategy.",
+          "kn": "Management, marketing, finance, HR, strategy.",
+          "hi": "Management, marketing, finance, HR, strategy.",
+          "ta": "Management, marketing, finance, HR, strategy.",
+          "te": "Management, marketing, finance, HR, strategy.",
+          "ml": "Management, marketing, finance, HR, strategy."
+        },
+        "core_subjects": {
+          "en": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics.",
+          "kn": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics.",
+          "hi": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics.",
+          "ta": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics.",
+          "te": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics.",
+          "ml": "Marketing, Financial Mgmt, Ops, HR, Strategy, Analytics."
+        },
+        "coding_intensity": {
+          "en": "Low–moderate — spreadsheets, optional analytics tools.",
+          "kn": "Low–moderate — spreadsheets, optional analytics tools.",
+          "hi": "Low–moderate — spreadsheets, optional analytics tools.",
+          "ta": "Low–moderate — spreadsheets, optional analytics tools.",
+          "te": "Low–moderate — spreadsheets, optional analytics tools.",
+          "ml": "Low–moderate — spreadsheets, optional analytics tools."
+        },
+        "ai_exposure": {
+          "en": "AI in business decisions (course dependent).",
+          "kn": "AI in business decisions (course dependent).",
+          "hi": "AI in business decisions (course dependent).",
+          "ta": "AI in business decisions (course dependent).",
+          "te": "AI in business decisions (course dependent).",
+          "ml": "AI in business decisions (course dependent)."
+        },
+        "security_exposure": {
+          "en": "Information risk at management level.",
+          "kn": "Information risk at management level.",
+          "hi": "Information risk at management level.",
+          "ta": "Information risk at management level.",
+          "te": "Information risk at management level.",
+          "ml": "Information risk at management level."
+        },
+        "math_level": {
+          "en": "Moderate — quantitative methods, not engineering math core.",
+          "kn": "Moderate — quantitative methods, not engineering math core.",
+          "hi": "Moderate — quantitative methods, not engineering math core.",
+          "ta": "Moderate — quantitative methods, not engineering math core.",
+          "te": "Moderate — quantitative methods, not engineering math core.",
+          "ml": "Moderate — quantitative methods, not engineering math core."
+        },
+        "career_paths": {
+          "en": "Marketing, finance, HR, consulting, general management.",
+          "kn": "Marketing, finance, HR, consulting, general management.",
+          "hi": "Marketing, finance, HR, consulting, general management.",
+          "ta": "Marketing, finance, HR, consulting, general management.",
+          "te": "Marketing, finance, HR, consulting, general management.",
+          "ml": "Marketing, finance, HR, consulting, general management."
+        },
+        "placement_domains": {
+          "en": "Corporate, banks, startups in non-tech functions.",
+          "kn": "Corporate, banks, startups in non-tech functions.",
+          "hi": "Corporate, banks, startups in non-tech functions.",
+          "ta": "Corporate, banks, startups in non-tech functions.",
+          "te": "Corporate, banks, startups in non-tech functions.",
+          "ml": "Corporate, banks, startups in non-tech functions."
+        },
+        "higher_studies": {
+          "en": "PhD management, executive programs.",
+          "kn": "PhD management, executive programs.",
+          "hi": "PhD management, executive programs.",
+          "ta": "PhD management, executive programs.",
+          "te": "PhD management, executive programs.",
+          "ml": "PhD management, executive programs."
+        },
+        "industry_demand": {
+          "en": "Broad across economy.",
+          "kn": "Broad across economy.",
+          "hi": "Broad across economy.",
+          "ta": "Broad across economy.",
+          "te": "Broad across economy.",
+          "ml": "Broad across economy."
+        },
+        "real_world_applications": {
+          "en": "P&L ownership, go-to-market, people leadership.",
+          "kn": "P&L ownership, go-to-market, people leadership.",
+          "hi": "P&L ownership, go-to-market, people leadership.",
+          "ta": "P&L ownership, go-to-market, people leadership.",
+          "te": "P&L ownership, go-to-market, people leadership.",
+          "ml": "P&L ownership, go-to-market, people leadership."
+        },
+        "future_scope": {
+          "en": "Depends on specialization; leadership always relevant.",
+          "kn": "Depends on specialization; leadership always relevant.",
+          "hi": "Depends on specialization; leadership always relevant.",
+          "ta": "Depends on specialization; leadership always relevant.",
+          "te": "Depends on specialization; leadership always relevant.",
+          "ml": "Depends on specialization; leadership always relevant."
+        },
+        "best_suited_personality": {
+          "en": "Communicators, organizers, decision-makers.",
+          "kn": "Communicators, organizers, decision-makers.",
+          "hi": "Communicators, organizers, decision-makers.",
+          "ta": "Communicators, organizers, decision-makers.",
+          "te": "Communicators, organizers, decision-makers.",
+          "ml": "Communicators, organizers, decision-makers."
+        },
+        "innovation_scope": {
+          "en": "Medium — new ventures and intrapreneurship.",
+          "kn": "Medium — new ventures and intrapreneurship.",
+          "hi": "Medium — new ventures and intrapreneurship.",
+          "ta": "Medium — new ventures and intrapreneurship.",
+          "te": "Medium — new ventures and intrapreneurship.",
+          "ml": "Medium — new ventures and intrapreneurship."
+        },
+        "startup_opportunities": {
+          "en": "Founders and operators.",
+          "kn": "Founders and operators.",
+          "hi": "Founders and operators.",
+          "ta": "Founders and operators.",
+          "te": "Founders and operators.",
+          "ml": "Founders and operators."
+        },
+        "average_student_preference": {
+          "en": "Non-engineering or pivot students.",
+          "kn": "Non-engineering or pivot students.",
+          "hi": "Non-engineering or pivot students.",
+          "ta": "Non-engineering or pivot students.",
+          "te": "Non-engineering or pivot students.",
+          "ml": "Non-engineering or pivot students."
+        },
+        "recommended_for": {
+          "en": "Leadership and management career goals.",
+          "kn": "Leadership and management career goals.",
+          "hi": "Leadership and management career goals.",
+          "ta": "Leadership and management career goals.",
+          "te": "Leadership and management career goals.",
+          "ml": "Leadership and management career goals."
+        }
+      }
+    },
+    "civil": {
+      "display_names": {
+        "en": "Civil Engineering",
+        "kn": "Civil Engineering",
+        "hi": "Civil Engineering",
+        "ta": "Civil Engineering",
+        "te": "Civil Engineering",
+        "ml": "Civil Engineering"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Infrastructure, structures, construction, environment basics.",
+          "kn": "Infrastructure, structures, construction, environment basics.",
+          "hi": "Infrastructure, structures, construction, environment basics.",
+          "ta": "Infrastructure, structures, construction, environment basics.",
+          "te": "Infrastructure, structures, construction, environment basics.",
+          "ml": "Infrastructure, structures, construction, environment basics."
+        },
+        "core_subjects": {
+          "en": "Strength of materials, surveying, structures, environmental.",
+          "kn": "Strength of materials, surveying, structures, environmental.",
+          "hi": "Strength of materials, surveying, structures, environmental.",
+          "ta": "Strength of materials, surveying, structures, environmental.",
+          "te": "Strength of materials, surveying, structures, environmental.",
+          "ml": "Strength of materials, surveying, structures, environmental."
+        },
+        "coding_intensity": {
+          "en": "Low–moderate — tools like AutoCAD, simulations.",
+          "kn": "Low–moderate — tools like AutoCAD, simulations.",
+          "hi": "Low–moderate — tools like AutoCAD, simulations.",
+          "ta": "Low–moderate — tools like AutoCAD, simulations.",
+          "te": "Low–moderate — tools like AutoCAD, simulations.",
+          "ml": "Low–moderate — tools like AutoCAD, simulations."
+        },
+        "ai_exposure": {
+          "en": "Growing in smart infrastructure (elective).",
+          "kn": "Growing in smart infrastructure (elective).",
+          "hi": "Growing in smart infrastructure (elective).",
+          "ta": "Growing in smart infrastructure (elective).",
+          "te": "Growing in smart infrastructure (elective).",
+          "ml": "Growing in smart infrastructure (elective)."
+        },
+        "security_exposure": {
+          "en": "Low direct focus.",
+          "kn": "Low direct focus.",
+          "hi": "Low direct focus.",
+          "ta": "Low direct focus.",
+          "te": "Low direct focus.",
+          "ml": "Low direct focus."
+        },
+        "math_level": {
+          "en": "Moderate–high — mechanics-focused.",
+          "kn": "Moderate–high — mechanics-focused.",
+          "hi": "Moderate–high — mechanics-focused.",
+          "ta": "Moderate–high — mechanics-focused.",
+          "te": "Moderate–high — mechanics-focused.",
+          "ml": "Moderate–high — mechanics-focused."
+        },
+        "career_paths": {
+          "en": "Construction, design consultancies, PSUs, project management.",
+          "kn": "Construction, design consultancies, PSUs, project management.",
+          "hi": "Construction, design consultancies, PSUs, project management.",
+          "ta": "Construction, design consultancies, PSUs, project management.",
+          "te": "Construction, design consultancies, PSUs, project management.",
+          "ml": "Construction, design consultancies, PSUs, project management."
+        },
+        "placement_domains": {
+          "en": "EPC, real estate, infra, government projects.",
+          "kn": "EPC, real estate, infra, government projects.",
+          "hi": "EPC, real estate, infra, government projects.",
+          "ta": "EPC, real estate, infra, government projects.",
+          "te": "EPC, real estate, infra, government projects.",
+          "ml": "EPC, real estate, infra, government projects."
+        },
+        "higher_studies": {
+          "en": "M.Tech structures, environmental.",
+          "kn": "M.Tech structures, environmental.",
+          "hi": "M.Tech structures, environmental.",
+          "ta": "M.Tech structures, environmental.",
+          "te": "M.Tech structures, environmental.",
+          "ml": "M.Tech structures, environmental."
+        },
+        "industry_demand": {
+          "en": "Steady in infra cycles.",
+          "kn": "Steady in infra cycles.",
+          "hi": "Steady in infra cycles.",
+          "ta": "Steady in infra cycles.",
+          "te": "Steady in infra cycles.",
+          "ml": "Steady in infra cycles."
+        },
+        "real_world_applications": {
+          "en": "Bridges, highways, buildings, water systems.",
+          "kn": "Bridges, highways, buildings, water systems.",
+          "hi": "Bridges, highways, buildings, water systems.",
+          "ta": "Bridges, highways, buildings, water systems.",
+          "te": "Bridges, highways, buildings, water systems.",
+          "ml": "Bridges, highways, buildings, water systems."
+        },
+        "future_scope": {
+          "en": "Urbanization and sustainability projects.",
+          "kn": "Urbanization and sustainability projects.",
+          "hi": "Urbanization and sustainability projects.",
+          "ta": "Urbanization and sustainability projects.",
+          "te": "Urbanization and sustainability projects.",
+          "ml": "Urbanization and sustainability projects."
+        },
+        "best_suited_personality": {
+          "en": "Field-ready planners with patience for projects.",
+          "kn": "Field-ready planners with patience for projects.",
+          "hi": "Field-ready planners with patience for projects.",
+          "ta": "Field-ready planners with patience for projects.",
+          "te": "Field-ready planners with patience for projects.",
+          "ml": "Field-ready planners with patience for projects."
+        },
+        "innovation_scope": {
+          "en": "Medium — materials and green tech.",
+          "kn": "Medium — materials and green tech.",
+          "hi": "Medium — materials and green tech.",
+          "ta": "Medium — materials and green tech.",
+          "te": "Medium — materials and green tech.",
+          "ml": "Medium — materials and green tech."
+        },
+        "startup_opportunities": {
+          "en": "Construction tech, consulting.",
+          "kn": "Construction tech, consulting.",
+          "hi": "Construction tech, consulting.",
+          "ta": "Construction tech, consulting.",
+          "te": "Construction tech, consulting.",
+          "ml": "Construction tech, consulting."
+        },
+        "average_student_preference": {
+          "en": "Students preferring physical-world impact.",
+          "kn": "Students preferring physical-world impact.",
+          "hi": "Students preferring physical-world impact.",
+          "ta": "Students preferring physical-world impact.",
+          "te": "Students preferring physical-world impact.",
+          "ml": "Students preferring physical-world impact."
+        },
+        "recommended_for": {
+          "en": "Infrastructure and built-environment interest.",
+          "kn": "Infrastructure and built-environment interest.",
+          "hi": "Infrastructure and built-environment interest.",
+          "ta": "Infrastructure and built-environment interest.",
+          "te": "Infrastructure and built-environment interest.",
+          "ml": "Infrastructure and built-environment interest."
+        }
+      }
+    },
+    "mechanical": {
+      "display_names": {
+        "en": "Mechanical Engineering",
+        "kn": "Mechanical Engineering",
+        "hi": "Mechanical Engineering",
+        "ta": "Mechanical Engineering",
+        "te": "Mechanical Engineering",
+        "ml": "Mechanical Engineering"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Thermal, design, manufacturing, automation.",
+          "kn": "Thermal, design, manufacturing, automation.",
+          "hi": "Thermal, design, manufacturing, automation.",
+          "ta": "Thermal, design, manufacturing, automation.",
+          "te": "Thermal, design, manufacturing, automation.",
+          "ml": "Thermal, design, manufacturing, automation."
+        },
+        "core_subjects": {
+          "en": "Thermodynamics, design, manufacturing processes, FM.",
+          "kn": "Thermodynamics, design, manufacturing processes, FM.",
+          "hi": "Thermodynamics, design, manufacturing processes, FM.",
+          "ta": "Thermodynamics, design, manufacturing processes, FM.",
+          "te": "Thermodynamics, design, manufacturing processes, FM.",
+          "ml": "Thermodynamics, design, manufacturing processes, FM."
+        },
+        "coding_intensity": {
+          "en": "Moderate — CAD/CAE, automation scripts.",
+          "kn": "Moderate — CAD/CAE, automation scripts.",
+          "hi": "Moderate — CAD/CAE, automation scripts.",
+          "ta": "Moderate — CAD/CAE, automation scripts.",
+          "te": "Moderate — CAD/CAE, automation scripts.",
+          "ml": "Moderate — CAD/CAE, automation scripts."
+        },
+        "ai_exposure": {
+          "en": "Industry 4.0, predictive maintenance (electives).",
+          "kn": "Industry 4.0, predictive maintenance (electives).",
+          "hi": "Industry 4.0, predictive maintenance (electives).",
+          "ta": "Industry 4.0, predictive maintenance (electives).",
+          "te": "Industry 4.0, predictive maintenance (electives).",
+          "ml": "Industry 4.0, predictive maintenance (electives)."
+        },
+        "security_exposure": {
+          "en": "Low direct.",
+          "kn": "Low direct.",
+          "hi": "Low direct.",
+          "ta": "Low direct.",
+          "te": "Low direct.",
+          "ml": "Low direct."
+        },
+        "math_level": {
+          "en": "High — mechanics, fluids math.",
+          "kn": "High — mechanics, fluids math.",
+          "hi": "High — mechanics, fluids math.",
+          "ta": "High — mechanics, fluids math.",
+          "te": "High — mechanics, fluids math.",
+          "ml": "High — mechanics, fluids math."
+        },
+        "career_paths": {
+          "en": "Automotive, aerospace, manufacturing, energy.",
+          "kn": "Automotive, aerospace, manufacturing, energy.",
+          "hi": "Automotive, aerospace, manufacturing, energy.",
+          "ta": "Automotive, aerospace, manufacturing, energy.",
+          "te": "Automotive, aerospace, manufacturing, energy.",
+          "ml": "Automotive, aerospace, manufacturing, energy."
+        },
+        "placement_domains": {
+          "en": "Automotive suppliers, heavy industry, R&D.",
+          "kn": "Automotive suppliers, heavy industry, R&D.",
+          "hi": "Automotive suppliers, heavy industry, R&D.",
+          "ta": "Automotive suppliers, heavy industry, R&D.",
+          "te": "Automotive suppliers, heavy industry, R&D.",
+          "ml": "Automotive suppliers, heavy industry, R&D."
+        },
+        "higher_studies": {
+          "en": "M.Tech design/thermal/robotics.",
+          "kn": "M.Tech design/thermal/robotics.",
+          "hi": "M.Tech design/thermal/robotics.",
+          "ta": "M.Tech design/thermal/robotics.",
+          "te": "M.Tech design/thermal/robotics.",
+          "ml": "M.Tech design/thermal/robotics."
+        },
+        "industry_demand": {
+          "en": "Core manufacturing demand with automation shift.",
+          "kn": "Core manufacturing demand with automation shift.",
+          "hi": "Core manufacturing demand with automation shift.",
+          "ta": "Core manufacturing demand with automation shift.",
+          "te": "Core manufacturing demand with automation shift.",
+          "ml": "Core manufacturing demand with automation shift."
+        },
+        "real_world_applications": {
+          "en": "Vehicles, turbines, robotics arms, plants.",
+          "kn": "Vehicles, turbines, robotics arms, plants.",
+          "hi": "Vehicles, turbines, robotics arms, plants.",
+          "ta": "Vehicles, turbines, robotics arms, plants.",
+          "te": "Vehicles, turbines, robotics arms, plants.",
+          "ml": "Vehicles, turbines, robotics arms, plants."
+        },
+        "future_scope": {
+          "en": "Strong with EV and advanced manufacturing.",
+          "kn": "Strong with EV and advanced manufacturing.",
+          "hi": "Strong with EV and advanced manufacturing.",
+          "ta": "Strong with EV and advanced manufacturing.",
+          "te": "Strong with EV and advanced manufacturing.",
+          "ml": "Strong with EV and advanced manufacturing."
+        },
+        "best_suited_personality": {
+          "en": "Hands-on designers and makers.",
+          "kn": "Hands-on designers and makers.",
+          "hi": "Hands-on designers and makers.",
+          "ta": "Hands-on designers and makers.",
+          "te": "Hands-on designers and makers.",
+          "ml": "Hands-on designers and makers."
+        },
+        "innovation_scope": {
+          "en": "High in product development.",
+          "kn": "High in product development.",
+          "hi": "High in product development.",
+          "ta": "High in product development.",
+          "te": "High in product development.",
+          "ml": "High in product development."
+        },
+        "startup_opportunities": {
+          "en": "Hardware, EV components, industrial tools.",
+          "kn": "Hardware, EV components, industrial tools.",
+          "hi": "Hardware, EV components, industrial tools.",
+          "ta": "Hardware, EV components, industrial tools.",
+          "te": "Hardware, EV components, industrial tools.",
+          "ml": "Hardware, EV components, industrial tools."
+        },
+        "average_student_preference": {
+          "en": "Classic engineering preference.",
+          "kn": "Classic engineering preference.",
+          "hi": "Classic engineering preference.",
+          "ta": "Classic engineering preference.",
+          "te": "Classic engineering preference.",
+          "ml": "Classic engineering preference."
+        },
+        "recommended_for": {
+          "en": "Mechanical systems and machines interest.",
+          "kn": "Mechanical systems and machines interest.",
+          "hi": "Mechanical systems and machines interest.",
+          "ta": "Mechanical systems and machines interest.",
+          "te": "Mechanical systems and machines interest.",
+          "ml": "Mechanical systems and machines interest."
+        }
+      }
+    },
+    "basic_sciences": {
+      "display_names": {
+        "en": "Basic Sciences",
+        "kn": "Basic Sciences",
+        "hi": "Basic Sciences",
+        "ta": "Basic Sciences",
+        "te": "Basic Sciences",
+        "ml": "Basic Sciences"
+      },
+      "cells": {
+        "main_focus": {
+          "en": "Fundamental math, physics, chemistry support for engineering.",
+          "kn": "Fundamental math, physics, chemistry support for engineering.",
+          "hi": "Fundamental math, physics, chemistry support for engineering.",
+          "ta": "Fundamental math, physics, chemistry support for engineering.",
+          "te": "Fundamental math, physics, chemistry support for engineering.",
+          "ml": "Fundamental math, physics, chemistry support for engineering."
+        },
+        "core_subjects": {
+          "en": "Calculus, physics, chemistry labs, foundations.",
+          "kn": "Calculus, physics, chemistry labs, foundations.",
+          "hi": "Calculus, physics, chemistry labs, foundations.",
+          "ta": "Calculus, physics, chemistry labs, foundations.",
+          "te": "Calculus, physics, chemistry labs, foundations.",
+          "ml": "Calculus, physics, chemistry labs, foundations."
+        },
+        "coding_intensity": {
+          "en": "Low — scientific computing optional.",
+          "kn": "Low — scientific computing optional.",
+          "hi": "Low — scientific computing optional.",
+          "ta": "Low — scientific computing optional.",
+          "te": "Low — scientific computing optional.",
+          "ml": "Low — scientific computing optional."
+        },
+        "ai_exposure": {
+          "en": "Minimal at UG service level.",
+          "kn": "Minimal at UG service level.",
+          "hi": "Minimal at UG service level.",
+          "ta": "Minimal at UG service level.",
+          "te": "Minimal at UG service level.",
+          "ml": "Minimal at UG service level."
+        },
+        "security_exposure": {
+          "en": "N/A",
+          "kn": "N/A",
+          "hi": "N/A",
+          "ta": "N/A",
+          "te": "N/A",
+          "ml": "N/A"
+        },
+        "math_level": {
+          "en": "Very high in foundation courses.",
+          "kn": "Very high in foundation courses.",
+          "hi": "Very high in foundation courses.",
+          "ta": "Very high in foundation courses.",
+          "te": "Very high in foundation courses.",
+          "ml": "Very high in foundation courses."
+        },
+        "career_paths": {
+          "en": "Teaching, research prep, cross-bridge to PG specializations.",
+          "kn": "Teaching, research prep, cross-bridge to PG specializations.",
+          "hi": "Teaching, research prep, cross-bridge to PG specializations.",
+          "ta": "Teaching, research prep, cross-bridge to PG specializations.",
+          "te": "Teaching, research prep, cross-bridge to PG specializations.",
+          "ml": "Teaching, research prep, cross-bridge to PG specializations."
+        },
+        "placement_domains": {
+          "en": "Fewer direct; supports core engineering strength.",
+          "kn": "Fewer direct; supports core engineering strength.",
+          "hi": "Fewer direct; supports core engineering strength.",
+          "ta": "Fewer direct; supports core engineering strength.",
+          "te": "Fewer direct; supports core engineering strength.",
+          "ml": "Fewer direct; supports core engineering strength."
+        },
+        "higher_studies": {
+          "en": "MSc, integrated PhD paths.",
+          "kn": "MSc, integrated PhD paths.",
+          "hi": "MSc, integrated PhD paths.",
+          "ta": "MSc, integrated PhD paths.",
+          "te": "MSc, integrated PhD paths.",
+          "ml": "MSc, integrated PhD paths."
+        },
+        "industry_demand": {
+          "en": "Indirect — strengthens tech programs.",
+          "kn": "Indirect — strengthens tech programs.",
+          "hi": "Indirect — strengthens tech programs.",
+          "ta": "Indirect — strengthens tech programs.",
+          "te": "Indirect — strengthens tech programs.",
+          "ml": "Indirect — strengthens tech programs."
+        },
+        "real_world_applications": {
+          "en": "Underpins all STEM programs.",
+          "kn": "Underpins all STEM programs.",
+          "hi": "Underpins all STEM programs.",
+          "ta": "Underpins all STEM programs.",
+          "te": "Underpins all STEM programs.",
+          "ml": "Underpins all STEM programs."
+        },
+        "future_scope": {
+          "en": "Stable as academic backbone.",
+          "kn": "Stable as academic backbone.",
+          "hi": "Stable as academic backbone.",
+          "ta": "Stable as academic backbone.",
+          "te": "Stable as academic backbone.",
+          "ml": "Stable as academic backbone."
+        },
+        "best_suited_personality": {
+          "en": "Theory-comfortable explorers.",
+          "kn": "Theory-comfortable explorers.",
+          "hi": "Theory-comfortable explorers.",
+          "ta": "Theory-comfortable explorers.",
+          "te": "Theory-comfortable explorers.",
+          "ml": "Theory-comfortable explorers."
+        },
+        "innovation_scope": {
+          "en": "Research-oriented.",
+          "kn": "Research-oriented.",
+          "hi": "Research-oriented.",
+          "ta": "Research-oriented.",
+          "te": "Research-oriented.",
+          "ml": "Research-oriented."
+        },
+        "startup_opportunities": {
+          "en": "Edtech, content, labs.",
+          "kn": "Edtech, content, labs.",
+          "hi": "Edtech, content, labs.",
+          "ta": "Edtech, content, labs.",
+          "te": "Edtech, content, labs.",
+          "ml": "Edtech, content, labs."
+        },
+        "average_student_preference": {
+          "en": "Foundation-year exposure primarily.",
+          "kn": "Foundation-year exposure primarily.",
+          "hi": "Foundation-year exposure primarily.",
+          "ta": "Foundation-year exposure primarily.",
+          "te": "Foundation-year exposure primarily.",
+          "ml": "Foundation-year exposure primarily."
+        },
+        "recommended_for": {
+          "en": "Students strengthening fundamentals before specialization.",
+          "kn": "Students strengthening fundamentals before specialization.",
+          "hi": "Students strengthening fundamentals before specialization.",
+          "ta": "Students strengthening fundamentals before specialization.",
+          "te": "Students strengthening fundamentals before specialization.",
+          "ml": "Students strengthening fundamentals before specialization."
+        }
+      }
+    }
+  }
+}

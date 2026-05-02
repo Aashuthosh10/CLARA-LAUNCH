@@ -18,10 +18,13 @@ import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
 import LeadershipOverview from '../components/chat/LeadershipOverview';
 import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
+import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/PremiumPrincipalCard';
+import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import CampusNavigationStage from '../components/chat/CampusNavigationStage';
+import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
 import ChatOrbControl from './chat/ChatOrbControl';
-import { useChatLayoutReducer } from './chat/useChatLayoutReducer';
+import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
@@ -44,6 +47,9 @@ import {
   selectFaqSuggestions,
   type FaqSuggestionCategory,
 } from '../data/faqSuggestions';
+import { inferForcedDepartmentComparisonFromUserText } from '../lib/departmentComparisonIntent';
+import { inferExecutiveProfileFromUserText } from '../lib/executiveLeadershipIntent';
+import type { ExecutiveLeadershipKind } from '../lib/executiveLeadershipIntent';
 
 declare global {
   interface Window {
@@ -248,6 +254,14 @@ const normalizeDepartmentMenuKey = (departmentId: string): string | null => {
   return raw;
 };
 
+const getPayloadMessageText = (m: unknown): string => {
+  if (!m || typeof m !== 'object') return '';
+  const o = m as { text?: unknown; content?: unknown };
+  if (typeof o.text === 'string') return o.text;
+  if (typeof o.content === 'string') return o.content;
+  return '';
+};
+
 const normalizeCardTrigger = (trigger: unknown): string | null => {
   if (typeof trigger !== 'string') return null;
   const n = trigger.trim().toLowerCase();
@@ -255,6 +269,27 @@ const normalizeCardTrigger = (trigger: unknown): string | null => {
   if (n === 'hod_info' || n === 'head_of_department' || n === 'hod_profile') return 'hod';
   if (n === 'dept' || n === 'department') return 'department_overview';
   if (n === 'fees') return 'department_fees';
+  if (
+    n === 'principal_profile' ||
+    n === 'principal' ||
+    n === 'principle' ||
+    n === 'college_principal' ||
+    n === 'principal_card' ||
+    n === 'principle_profile' ||
+    n === 'principle_card'
+  ) {
+    return 'principal_profile';
+  }
+  if (
+    n === 'vice_principal_profile' ||
+    n === 'vice_principal' ||
+    n === 'dean_academics' ||
+    n === 'dean_academic' ||
+    n === 'dean_of_academics' ||
+    n === 'academic_dean'
+  ) {
+    return 'vice_principal_profile';
+  }
   return n;
 };
 
@@ -313,6 +348,9 @@ export default function ChatScreen({
   const [infoSlideChip, setInfoSlideChip] = useState('');
   const [infoSlides, setInfoSlides] = useState<{ title: string; content: string }[]>([]);
   const [isHodStage, setIsHodStage] = useState(false);
+  const [executiveLeadershipKind, setExecutiveLeadershipKind] = useState<ExecutiveLeadershipKind | null>(
+    null,
+  );
   const [isFeesStage, setIsFeesStage] = useState(false);
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   const [isDocumentsStage, setIsDocumentsStage] = useState(false);
@@ -320,6 +358,11 @@ export default function ChatScreen({
   const [selectedCampusIndex, setSelectedCampusIndex] = useState(0);
   const [isCampusSpeaking, setIsCampusSpeaking] = useState(false);
   const [hasCampusRoomSelection, setHasCampusRoomSelection] = useState(false);
+  const [departmentComparisonOpen, setDepartmentComparisonOpen] = useState(false);
+  const [comparisonDeptIds, setComparisonDeptIds] = useState<string[]>([]);
+  const [comparisonHighlightId, setComparisonHighlightId] = useState<string | null>(null);
+  const [comparisonRecommendFocus, setComparisonRecommendFocus] = useState<string | null>(null);
+  const comparisonLayoutSnapRef = useRef<ChatLayoutMode | null>(null);
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
   const isE2EFlow = useMemo(() => {
@@ -402,6 +445,8 @@ export default function ChatScreen({
       clearSuggestionLayer();
       // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
       if (source === 'VOICE') {
+        setDepartmentComparisonOpen(false);
+        comparisonLayoutSnapRef.current = null;
         setLayoutMode('FULL_TEXT');
         setActiveCards(null);
         setCurrentCardIdx(0);
@@ -413,6 +458,7 @@ export default function ChatScreen({
         setInfoSlides([]);
         setInfoSlideChip('');
         setIsHodStage(false);
+        setExecutiveLeadershipKind(null);
         setIsFeesStage(false);
         setActiveFeesDepartmentId(null);
         setIsDocumentsStage(false);
@@ -664,6 +710,12 @@ export default function ChatScreen({
     });
   }, [language, collegeData]);
 
+  const handleCloseDepartmentComparison = useCallback(() => {
+    setDepartmentComparisonOpen(false);
+    const snap = comparisonLayoutSnapRef.current;
+    if (snap !== null) setLayoutMode(snap);
+    comparisonLayoutSnapRef.current = null;
+  }, [setLayoutMode]);
   const clearCardStages = useCallback(() => {
     setActiveCards(null);
     setCurrentCardIdx(0);
@@ -675,6 +727,7 @@ export default function ChatScreen({
     setInfoSlides([]);
     setInfoSlideChip('');
     setIsHodStage(false);
+    setExecutiveLeadershipKind(null);
     setIsFeesStage(false);
     setActiveFeesDepartmentId(null);
     setIsDocumentsStage(false);
@@ -741,11 +794,13 @@ export default function ChatScreen({
     }
     stopListening();
     if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
     setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
+    setDepartmentComparisonOpen(false);
+    comparisonLayoutSnapRef.current = null;
     if (onHome) onHome();
   }, [clearSuggestionLayer, stopTextReveal, stopListening, onHome]);
 
@@ -958,9 +1013,31 @@ export default function ChatScreen({
     
     // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
     const nativeTrigger = payload?.showCard;
-    const cardTrigger = normalizeCardTrigger(nativeTrigger);
     const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
     const isResponseReady = payload?.isProcessing !== true && payloadMessageList.length > 0;
+
+    const lastUserForInference = [...payloadMessageList].reverse().find((m: any) => {
+      const role = String(m?.role ?? '').toLowerCase();
+      return role === 'user' && getPayloadMessageText(m).trim().length > 0;
+    });
+    const lastUserTextForInference = lastUserForInference
+      ? getPayloadMessageText(lastUserForInference).trim()
+      : '';
+    const forcedDeptComparison = inferForcedDepartmentComparisonFromUserText(lastUserTextForInference);
+
+    let cardTrigger = normalizeCardTrigger(nativeTrigger);
+    if (isResponseReady && !cardTrigger) {
+      const inferred = inferExecutiveProfileFromUserText(lastUserTextForInference);
+      if (inferred === 'principal') cardTrigger = 'principal_profile';
+      else if (inferred === 'vice_principal') cardTrigger = 'vice_principal_profile';
+    }
+    if (
+      isResponseReady &&
+      forcedDeptComparison.force &&
+      forcedDeptComparison.departmentIds.length >= 2
+    ) {
+      cardTrigger = 'department_comparison';
+    }
     
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
@@ -1042,6 +1119,40 @@ export default function ChatScreen({
       return;
     }
 
+    if (cardTrigger === 'department_comparison' && isResponseReady) {
+      currentUiLockRef.current = 'CARD';
+      if (comparisonLayoutSnapRef.current === null) {
+        comparisonLayoutSnapRef.current = layoutMode;
+      }
+      const rawList = payload?.comparisonDepartments;
+      const cmpIds = Array.isArray(rawList)
+        ? (rawList as unknown[]).filter((x): x is string => typeof x === 'string')
+        : [];
+      const mergedCmp =
+        cmpIds.length >= 2 ? cmpIds : forcedDeptComparison.departmentIds;
+      setComparisonDeptIds(mergedCmp);
+      setComparisonHighlightId(
+        typeof payload?.comparisonHighlightId === 'string' ? payload.comparisonHighlightId : null,
+      );
+      setComparisonRecommendFocus(
+        typeof payload?.comparisonRecommendFocus === 'string'
+          ? payload.comparisonRecommendFocus
+          : null,
+      );
+      setDepartmentComparisonOpen(true);
+      setLayoutMode('FULL_TEXT');
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'FULL_TEXT',
+        });
+      }
+      return;
+    }
+
     // Keep Fees card sticky for the active response stream.
     // Some backend chunks can arrive without `showCard: "fees"` (or with a generic fallback trigger),
     // which previously caused a temporary switch back to FULL_TEXT while TTS was still speaking.
@@ -1052,6 +1163,26 @@ export default function ChatScreen({
           audioBase64,
           segmentKey,
           turnId: turnId,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    // Keep Principal / Vice Principal premium cards sticky across TTS chunks that omit `showCard`.
+    if (
+      executiveLeadershipKind &&
+      currentUiLockRef.current === 'CARD' &&
+      cardTrigger !== 'principal_profile' &&
+      cardTrigger !== 'vice_principal_profile'
+    ) {
+      setLayoutMode('SPLIT_CARDS');
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1071,6 +1202,8 @@ export default function ChatScreen({
       setIsInfoSlideStage(false);
       setInfoSlides([]);
       setInfoSlideChip('');
+      setIsHodStage(false);
+      setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
@@ -1097,6 +1230,7 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false);
+      setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
@@ -1118,6 +1252,7 @@ export default function ChatScreen({
     if (cardTrigger === 'placements') {
       currentUiLockRef.current = 'CARD';
       setIsHodStage(false);
+      setExecutiveLeadershipKind(null);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
       setCourseMenuOptions([]);
@@ -1161,6 +1296,7 @@ export default function ChatScreen({
         setCourseMenuOptions([]);
 
         currentUiLockRef.current = 'CARD';
+        setExecutiveLeadershipKind(null);
         setIsHodStage(true);
         setLayoutMode('SPLIT_CARDS');
       } else if (currentUiLockRef.current !== 'CARD') {
@@ -1170,8 +1306,64 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'placements') {
+    if (cardTrigger === 'principal_profile') {
+      currentUiLockRef.current = 'CARD';
       setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions([]);
+      setIsHodStage(false);
+      setExecutiveLeadershipKind('principal');
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'vice_principal_profile') {
+      currentUiLockRef.current = 'CARD';
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions([]);
+      setIsHodStage(false);
+      setExecutiveLeadershipKind('vice_principal');
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'placements') {
+      setIsHodStage(false);
+      setIsFeesStage(false);
+      setExecutiveLeadershipKind(null);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
       setCourseMenuOptions([]);
@@ -1213,6 +1405,7 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false); // Protect against HOD stage bleed-over
+      setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
@@ -1294,6 +1487,7 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false);
+      setExecutiveLeadershipKind(null);
       setIsDocumentsStage(false);
       setActiveCards(null);
       setSuppressedTurnId(null);
@@ -1331,6 +1525,7 @@ export default function ChatScreen({
       setInfoSlides([]);
       setInfoSlideChip('');
       setIsHodStage(false);
+      setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(true);
@@ -1360,6 +1555,8 @@ export default function ChatScreen({
         setIsInfoSlideStage(false);
         setInfoSlides([]);
         setInfoSlideChip('');
+        setIsHodStage(false);
+        setExecutiveLeadershipKind(null);
         setIsFeesStage(false);
         setActiveFeesDepartmentId(null);
         setIsDocumentsStage(false);
@@ -1424,7 +1621,18 @@ export default function ChatScreen({
       });
     }
 
-  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage, isPayloadStale, isCampusNavigationStage]);
+  }, [
+    payload,
+    resolveCardsFromTrigger,
+    collegeData,
+    language,
+    interceptAndSendMessage,
+    isPayloadStale,
+    isCampusNavigationStage,
+    executiveLeadershipKind,
+    isFeesStage,
+    isDepartmentOverviewStage,
+  ]);
 
   useEffect(() => {
     if (payload && isPayloadStale?.(payload)) return;
@@ -1976,10 +2184,14 @@ export default function ChatScreen({
       <AnimatePresence mode="wait">
           {/* ─── FULL TEXT MODE ─── */}
           {layoutMode === 'FULL_TEXT' ? (
-            <motion.div key="full-text" className="full-text-layout">
-
-              {/* Center content crossfades from greeting to language bubbles; orb stays anchored below. */}
-              <div className="full-text-message-stage relative z-10 flex min-h-0 flex-col">
+            <motion.div
+              key="full-text"
+              layoutId="main"
+              className={`full-text-layout min-h-0${departmentComparisonOpen ? ' full-text-layout--comparison-active' : ''}`}
+            >
+              <div
+                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${departmentComparisonOpen ? ' full-text-message-stage--with-comparison' : ''}`}
+              >
                 <div ref={fullTextScrollRef} className="text-container">
                   <AnimatePresence mode="wait">
                     {showLanguageOverlay &&
@@ -2079,21 +2291,42 @@ export default function ChatScreen({
                   </AnimatePresence>
                 </div>
 
-                <div className="full-text-orb-zone">
+                {!departmentComparisonOpen ? (
+                  <div className="full-text-orb-zone">
+                    {renderFaqCarousel('full')}
+                    <ChatOrbControl
+                      orbState={orbState}
+                      isProcessing={isResponsePending}
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+                      onTap={handleOrbTap}
+                      bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <DepartmentComparisonCinema
+                language={language}
+                open={departmentComparisonOpen}
+                initialDepartmentIds={comparisonDeptIds}
+                highlightId={comparisonHighlightId}
+                recommendFocus={comparisonRecommendFocus}
+                onClose={handleCloseDepartmentComparison}
+              />
+
+              {departmentComparisonOpen ? (
+                <motion.div layoutId="orb-container" className="full-text-orb-dock">
                   {renderFaqCarousel('full')}
                   <ChatOrbControl
                     orbState={orbState}
                     isProcessing={isResponsePending}
                     amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
                     onTap={handleOrbTap}
-                    bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
+                    comparisonMode
+                    bottomClassName="absolute -bottom-9 left-1/2 -translate-x-1/2 w-full text-center"
                   />
-                </div>
-
-              </div>
-              
-
-
+                </motion.div>
+              ) : null}
             </motion.div>
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
@@ -2108,6 +2341,10 @@ export default function ChatScreen({
                     direction={selectedCampusDirection}
                     language={language}
                   />
+                ) : executiveLeadershipKind === 'principal' ? (
+                  <PremiumPrincipalCard language={language} />
+                ) : executiveLeadershipKind === 'vice_principal' ? (
+                  <PremiumVicePrincipalCard language={language} />
                 ) : isHodStage ? (
                   <LeadershipOverview
                     cards={[]}

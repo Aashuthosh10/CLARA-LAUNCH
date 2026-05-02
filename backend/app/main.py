@@ -102,6 +102,7 @@ from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
+    INTENT_DEPARTMENT_COMPARISON,
     INTENT_DEPARTMENT_FEES,
     INTENT_DOCUMENTS,
     INTENT_DEPARTMENT_OVERVIEW,
@@ -111,9 +112,12 @@ from backend.services.answer_generation import (
     INTENT_OFF_TOPIC,
     INTENT_PLACEMENTS,
     INTENT_TRUSTEES_PROFILE,
-    extract_features,
     build_narrator_system_prompt,
+    build_system_prompt,
     build_target_card_payload,
+    department_label_to_json_key,
+    extract_comparison_department_canonical_labels,
+    extract_features,
     get_course_menu_options,
     get_course_menu_spoken_prompt,
     get_off_topic_reply,
@@ -125,7 +129,14 @@ from backend.services.answer_generation import (
     normalize_and_classify_query,
     rag_language_enforcement_directive,
     resolve_intent_from_features,
+    text_has_department_comparison_cue,
     translate_reply_to_session_language_async,
+)
+from backend.services.department_comparison_registry import (
+    build_comparison_context_for_llm,
+    default_comparison_ids,
+    department_order_keys,
+    validate_department_ids,
 )
 from backend.security.ws_auth import (
     log_ws_auth_configuration_warnings,
@@ -394,6 +405,71 @@ def _get_ack_earcon_base64() -> str:
     wav.extend(pcm)
     _ACK_EARCON_B64 = base64.b64encode(bytes(wav)).decode("ascii")
     return _ACK_EARCON_B64
+
+
+def _strip_llm_json_fence(text: str) -> str:
+    s = (text or "").strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"\s*```\s*$", "", s)
+    return s.strip()
+
+
+def _infer_comparison_focus(merged_text: str) -> str:
+    m = (merged_text or "").lower()
+    if any(x in m for x in ("child", "kid", "ಮಗು", "बच्च", "குழந்த", "పిల్ల", "കുട്ടി")):
+        return "child"
+    if "easier" in m or "easy branch" in m or "harder" in m or "difficult" in m:
+        return "ease"
+    if "future" in m or "scope" in m or "growth" in m:
+        return "future"
+    if any(x in m for x in ("placement", "package", "salary", "job", "company")):
+        return "placements"
+    return "generic"
+
+
+async def _llm_resolve_department_comparison_spec(
+    text: str,
+    language_name: str,
+    seed_ids: list[str],
+) -> dict[str, Any]:
+    try:
+        client = await get_groq_client()
+        if not client:
+            return {}
+        valid = department_order_keys()
+        if not valid:
+            return {}
+        seed_s = ",".join(seed_ids) if seed_ids else "(none)"
+        system_prompt = (
+            "You assist an SVIT campus kiosk. Valid department_ids (JSON keys only): "
+            f"{json.dumps(valid)}.\n"
+            "Return ONLY one JSON object (no markdown fences) with keys:\n"
+            "- comparison: boolean — true if user wants to compare branches/courses, contrast options, "
+            "or a recommendation between programs; false if they only want an unprompted list of all branches.\n"
+            "- department_ids: array of 2-3 distinct strings, each must be in valid list above\n"
+            "- recommend_focus: null or one of: placements, future, child, ease, generic\n"
+            "- highlight_id: null or one string from department_ids to visually favor when data supports it\n"
+            "Prefer keeping mentioned programs from the seeds when they are valid. "
+            "If only one program is named but the user asks which is better, add related programs from the valid list."
+        )
+        user_prompt = f"Session language: {language_name}\nRegex seed ids: {seed_s}\nUser query: {text.strip()}"
+        completion = await client.chat.completions.create(
+            model=RAG_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.0,
+            top_p=0.25,
+            max_tokens=180,
+        )
+        raw = _strip_llm_json_fence((completion.choices[0].message.content or "").strip())
+        out = json.loads(raw)
+        return out if isinstance(out, dict) else {}
+    except Exception:
+        logger.exception("department comparison spec LLM failed")
+        return {}
 
 
 async def _llm_detect_broad_course_intent(text: str, language_name: str) -> bool:
@@ -1026,6 +1102,59 @@ async def process_user_text_and_reply(
             if is_broad_course_menu:
                 intent = INTENT_COURSE_MENU
 
+        # Recover comparison when broad routing (e.g. course-menu heuristics / location downgrade)
+        # masks a clear two-program contrast; single-department "tell me about …" flows stay unaffected.
+        if intent in (INTENT_NORMAL_QUERY, INTENT_COURSE_MENU):
+            comp_recover_labels = extract_comparison_department_canonical_labels(merged_for_features)
+            if len(comp_recover_labels) >= 2 and (
+                text_has_department_comparison_cue(merged_for_features)
+                or text_has_department_comparison_cue(text)
+                or text_has_department_comparison_cue(query_en)
+            ):
+                intent = INTENT_DEPARTMENT_COMPARISON
+
+        comparison_dept_ids: list[str] = []
+        comparison_recommend_focus = "generic"
+        comparison_highlight_id: str | None = None
+        if intent == INTENT_DEPARTMENT_COMPARISON:
+            seeds = validate_department_ids(
+                [
+                    k
+                    for k in (
+                        department_label_to_json_key(lab) for lab in features.comparison_department_names
+                    )
+                    if k
+                ]
+            )
+            comparison_dept_ids = seeds
+            comparison_recommend_focus = _infer_comparison_focus(merged_for_features)
+            comparison_highlight_id = comparison_dept_ids[0] if comparison_dept_ids else None
+            needs_llm = len(comparison_dept_ids) < 2 or bool(
+                getattr(features, "is_comparison_recommendation", False)
+            )
+            if needs_llm:
+                try:
+                    spec = await asyncio.wait_for(
+                        _llm_resolve_department_comparison_spec(rag_query, lang_name, comparison_dept_ids),
+                        timeout=2.0,
+                    )
+                except asyncio.TimeoutError:
+                    spec = {}
+                if isinstance(spec, dict):
+                    cand = validate_department_ids(list(spec.get("department_ids") or []))
+                    if len(cand) >= 2:
+                        comparison_dept_ids = cand
+                    rf = spec.get("recommend_focus")
+                    if isinstance(rf, str) and rf.strip():
+                        comparison_recommend_focus = rf.strip().lower()
+                    hid = spec.get("highlight_id")
+                    if isinstance(hid, str) and hid in comparison_dept_ids:
+                        comparison_highlight_id = hid
+            if len(comparison_dept_ids) < 2:
+                comparison_dept_ids = validate_department_ids(default_comparison_ids(3))
+            if comparison_highlight_id is None or comparison_highlight_id not in comparison_dept_ids:
+                comparison_highlight_id = comparison_dept_ids[0] if comparison_dept_ids else None
+
         off_topic_direct_reply: str | None = None
         if intent == INTENT_OFF_TOPIC:
             off_topic_direct_reply = get_off_topic_reply(lang_name)
@@ -1057,6 +1186,17 @@ async def process_user_text_and_reply(
         elif intent == INTENT_DOCUMENTS or is_location_turn:
             context = ""
             timing.mark("rag_end")
+        elif intent == INTENT_DEPARTMENT_COMPARISON:
+            context = build_comparison_context_for_llm(comparison_dept_ids, lang_key=lang_key)
+            hint_bits: list[str] = []
+            if comparison_recommend_focus and comparison_recommend_focus != "generic":
+                hint_bits.append(f"recommend_focus={comparison_recommend_focus}")
+            if comparison_highlight_id:
+                hint_bits.append(f"highlight_id={comparison_highlight_id}")
+            if hint_bits:
+                context = f"{context}\n\n(Session hints: {', '.join(hint_bits)})"
+            timing.mark("rag_end")
+            context_source = "comparison_registry"
         elif is_narrator_intent(intent):
             # Presentation mode: only locale JSON slices that match on-screen cards (no vector RAG).
             narrator_payload = build_target_card_payload(
@@ -1131,6 +1271,8 @@ async def process_user_text_and_reply(
                 build_narrator_system_prompt(lang_name, card_json),
                 session,
             )
+        elif intent == INTENT_DEPARTMENT_COMPARISON:
+            system_prompt = build_system_prompt(INTENT_DEPARTMENT_COMPARISON, lang_name, context)
         else:
             system_prompt = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
@@ -1147,7 +1289,7 @@ async def process_user_text_and_reply(
             )
             system_prompt = _append_guest_name_system_clause(system_prompt, session)
 
-        if context.strip() and narrator_payload is None:
+        if context.strip() and narrator_payload is None and intent != INTENT_DEPARTMENT_COMPARISON:
             if lang_key != "en" and context_source == "rag":
                 directive = multilingual_rag_reply_directive(lang_name)
             else:
@@ -1430,6 +1572,8 @@ async def process_user_text_and_reply(
             show_card = "documents"
             assistant_msg["text"] = _documents_card_direct_reply(lang_key)
             assistant_msg["isHidden"] = True
+        elif intent == INTENT_DEPARTMENT_COMPARISON:
+            show_card = "department_comparison"
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
@@ -1608,6 +1752,11 @@ async def process_user_text_and_reply(
             payload["type"] = "assistant_audio_update"
         if department_id:
             payload["departmentId"] = department_id
+        if intent == INTENT_DEPARTMENT_COMPARISON and comparison_dept_ids:
+            payload["comparisonDepartments"] = list(comparison_dept_ids)
+            payload["comparisonRecommendFocus"] = comparison_recommend_focus
+            if comparison_highlight_id:
+                payload["comparisonHighlightId"] = comparison_highlight_id
         if course_menu_options:
             payload["options"] = course_menu_options
         if full_audio_b64:

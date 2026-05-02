@@ -23,7 +23,9 @@ import { KioskState } from './store/kiosk/types';
 import SleepScreen from './screens/SleepScreen';
 import ChatScreen from './screens/ChatScreen';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:6969/ws/clara';
+const WS_BASE_URL =
+  import.meta.env.VITE_WS_URL ||
+  `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:6969/ws/clara`;
 const WS_TOKEN = (import.meta.env.VITE_WS_TOKEN || '').trim();
 const WS_URL = WS_TOKEN
   ? `${WS_BASE_URL}${WS_BASE_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(WS_TOKEN)}`

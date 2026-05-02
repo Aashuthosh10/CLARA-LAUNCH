@@ -195,7 +195,7 @@ export function initKioskSync(wsUrl: string) {
             if ('messages' in p && Array.isArray(p.messages)) {
                 updates.messages = p.messages;
             }
-            if ('showCard' in p && p.showCard) {
+            if ('showCard' in p && p.showCard && p.showCard !== 'department_comparison') {
                 updates.layoutMode = 'SPLIT_CARDS';
             }
             if (Object.keys(updates).length) kioskStore.updateContent(updates);

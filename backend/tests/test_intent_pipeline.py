@@ -2,12 +2,20 @@ import unittest
 
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
+    INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_FEES,
     INTENT_DEPARTMENT_OVERVIEW,
     INTENT_DOCUMENTS,
     INTENT_HOD_PROFILE,
+    INTENT_NORMAL_QUERY,
+    INTENT_PRINCIPAL_PROFILE,
+    INTENT_TRUSTEES_PROFILE,
+    INTENT_VICE_PRINCIPAL_PROFILE,
+    _detect_profile_intent,
     extract_features,
+    maybe_override_intent_with_executive_profile,
+    normalized_text_for_executive_keyword_scan,
     resolve_intent_from_features,
 )
 
@@ -117,6 +125,58 @@ class TestIntentPipeline(unittest.TestCase):
         intent, dept = self._resolve("courses in cse")
         self.assertEqual(intent, INTENT_COURSE_MENU)
         self.assertEqual(dept, "CSE")
+
+    def test_principal_executive_detection_and_override(self) -> None:
+        for phrase in (
+            "who is the principal",
+            "principal details",
+            "who runs this college",
+            "college head",
+            "principal of svit",
+            "tell me about the principal",
+            "who is the principle",
+            "ಪ್ರಿನ್ಸಿಪಾಲ್ ತಿಳಿಸಿ",
+            "കോളേജിന് പ്രിൻസിപ്പൽ ആർ",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertEqual(
+                    maybe_override_intent_with_executive_profile(
+                        INTENT_NORMAL_QUERY,
+                        phrase,
+                    ),
+                    INTENT_PRINCIPAL_PROFILE,
+                )
+                self.assertEqual(
+                    _detect_profile_intent(normalized_text_for_executive_keyword_scan(phrase)),
+                    INTENT_PRINCIPAL_PROFILE,
+                )
+
+        for phrase in (
+            "overview of vice principal",
+            "vice principal name",
+            "ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಯಾರು",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertEqual(
+                    maybe_override_intent_with_executive_profile(
+                        INTENT_COLLEGE_OVERVIEW,
+                        phrase,
+                    ),
+                    INTENT_VICE_PRINCIPAL_PROFILE,
+                )
+                self.assertEqual(
+                    _detect_profile_intent(normalized_text_for_executive_keyword_scan(phrase)),
+                    INTENT_VICE_PRINCIPAL_PROFILE,
+                )
+
+        # Trustees wording without principal cues must still resolve to trustees detection (not overridden from HOD flows).
+        self.assertEqual(
+            maybe_override_intent_with_executive_profile(
+                INTENT_TRUSTEES_PROFILE,
+                "who are the founder trustees",
+            ),
+            INTENT_TRUSTEES_PROFILE,
+        )
 
     def test_documents_intent_multilingual(self) -> None:
         phrases = [

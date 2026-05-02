@@ -160,6 +160,7 @@
 .full-text-layout {
   width: 100vw;
   height: 100vh;
+  min-height: 0;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -168,6 +169,7 @@
   padding: 0;
   z-index: 10;
   background: transparent;
+  overflow: hidden;
 }
 
 .full-text-message-stage {
@@ -176,12 +178,233 @@
   max-width: none;
   display: flex;
   flex: 1;
+  min-height: 0;
   align-items: stretch;
   justify-content: stretch;
   overflow: hidden;
   margin: 0 auto;
   padding: 0;
   position: relative;
+}
+
+.full-text-message-stage--with-comparison {
+  flex: 0 1 auto;
+  max-height: min(22vh, 200px);
+  justify-content: flex-start;
+}
+
+.full-text-message-stage--with-comparison .full-text-safe-zone {
+  max-height: min(18vh, 168px);
+}
+
+/* Orb dock: fixed bottom band — content above must not reposition this */
+.full-text-orb-dock {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  flex-shrink: 0;
+  justify-content: center;
+  padding-top: 0.35rem;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  margin-top: 0;
+  pointer-events: auto;
+}
+
+.full-text-layout.full-text-layout--comparison-active .full-text-orb-dock {
+  padding-top: 0;
+  padding-bottom: calc(clamp(28px, 4vh, 42px) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ─── Inline department comparison (lavender glass) ─── */
+.comparison-embed-slot {
+  pointer-events: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: clamp(22px, 2.75vh, 38px);
+  overflow: visible;
+}
+
+.comparison-embed-leading-filler {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.comparison-embed-panel-shell {
+  pointer-events: auto;
+  max-height: min(85vh, 1080px);
+  overflow: hidden;
+}
+
+.department-comparison-panel {
+  max-height: 100%;
+  border: 1px solid rgba(58, 24, 112, 0.22);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.58) 0%,
+    rgba(252, 231, 243, 0.42) 42%,
+    rgba(237, 233, 254, 0.5) 100%
+  );
+  box-shadow:
+    0 20px 50px rgba(24, 10, 44, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
+    0 -24px 48px rgba(167, 139, 250, 0.06) inset;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.department-comparison-panel-glow {
+  background:
+    radial-gradient(ellipse 85% 65% at 50% -15%, rgba(192, 167, 250, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 90% 95%, rgba(233, 213, 255, 0.35), transparent 50%);
+  opacity: 1;
+}
+
+.department-comparison-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5b21b6;
+}
+
+.department-comparison-title {
+  font-size: clamp(1.15rem, 2.4vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.department-comparison-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(58, 24, 112, 0.12);
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 14px rgba(24, 10, 44, 0.06);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.department-comparison-close:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(58, 24, 112, 0.2);
+}
+
+.department-comparison-select {
+  min-width: 9.5rem;
+  max-width: 16rem;
+  cursor: pointer;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(58, 24, 112, 0.2);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.64rem 0.88rem;
+  font-weight: 600;
+  color: #1e1b4b;
+  outline: none;
+  box-shadow: 0 2px 10px rgba(24, 10, 44, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.department-comparison-select:focus {
+  border-color: rgba(91, 33, 182, 0.45);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.28);
+}
+
+.department-comparison-add-dept {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(58, 24, 112, 0.2);
+  background: rgba(255, 255, 255, 0.65);
+  padding: 0.58rem 0.88rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #4c1d95;
+  box-shadow: 0 2px 10px rgba(24, 10, 44, 0.05);
+}
+
+.department-comparison-add-dept:hover {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(58, 24, 112, 0.3);
+}
+
+.department-comparison-scroll {
+  scrollbar-color: rgba(91, 33, 182, 0.35) transparent;
+  padding-top: 0.4rem;
+}
+
+.department-comparison-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.department-comparison-scroll::-webkit-scrollbar-thumb {
+  background: rgba(91, 33, 182, 0.28);
+  border-radius: 9999px;
+}
+
+.department-comparison-hint {
+  color: #64748b;
+}
+
+.department-comparison-col-head {
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.department-comparison-col-head--highlight {
+  border-color: rgba(139, 92, 246, 0.42);
+  background: linear-gradient(165deg, rgba(237, 233, 254, 0.95), rgba(250, 245, 255, 0.88));
+  box-shadow:
+    0 10px 28px rgba(91, 33, 182, 0.12),
+    0 0 0 1px rgba(167, 139, 250, 0.2) inset;
+}
+
+.department-comparison-highlight-badge {
+  color: #6d28d9;
+}
+
+.department-comparison-row-label {
+  border-radius: 0.65rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(10px);
+  padding: 0.98rem 0.85rem;
+  min-height: 3.55rem;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  color: #334155;
+}
+
+.department-comparison-cell {
+  border: 1px solid rgba(241, 245, 249, 0.9);
+  background: rgba(255, 255, 255, 0.42);
+  color: #1e293b;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.department-comparison-cell:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(199, 177, 246, 0.45);
+  box-shadow: 0 6px 18px rgba(91, 33, 182, 0.06);
+}
+
+.department-comparison-cell--highlight {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(245, 243, 255, 0.88);
 }
 
 .full-text-message-wrapper {
