@@ -14,6 +14,18 @@ async function installMockClaraSocket(page: Page) {
         },
       ],
     };
+    const namePayload = {
+      turn_id: 'name_after_language_pick',
+      isProcessing: false,
+      isSpeaking: false,
+      messages: [
+        {
+          id: 'name_prompt',
+          role: 'clara',
+          text: 'May I know your preferred name?',
+        },
+      ],
+    };
     const readyPayload = {
       turn_id: 'ready_after_language_pick',
       isProcessing: false,
@@ -55,6 +67,8 @@ async function installMockClaraSocket(page: Page) {
       static OPEN = 1;
       static CLOSING = 2;
       static CLOSED = 3;
+      /** First user_message after language_selected simulates guest-name reply → ready_prompt. */
+      static postLangUserMsgCount = 0;
 
       CONNECTING = 0;
       OPEN = 1;
@@ -79,13 +93,41 @@ async function installMockClaraSocket(page: Page) {
 
       send(raw: string) {
         const msg = JSON.parse(raw);
-        if (msg.action === 'wake') this.emit(5, greetingPayload);
-        if (msg.action === 'language_selected') this.emit(5, readyPayload);
+        if (msg.action === 'wake') {
+          MockClaraWebSocket.postLangUserMsgCount = 0;
+          this.emit(5, greetingPayload);
+        }
+        if (msg.action === 'language_selected') {
+          MockClaraWebSocket.postLangUserMsgCount = 0;
+          this.emit(5, namePayload);
+        }
         if (msg.action === 'user_message') {
+          MockClaraWebSocket.postLangUserMsgCount += 1;
+          const n = MockClaraWebSocket.postLangUserMsgCount;
+          if (n === 1) {
+            const ut = typeof msg.text === 'string' ? msg.text : '';
+            this.emit(5, {
+              turn_id: 'ready_after_language_pick',
+              isProcessing: false,
+              isSpeaking: false,
+              messages: [
+                { id: 'user-mock', role: 'user', text: ut },
+                {
+                  id: 'ready_prompt',
+                  role: 'clara',
+                  text: 'Wonderful. What would you like to know?',
+                },
+              ],
+            });
+            return;
+          }
           this.emit(5, documentsPayload);
           window.setTimeout(() => this.emit(5, documentsAudioPayload), 120);
         }
-        if (msg.action === 'reset_session' || msg.type === 'RESET_SESSION') this.emit(0, null);
+        if (msg.action === 'reset_session' || msg.type === 'RESET_SESSION') {
+          MockClaraWebSocket.postLangUserMsgCount = 0;
+          this.emit(0, null);
+        }
       }
 
       close() {
@@ -125,6 +167,19 @@ async function selectInlineLanguage(page: Page, language: string) {
   await button.click({ force: true });
 }
 
+async function completeInlineGuestNameGate(page: Page) {
+  await expect(
+    page.getByText(
+      /May I know your preferred name\?|ನಿಮ್ಮ ಆತ್ಮೀಯ ಹೆಸರನ್ನು|आपका नाम|உங்கள் பெயரை|మీ పేరు|നിങ്ങളുടെ പേരറിയാമോ/i
+    )
+  ).toBeVisible({ timeout: 15000 });
+  await page.waitForFunction(() => typeof window.__CLARA_TEST_SEND_MESSAGE === 'function');
+  await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('Alex'));
+  await expect(
+    page.getByText(/Wonderful|ready to help|What would you like|सहायता|ಸಹಾಯ|உதவ|సహాయం|സഹായ/i)
+  ).toBeVisible({ timeout: 15000 });
+}
+
 test.describe('CLARA chat flow', () => {
   test.beforeEach(async ({ page }) => {
     await installMockClaraSocket(page);
@@ -137,10 +192,8 @@ test.describe('CLARA chat flow', () => {
 
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
     await selectInlineLanguage(page, 'english');
+    await completeInlineGuestNameGate(page);
 
-    await expect(
-      page.getByText(/Wonderful|ready to help|What would you like|सहायता|ಸಹಾಯ|உதவ|సహాయం|സഹായ/i)
-    ).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible();
   });
 
@@ -162,9 +215,8 @@ test.describe('CLARA chat flow', () => {
 
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 10000 });
     await selectInlineLanguage(page, 'english');
-    await expect(
-      page.getByText(/Wonderful|ready to help|What would you like|सहायता|ಸಹಾಯ|உதவ|సహాయం|സഹായ/i)
-    ).toBeVisible({ timeout: 15000 });
+    await completeInlineGuestNameGate(page);
+
     await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible();
   });
 
@@ -174,9 +226,9 @@ test.describe('CLARA chat flow', () => {
 
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
     await selectInlineLanguage(page, 'english');
-    await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible({ timeout: 15000 });
+    await completeInlineGuestNameGate(page);
 
-    await page.waitForFunction(() => typeof window.__CLARA_TEST_SEND_MESSAGE === 'function');
+    await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible({ timeout: 15000 });
     await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('admission documents'));
 
     await expect(page.getByTestId('documents-block')).toBeVisible({ timeout: 20000 });
@@ -194,9 +246,9 @@ test.describe('CLARA chat flow', () => {
 
       await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
       await selectInlineLanguage(page, language);
+      await completeInlineGuestNameGate(page);
 
       await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible({ timeout: 15000 });
-      await page.waitForFunction(() => typeof window.__CLARA_TEST_SEND_MESSAGE === 'function');
     });
   }
 });

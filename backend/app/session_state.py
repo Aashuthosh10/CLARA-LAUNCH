@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 
 def append_session_history(session: dict, role: str, text: str, *, max_turns: int = 3) -> None:
     cleaned = (text or "").strip()
@@ -24,3 +26,40 @@ def history_for_llm(session: dict) -> list[dict[str, str]]:
         if text:
             out.append({"role": role, "content": text})
     return out
+
+
+def text_contains_guest_name_token(text: str, name: str) -> bool:
+    """
+    True if `text` contains `name` as a whole word or whole multi-word phrase.
+    Short names (< 3 chars) return False to avoid ambiguous matches and false suppression.
+    """
+    name = (name or "").strip()
+    if len(name) < 3:
+        return False
+    hay = (text or "").strip()
+    if not hay:
+        return False
+
+    parts = name.split()
+    if len(parts) >= 2:
+        pattern = r"\b" + r"\s+".join(re.escape(p) for p in parts) + r"\b"
+        try:
+            return bool(re.search(pattern, hay, re.IGNORECASE))
+        except re.error:
+            return name.casefold() in hay.casefold()
+
+    token = parts[0]
+    if len(token) < 3:
+        return False
+    if token.isascii() and token.isalpha():
+        return bool(re.search(rf"\b{re.escape(token)}\b", hay, re.IGNORECASE))
+    return token.casefold() in hay.casefold()
+
+
+def assistant_last_reply_used_guest_name(session: dict, name: str) -> bool:
+    """True if the most recent assistant history line includes the guest name (token-aware)."""
+    for item in reversed(session.get("history") or []):
+        if item.get("role") != "assistant":
+            continue
+        return text_contains_guest_name_token((item.get("text") or "").strip(), name)
+    return False

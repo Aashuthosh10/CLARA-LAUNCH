@@ -15,7 +15,6 @@ import { isValidTransition, mapBackendState } from './stateMachine';
 import { getStore as getWSStore } from '../../lib/ws/state';
 import { initWatchdog } from '../../lib/kiosk/watchdog';
 
-const IDLE_TIMEOUT_MS = 30000; // 30 seconds
 const MAX_MESSAGES = 50;       // Cap message array to prevent unbounded growth
 
 const INITIAL_STATE: KioskSnapshot = {
@@ -69,13 +68,11 @@ function notify() {
 }
 
 function startIdleTimer() {
-    if (idleTimer) clearTimeout(idleTimer);
-    if (currentSnapshot.currentState === KioskState.SLEEP) return;
-
-    idleTimer = setTimeout(() => {
-        if (import.meta.env.DEV) console.log('[KIOSK] Session expired due to inactivity.');
-        kioskStore.resetSession();
-    }, IDLE_TIMEOUT_MS);
+    // Previously: 30s store-only expiry. Chat inactivity is handled in App.tsx (`VITE_KIOSK_INACTIVITY_MS`) with a hard reset.
+    if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+    }
 }
 
 export const kioskStore = {

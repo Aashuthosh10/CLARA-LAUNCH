@@ -7,6 +7,7 @@ Edit order:
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -95,6 +96,72 @@ _READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
     "Malayalam": "വളരെ നന്നായി. നിങ്ങളെ ശ്രദ്ധയോടെ സഹായിക്കാൻ ഞാൻ തയ്യാറാണ്. ഇന്ന് നിങ്ങൾ എന്താണ് അറിയാൻ ആഗ്രഹിക്കുന്നത്?",
 }
 
+_NAME_PROMPTS_BY_LANGUAGE: dict[str, str] = {
+    "English": "May I know your preferred name?",
+    "Kannada": "ನಿಮ್ಮ ಆತ್ಮೀಯ ಹೆಸರನ್ನು ತಿಳಿಸಬಹುದೇ?",
+    "Hindi": "क्या मैं आपका नाम जान सकती हूँ?",
+    "Tamil": "உங்கள் பெயரை அறியலாமா?",
+    "Telugu": "మీ పేరు ఏమిటో చెప్పగలరా?",
+    "Malayalam": "നിങ്ങളുടെ പേരറിയാമോ?",
+}
+
+# Placeholder uses literal "{name}"; substituted via str.replace for user safety.
+_READY_PROMPTS_WITH_NAME_BY_LANGUAGE: dict[str, str] = {
+    "English": (
+        "Wonderful to meet you, {name}. I am ready to help you with care. "
+        "What would you like to explore today?"
+    ),
+    "Kannada": (
+        "{name}, ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗುವುದು ಸಂತೋಷ. ನಿಮಗೆ ಆತ್ಮೀಯವಾಗಿ ಸಹಾಯ ಮಾಡಲು ನಾನು ಸಿದ್ಧವಾಗಿದ್ದೇನೆ. "
+        "ಇಂದು ನೀವು ಏನನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?"
+    ),
+    "Hindi": (
+        "{name}, आपसे मिलकर अच्छा लगा। मैं पूरे ध्यान से आपकी मदद के लिए तैयार हूँ। "
+        "आज आप क्या जानना चाहेंगे?"
+    ),
+    "Tamil": (
+        "{name}, உங்களை சந்திப்பதில் மகிழ்ச்சி. உங்களுக்கு அக்கறையுடன் உதவ நான் தயார். "
+        "இன்று நீங்கள் என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?"
+    ),
+    "Telugu": (
+        "{name}, మిమ്മల్ని కలవడం ఆనందం. మీకు శ్రద్ధగా సహాయం చేయడానికి నేను సిద్ధంగా ఉన్నాను. "
+        "ఈరోజు మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?"
+    ),
+    "Malayalam": (
+        "{name}, നിങ്ങളെ കാണാൻ സന്തോഷം. നിങ്ങളെ ശ്രദ്ധയോടെ സഹായിക്കാൻ ഞാൻ തയ്യാറാണ്. "
+        "ഇന്ന് നിങ്ങൾ എന്താണ് അറിയാൻ ആഗ്രഹിക്കുന്നത്?"
+    ),
+}
+
+_GUEST_NAME_PREFIX_RE = re.compile(
+    r"^\s*(?:my\s+name\s+is|"
+    r"i\s*['\u2019]?\s*m|i\s+am|call\s+me|this\s+is|"
+    r"name\s*[:：]\s*|the\s+name\s+is)\s+",
+    re.IGNORECASE,
+)
+
+_GUEST_NAME_MAX_LEN = 48
+
+# Phrases meaning "I'd rather not share my name" (ASCII normalize for matching).
+_SKIP_GUEST_NAME_PHRASES: frozenset[str] = frozenset(
+    {
+        "skip",
+        "no",
+        "no thanks",
+        "no thank you",
+        "pass",
+        "none",
+        "prefer not",
+        "prefer not to say",
+        "rather not",
+        "rather not say",
+        "not now",
+        "anonymous",
+        "skip please",
+        "no name",
+    }
+)
+
 
 # ---------------------------------------------------------------------------
 # Time-aware greeting translations retained for non-language-gate flows
@@ -127,10 +194,54 @@ _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
 }
 
 
+def guest_name_reply_is_skip(text: str | None) -> bool:
+    """True if the user declined to share a name (English-oriented phrases)."""
+    if not text or not str(text).strip():
+        return False
+    key = " ".join(str(text).strip().lower().split())
+    return key in _SKIP_GUEST_NAME_PHRASES
+
+
+def normalize_guest_name(raw: str | None) -> str | None:
+    """Strip fillers and return a safe display name, or None if unusable."""
+    if not raw:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    if guest_name_reply_is_skip(s):
+        return None
+    s = _GUEST_NAME_PREFIX_RE.sub("", s)
+    s = s.strip(" \t\r\n.,!?\"'")
+    s = " ".join(s.split())
+    if guest_name_reply_is_skip(s):
+        return None
+    if not s:
+        return None
+    if len(s) > _GUEST_NAME_MAX_LEN:
+        s = s[:_GUEST_NAME_MAX_LEN].rsplit(" ", 1)[0].strip() or s[:_GUEST_NAME_MAX_LEN].strip()
+    if not s or (s.isdigit() and len(s) > 3):
+        return None
+    if sum(1 for c in s if c.isalpha()) < 1:
+        return None
+    return s
+
+
+def get_name_prompt(language: str | None) -> str:
+    lang = language if language in _NAME_PROMPTS_BY_LANGUAGE else "English"
+    return _NAME_PROMPTS_BY_LANGUAGE.get(lang, _NAME_PROMPTS_BY_LANGUAGE["English"])
+
+
 def _validate_language_parity() -> None:
     missing_prompts = [lang for lang in SUPPORTED_LANGUAGES if lang not in _READY_PROMPTS_BY_LANGUAGE]
     if missing_prompts:
         raise RuntimeError(f"Missing ready prompt translations: {', '.join(missing_prompts)}")
+    missing_names = [lang for lang in SUPPORTED_LANGUAGES if lang not in _NAME_PROMPTS_BY_LANGUAGE]
+    if missing_names:
+        raise RuntimeError(f"Missing name prompt translations: {', '.join(missing_names)}")
+    missing_ready_named = [lang for lang in SUPPORTED_LANGUAGES if lang not in _READY_PROMPTS_WITH_NAME_BY_LANGUAGE]
+    if missing_ready_named:
+        raise RuntimeError(f"Missing personalized ready prompt translations: {', '.join(missing_ready_named)}")
     for period, mapping in _GREETINGS_BY_PERIOD.items():
         missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
         if missing:
@@ -146,9 +257,13 @@ def get_greeting(language: str | None, now: datetime | None = None) -> str:
     return _GREETINGS_BY_PERIOD[period].get(lang, _GREETINGS_BY_PERIOD[period]["English"])
 
 
-def get_ready_prompt(language: str | None) -> str:
+def get_ready_prompt(language: str | None, preferred_name: str | None = None) -> str:
     lang = language if language in _READY_PROMPTS_BY_LANGUAGE else "English"
-    return _READY_PROMPTS_BY_LANGUAGE.get(lang, _READY_PROMPTS_BY_LANGUAGE["English"])
+    if not (preferred_name or "").strip():
+        return _READY_PROMPTS_BY_LANGUAGE.get(lang, _READY_PROMPTS_BY_LANGUAGE["English"])
+    name = str(preferred_name).strip()
+    template = _READY_PROMPTS_WITH_NAME_BY_LANGUAGE.get(lang, _READY_PROMPTS_WITH_NAME_BY_LANGUAGE["English"])
+    return template.replace("{name}", name)
 
 
 # Backward-compatible default snapshot (evening English).

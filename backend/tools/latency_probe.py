@@ -67,7 +67,10 @@ async def run_probe(url: str, turns: int, language: str, timeout_s: float, origi
         await ws.send(json.dumps({"action": "wake"}))
         await ws.recv()  # state 5 (chat after wake)
         await ws.send(json.dumps({"action": "language_selected", "language": language}))
-        await ws.recv()  # ack
+        await _recv_until_turn_done(ws, timeout_s=timeout_s)  # name prompt
+        await ws.send(json.dumps({"action": "user_message", "text": "Probe"}))
+        await _recv_until_turn_done(ws, timeout_s=timeout_s)  # ready after guest name
+
         await ws.send(json.dumps({"action": "conversation_started"}))
         await ws.recv()  # greeting payload
 

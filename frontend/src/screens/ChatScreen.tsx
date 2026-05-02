@@ -7,6 +7,7 @@ import fullTextBgImage from '../assets/full_text_bg.png';
 import {
   type ChatMessage,
   type OrbState,
+  type TextMessage,
   isTextMessage,
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
@@ -271,6 +272,8 @@ interface ChatScreenProps {
   onBack: () => void;
   onHome?: () => void;
   onOrbTap: () => void;
+  /** Kiosk: reset 1-minute inactivity-to-sleep timer on real user intent. */
+  onChatUserActivity?: () => void;
   sendMessage: (msg: object) => void;
   /** When true, discard payload-driven updates (ghost session prevention). */
   isPayloadStale?: (p: unknown) => boolean;
@@ -289,6 +292,7 @@ export default function ChatScreen({
   onBack,
   onHome,
   onOrbTap,
+  onChatUserActivity,
   sendMessage,
   isPayloadStale,
 }: ChatScreenProps) {
@@ -425,9 +429,16 @@ export default function ChatScreen({
           );
         }
       }
+
+      const text = typeof msg.text === 'string' ? msg.text : '';
+      const isBackgroundNoiseDummy =
+        text.includes('BACKGROUND_NOISE') || text.includes('**BACKGROUND_NOISE**');
+      if (!isBackgroundNoiseDummy) {
+        onChatUserActivity?.();
+      }
     }
     sendMessage(msg);
-  }, [clearSuggestionLayer, sendMessage, setLayoutMode]);
+  }, [clearSuggestionLayer, sendMessage, setLayoutMode, onChatUserActivity]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -511,7 +522,13 @@ export default function ChatScreen({
     if (Array.isArray(payload?.messages)) {
       const incomingMessages = payload.messages as ChatMessage[];
       const hasReadyPrompt = incomingMessages.some((m: any) => m?.id === 'ready_prompt');
-      if (hasReadyPrompt || payload?.turn_id === 'ready_after_language_pick') {
+      const hasNamePrompt = incomingMessages.some((m: any) => m?.id === 'name_prompt');
+      if (
+        hasReadyPrompt ||
+        hasNamePrompt ||
+        payload?.turn_id === 'ready_after_language_pick' ||
+        payload?.turn_id === 'name_after_language_pick'
+      ) {
         setIsAwaitingReadyPrompt(false);
       }
       const hasAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
@@ -598,6 +615,7 @@ export default function ChatScreen({
 
   const handleInlineLanguagePick = useCallback(
     (lang: Language) => {
+      onChatUserActivity?.();
       setLanguage(lang);
       setIsAwaitingReadyPrompt(true);
       clearSuggestionLayer();
@@ -607,7 +625,7 @@ export default function ChatScreen({
       setLanguageGateSatisfied(true);
       onInlineLanguageResolved?.();
     },
-    [clearSuggestionLayer, sendMessage, setLanguage, onInlineLanguageResolved]
+    [clearSuggestionLayer, sendMessage, setLanguage, onInlineLanguageResolved, onChatUserActivity]
   );
 
   const resolveCardsFromTrigger = useCallback((trigger: unknown): CardDataItem[] | null => {
@@ -736,6 +754,7 @@ export default function ChatScreen({
     if (!cleanText) return;
 
     stopCampusSpeech();
+    onChatUserActivity?.();
     setIsCampusSpeaking(true);
     campusTtsSerialRef.current += 1;
     sendMessage({
@@ -744,7 +763,7 @@ export default function ChatScreen({
       text: cleanText,
       turn_id: `campus-${key}-${language}-${campusTtsSerialRef.current}`,
     });
-  }, [language, sendMessage, stopCampusSpeech]);
+  }, [language, onChatUserActivity, sendMessage, stopCampusSpeech]);
 
   const speakCampusDirection = useCallback((index = selectedCampusIndex) => {
     const direction = CAMPUS_DIRECTIONS[index] ?? CAMPUS_DIRECTIONS[0];
@@ -759,6 +778,7 @@ export default function ChatScreen({
   }, [language, requestCampusTts]);
 
   const openCampusNavigation = useCallback(() => {
+    onChatUserActivity?.();
     stopListening();
     clearSuggestionLayer();
     if (currentAudioRef.current) {
@@ -788,7 +808,15 @@ export default function ChatScreen({
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
     setLayoutMode('SPLIT_CARDS');
-  }, [clearCardStages, clearSuggestionLayer, displayMessages, setLayoutMode, stopListening, visuallyFocusedMessage]);
+  }, [
+    clearCardStages,
+    clearSuggestionLayer,
+    displayMessages,
+    onChatUserActivity,
+    setLayoutMode,
+    stopListening,
+    visuallyFocusedMessage,
+  ]);
 
   const returnToChatFromCampus = useCallback(() => {
     stopCampusSpeech();
@@ -1664,16 +1692,18 @@ export default function ChatScreen({
   }, [displayMessages, suppressedTurnId]);
   const recentPanelMessages = useMemo(() => filteredMessages.slice(-4), [filteredMessages]);
 
-  const latestTextAssistantMsg = useMemo(
-    () =>
-      [...filteredMessages]
-        .reverse()
-        .find((message) => isTextMessage(message) && message.role === 'clara') ?? null,
-    [filteredMessages],
-  );
-  const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
-    ? visuallyFocusedMessage
-    : latestTextAssistantMsg;
+  const latestTextAssistantMsg = useMemo((): TextMessage | null => {
+    const found = [...filteredMessages]
+      .reverse()
+      .find((message): message is TextMessage => isTextMessage(message) && message.role === 'clara');
+    return found ?? null;
+  }, [filteredMessages]);
+  const lastAssistantMsg: TextMessage | null =
+    visuallyFocusedMessage &&
+    isTextMessage(visuallyFocusedMessage) &&
+    visuallyFocusedMessage.role === 'clara'
+      ? visuallyFocusedMessage
+      : latestTextAssistantMsg;
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
     isLanguageGateOpen ||

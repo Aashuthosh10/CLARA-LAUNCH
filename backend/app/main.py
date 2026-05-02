@@ -39,7 +39,11 @@ from backend.app.audio_utils import (
     normalize_tts_pronunciation,
     split_first_sentence,
 )
-from backend.app.session_state import append_session_history, history_for_llm
+from backend.app.session_state import (
+    append_session_history,
+    assistant_last_reply_used_guest_name,
+    history_for_llm,
+)
 from backend.app.telemetry import debug_payload, log_turn_metrics, text_preview
 from backend.app.ws_schemas import parse_inbound_ws_message
 from backend.config.settings import (
@@ -84,7 +88,10 @@ from backend.core.rag import get_relevant_context, get_rag_document_count, warmu
 from backend.services.greetings import (
     get_greeting,
     get_language_required_nudge_english,
+    get_name_prompt,
     get_ready_prompt,
+    guest_name_reply_is_skip,
+    normalize_guest_name,
     get_wakeup_language_gate_display_text,
     get_wakeup_language_gate_tts_text,
     greeting_font_family_css,
@@ -713,6 +720,128 @@ async def _complete_groq_reply(
     return out, s1
 
 
+def _append_guest_name_system_clause(system_prompt: str, session: dict[str, Any]) -> str:
+    name = (session.get("guest_name") or "").strip()
+    if not name:
+        return system_prompt
+    safe = name.replace('"', "'").strip()
+    policy_lines = (
+        f'The visitor introduced themselves as "{safe}". '
+        "Use this only for light rapport. "
+        "Default: omit their name—especially in short, single-fact, or yes-or-no answers. "
+        "You may use their name at most once in a reply only when the answer is genuinely substantial "
+        "(for example: weaving together several facts, answering multiple parts, reassurance, "
+        "or closing a longer explanation or narrator-style segment). "
+        "Use their name only a few times in the whole chat; do not cluster it only at the beginning—"
+        "many turns in a row without the name is correct. "
+        "Do not force the name into openings; clarity and accurate facts come first. "
+        "Stay grounded strictly in verified SVIT or provided context facts."
+    )
+    if assistant_last_reply_used_guest_name(session, safe):
+        policy_lines += (
+            " Your previous reply already used their name; keep this reply without their name "
+            "unless the user's latest message clearly calls for personal acknowledgment."
+        )
+    return f"{system_prompt}\n\n{policy_lines}"
+
+
+async def _complete_guest_name_turn(
+    session: dict[str, Any],
+    text: str,
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+) -> None:
+    """Handle the first user turn after language pick: capture name + send ready_prompt."""
+    try:
+        processing_payload: dict[str, Any] = {"isProcessing": True, "turn_id": timing.turn_id}
+        processing_payload.update(debug_payload(timing))
+        await _ws_send_json(websocket, 5, session, processing_payload)
+    except Exception as exc:
+        logger.warning("Could not send isProcessing for guest name: %s", exc)
+        return
+
+    if _turn_stale(session, turn_gen_marker):
+        logger.info("Stale guest name turn dropped")
+        return
+
+    _, lang_name, lang_code = resolve_session_language(session)
+    language_display = session.get("language_name") or lang_name
+
+    session["awaiting_guest_name"] = False
+    if guest_name_reply_is_skip(text):
+        session["guest_name"] = None
+    else:
+        session["guest_name"] = normalize_guest_name(text)
+
+    reply_text = get_ready_prompt(language_display, session.get("guest_name"))
+
+    append_session_history(session, "user", text, max_turns=3)
+    append_session_history(session, "assistant", reply_text, max_turns=3)
+
+    user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()}
+    ready_msg = {"id": "ready_prompt", "role": "clara", "text": reply_text}
+    session["messages"] = [user_msg, ready_msg]
+
+    tts_cache_hit = False
+    timing.mark("tts_start")
+    audio_b64 = None
+    try:
+        audio_b64, tts_cache_hit = await tts_to_base64_cached(
+            reply_text,
+            lang_code,
+            turn_id=timing.turn_id,
+            utterance_kind="guest_name_ready_prompt",
+        )
+    except Exception as exc:
+        logger.exception("Guest name ready prompt TTS failed: %s", exc)
+    timing.mark("tts_end")
+
+    timing.mark("turn_end")
+    utterance_kind = "guest_name_ready_prompt"
+    payload: dict[str, Any] = {
+        "messages": session["messages"],
+        "isProcessing": False,
+        "isSpeaking": bool(audio_b64),
+        "audioPending": False,
+        "turn_id": "ready_after_language_pick",
+        "assistantText": reply_text,
+        "spokenText": reply_text.strip(),
+        "utterance_kind": utterance_kind,
+        "segment_index": 0,
+        "is_final_segment": True,
+        "direct_reply": True,
+        "rag_used": False,
+        "llm_used": False,
+        "tts_cache_hit": tts_cache_hit,
+        "llm_cache_hit": False,
+    }
+    if audio_b64:
+        payload["audioBase64"] = audio_b64
+        payload["audioUnavailable"] = False
+        if not timing.has("play_start"):
+            timing.mark("play_start")
+            est = estimate_wav_duration_ms(audio_b64)
+            if est is not None and not timing.has("play_end"):
+                timing.marks["play_end"] = timing.marks["play_start"] + est
+    else:
+        payload["audioUnavailable"] = True
+
+    payload.update(debug_payload(timing))
+    try:
+        if not _turn_stale(session, turn_gen_marker):
+            await _ws_send_json(websocket, 5, session, payload)
+            log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=True)
+            log_turn_metrics(
+                timing,
+                llm_cache_hit=False,
+                tts_cache_hit=tts_cache_hit,
+                language=language_display or "English",
+            )
+    except Exception as exc:
+        logger.warning("Guest name outbound failed: %s", exc)
+
+
 async def process_user_text_and_reply(
     session: dict[str, Any],
     text: str,
@@ -723,6 +852,10 @@ async def process_user_text_and_reply(
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
     turn_gen_marker = int(session.get("session_generation", 0))
+    if session.get("awaiting_guest_name"):
+        await _complete_guest_name_turn(session, text, websocket, timing, turn_gen_marker)
+        return
+
     append_session_history(session, "user", text, max_turns=3)
     try:
         processing_payload = {"isProcessing": True}
@@ -994,7 +1127,10 @@ async def process_user_text_and_reply(
         off_topic_reply = get_off_topic_reply(lang_name)
         if narrator_payload is not None:
             card_json = json.dumps(narrator_payload, ensure_ascii=False, indent=2)
-            system_prompt = build_narrator_system_prompt(lang_name, card_json)
+            system_prompt = _append_guest_name_system_clause(
+                build_narrator_system_prompt(lang_name, card_json),
+                session,
+            )
         else:
             system_prompt = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
@@ -1009,6 +1145,7 @@ async def process_user_text_and_reply(
                 f"If information is unavailable, say exactly: {unavailable_reply}. "
                 f"If the question is not related to SVIT/college topics, say exactly: {off_topic_reply}"
             )
+            system_prompt = _append_guest_name_system_clause(system_prompt, session)
 
         if context.strip() and narrator_payload is None:
             if lang_key != "en" and context_source == "rag":
@@ -1673,6 +1810,8 @@ async def websocket_clara(websocket: WebSocket):
         "language_detection": None,
         "messages": [],
         "history": [],
+        "guest_name": None,
+        "awaiting_guest_name": False,
         "cached_greeting_audio": None,
         "cached_greeting_message": None,
     }
@@ -1707,6 +1846,8 @@ async def websocket_clara(websocket: WebSocket):
                         "language_detection": None,
                         "messages": [],
                         "history": [],
+                        "guest_name": None,
+                        "awaiting_guest_name": False,
                         "cached_greeting_audio": None,
                         "cached_greeting_message": None,
                     }
@@ -1749,18 +1890,20 @@ async def websocket_clara(websocket: WebSocket):
                 code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
                 set_session_language(session, code_key, is_auto=False)
                 session["language_detection"] = None
-                ready_text = get_ready_prompt(language)
-                ready_msg = {"id": "ready_prompt", "role": "clara", "text": ready_text}
+                session["awaiting_guest_name"] = True
+                session["guest_name"] = None
+                name_prompt_text = get_name_prompt(language)
+                name_prompt_msg = {"id": "name_prompt", "role": "clara", "text": name_prompt_text}
                 audio_b64 = None
                 try:
                     audio_b64, _ = await tts_to_base64_cached(
-                        ready_text,
+                        name_prompt_text,
                         session["language_code"],
-                        utterance_kind="language_selected_ready_prompt",
+                        utterance_kind="language_selected_name_prompt",
                     )
                 except Exception as exc:
-                    logger.exception("Language ready prompt TTS failed: %s", exc)
-                session["messages"] = [ready_msg]
+                    logger.exception("Language name prompt TTS failed: %s", exc)
+                session["messages"] = [name_prompt_msg]
                 session["cached_greeting_audio"] = None
                 session["cached_greeting_message"] = None
                 payload: dict[str, Any] = {
@@ -1770,9 +1913,9 @@ async def websocket_clara(websocket: WebSocket):
                 }
                 if audio_b64:
                     payload["audioBase64"] = audio_b64
-                    payload["turn_id"] = "ready_after_language_pick"
+                    payload["turn_id"] = "name_after_language_pick"
                 else:
-                    payload["error"] = "Could not generate ready prompt audio."
+                    payload["error"] = "Could not generate name prompt audio."
                 await _ws_send_json(websocket, 5, session, payload)
                 continue
 

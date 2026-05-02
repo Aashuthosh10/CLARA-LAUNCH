@@ -1,4 +1,12 @@
-import React, { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   forceSingletonWsRouteSleep,
@@ -21,6 +29,14 @@ const WS_URL = WS_TOKEN
   ? `${WS_BASE_URL}${WS_BASE_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(WS_TOKEN)}`
   : WS_BASE_URL;
 const VOICE_INPUT_MODE = (import.meta.env.VITE_VOICE_INPUT_MODE || 'browser').toLowerCase() === 'backend' ? 'backend' : 'browser';
+
+const _parsedInactivityMs = Number(import.meta.env.VITE_KIOSK_INACTIVITY_MS);
+const CHAT_USER_INACTIVITY_MS =
+  Number.isFinite(_parsedInactivityMs) && _parsedInactivityMs > 0 ? _parsedInactivityMs : 60_000;
+
+function isChatRouteState(state: number): boolean {
+  return state === 3 || state === 4 || state === 5;
+}
 
 /**
  * Shell: increments `runtimeSessionKey` so Home destroys the FULL kiosk subtree (React remount —
@@ -72,6 +88,18 @@ function ClaraKioskRuntime({
   const [lastHardResetAt, setLastHardResetAt] = useState<number | null>(null);
 
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
+  const effectiveStateRef = useRef(effectiveState);
+  effectiveStateRef.current = effectiveState;
+
+  const chatIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatInactivityGenerationRef = useRef(0);
+
+  const clearChatUserInactivityTimer = useCallback(() => {
+    if (chatIdleTimerRef.current !== null) {
+      clearTimeout(chatIdleTimerRef.current);
+      chatIdleTimerRef.current = null;
+    }
+  }, []);
 
   // Before passive effects re-subscribe singleton WS snapshot, force canonical sleep route.
   // Runs every runtime mount (cold load + Home remount); prevents stale entry.state===5 resurrecting Chat.
@@ -105,6 +133,31 @@ function ClaraKioskRuntime({
     setLastHardResetAt(Date.now());
     resetClaraSession();
   }, [resetClaraSession]);
+
+  const scheduleChatUserInactivityTimer = useCallback(() => {
+    clearChatUserInactivityTimer();
+    chatInactivityGenerationRef.current += 1;
+    const gen = chatInactivityGenerationRef.current;
+    chatIdleTimerRef.current = setTimeout(() => {
+      chatIdleTimerRef.current = null;
+      if (gen !== chatInactivityGenerationRef.current) return;
+      if (!isChatRouteState(effectiveStateRef.current)) return;
+      resetClaraSession();
+    }, CHAT_USER_INACTIVITY_MS);
+  }, [clearChatUserInactivityTimer, resetClaraSession]);
+
+  const reportChatUserActivity = useCallback(() => {
+    scheduleChatUserInactivityTimer();
+  }, [scheduleChatUserInactivityTimer]);
+
+  useEffect(() => {
+    if (!isChatRouteState(effectiveState)) {
+      clearChatUserInactivityTimer();
+      return;
+    }
+    scheduleChatUserInactivityTimer();
+    return clearChatUserInactivityTimer;
+  }, [effectiveState, scheduleChatUserInactivityTimer, clearChatUserInactivityTimer]);
 
   useEffect(() => {
     if (effectiveState === 0) {
@@ -237,7 +290,11 @@ function ClaraKioskRuntime({
                 onInlineLanguageResolved={() => setShowChatLanguageGate(false)}
                 onBack={() => setManualState(0)}
                 onHome={resetClaraSessionWithTimestamp}
-                onOrbTap={() => sendMessage({ action: 'mic_start' })}
+                onOrbTap={() => {
+                  reportChatUserActivity();
+                  sendMessage({ action: 'mic_start' });
+                }}
+                onChatUserActivity={reportChatUserActivity}
                 sendMessage={sendMessage}
               />
             </Fragment>
