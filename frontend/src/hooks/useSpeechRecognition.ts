@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Language } from '../context/LanguageContext';
 
 const LANGUAGE_TO_BCP47: Record<Language, string> = {
@@ -18,8 +18,6 @@ function errorCodeToMessage(code: string): string {
       return 'No speech heard. Try again.';
     case 'network':
       return 'Network error. Try again.';
-    case 'aborted':
-      return 'Listening stopped.';
     case 'audio-capture':
       return 'No microphone found.';
     case 'service-not-allowed':
@@ -37,10 +35,24 @@ export function useSpeechRecognition(
 ) {
   const recognitionRef = useRef<{ stop: () => void; abort?: () => void } | null>(null);
   const isListeningRef = useRef(false);
+  const [isListening, setIsListening] = useState(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const sendMessageRef = useRef(sendMessage);
   sendMessageRef.current = sendMessage;
   const onEmptyRef = useRef(onEmptyTranscript);
   onEmptyRef.current = onEmptyTranscript;
+
+  const releaseMicStream = useCallback(() => {
+    if (!mediaStreamRef.current) return;
+    mediaStreamRef.current.getTracks().forEach((track) => {
+      try {
+        track.stop();
+      } catch {
+        // ignore track stop failures
+      }
+    });
+    mediaStreamRef.current = null;
+  }, []);
 
   const startListening = useCallback(() => {
     if (isListeningRef.current) return;
@@ -73,9 +85,13 @@ export function useSpeechRecognition(
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       const code = event.error || 'unknown';
-      onError?.(code, errorCodeToMessage(code));
       recognitionRef.current = null;
       isListeningRef.current = false;
+      setIsListening(false);
+      releaseMicStream();
+      if (code === 'aborted') return;
+      const userMessage = errorCodeToMessage(code);
+      if (userMessage) onError?.(code, userMessage);
       try {
         if (typeof recognition.abort === 'function') recognition.abort();
       } catch {
@@ -86,34 +102,57 @@ export function useSpeechRecognition(
     recognition.onend = () => {
       recognitionRef.current = null;
       isListeningRef.current = false;
+      setIsListening(false);
+      releaseMicStream();
     };
 
     try {
       recognition.start();
       recognitionRef.current = recognition;
       isListeningRef.current = true;
+      setIsListening(true);
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        void navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            if (!isListeningRef.current) {
+              stream.getTracks().forEach((track) => track.stop());
+              return;
+            }
+            mediaStreamRef.current = stream;
+          })
+          .catch(() => {
+            // Best effort only; speech API may still own mic directly.
+          });
+      }
     } catch {
       onError?.('start-failed', 'Could not start microphone. Try again.');
       recognitionRef.current = null;
       isListeningRef.current = false;
+      setIsListening(false);
+      releaseMicStream();
     }
-  }, [language, onError, onEmptyTranscript]);
+  }, [language, onError, onEmptyTranscript, releaseMicStream]);
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
+    const recognition = recognitionRef.current;
+    if (recognition) {
       try {
-        if (typeof recognitionRef.current.abort === 'function') {
-           recognitionRef.current.abort();
-        } else {
-           recognitionRef.current.stop();
-        }
+        recognition.stop();
       } catch {
         // ignore
       }
-      recognitionRef.current = null;
+      try {
+        if (typeof recognition.abort === 'function') recognition.abort();
+      } catch {
+        // ignore
+      }
     }
+    recognitionRef.current = null;
+    releaseMicStream();
     isListeningRef.current = false;
-  }, []);
+    setIsListening(false);
+  }, [releaseMicStream]);
 
-  return { startListening, stopListening };
+  return { startListening, stopListening, isListening };
 }

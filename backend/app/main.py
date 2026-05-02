@@ -89,6 +89,7 @@ from backend.services.greetings import (
     get_wakeup_language_gate_tts_text,
     greeting_font_family_css,
 )
+from backend.services.faq_answers import get_faq_answer_for_question
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
@@ -428,6 +429,7 @@ async def tts_to_base64_cached(
     *,
     turn_id: str | None = None,
     utterance_kind: str = "reply",
+    timeout_s: float | None = None,
 ) -> tuple[str | None, bool]:
     tts_text = normalize_tts_pronunciation(text)
     key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(tts_text)}"
@@ -462,16 +464,17 @@ async def tts_to_base64_cached(
             )
             return cached, True
 
+        provider_timeout_s = timeout_s or TTS_TIMEOUT_S
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         try:
-            audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, language_code), timeout=TTS_TIMEOUT_S)
+            audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, language_code), timeout=provider_timeout_s)
         except asyncio.TimeoutError:
             logger.warning(
                 "TTS primary language timed out turn_id=%s kind=%s lang=%s timeout_s=%.2f",
                 turn_id or "-",
                 utterance_kind,
                 language_code,
-                TTS_TIMEOUT_S,
+                provider_timeout_s,
             )
             audio = None
         except Exception as exc:
@@ -491,13 +494,13 @@ async def tts_to_base64_cached(
                 language_code,
             )
             try:
-                audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, "en-IN"), timeout=TTS_TIMEOUT_S)
+                audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, "en-IN"), timeout=provider_timeout_s)
             except asyncio.TimeoutError:
                 logger.warning(
                     "TTS fallback language timed out turn_id=%s kind=%s timeout_s=%.2f",
                     turn_id or "-",
                     utterance_kind,
-                    TTS_TIMEOUT_S,
+                    provider_timeout_s,
                 )
                 audio = None
             except Exception as exc:
@@ -768,78 +771,91 @@ async def process_user_text_and_reply(
     first_sentence_sent = False
 
     try:
-        preprocess: dict[str, Any] | None = None
-        if lang_key == "en" and _looks_clear_english(text):
+        faq_direct_reply = get_faq_answer_for_question(text, lang_name)
+        if faq_direct_reply:
             preprocess = None
+            english_translation = ""
+            department_hint = None
+            query_en = text.strip()
+            merged_for_features = query_en
+            features = extract_features("", department_hint=None)
+            intent = INTENT_NORMAL_QUERY
+            detected_department = None
+            logger.info("[FAQ_TRACE] matched deterministic FAQ answer before Groq/RAG")
         else:
-            try:
-                preprocess = await asyncio.wait_for(
-                    normalize_and_classify_query(text, lang_name),
-                    timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
-                    MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
-                )
+            preprocess: dict[str, Any] | None = None
+            if lang_key == "en" and _looks_clear_english(text):
                 preprocess = None
-            except Exception as exc:
-                logger.warning("Multilingual preprocessor failed: %s", exc)
-                preprocess = None
+            else:
+                try:
+                    preprocess = await asyncio.wait_for(
+                        normalize_and_classify_query(text, lang_name),
+                        timeout=MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Multilingual preprocessor timed out after %.2fs; falling back to raw text",
+                        MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
+                    )
+                    preprocess = None
+                except Exception as exc:
+                    logger.warning("Multilingual preprocessor failed: %s", exc)
+                    preprocess = None
 
-        english_translation = str((preprocess or {}).get("english_translation") or "").strip()
-        department_hint = (preprocess or {}).get("target_department")
-        query_en = english_translation or text.strip()
-        # Documents and other mixed-language triggers must work on raw + translated text.
-        merged_for_features = f"{query_en} {text}".strip()
-        features = extract_features(merged_for_features, department_hint=department_hint)
-        intent = resolve_intent_from_features(features)
-        detected_department = features.department_name
+            english_translation = str((preprocess or {}).get("english_translation") or "").strip()
+            department_hint = (preprocess or {}).get("target_department")
+            query_en = english_translation or text.strip()
+            # Documents and other mixed-language triggers must work on raw + translated text.
+            merged_for_features = f"{query_en} {text}".strip()
+            features = extract_features(merged_for_features, department_hint=department_hint)
+            intent = resolve_intent_from_features(features)
+            detected_department = features.department_name
 
-        # Safety fallback: if translation drops department tokens, retry extraction on raw input.
-        if intent == INTENT_DEPARTMENT_FEES and not detected_department:
-            raw_features = extract_features(text, department_hint=department_hint)
-            if raw_features.department_name:
-                detected_department = raw_features.department_name
+            # Safety fallback: if translation drops department tokens, retry extraction on raw input.
+            if intent == INTENT_DEPARTMENT_FEES and not detected_department:
+                raw_features = extract_features(text, department_hint=department_hint)
+                if raw_features.department_name:
+                    detected_department = raw_features.department_name
 
-        # Hard override for deterministic department clicks from department menu.
-        local_intent_type = str((local_intent or {}).get("type") or "").strip().lower()
-        if local_intent_type == "department_click":
-            selected_department = str((local_intent or {}).get("departmentLabel") or "").strip()
-            if selected_department:
-                detected_department = selected_department
-                intent = INTENT_DEPARTMENT_OVERVIEW
+        if not faq_direct_reply:
+            # Hard override for deterministic department clicks from department menu.
+            local_intent_type = str((local_intent or {}).get("type") or "").strip().lower()
+            if local_intent_type == "department_click":
+                selected_department = str((local_intent or {}).get("departmentLabel") or "").strip()
+                if selected_department:
+                    detected_department = selected_department
+                    intent = INTENT_DEPARTMENT_OVERVIEW
 
-        # Frontend local intent is a fallback path only when backend resolves no actionable card.
-        elif local_intent and intent == INTENT_NORMAL_QUERY:
-            frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
-            if frontend_trigger in {"department_overview", "department"}:
-                intent = INTENT_DEPARTMENT_OVERVIEW
-            elif frontend_trigger in {"course_menu", "courses"}:
-                intent = INTENT_COURSE_MENU
-            elif frontend_trigger in {"hod", "hod_info", "head_of_department"}:
-                intent = INTENT_HOD_PROFILE
-            elif frontend_trigger == "admissions":
-                intent = INTENT_ADMISSIONS
-            elif frontend_trigger == "placements":
-                intent = INTENT_PLACEMENTS
-            elif frontend_trigger in {"fees", "department_fees"}:
-                intent = INTENT_DEPARTMENT_FEES
-            elif frontend_trigger == "documents":
-                intent = INTENT_DOCUMENTS
-            frontend_dept = local_intent.get("departmentLabel")
-            if frontend_dept and not detected_department:
-                detected_department = str(frontend_dept)
-        elif local_intent:
-            frontend_dept = local_intent.get("departmentLabel")
-            if frontend_dept and not detected_department:
-                detected_department = str(frontend_dept)
-            # If local layer clearly identified fees intent, keep it card-driven.
-            frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
-            if frontend_trigger in {"fees", "department_fees"} and intent in {INTENT_NORMAL_QUERY, INTENT_ADMISSIONS}:
-                intent = INTENT_DEPARTMENT_FEES if detected_department else INTENT_ADMISSIONS
-            elif frontend_trigger == "documents" and intent == INTENT_NORMAL_QUERY:
-                intent = INTENT_DOCUMENTS
+            # Frontend local intent is a fallback path only when backend resolves no actionable card.
+            elif local_intent and intent == INTENT_NORMAL_QUERY:
+                frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
+                if frontend_trigger in {"department_overview", "department"}:
+                    intent = INTENT_DEPARTMENT_OVERVIEW
+                elif frontend_trigger in {"course_menu", "courses"}:
+                    intent = INTENT_COURSE_MENU
+                elif frontend_trigger in {"hod", "hod_info", "head_of_department"}:
+                    intent = INTENT_HOD_PROFILE
+                elif frontend_trigger == "admissions":
+                    intent = INTENT_ADMISSIONS
+                elif frontend_trigger == "placements":
+                    intent = INTENT_PLACEMENTS
+                elif frontend_trigger in {"fees", "department_fees"}:
+                    intent = INTENT_DEPARTMENT_FEES
+                elif frontend_trigger == "documents":
+                    intent = INTENT_DOCUMENTS
+                frontend_dept = local_intent.get("departmentLabel")
+                if frontend_dept and not detected_department:
+                    detected_department = str(frontend_dept)
+            elif local_intent:
+                frontend_dept = local_intent.get("departmentLabel")
+                if frontend_dept and not detected_department:
+                    detected_department = str(frontend_dept)
+                # If local layer clearly identified fees intent, keep it card-driven.
+                frontend_trigger = str(local_intent.get("trigger") or "").strip().lower()
+                if frontend_trigger in {"fees", "department_fees"} and intent in {INTENT_NORMAL_QUERY, INTENT_ADMISSIONS}:
+                    intent = INTENT_DEPARTMENT_FEES if detected_department else INTENT_ADMISSIONS
+                elif frontend_trigger == "documents" and intent == INTENT_NORMAL_QUERY:
+                    intent = INTENT_DOCUMENTS
 
         rag_query = query_en
         llm_user_text = query_en
@@ -854,14 +870,17 @@ async def process_user_text_and_reply(
 
         # Force location/address questions through vector RAG context instead of narrator-only flow.
         # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
-        is_location_turn = _is_location_query(text) or _is_location_query(query_en)
+        is_location_turn = False if faq_direct_reply else (_is_location_query(text) or _is_location_query(query_en))
         if is_location_turn:
             intent = INTENT_NORMAL_QUERY
 
         is_broad_course_menu = False
         should_check_broad_course = (
+            not faq_direct_reply
+            and (
             intent == INTENT_COURSE_MENU
             or (intent == INTENT_NORMAL_QUERY and any(term in merged_for_features.lower() for term in _COURSE_QUERY_TERMS))
+            )
         )
         if should_check_broad_course:
             try:
@@ -877,18 +896,35 @@ async def process_user_text_and_reply(
         off_topic_direct_reply: str | None = None
         if intent == INTENT_OFF_TOPIC:
             off_topic_direct_reply = get_off_topic_reply(lang_name)
-        precomputed_card_direct_reply = _card_direct_reply(intent, lang_key, detected_department)
+        department_required_card_intents = {
+            INTENT_DEPARTMENT_OVERVIEW,
+            INTENT_DEPARTMENT_FEES,
+            INTENT_HOD_PROFILE,
+        }
+        if intent in department_required_card_intents and not detected_department:
+            logger.info("Strict card routing: suppressing %s without a clear department", intent)
+            if intent == INTENT_HOD_PROFILE:
+                pass
+            else:
+                intent = INTENT_NORMAL_QUERY
+
+        # Narrator/card intents must be spoken from TARGET_CARD_DATA, not shortcut "Showing..." text.
+        precomputed_card_direct_reply = None if (faq_direct_reply or is_narrator_intent(intent)) else _card_direct_reply(intent, lang_key, detected_department)
         timing.mark("rag_start")
         narrator_payload: dict[str, Any] | None = None
         context_source = "none"
-        if off_topic_direct_reply is not None:
+        if faq_direct_reply:
+            context = ""
+            context_source = "faq"
+            timing.mark("rag_end")
+        elif off_topic_direct_reply is not None:
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
         elif intent == INTENT_DOCUMENTS or is_location_turn:
             context = ""
             timing.mark("rag_end")
-        elif is_narrator_intent(intent) and precomputed_card_direct_reply is None:
+        elif is_narrator_intent(intent):
             # Presentation mode: only locale JSON slices that match on-screen cards (no vector RAG).
             narrator_payload = build_target_card_payload(
                 intent,
@@ -907,12 +943,13 @@ async def process_user_text_and_reply(
                 )
             else:
                 # Narrator payload failed (e.g., department not found in locale data).
-                # Fall back to RAG context so the LLM can still produce a useful answer
-                # instead of the generic "visit Admission Block" fallback.
+                # Fall back to text-only RAG; do not emit a card without matching data.
                 logger.warning(
                     "[NLP_TRACE] Narrator payload was None for intent=%s dept=%s; falling back to RAG context",
                     intent, detected_department,
                 )
+                intent = INTENT_NORMAL_QUERY
+                precomputed_card_direct_reply = None
                 try:
                     context = await asyncio.wait_for(
                         asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key="en"),
@@ -1006,7 +1043,7 @@ async def process_user_text_and_reply(
                 cache_key_candidates.append(
                     f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{raw_norm}|{context_sig}"
                 )
-        direct_reply = off_topic_direct_reply
+        direct_reply = faq_direct_reply or off_topic_direct_reply
         if is_location_turn:
             direct_reply = _location_direct_reply(lang_key)
         if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
@@ -1071,6 +1108,8 @@ async def process_user_text_and_reply(
 
         def _maybe_start_first_sentence_tts(sentence: str) -> None:
             nonlocal first_sentence_task
+            if faq_direct_reply:
+                return
             if FORCE_FINAL_TTS_ONLY:
                 return
             if not ENABLE_TTS_PIPELINING or not ENABLE_FIRST_SENTENCE_TTS:
@@ -1137,8 +1176,9 @@ async def process_user_text_and_reply(
                 reply_text = ""
                 first_sentence = ""
 
-        # Keep model output structure consistent across languages: generate in English, then translate.
-        if reply_text and not direct_reply and lang_name != "English":
+        # Normal RAG replies may be translated after English generation.
+        # Narrator replies are generated directly in the selected language from locale card JSON.
+        if reply_text and not direct_reply and narrator_payload is None and lang_name != "English":
             try:
                 client = await get_groq_client()
                 reply_text = await translate_reply_to_session_language_async(
@@ -1192,7 +1232,7 @@ async def process_user_text_and_reply(
 
         user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text}
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
-        if intent in (
+        if (not faq_direct_reply) and intent in (
             INTENT_COURSE_MENU,
             INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
@@ -1206,12 +1246,14 @@ async def process_user_text_and_reply(
         show_card = None
         department_id = None
         course_menu_options = None
-        if intent == INTENT_COLLEGE_OVERVIEW:
+        if faq_direct_reply:
+            show_card = None
+        elif intent == INTENT_COLLEGE_OVERVIEW:
             show_card = "college"
         elif intent == INTENT_ADMISSIONS:
             # Regional/mixed fee queries without resolved department still open the fees card
             # (all-departments table), instead of falling back to plain text admissions mode.
-            if getattr(features, "is_fee_query", False):
+            if getattr(features, "is_fee_query", False) and entity_map.get("department"):
                 show_card = "department_fees"
                 department_id = entity_map.get("department")
             else:
@@ -1219,11 +1261,13 @@ async def process_user_text_and_reply(
         elif intent == INTENT_PLACEMENTS:
             show_card = "placements"
         elif intent == INTENT_DEPARTMENT_OVERVIEW:
-            show_card = "department_overview"
-            department_id = entity_map.get("department")
+            if entity_map.get("department"):
+                show_card = "department_overview"
+                department_id = entity_map.get("department")
         elif intent == INTENT_DEPARTMENT_FEES:
-            show_card = "department_fees"
-            department_id = entity_map.get("department")
+            if entity_map.get("department"):
+                show_card = "department_fees"
+                department_id = entity_map.get("department")
         elif intent == INTENT_HOD_PROFILE:
             if entity_map.get("department"):
                 show_card = "hod"
@@ -1234,8 +1278,11 @@ async def process_user_text_and_reply(
         elif intent == INTENT_TRUSTEES_PROFILE:
             show_card = "college"
         elif intent == INTENT_HOD_TRUSTEES_PROFILE:
-            show_card = "hod"
-            department_id = entity_map.get("department")
+            if entity_map.get("department"):
+                show_card = "hod"
+                department_id = entity_map.get("department")
+            else:
+                show_card = "college"
         elif intent == INTENT_COURSE_MENU:
             show_card = "course_menu"
             course_menu_options = get_course_menu_options()
@@ -1337,7 +1384,12 @@ async def process_user_text_and_reply(
         tts_cache_hit = False
         tts_timed_out = False
         tts_budget_s = TTS_TIMEOUT_S + 2.0
-        if LOW_LATENCY_VOICE_MODE:
+        if faq_direct_reply:
+            # FAQ answers are deterministic and can be longer than the normal short voice reply.
+            # Do not use the low-latency audio-update budget here; the UI waits on thinking
+            # until this audio is ready so visible text and TTS stay matched.
+            tts_budget_s = max(TTS_TIMEOUT_S + 12.0, 18.0)
+        elif LOW_LATENCY_VOICE_MODE:
             elapsed_before_tts_s = (timing.since_start("tts_start") or 0.0) / 1000.0
             tts_budget_s = max(0.5, AUDIO_UPDATE_TIMEOUT_S - elapsed_before_tts_s)
         if tts_text:
@@ -1348,6 +1400,7 @@ async def process_user_text_and_reply(
                         lang_code,
                         turn_id=timing.turn_id,
                         utterance_kind=utterance_kind,
+                        timeout_s=tts_budget_s if faq_direct_reply else None,
                     ),
                     timeout=tts_budget_s,
                 )
@@ -1375,7 +1428,7 @@ async def process_user_text_and_reply(
                     is_final_segment = True
                     tts_text = reply_text
         timing.mark("tts_end")
-        if tts_timed_out and LOW_LATENCY_VOICE_MODE:
+        if tts_timed_out and LOW_LATENCY_VOICE_MODE and not faq_direct_reply:
             timing.marks["tts_end"] = timing.started_ms + (AUDIO_UPDATE_TIMEOUT_S * 1000.0)
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")

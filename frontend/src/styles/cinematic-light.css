@@ -172,25 +172,66 @@
 
 .full-text-message-stage {
   width: 100%;
-  max-width: 80rem;
+  height: 100%;
+  max-width: none;
   display: flex;
   flex: 1;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   overflow: hidden;
   margin: 0 auto;
-  padding: 0 3rem 200px;
+  padding: 0;
+  position: relative;
 }
 
 .full-text-message-wrapper {
   width: 100%;
+  min-height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: visible;
 }
 
 .full-text-safe-zone {
-  max-height: 65vh;
+  max-height: 100%;
+}
+
+.text-container {
+  position: absolute;
+  top: clamp(3.25rem, 10vh, 7rem);
+  bottom: clamp(220px, 32vh, 310px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(900px, 75%);
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
+  text-align: center;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
+  z-index: 30;
+}
+
+.text-container::-webkit-scrollbar {
+  display: none;
+}
+
+.full-text-orb-zone {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  width: min(720px, 92%);
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  pointer-events: auto;
 }
 
 .course-menu-overlay {
@@ -289,18 +330,19 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.04));
   margin: 0;
   white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  max-height: 100%;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+  max-height: none;
   width: 100%;
-  overflow-y: auto;
+  overflow: visible;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 .full-text-readable {
-  font-size: 56px;
-  line-height: 1.35;
+  font-size: clamp(1.9rem, 4.1vw, 3.25rem);
+  line-height: 1.42;
   letter-spacing: -0.02em;
   max-width: 100%;
 }
@@ -659,6 +701,197 @@
   0% { opacity: 0.25; }
   50% { opacity: 0.6; }
   100% { opacity: 1; }
+}
+
+/* ─── FAQ Suggestion Carousel ─── */
+.faq-carousel-shell {
+  --faq-card-width: 300px;
+  --faq-card-gap: 14px;
+  position: relative;
+  z-index: 65;
+  width: calc((var(--faq-card-width) * 3) + (var(--faq-card-gap) * 2));
+  max-width: min(92vw, 980px);
+  margin: 0 auto;
+  padding: 0;
+  filter: none;
+}
+
+.faq-suggestions-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+.faq-carousel-shell-full {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.faq-carousel-shell-panel {
+  width: calc(100% - 2rem);
+  --faq-card-width: min(260px, calc(35vw - 126px));
+  flex-shrink: 0;
+  margin: 0 auto 0.85rem;
+}
+
+.faq-panel-suggestion-row {
+  width: calc(100% - 2rem);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.85rem;
+  overflow: hidden;
+}
+
+.faq-carousel-viewport {
+  width: 100%;
+  overflow: hidden;
+  padding: 0.2rem 0;
+  scroll-snap-type: x mandatory;
+}
+
+.faq-carousel-track {
+  display: flex;
+  align-items: stretch;
+  gap: var(--faq-card-gap);
+  will-change: transform;
+}
+
+.faq-suggestion-pill {
+  width: var(--faq-card-width);
+  min-width: var(--faq-card-width);
+  min-height: 54px;
+  scroll-snap-align: start;
+  border-radius: 9999px;
+  border: 1px solid rgba(120, 120, 140, 0.22);
+  background: rgba(255, 255, 255, 0.34);
+  color: #111827;
+  padding: 0.95rem 1.15rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  box-shadow: none !important;
+  filter: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.faq-suggestion-pill:hover {
+  border-color: rgba(120, 120, 140, 0.38);
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow: none !important;
+}
+
+.faq-suggestion-pill-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.78rem 0.95rem;
+  font-size: 0.94rem;
+}
+
+.brochure-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.brochure-modal-card {
+  position: relative;
+  width: min(880px, 92vw);
+  height: min(720px, 86vh);
+  border-radius: 2rem;
+  border: 2px solid rgba(46, 16, 101, 0.68);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 34px 110px rgba(15, 23, 42, 0.35);
+  padding: 2rem;
+  color: #0f172a;
+  overflow: hidden;
+}
+
+.brochure-modal-close {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 9999px;
+  border: 1px solid rgba(42, 17, 92, 0.24);
+  background: rgba(255, 255, 255, 0.72);
+  color: #2a115c;
+}
+
+.brochure-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 1.4rem;
+  color: #2a115c;
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.brochure-modal-card h2 {
+  margin: 1rem 0 0.35rem;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.brochure-modal-card p {
+  max-width: 680px;
+  margin: 0 0 1rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.brochure-modal-card p span {
+  color: #2a115c;
+  font-weight: 900;
+}
+
+.brochure-modal-frame {
+  width: 100%;
+  height: calc(100% - 150px);
+  border: 1px solid rgba(42, 17, 92, 0.18);
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.brochure-modal-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #2a115c;
+  text-align: center;
+  font-weight: 800;
+}
+
+.brochure-modal-fallback span {
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 1280px) {

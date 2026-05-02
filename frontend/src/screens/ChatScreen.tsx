@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { AnimatePresence, motion, LayoutGroup } from 'motion/react';
-import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2 } from 'lucide-react';
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from 'motion/react';
+import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import fullTextBgImage from '../assets/full_text_bg.png';
@@ -38,6 +38,11 @@ import {
   campusSpeechText,
   localizedCampusSteps,
 } from '../data/campusDirections';
+import {
+  inferFaqCategories,
+  selectFaqSuggestions,
+  type FaqSuggestionCategory,
+} from '../data/faqSuggestions';
 
 declare global {
   interface Window {
@@ -126,39 +131,6 @@ const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
   Malayalam: { placements: 'പ്ലേസ്മെന്റും പരിശീലനവും' },
 };
 
-const READY_SUGGESTIONS: Record<Language, { label: string; text: string }[]> = {
-  English: [
-    { label: 'Which course is best for my child?', text: 'Which course would be best for my child?' },
-    { label: 'Tell me about fees', text: 'Please tell me about the fees.' },
-    { label: 'How are the placements?', text: 'How are the placements?' },
-  ],
-  Kannada: [
-    { label: 'ನನ್ನ ಮಗುವಿಗೆ ಯಾವ ಕೋರ್ಸ್ ಉತ್ತಮ?', text: 'ನನ್ನ ಮಗುವಿಗೆ ಯಾವ ಕೋರ್ಸ್ ಉತ್ತಮ?' },
-    { label: 'ಫೀಸ್ ಬಗ್ಗೆ ಹೇಳಿ', text: 'ಫೀಸ್ ಬಗ್ಗೆ ಹೇಳಿ.' },
-    { label: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಹೇಗಿದೆ?', text: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಹೇಗಿದೆ?' },
-  ],
-  Hindi: [
-    { label: 'मेरे बच्चे के लिए कौन सा कोर्स अच्छा है?', text: 'मेरे बच्चे के लिए कौन सा कोर्स अच्छा रहेगा?' },
-    { label: 'फीस के बारे में बताइए', text: 'कृपया फीस के बारे में बताइए।' },
-    { label: 'प्लेसमेंट कैसे हैं?', text: 'प्लेसमेंट कैसे हैं?' },
-  ],
-  Tamil: [
-    { label: 'என் குழந்தைக்கு எந்த பாடநெறி சிறந்தது?', text: 'என் குழந்தைக்கு எந்த பாடநெறி சிறந்தது?' },
-    { label: 'கட்டண விவரம் சொல்லுங்கள்', text: 'கட்டண விவரம் சொல்லுங்கள்.' },
-    { label: 'பிளேஸ்மென்ட் எப்படி உள்ளது?', text: 'பிளேஸ்மென்ட் எப்படி உள்ளது?' },
-  ],
-  Telugu: [
-    { label: 'నా పిల్లలకి ఏ కోర్స్ మంచిది?', text: 'నా పిల్లలకి ఏ కోర్స్ మంచిది?' },
-    { label: 'ఫీజుల గురించి చెప్పండి', text: 'ఫీజుల గురించి చెప్పండి.' },
-    { label: 'ప్లేస్‌మెంట్స్ ఎలా ఉన్నాయి?', text: 'ప్లేస్‌మెంట్స్ ఎలా ఉన్నాయి?' },
-  ],
-  Malayalam: [
-    { label: 'എന്റെ കുട്ടിക്ക് ഏത് കോഴ്സാണ് നല്ലത്?', text: 'എന്റെ കുട്ടിക്ക് ഏത് കോഴ്സാണ് നല്ലത്?' },
-    { label: 'ഫീസ് വിവരങ്ങൾ പറയൂ', text: 'ഫീസ് വിവരങ്ങൾ പറയൂ.' },
-    { label: 'പ്ലേസ്മെന്റുകൾ എങ്ങനെയാണ്?', text: 'പ്ലേസ്മെന്റുകൾ എങ്ങനെയാണ്?' },
-  ],
-};
-
 type PendingAudio = {
   audioBase64: string;
   segmentKey: string;
@@ -167,6 +139,72 @@ type PendingAudio = {
   cardsToSync: any[] | null;
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
 };
+
+type VisibleFaqSuggestion = {
+  id: string;
+  text: string;
+};
+
+const FAQ_CAROUSEL_INTERVAL_MS = 3600;
+const FAQ_TICKER_CARD_WIDTH = 300;
+const FAQ_TICKER_CARD_GAP = 14;
+const FAQ_TICKER_ITEM_SPAN = FAQ_TICKER_CARD_WIDTH + FAQ_TICKER_CARD_GAP;
+const FAQ_TICKER_VIEWPORT_WIDTH = (FAQ_TICKER_CARD_WIDTH * 3) + (FAQ_TICKER_CARD_GAP * 2);
+const FAQ_TICKER_SPEED_PX_PER_MS = 0.035;
+const GENERAL_FAQ_CATEGORIES: FaqSuggestionCategory[] = ['college', 'campus', 'admissions', 'placements'];
+const TEXT_SCROLL_PX_PER_SECOND = 30;
+
+function processResponseSentences(value: unknown): string[] {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+  const matches = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [];
+  return matches.map((sentence) => sentence.trim()).filter(Boolean);
+}
+
+function payloadResponseText(payload: any, fallback: string): string {
+  return String(payload?.message ?? payload?.responseText ?? payload?.assistantText ?? fallback ?? '');
+}
+
+function FaqTickerCard({
+  suggestion,
+  index,
+  totalItems,
+  x,
+  onSelect,
+}: {
+  suggestion: VisibleFaqSuggestion;
+  index: number;
+  totalItems: number;
+  x: ReturnType<typeof useMotionValue<number>>;
+  onSelect: (id: string, question: string) => void;
+}) {
+  const totalWidth = Math.max(1, totalItems) * FAQ_TICKER_ITEM_SPAN;
+  const center = FAQ_TICKER_VIEWPORT_WIDTH / 2;
+  const distanceFromCenter = useTransform(x, (value) => {
+    const raw = index * FAQ_TICKER_ITEM_SPAN + FAQ_TICKER_CARD_WIDTH / 2 + value;
+    const wrapped = ((raw % totalWidth) + totalWidth) % totalWidth;
+    const direct = Math.abs(wrapped - center);
+    return Math.min(direct, Math.abs(direct - totalWidth));
+  });
+  const scale = useTransform(distanceFromCenter, [0, FAQ_TICKER_ITEM_SPAN * 1.25], [1.2, 0.85]);
+  const opacity = useTransform(distanceFromCenter, [0, FAQ_TICKER_ITEM_SPAN * 1.4], [1, 0.6]);
+  const filter = useTransform(distanceFromCenter, (distance) =>
+    distance > FAQ_TICKER_ITEM_SPAN * 0.75 ? 'blur(1px)' : 'blur(0px)',
+  );
+
+  return (
+    <motion.button
+      type="button"
+      className="faq-suggestion-pill"
+      style={{ scale, opacity, filter }}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onSelect(suggestion.id, suggestion.text)}
+    >
+      {suggestion.text}
+    </motion.button>
+  );
+}
 
 const estimateWavDurationSeconds = (audioBase64: string): number | null => {
   try {
@@ -278,7 +316,6 @@ export default function ChatScreen({
   const [selectedCampusIndex, setSelectedCampusIndex] = useState(0);
   const [isCampusSpeaking, setIsCampusSpeaking] = useState(false);
   const [hasCampusRoomSelection, setHasCampusRoomSelection] = useState(false);
-  const [showCampusReturnSuggestions, setShowCampusReturnSuggestions] = useState(false);
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
   const isE2EFlow = useMemo(() => {
@@ -288,51 +325,35 @@ export default function ChatScreen({
 
   // Response Priority Lock (CARD > UI > TEXT)
   const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
+  const lastSuggestionIdsRef = useRef<string[]>([]);
+  const lastSuggestionTurnIdRef = useRef<string | null>(null);
+  const [faqSuggestions, setFaqSuggestions] = useState<VisibleFaqSuggestion[]>(() =>
+    selectFaqSuggestions('English', GENERAL_FAQ_CATEGORIES, []),
+  );
+  const [faqCarouselIndex, setFaqCarouselIndex] = useState(0);
+  const [isFaqCarouselPaused, setIsFaqCarouselPaused] = useState(false);
+  const [isBrochureOpen, setIsBrochureOpen] = useState(false);
+  const tickerX = useMotionValue(0);
+  const isResponsePending = isProcessing || Boolean(payload?.audioPending);
+  const ensureSuggestions = useCallback(
+    (nextSuggestions?: VisibleFaqSuggestion[]) => {
+      const base = (nextSuggestions && nextSuggestions.length > 0)
+        ? nextSuggestions
+        : selectFaqSuggestions(language, GENERAL_FAQ_CATEGORIES, lastSuggestionIdsRef.current);
+      const safe = (base.length ? base : selectFaqSuggestions('English', GENERAL_FAQ_CATEGORIES, []))
+        .slice(0, 5);
+      setFaqSuggestions(safe);
+      setFaqCarouselIndex(0);
+      tickerX.set(0);
+      setIsFaqCarouselPaused(false);
+    },
+    [language, tickerX],
+  );
 
-  // Wraps original sendMessage to sniff for intents dynamically on dispatch
-  const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
-    if (msg?.action === 'user_message' && typeof msg.text === 'string') {
-      // 1. Reset UI completely on NEW VOICE queries
-      // Rule 5: Navigation clicks (UI source) should NOT wipe the layout mode.
-      if (source === 'VOICE') {
-        setLayoutMode('FULL_TEXT');
-        setActiveCards(null);
-        setIsCampusNavigationStage(false);
-        setIsDepartmentOverviewStage(false);
-        setActiveDepartmentId(null);
-        setIsInfoSlideStage(false);
-        setInfoSlides([]);
-        setInfoSlideChip('');
-        setIsHodStage(false);
-        setIsFeesStage(false);
-        setActiveFeesDepartmentId(null);
-        setIsDocumentsStage(false);
-        setCourseMenuOptions([]);
-        currentUiLockRef.current = 'IDLE'; // Release the lock
-      }
-      
-      // Backend is authoritative for intent routing on voice turns.
-      // Frontend localIntent is allowed only for explicit UI command flows.
-      if (source === 'UI' && msg?.localIntent) {
-        if (import.meta.env.DEV) {
-          console.log(
-            `[CLARA_PIPELINE] UI localIntent forwarded type=${msg.localIntent?.type ?? 'unknown'} dept=${msg.localIntent?.departmentLabel ?? 'none'}`
-          );
-        }
-      }
-    }
-    sendMessage(msg);
-  }, [sendMessage]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.__CLARA_TEST_SEND_MESSAGE = (text: string) => {
-      interceptAndSendMessage({ action: 'user_message', text }, 'UI');
-    };
-    return () => {
-      delete window.__CLARA_TEST_SEND_MESSAGE;
-    };
-  }, [interceptAndSendMessage]);
+  const clearSuggestionLayer = useCallback(() => {
+    ensureSuggestions();
+    lastSuggestionTurnIdRef.current = null;
+  }, [ensureSuggestions]);
 
   const [activeTargetDepartment, setActiveTargetDepartment] = useState<string | null>(null);
 
@@ -347,10 +368,11 @@ export default function ChatScreen({
   const [thinkingIndex, setThinkingIndex] = useState(0);
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
   const [visuallyFocusedMessage, setVisuallyFocusedMessage] = useState<ChatMessage | null>(null);
+  const [sentenceRevealText, setSentenceRevealText] = useState('');
+  const [sentenceRevealTurnId, setSentenceRevealTurnId] = useState<string | null>(null);
   const [isAwaitingReadyPrompt, setIsAwaitingReadyPrompt] = useState(false);
   const hasStartedRef = useRef(false);
   const prevLayoutModeRef = useRef<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
-  const hasAutoStartedRef = useRef(false);
   const languagePromptRequestedRef = useRef(false);
   const wasPlayingAudioRef = useRef(false);
   const isPendingListeningRef = useRef(false);
@@ -359,11 +381,64 @@ export default function ChatScreen({
   const savedChatFocusRef = useRef<ChatMessage | null>(null);
   const campusTtsSerialRef = useRef(0);
   const audioPrimedRef = useRef(false);
+  const sentenceRevealAbortRef = useRef(0);
+  const sentenceRevealKeyRef = useRef<string | null>(null);
+  const fullTextScrollRef = useRef<HTMLDivElement | null>(null);
+  const textScrollFrameRef = useRef<number | null>(null);
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const cardProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Wraps original sendMessage to sniff for intents dynamically on dispatch.
+  // Deterministic FAQ answers are resolved by the backend before Groq/RAG.
+  const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
+    if (msg?.action === 'user_message' && typeof msg.text === 'string') {
+      clearSuggestionLayer();
+      // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
+      if (source === 'VOICE') {
+        setLayoutMode('FULL_TEXT');
+        setActiveCards(null);
+        setCurrentCardIdx(0);
+        setSuppressedTurnId(null);
+        setIsCampusNavigationStage(false);
+        setIsDepartmentOverviewStage(false);
+        setActiveDepartmentId(null);
+        setIsInfoSlideStage(false);
+        setInfoSlides([]);
+        setInfoSlideChip('');
+        setIsHodStage(false);
+        setIsFeesStage(false);
+        setActiveFeesDepartmentId(null);
+        setIsDocumentsStage(false);
+        setCourseMenuOptions([]);
+        currentUiLockRef.current = 'IDLE';
+      }
+
+      // Backend is authoritative for intent routing on voice turns.
+      // Frontend localIntent is allowed only for explicit UI command flows.
+      if (source === 'UI' && msg?.localIntent) {
+        if (import.meta.env.DEV) {
+          console.log(
+            `[CLARA_PIPELINE] UI localIntent forwarded type=${msg.localIntent?.type ?? 'unknown'} dept=${msg.localIntent?.departmentLabel ?? 'none'}`
+          );
+        }
+      }
+    }
+    sendMessage(msg);
+  }, [clearSuggestionLayer, sendMessage, setLayoutMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__CLARA_TEST_SEND_MESSAGE = (text: string) => {
+      interceptAndSendMessage({ action: 'user_message', text }, 'VOICE');
+    };
+    return () => {
+      delete window.__CLARA_TEST_SEND_MESSAGE;
+    };
+  }, [interceptAndSendMessage]);
+
   // Prime browser audio on first user gesture to reduce autoplay blocks in demos/kiosk.
   useEffect(() => {
     const primeAudio = () => {
@@ -406,6 +481,7 @@ export default function ChatScreen({
   }, [interceptAndSendMessage]);
 
   const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
+    if (errorCode === 'aborted' || !userMessage?.trim()) return;
     if (import.meta.env.DEV) {
       console.warn('[CLARA_SPEECH] browser speech error', { errorCode, userMessage });
     }
@@ -422,7 +498,7 @@ export default function ChatScreen({
     setVisuallyFocusedMessage(errorBubble);
   }, []);
 
-  const { startListening: startSpeechRecognition, stopListening } = useSpeechRecognition(
+  const { startListening: startSpeechRecognition, stopListening, isListening: speechListening } = useSpeechRecognition(
     interceptAndSendMessage,
     language,
     handleSpeechError,
@@ -439,11 +515,15 @@ export default function ChatScreen({
         setIsAwaitingReadyPrompt(false);
       }
       const hasAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+      const isWaitingForAudio = Boolean(payload?.audioPending);
       const isTerminalTurn = payload?.isProcessing === false;
-      if (isTerminalTurn && hasAudio) {
+      if (isTerminalTurn && (hasAudio || isWaitingForAudio)) {
         // Defer message commit until playback kickoff for tighter text-audio sync.
         deferredMessagesRef.current = incomingMessages;
         deferredTurnIdRef.current = payload?.turn_id ?? null;
+        if (isWaitingForAudio) {
+          setVisuallyFocusedMessage(null);
+        }
       } else {
         deferredMessagesRef.current = null;
         deferredTurnIdRef.current = null;
@@ -452,7 +532,7 @@ export default function ChatScreen({
       const isCardTurn = Boolean(payload?.showCard);
       if (isCardTurn) {
         setVisuallyFocusedMessage(null);
-      } else if (payload?.isProcessing !== true) {
+      } else if (payload?.isProcessing !== true && !isWaitingForAudio) {
         const latestAssistant = [...incomingMessages]
           .reverse()
           .find((m: any) => m?.role === 'clara' && typeof m?.text === 'string' && !(m as any)?.isHidden && !(m as any)?.isCardData);
@@ -462,7 +542,7 @@ export default function ChatScreen({
   }, [payload, isPayloadStale]);
 
   useEffect(() => {
-    if (!isProcessing) {
+    if (!isResponsePending) {
       setThinkingIndex(0);
       return;
     }
@@ -470,7 +550,7 @@ export default function ChatScreen({
       setThinkingIndex(prev => prev + 1);
     }, 2200);
     return () => clearInterval(ticker);
-  }, [isProcessing]);
+  }, [isResponsePending]);
 
   useEffect(() => {
     setLanguageGateSatisfied(!inlineLanguageGate);
@@ -495,7 +575,7 @@ export default function ChatScreen({
         !(m as { isHidden?: boolean }).isHidden &&
         typeof (m as { text?: string }).text === 'string'
     );
-    if (!hasAssistant || isProcessing) return;
+    if (!hasAssistant || isResponsePending) return;
 
     const openingTurn = payload?.turn_id === 'greeting_opening';
     const hasOpeningAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
@@ -508,7 +588,7 @@ export default function ChatScreen({
     inlineLanguageGate,
     languageGateSatisfied,
     displayMessages,
-    isProcessing,
+    isResponsePending,
     hasGreeted,
     isE2EFlow,
     payload?.turn_id,
@@ -520,13 +600,14 @@ export default function ChatScreen({
     (lang: Language) => {
       setLanguage(lang);
       setIsAwaitingReadyPrompt(true);
+      clearSuggestionLayer();
       setVisuallyFocusedMessage(null);
       sendMessage({ action: 'language_selected', language: lang });
       setShowLanguageOverlay(false);
       setLanguageGateSatisfied(true);
       onInlineLanguageResolved?.();
     },
-    [sendMessage, setLanguage, onInlineLanguageResolved]
+    [clearSuggestionLayer, sendMessage, setLanguage, onInlineLanguageResolved]
   );
 
   const resolveCardsFromTrigger = useCallback((trigger: unknown): CardDataItem[] | null => {
@@ -565,17 +646,6 @@ export default function ChatScreen({
     });
   }, [language, collegeData]);
 
-  const handleHomeClick = useCallback(() => {
-    stopListening();
-    if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-    }
-    setIsPlayingBackendAudio(false);
-    setIsCampusSpeaking(false);
-    if (onHome) onHome();
-  }, [stopListening, onHome]);
-
   const clearCardStages = useCallback(() => {
     setActiveCards(null);
     setCurrentCardIdx(0);
@@ -600,6 +670,66 @@ export default function ChatScreen({
     setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
   }, []);
+
+  const stopTextReveal = useCallback((clearText = false) => {
+    sentenceRevealAbortRef.current += 1;
+    sentenceRevealKeyRef.current = null;
+    if (textScrollFrameRef.current !== null) {
+      cancelAnimationFrame(textScrollFrameRef.current);
+      textScrollFrameRef.current = null;
+    }
+    if (clearText) {
+      setSentenceRevealText('');
+      setSentenceRevealTurnId(null);
+    }
+  }, []);
+
+  const animateFullTextScroll = useCallback(() => {
+    const node = fullTextScrollRef.current;
+    if (!node) return;
+    if (textScrollFrameRef.current !== null) {
+      cancelAnimationFrame(textScrollFrameRef.current);
+      textScrollFrameRef.current = null;
+    }
+
+    const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+    if (maxScroll <= 2) {
+      return;
+    }
+
+    const startTop = node.scrollTop;
+    const distance = maxScroll - startTop;
+    const duration = Math.max(1200, Math.abs(distance / TEXT_SCROLL_PX_PER_SECOND) * 1000);
+    const startedAt = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      node.scrollTop = startTop + distance * progress;
+      if (progress < 1) {
+        textScrollFrameRef.current = requestAnimationFrame(step);
+      } else {
+        textScrollFrameRef.current = null;
+      }
+    };
+    textScrollFrameRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const handleHomeClick = useCallback(() => {
+    clearSuggestionLayer();
+    stopTextReveal(true);
+    setPendingAudio(null);
+    if (cardProgressTimerRef.current) {
+      clearInterval(cardProgressTimerRef.current);
+      cardProgressTimerRef.current = null;
+    }
+    stopListening();
+    if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+    }
+    setIsPlayingBackendAudio(false);
+    setIsCampusSpeaking(false);
+    if (onHome) onHome();
+  }, [clearSuggestionLayer, stopTextReveal, stopListening, onHome]);
 
   const requestCampusTts = useCallback((text: string, key: string) => {
     const cleanText = text.trim();
@@ -630,6 +760,7 @@ export default function ChatScreen({
 
   const openCampusNavigation = useCallback(() => {
     stopListening();
+    clearSuggestionLayer();
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -656,22 +787,21 @@ export default function ChatScreen({
     setIsCampusNavigationStage(true);
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
-    setShowCampusReturnSuggestions(false);
     setLayoutMode('SPLIT_CARDS');
-  }, [clearCardStages, displayMessages, setLayoutMode, stopListening, visuallyFocusedMessage]);
+  }, [clearCardStages, clearSuggestionLayer, displayMessages, setLayoutMode, stopListening, visuallyFocusedMessage]);
 
   const returnToChatFromCampus = useCallback(() => {
     stopCampusSpeech();
+    clearSuggestionLayer();
     setIsCampusNavigationStage(false);
     currentUiLockRef.current = 'IDLE';
     setLayoutMode('FULL_TEXT');
     setVisuallyFocusedMessage(savedChatFocusRef.current);
-    setShowCampusReturnSuggestions(true);
-  }, [setLayoutMode, stopCampusSpeech]);
+  }, [clearSuggestionLayer, setLayoutMode, stopCampusSpeech]);
 
   // Sync Card Progression with Backend Audio Duration
   const handleAudioPlayback = useCallback(
-    (audioBase64: string, segmentKey: string, isOverview: boolean, cardsToSync: any[] | null) => {
+    (audioBase64: string, segmentKey: string, isOverview: boolean, cardsToSync: any[] | null, _turnId?: string) => {
     // Dedupe by a per-segment key (not just per-turn), because the backend can stream
     // multiple TTS segments for the same `turn_id` (ack + first sentence + remainder).
     if (playedSegmentKeysRef.current.has(segmentKey)) return;
@@ -854,7 +984,7 @@ export default function ChatScreen({
           turnId: turnId,
           isOverview: false,
           cardsToSync: null,
-          targetLayout: 'SPLIT_CARDS',
+          targetLayout: isCampusNavigationStage ? 'SPLIT_CARDS' : 'FULL_TEXT',
         });
       } else {
         setIsCampusSpeaking(false);
@@ -1266,7 +1396,71 @@ export default function ChatScreen({
       });
     }
 
-  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage, isPayloadStale]);
+  }, [payload, resolveCardsFromTrigger, collegeData, language, interceptAndSendMessage, isPayloadStale, isCampusNavigationStage]);
+
+  useEffect(() => {
+    if (payload && isPayloadStale?.(payload)) return;
+
+    let categories: FaqSuggestionCategory[] = GENERAL_FAQ_CATEGORIES;
+    let turnId = 'general';
+
+    if (payload?.type !== 'campus_navigation_tts' && payload?.type !== 'assistant_ack_audio' && payload?.type !== 'assistant_partial') {
+      if (Array.isArray(payload?.messages)) {
+        const latestAssistant = [...payload.messages]
+          .reverse()
+          .find(
+            (message: any) =>
+              message?.role === 'clara' &&
+              typeof message?.text === 'string' &&
+              !message?.isHidden &&
+              !message?.isCardData,
+          );
+        const assistantText =
+          latestAssistant?.text ??
+          (typeof payload?.assistantText === 'string' ? payload.assistantText : '') ??
+          '';
+        turnId = String(payload?.turn_id || latestAssistant?.id || 'general');
+        categories = inferFaqCategories(payload, assistantText);
+      }
+    }
+
+    const nextSuggestions = selectFaqSuggestions(language, categories, lastSuggestionIdsRef.current);
+    ensureSuggestions(nextSuggestions);
+    if (turnId !== 'general') {
+      lastSuggestionTurnIdRef.current = turnId;
+      const ids = nextSuggestions.map((suggestion) => suggestion.id);
+      lastSuggestionIdsRef.current = [...ids, ...lastSuggestionIdsRef.current]
+        .filter((id, index, list) => list.indexOf(id) === index)
+        .slice(0, 15);
+    }
+  }, [payload, language, isPayloadStale, ensureSuggestions]);
+
+  useEffect(() => {
+    if (faqSuggestions.length <= 1 || isFaqCarouselPaused || isBrochureOpen) return;
+    const maxIndex = Math.max(0, faqSuggestions.length - 1);
+    const timer = setInterval(() => {
+      setFaqCarouselIndex((index) => (index >= maxIndex ? 0 : index + 1));
+    }, FAQ_CAROUSEL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [faqSuggestions.length, isFaqCarouselPaused, isBrochureOpen]);
+
+  useAnimationFrame((_time, delta) => {
+    if (
+      !faqSuggestions.length ||
+      isFaqCarouselPaused ||
+      isBrochureOpen ||
+      isResponsePending ||
+      isPlayingBackendAudio ||
+      isCampusSpeaking ||
+      (showLanguageOverlay && inlineLanguageGate && !languageGateSatisfied)
+    ) {
+      return;
+    }
+    const totalWidth = faqSuggestions.length * FAQ_TICKER_ITEM_SPAN;
+    if (!totalWidth) return;
+    const next = tickerX.get() - delta * FAQ_TICKER_SPEED_PX_PER_MS;
+    tickerX.set(next <= -totalWidth ? next + totalWidth : next);
+  });
 
   // Start queued audio only after its target layout is visible.
   useEffect(() => {
@@ -1281,7 +1475,12 @@ export default function ChatScreen({
         deferredMessagesRef.current &&
         (!deferredTurnIdRef.current || deferredTurnIdRef.current === pendingAudio.turnId)
       ) {
-        setDisplayMessages(deferredMessagesRef.current);
+        const committedMessages = deferredMessagesRef.current;
+        setDisplayMessages(committedMessages);
+        const latestAssistant = [...committedMessages]
+          .reverse()
+          .find((m: any) => m?.role === 'clara' && typeof m?.text === 'string' && !(m as any)?.isHidden && !(m as any)?.isCardData);
+        setVisuallyFocusedMessage((latestAssistant as ChatMessage) ?? null);
         deferredMessagesRef.current = null;
         deferredTurnIdRef.current = null;
       }
@@ -1289,7 +1488,8 @@ export default function ChatScreen({
         pendingAudio.audioBase64,
         pendingAudio.segmentKey,
         pendingAudio.isOverview,
-        pendingAudio.cardsToSync
+        pendingAudio.cardsToSync,
+        pendingAudio.turnId
       );
       setPendingAudio(current =>
         current?.segmentKey === pendingAudio.segmentKey ? null : current
@@ -1321,6 +1521,12 @@ export default function ChatScreen({
   useEffect(() => {
     return () => stopCampusSpeech();
   }, [stopCampusSpeech]);
+
+  useEffect(() => {
+    return () => {
+      stopTextReveal(false);
+    };
+  }, [stopTextReveal]);
 
   // Time-based reset UI behavior removed to enforce persistent screen state.
 
@@ -1354,25 +1560,6 @@ export default function ChatScreen({
     }
   }, [propIsListening, propIsSpeaking, payload?.audioPending, isProcessing, isPlayingBackendAudio, isCampusSpeaking, hasGreeted, showUnmuteHint]);
 
-  // Auto-Start Listening Loop (ONLY ONCE) — skip while inline language gate is active so the mic does not open over the picker.
-  useEffect(() => {
-    if (inlineLanguageGate && !languageGateSatisfied) return;
-    if (orbState === 'ready' && !propIsListening && voiceInputMode !== 'backend' && !hasAutoStartedRef.current) {
-      hasAutoStartedRef.current = true;
-      const timer = setTimeout(() => {
-        startSpeechRecognition();
-      }, 600); // Sustain the 'ready' visual feedback briefly before engaging mic
-      return () => clearTimeout(timer);
-    }
-  }, [
-    inlineLanguageGate,
-    languageGateSatisfied,
-    orbState,
-    propIsListening,
-    voiceInputMode,
-    startSpeechRecognition,
-  ]);
-
   useEffect(() => {
     if (!hasStartedRef.current) {
       hasStartedRef.current = true;
@@ -1388,10 +1575,36 @@ export default function ChatScreen({
   }, [propIsListening]);
 
   const handleOrbTap = () => {
+    const browserListening = speechListening || isPendingListeningRef.current;
+    const backendListening = voiceInputMode === 'backend' && propIsListening;
+    const shouldStopMic = browserListening || backendListening;
+
+    clearSuggestionLayer();
+    setIsFaqCarouselPaused(true);
+    stopTextReveal(true);
+    setPendingAudio(null);
+    if (cardProgressTimerRef.current) {
+      clearInterval(cardProgressTimerRef.current);
+      cardProgressTimerRef.current = null;
+    }
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    stopListening();
+    setIsPlayingBackendAudio(false);
+    setIsCampusSpeaking(false);
     setShowUnmuteHint(false);
     setHasGreeted(true);
-    setShowCampusReturnSuggestions(false);
-    setVisuallyFocusedMessage(null);
+    isPendingListeningRef.current = false;
+
+    if (shouldStopMic) {
+      if (voiceInputMode === 'backend') {
+        sendMessage({ action: 'mic_stop' });
+      }
+      setOrbState('idle');
+      return;
+    }
     
     // IMMEDIATE VISUAL FEEDBACK: Optimistically set listening state
     // so the UI feels instantly responsive. The effect above will clear
@@ -1406,10 +1619,8 @@ export default function ChatScreen({
       setOrbState(prev => prev === 'listening' && !propIsListening ? 'idle' : prev);
     }, 3000);
 
-    if (orbState === 'idle' || orbState === 'ready' || orbState === 'completed') {
-      if (voiceInputMode === 'backend') onOrbTap();
-      else startSpeechRecognition();
-    }
+    if (voiceInputMode === 'backend') onOrbTap();
+    else startSpeechRecognition();
   };
 
   const handleCardSelect = useCallback((idx: number) => {
@@ -1422,6 +1633,7 @@ export default function ChatScreen({
 
   const handleCourseMenuSelect = useCallback(
     (departmentName: string) => {
+      clearSuggestionLayer();
       setCourseMenuOptions([]);
       
       // DIRECT ACTION MAPPING (UI_CLICK = Deterministic Command)
@@ -1441,7 +1653,7 @@ export default function ChatScreen({
         },
       }, 'UI');
     },
-    [interceptAndSendMessage]
+    [clearSuggestionLayer, interceptAndSendMessage]
   );
 
   const filteredMessages = useMemo(() => {
@@ -1452,15 +1664,32 @@ export default function ChatScreen({
   }, [displayMessages, suppressedTurnId]);
   const recentPanelMessages = useMemo(() => filteredMessages.slice(-4), [filteredMessages]);
 
+  const latestTextAssistantMsg = useMemo(
+    () =>
+      [...filteredMessages]
+        .reverse()
+        .find((message) => isTextMessage(message) && message.role === 'clara') ?? null,
+    [filteredMessages],
+  );
   const lastAssistantMsg = visuallyFocusedMessage && isTextMessage(visuallyFocusedMessage) && visuallyFocusedMessage.role === 'clara'
     ? visuallyFocusedMessage
-    : null;
-  const shouldShowReadySuggestions =
-    (lastAssistantMsg?.id === 'ready_prompt' || showCampusReturnSuggestions) &&
-    !isProcessing &&
-    !showLanguageOverlay &&
-    !isAwaitingReadyPrompt;
-  const readySuggestions = READY_SUGGESTIONS[language] ?? READY_SUGGESTIONS.English;
+    : latestTextAssistantMsg;
+  const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
+  const shouldHideFaqSuggestions =
+    isLanguageGateOpen ||
+    isResponsePending;
+  const submitFaqSuggestion = useCallback(
+    (_id: string, question: string) => {
+      stopListening();
+      isPendingListeningRef.current = false;
+      if (voiceInputMode === 'backend' && propIsListening) {
+        sendMessage({ action: 'mic_stop' });
+      }
+      clearSuggestionLayer();
+      interceptAndSendMessage({ action: 'user_message', text: question }, 'VOICE');
+    },
+    [clearSuggestionLayer, interceptAndSendMessage, propIsListening, sendMessage, stopListening, voiceInputMode],
+  );
   const fullTextMessageClassName = 'word-by-word-text full-text-readable';
   /** English greeting uses Didone-style stack from backend (`greetings.py` → `greetingFontFamily`). */
   const greetingFontStyle = useMemo((): React.CSSProperties | undefined => {
@@ -1471,6 +1700,44 @@ export default function ChatScreen({
   }, [payload, payload?.greetingFontFamily, isPayloadStale]);
   const fullTextGreetingStyle =
     lastAssistantMsg?.id === 'greeting' ? greetingFontStyle : undefined;
+  const fullTextDisplayText =
+    lastAssistantMsg && sentenceRevealTurnId === lastAssistantMsg.id
+      ? sentenceRevealText
+      : lastAssistantMsg?.text ?? '';
+  const fullTextAnimate = true;
+
+  useEffect(() => {
+    if (!lastAssistantMsg || isAwaitingReadyPrompt || isResponsePending) return;
+    if (payload && isPayloadStale?.(payload)) return;
+
+    const sourceText = payloadResponseText(payload, lastAssistantMsg.text);
+    const processedSentences = processResponseSentences(sourceText);
+    if (!processedSentences.length) return;
+
+    const visibleText = processedSentences.join(' ');
+    const revealKey = `${lastAssistantMsg.id}:${language}:${visibleText}`;
+    if (sentenceRevealKeyRef.current === revealKey) return;
+
+    sentenceRevealKeyRef.current = revealKey;
+    sentenceRevealAbortRef.current += 1;
+    setSentenceRevealTurnId(lastAssistantMsg.id);
+    setSentenceRevealText(visibleText);
+  }, [
+    lastAssistantMsg?.id,
+    lastAssistantMsg?.text,
+    language,
+    isAwaitingReadyPrompt,
+    isResponsePending,
+    payload,
+    isPayloadStale,
+  ]);
+
+  useEffect(() => {
+    if (layoutMode !== 'FULL_TEXT') return;
+    const frame = requestAnimationFrame(animateFullTextScroll);
+    return () => cancelAnimationFrame(frame);
+  }, [layoutMode, fullTextDisplayText, animateFullTextScroll]);
+
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
@@ -1489,6 +1756,58 @@ export default function ChatScreen({
     return buildDepartmentSlidesFromRecord(rec, jk, language);
   }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
 
+  const renderFaqCarousel = (placement: 'full' | 'panel') => {
+    if (placement === 'panel') {
+      const activeSuggestion = faqSuggestions[faqCarouselIndex % faqSuggestions.length];
+      if (!activeSuggestion) return null;
+      return (
+        <div
+          className={`faq-panel-suggestion-row ${shouldHideFaqSuggestions ? 'faq-suggestions-hidden' : ''}`}
+          onMouseEnter={() => setIsFaqCarouselPaused(true)}
+          onMouseLeave={() => setIsFaqCarouselPaused(false)}
+        >
+          <motion.button
+            type="button"
+            className="faq-suggestion-pill faq-suggestion-pill-panel"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => submitFaqSuggestion(activeSuggestion.id, activeSuggestion.text)}
+          >
+            {activeSuggestion.text}
+          </motion.button>
+        </div>
+      );
+    }
+
+    const tickerItems = [...faqSuggestions, ...faqSuggestions, ...faqSuggestions];
+    return (
+      <div
+        className={`faq-carousel-shell faq-carousel-shell-full ${shouldHideFaqSuggestions ? 'faq-suggestions-hidden' : ''}`}
+        onMouseEnter={() => setIsFaqCarouselPaused(true)}
+        onMouseLeave={() => setIsFaqCarouselPaused(false)}
+      >
+        <div className="faq-carousel-viewport">
+          <motion.div
+            className="faq-carousel-track"
+            style={{ x: tickerX }}
+          >
+            {tickerItems.map((suggestion, index) => (
+              <React.Fragment key={`${suggestion.id}-${index}`}>
+                <FaqTickerCard
+                  suggestion={suggestion}
+                  index={index}
+                  totalItems={faqSuggestions.length}
+                  x={tickerX}
+                  onSelect={submitFaqSuggestion}
+                />
+              </React.Fragment>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     const prev = prevLayoutModeRef.current;
     if (prev === 'SPLIT_CARDS' && layoutMode === 'FULL_TEXT') {
@@ -1505,7 +1824,7 @@ export default function ChatScreen({
       panel.scrollTo({ top: panel.scrollHeight, behavior: 'smooth' });
     });
     return () => cancelAnimationFrame(raf);
-  }, [layoutMode, recentPanelMessages, isProcessing, thinkingIndex]);
+  }, [layoutMode, recentPanelMessages, isResponsePending, thinkingIndex]);
 
   return (
     <div className="light-chat-container" data-testid="chat-screen">
@@ -1551,14 +1870,67 @@ export default function ChatScreen({
           whileTap={{ scale: 0.97 }}
           onClick={() => {
             if (isCampusNavigationStage) returnToChatFromCampus();
-            interceptAndSendMessage({ action: 'user_message', text: 'Feedback' }, 'UI');
+            setIsBrochureOpen(true);
           }}
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
-          <MessageSquareText className="h-4 w-4 text-[#2a115c]" />
-          Feedback
+          <FileText className="h-4 w-4 text-[#2a115c]" />
+          College Brochure
         </motion.button>
       </motion.div>
+
+      <AnimatePresence>
+        {isBrochureOpen && (
+          <motion.div
+            key="college-brochure-modal"
+            className="brochure-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsBrochureOpen(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="brochure-title"
+              className="brochure-modal-card"
+              initial={{ opacity: 0, y: 34, scale: 0.94, filter: 'blur(12px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: 18, scale: 0.96, filter: 'blur(10px)' }}
+              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="brochure-modal-close"
+                onClick={() => setIsBrochureOpen(false)}
+                aria-label="Close college brochure"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="brochure-modal-icon">
+                <FileText className="h-8 w-8" />
+              </div>
+              <h2 id="brochure-title">College Brochure</h2>
+              <p>
+                Preview the latest SVIT college brochure here.
+              </p>
+              <object
+                aria-label="College Brochure PDF Viewer"
+                data="/college-brochure.pdf"
+                type="application/pdf"
+                className="brochure-modal-frame"
+              >
+                <div className="brochure-modal-fallback">
+                  <FileText className="h-10 w-10" />
+                  <strong>Brochure preview</strong>
+                  <span>The PDF viewer is ready for /college-brochure.pdf.</span>
+                </div>
+              </object>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ─── GLOBAL CINEMATIC BACKGROUND ─── */}
       <div 
@@ -1571,29 +1943,20 @@ export default function ChatScreen({
         }}
       />
 
-      <LayoutGroup>
-        <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
           {/* ─── FULL TEXT MODE ─── */}
           {layoutMode === 'FULL_TEXT' ? (
-            <motion.div key="full-text" layoutId="main" className="full-text-layout">
+            <motion.div key="full-text" className="full-text-layout">
 
               {/* Center content crossfades from greeting to language bubbles; orb stays anchored below. */}
-              <div
-                className="full-text-message-stage relative z-10 flex min-h-0 flex-col"
-                style={{
-                  paddingLeft: '3rem',
-                  paddingRight: '3rem',
-                  paddingBottom: '1.25rem',
-                  paddingTop: 0,
-                }}
-              >
-                <div className="relative flex min-h-0 w-full flex-1 flex-col justify-center">
+              <div className="full-text-message-stage relative z-10 flex min-h-0 flex-col">
+                <div ref={fullTextScrollRef} className="text-container">
                   <AnimatePresence mode="wait">
                     {showLanguageOverlay &&
                     inlineLanguageGate &&
                     !languageGateSatisfied &&
                     layoutMode === 'FULL_TEXT' &&
-                    !isProcessing ? (
+                    !isResponsePending ? (
                       <motion.div
                         key="inline-lang-panel"
                         role="region"
@@ -1651,7 +2014,7 @@ export default function ChatScreen({
                           })}
                         </div>
                       </motion.div>
-                    ) : isProcessing ? (
+                    ) : isResponsePending ? (
                       <motion.div
                         key="thinking"
                         initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
@@ -1675,8 +2038,8 @@ export default function ChatScreen({
                         className="full-text-message-wrapper full-text-safe-zone"
                       >
                         <AnimatedAiMessage
-                          text={lastAssistantMsg.text}
-                          animate={true}
+                          text={fullTextDisplayText}
+                          animate={fullTextAnimate}
                           audioDuration={currentAudioDuration}
                           className={fullTextMessageClassName}
                           style={fullTextGreetingStyle}
@@ -1686,63 +2049,16 @@ export default function ChatScreen({
                   </AnimatePresence>
                 </div>
 
-                <motion.div
-                  layoutId="orb-container"
-                  className="relative z-40 flex shrink-0 justify-center pb-2 pt-3"
-                >
-                  <AnimatePresence>
-                    {shouldShowReadySuggestions && (
-                      <motion.div
-                        key="ready-suggestions"
-                        initial={{ opacity: 0, y: 24, scale: 0.94, filter: 'blur(10px)' }}
-                        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, y: 12, scale: 0.96, filter: 'blur(8px)' }}
-                        transition={{ duration: 0.72, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                        className="absolute bottom-[calc(100%+1.2rem)] left-1/2 flex w-[90vw] max-w-5xl -translate-x-1/2 flex-wrap justify-center gap-3 sm:gap-4"
-                      >
-                        {readySuggestions.map((suggestion, index) => (
-                          <motion.button
-                            key={suggestion.text}
-                            type="button"
-                            initial={{ opacity: 0, y: 20, scale: 0.88, filter: 'blur(8px)' }}
-                            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                            transition={{
-                              delay: 0.28 + index * 0.08,
-                              duration: 0.56,
-                              ease: [0.16, 1, 0.3, 1],
-                            }}
-                            whileHover={{
-                              scale: 1.04,
-                              y: -3,
-                              boxShadow: '0 22px 54px rgba(24, 10, 44, 0.34), 0 0 0 1px rgba(255,255,255,0.26) inset',
-                            }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => {
-                              setShowCampusReturnSuggestions(false);
-                              interceptAndSendMessage(
-                                { action: 'user_message', text: suggestion.text },
-                                'UI'
-                              );
-                            }}
-                            className="group relative w-fit max-w-[18rem] overflow-hidden rounded-full border border-[#2a115c]/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-center shadow-[0_16px_44px_rgba(24,10,44,0.24),inset_0_1px_0_rgba(255,255,255,0.72),inset_0_0_0_1px_rgba(255,255,255,0.22)] backdrop-blur-xl transition-colors hover:border-[#17072f]/85 hover:bg-white/82"
-                          >
-                            <span className="pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-                            <span className="block text-xs sm:text-sm font-bold leading-snug text-slate-900">
-                              {suggestion.label}
-                            </span>
-                          </motion.button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                <div className="full-text-orb-zone">
+                  {renderFaqCarousel('full')}
                   <ChatOrbControl
                     orbState={orbState}
-                    isProcessing={isProcessing}
-                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
+                    isProcessing={isResponsePending}
+                    amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
                     onTap={handleOrbTap}
                     bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
                   />
-                </motion.div>
+                </div>
 
               </div>
               
@@ -1752,7 +2068,7 @@ export default function ChatScreen({
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
           ) : (
-            <motion.div key="split" layoutId="main" className="split-cards-layout">
+            <motion.div key="split" className="split-cards-layout">
               <div className="visual-stage-70 flex flex-col items-center">
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
@@ -1870,14 +2186,14 @@ export default function ChatScreen({
                           ? <div key={m.id || i} className="bubble-user">{m.text}</div>
                           : <AnimatedAiMessage 
                               key={m.id || i} 
-                              text={m.text} 
+                              text={sentenceRevealTurnId === m.id ? sentenceRevealText : m.text} 
                               animate={i === recentPanelMessages.length - 1}
                               audioDuration={i === recentPanelMessages.length - 1 ? currentAudioDuration : 0}
                               className="bubble-clara"
                               style={m.id === 'greeting' ? greetingFontStyle : undefined}
                             />
                       ))}
-                      {isProcessing && (
+                      {isResponsePending && (
                         <div className="bubble-clara bubble-thinking">
                           <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
                         </div>
@@ -1885,16 +2201,14 @@ export default function ChatScreen({
                     </>
                   )}
                 </div>
+                {renderFaqCarousel('panel')}
                 
                 {!isCampusNavigationStage && (
-                  <motion.div 
-                    layoutId="orb-container" 
-                    className="w-full flex justify-center pb-12"
-                  >
+                  <motion.div className="w-full flex justify-center pb-12">
                     <ChatOrbControl
                       orbState={orbState}
-                      isProcessing={isProcessing}
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isProcessing ? 0.3 : 0.05)}
+                      isProcessing={isResponsePending}
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
                       onTap={handleOrbTap}
                       bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
                     />
@@ -1903,8 +2217,7 @@ export default function ChatScreen({
               </motion.aside>
             </motion.div>
           )}
-        </AnimatePresence>
-      </LayoutGroup>
+      </AnimatePresence>
     </div>
   );
 }

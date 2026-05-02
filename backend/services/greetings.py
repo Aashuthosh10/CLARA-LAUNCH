@@ -18,9 +18,9 @@ SUPPORTED_LANGUAGES: tuple[str, ...] = ("English", "Kannada", "Hindi", "Tamil", 
 # Wake / first paint (English only, before language is chosen)
 # ---------------------------------------------------------------------------
 WAKE_OPENING_GREETING_ENGLISH: dict[str, str] = {
-    "morning": "Good morning. I am CLARA. How can I help you today?",
-    "afternoon": "Good afternoon. I am CLARA. How can I help you today?",
-    "evening": "Good evening. I am CLARA. How can I help you today?",
+    "morning": "Good morning. I am CLARA, your campus assistant.",
+    "afternoon": "Good afternoon. I am CLARA, your campus assistant.",
+    "evening": "Good evening. I am CLARA, your campus assistant.",
 }
 
 LANGUAGE_GATE_NUDGE_ENGLISH: str = (
@@ -48,7 +48,7 @@ def _time_period(now: datetime | None = None) -> str:
 
 
 def get_short_opening_greeting_english(now: datetime | None = None) -> str:
-    """First-line intro only (no “How may I help you today?”)."""
+    """First-line intro only."""
     period = _time_period(now)
     return WAKE_OPENING_GREETING_ENGLISH.get(
         period,
@@ -101,28 +101,28 @@ _READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
 # ---------------------------------------------------------------------------
 _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     "morning": {
-        "English": "Good morning. I am CLARA. How may I help you today?",
-        "Kannada": "ಶುಭೋದಯ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
-        "Hindi": "सुप्रभात। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
-        "Tamil": "காலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
-        "Telugu": "శుభోదయం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు. ఈరోజు నేను మీకు ఎలా సహాయం చేయగలను?",
-        "Malayalam": "സുപ്രഭാതം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+        "English": "Good morning. I am CLARA, your campus assistant.",
+        "Kannada": "ಶುಭೋದಯ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Hindi": "सुप्रभात। मैं CLARA हूँ, आपकी कैंपस सहायक।",
+        "Tamil": "காலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
+        "Telugu": "శుభోదయం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
+        "Malayalam": "സുപ്രഭാതം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി.",
     },
     "afternoon": {
-        "English": "Good afternoon. I am CLARA. How may I help you today?",
-        "Kannada": "ಶುಭ ಮಧ್ಯಾಹ್ನ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
-        "Hindi": "शुभ दोपहर। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
-        "Tamil": "மதிய வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
-        "Telugu": "శుభ మధ్యాహ్నం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు. ఈరోజు నేను మీకు ఎలా సహాయం చేయగలను?",
-        "Malayalam": "ശുഭ ഉച്ചയ്ക്ക് ശേഷം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+        "English": "Good afternoon. I am CLARA, your campus assistant.",
+        "Kannada": "ಶುಭ ಮಧ್ಯಾಹ್ನ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Hindi": "शुभ दोपहर। मैं CLARA हूँ, आपकी कैंपस सहायक।",
+        "Tamil": "மதிய வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
+        "Telugu": "శుభ మధ్యాహ్నం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
+        "Malayalam": "ശുഭ ഉച്ചയ്ക്ക് ശേഷം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി.",
     },
     "evening": {
-        "English": "Good evening. I am CLARA. How may I help you today?",
-        "Kannada": "ಶುಭ ಸಂಜೆ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ. ಇಂದು ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
-        "Hindi": "शुभ संध्या। मैं CLARA हूँ, आपकी कैंपस सहायक। आज मैं आपकी कैसे मदद कर सकती हूँ?",
-        "Tamil": "மாலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?",
-        "Telugu": "శుభ సాయంత్రం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు. ఈరోజు నేను మీకు ఎలా సహాయం చేయగలను?",
-        "Malayalam": "ശുഭ സായാഹ്നം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+        "English": "Good evening. I am CLARA, your campus assistant.",
+        "Kannada": "ಶುಭ ಸಂಜೆ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Hindi": "शुभ संध्या। मैं CLARA हूँ, आपकी कैंपस सहायक।",
+        "Tamil": "மாலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
+        "Telugu": "శుభ సాయంత్రం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
+        "Malayalam": "ശുഭ സായാഹ്നം. ഞാൻ CLARA, നിങ്ങളുടെ ക്യാമ്പസ് സഹായി.",
     },
 }
 
