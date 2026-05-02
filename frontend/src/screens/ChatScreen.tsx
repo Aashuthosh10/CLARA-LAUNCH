@@ -21,7 +21,6 @@ import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/PremiumPrincipalCard';
 import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
-import CampusNavigationStage from '../components/chat/CampusNavigationStage';
 import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
@@ -38,10 +37,32 @@ import {
 import { useCollegeData } from '../hooks/useCollegeData';
 import {
   CAMPUS_DIRECTIONS,
+  type CampusDirection,
+  type CampusNavigationRouteMode,
+  type CampusRouteResult,
+  campusDirectionFromMapMatch,
   campusLabels,
   campusSpeechText,
+  getCampusRouteApi,
+  legacyCampusIndexForCode,
   localizedCampusSteps,
-} from '../data/campusDirections';
+  CampusNavigationStage,
+  matchCampusTranscriptApi,
+} from '../campus-navigation';
+import { parseRoomCodeFromDestinationLabel } from '../campus-navigation/campusMapGeometry';
+
+function campusNavigationRouteModeToApi(mode: CampusNavigationRouteMode): string {
+  switch (mode) {
+    case 'accessible':
+      return 'accessible';
+    case 'lift':
+      return 'lift';
+    case 'stairs':
+      return 'stairs';
+    default:
+      return 'shortest';
+  }
+}
 import {
   inferFaqCategories,
   selectFaqSuggestions,
@@ -358,6 +379,9 @@ export default function ChatScreen({
   const [selectedCampusIndex, setSelectedCampusIndex] = useState(0);
   const [isCampusSpeaking, setIsCampusSpeaking] = useState(false);
   const [hasCampusRoomSelection, setHasCampusRoomSelection] = useState(false);
+  const [campusRouteMode, setCampusRouteMode] = useState<CampusNavigationRouteMode>('default');
+  const [campusRouteResult, setCampusRouteResult] = useState<CampusRouteResult | null>(null);
+  const [campusDirectionOverride, setCampusDirectionOverride] = useState<CampusDirection | null>(null);
   const [departmentComparisonOpen, setDepartmentComparisonOpen] = useState(false);
   const [comparisonDeptIds, setComparisonDeptIds] = useState<string[]>([]);
   const [comparisonHighlightId, setComparisonHighlightId] = useState<string | null>(null);
@@ -427,6 +451,7 @@ export default function ChatScreen({
   const deferredTurnIdRef = useRef<string | null>(null);
   const savedChatFocusRef = useRef<ChatMessage | null>(null);
   const campusTtsSerialRef = useRef(0);
+  const processCampusVoiceTranscriptRef = useRef<(transcript: string) => void>(() => {});
   const audioPrimedRef = useRef(false);
   const sentenceRevealAbortRef = useRef(0);
   const sentenceRevealKeyRef = useRef<string | null>(null);
@@ -442,6 +467,11 @@ export default function ChatScreen({
   // Deterministic FAQ answers are resolved by the backend before Groq/RAG.
   const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
     if (msg?.action === 'user_message' && typeof msg.text === 'string') {
+      const trimmed = msg.text.trim();
+      if (source === 'VOICE' && isCampusNavigationStage && trimmed) {
+        processCampusVoiceTranscriptRef.current(trimmed);
+        return;
+      }
       clearSuggestionLayer();
       // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
       if (source === 'VOICE') {
@@ -484,7 +514,7 @@ export default function ChatScreen({
       }
     }
     sendMessage(msg);
-  }, [clearSuggestionLayer, sendMessage, setLayoutMode, onChatUserActivity]);
+  }, [clearSuggestionLayer, sendMessage, setLayoutMode, onChatUserActivity, isCampusNavigationStage]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -528,14 +558,15 @@ export default function ChatScreen({
   const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
   // Browser Speech Rec fallback (used if not relying on backend voice activity detection)
   const handleEmptyTranscript = useCallback(() => {
-     setShowUnmuteHint(false);
-     setIsDepartmentOverviewStage(false);
-     setActiveDepartmentId(null);
-     interceptAndSendMessage({
-        action: "user_message",
-        text: "**BACKGROUND_NOISE** No words detected, returning to idle state."
-     });
-  }, [interceptAndSendMessage]);
+    if (isCampusNavigationStage) return;
+    setShowUnmuteHint(false);
+    setIsDepartmentOverviewStage(false);
+    setActiveDepartmentId(null);
+    interceptAndSendMessage({
+      action: 'user_message',
+      text: '**BACKGROUND_NOISE** No words detected, returning to idle state.',
+    });
+  }, [interceptAndSendMessage, isCampusNavigationStage]);
 
   const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
     if (errorCode === 'aborted' || !userMessage?.trim()) return;
@@ -820,12 +851,45 @@ export default function ChatScreen({
     });
   }, [language, onChatUserActivity, sendMessage, stopCampusSpeech]);
 
-  const speakCampusDirection = useCallback((index = selectedCampusIndex) => {
-    const direction = CAMPUS_DIRECTIONS[index] ?? CAMPUS_DIRECTIONS[0];
-    if (!direction) return;
+  const speakCampusDirection = useCallback(
+    (index?: number) => {
+      const direction =
+        index !== undefined
+          ? (CAMPUS_DIRECTIONS[index] ?? CAMPUS_DIRECTIONS[0])
+          : (campusDirectionOverride ?? (CAMPUS_DIRECTIONS[selectedCampusIndex] ?? CAMPUS_DIRECTIONS[0]));
+      if (!direction) return;
+      const key = index !== undefined ? `nav-${index}` : `nav-${selectedCampusIndex}-cur`;
+      requestCampusTts(campusSpeechText(direction, language), key);
+    },
+    [language, requestCampusTts, selectedCampusIndex, campusDirectionOverride],
+  );
 
-    requestCampusTts(campusSpeechText(direction, language), `nav-${index}`);
-  }, [language, requestCampusTts, selectedCampusIndex]);
+  const processCampusVoiceTranscript = useCallback(
+    async (transcript: string) => {
+      const match = await matchCampusTranscriptApi(transcript);
+      const labels = campusLabels(language);
+      if (!match?.matched || !match.room) {
+        requestCampusTts(
+          labels.selectRoomPrompt || "Sorry, I couldn't match that to a campus room. Try a room code.",
+          'campus-no-match',
+        );
+        return;
+      }
+      const direction = campusDirectionFromMapMatch(match.room);
+      setCampusDirectionOverride(direction);
+      const idx = legacyCampusIndexForCode(match.room.code);
+      if (idx !== null) setSelectedCampusIndex(idx);
+      setHasCampusRoomSelection(true);
+      requestCampusTts(campusSpeechText(direction, language), 'nav-voice');
+    },
+    [language, requestCampusTts],
+  );
+
+  useEffect(() => {
+    processCampusVoiceTranscriptRef.current = (text: string) => {
+      void processCampusVoiceTranscript(text);
+    };
+  }, [processCampusVoiceTranscript]);
 
   const promptCampusRoomSelection = useCallback(() => {
     const labels = campusLabels(language);
@@ -859,9 +923,14 @@ export default function ChatScreen({
           }
         : null);
     clearCardStages();
+    setDepartmentComparisonOpen(false);
+    comparisonLayoutSnapRef.current = null;
     setIsCampusNavigationStage(true);
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
+    setCampusRouteMode('default');
+    setCampusRouteResult(null);
+    setCampusDirectionOverride(null);
     setLayoutMode('SPLIT_CARDS');
   }, [
     clearCardStages,
@@ -878,6 +947,9 @@ export default function ChatScreen({
     clearSuggestionLayer();
     setIsCampusNavigationStage(false);
     currentUiLockRef.current = 'IDLE';
+    setCampusRouteMode('default');
+    setCampusRouteResult(null);
+    setCampusDirectionOverride(null);
     setLayoutMode('FULL_TEXT');
     setVisuallyFocusedMessage(savedChatFocusRef.current);
   }, [clearSuggestionLayer, setLayoutMode, stopCampusSpeech]);
@@ -1981,10 +2053,47 @@ export default function ChatScreen({
   const thinkingTitle = THINKING_TITLE[language] ?? THINKING_TITLE.English;
   const thinkingEmoji = THINKING_EMOJIS[thinkingIndex % THINKING_EMOJIS.length];
   const campusCopy = campusLabels(language);
-  const selectedCampusDirection = CAMPUS_DIRECTIONS[selectedCampusIndex] ?? CAMPUS_DIRECTIONS[0];
-  const selectedCampusSteps = selectedCampusDirection
-    ? localizedCampusSteps(selectedCampusDirection, language)
-    : [];
+  const selectedCampusDirection = useMemo(
+    () => campusDirectionOverride ?? (CAMPUS_DIRECTIONS[selectedCampusIndex] ?? CAMPUS_DIRECTIONS[0])!,
+    [campusDirectionOverride, selectedCampusIndex],
+  );
+  const campusDisplaySteps = useMemo(() => {
+    if (campusRouteResult?.status === 'ok') {
+      const flat = campusRouteResult.floor_segments.flatMap((s) => s.steps ?? []);
+      if (flat.length) return flat;
+    }
+    return localizedCampusSteps(selectedCampusDirection, language);
+  }, [campusRouteResult, selectedCampusDirection, language]);
+
+  useEffect(() => {
+    if (!isCampusNavigationStage || !hasCampusRoomSelection) {
+      setCampusRouteResult(null);
+      return;
+    }
+    const code = parseRoomCodeFromDestinationLabel(selectedCampusDirection.to);
+    if (!code) {
+      setCampusRouteResult(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const res = await getCampusRouteApi({
+        destination_room_code: code,
+        mode: campusNavigationRouteModeToApi(campusRouteMode),
+        language: language === 'English' ? 'en' : 'en',
+      });
+      if (!cancelled) setCampusRouteResult(res);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    campusRouteMode,
+    hasCampusRoomSelection,
+    isCampusNavigationStage,
+    language,
+    selectedCampusDirection.to,
+  ]);
 
   const departmentSlides = useMemo(() => {
     if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
@@ -2408,6 +2517,8 @@ export default function ChatScreen({
                         value={selectedCampusIndex}
                         onChange={(event) => {
                           const nextIndex = Number(event.target.value);
+                          setCampusDirectionOverride(null);
+                          setCampusRouteResult(null);
                           setSelectedCampusIndex(nextIndex);
                           setHasCampusRoomSelection(true);
                           speakCampusDirection(nextIndex);
@@ -2431,7 +2542,7 @@ export default function ChatScreen({
                           <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
                         </div>
                         <ol className="campus-direction-steps">
-                          {selectedCampusSteps.map((step, index) => (
+                          {campusDisplaySteps.map((step, index) => (
                             <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
                           ))}
                         </ol>

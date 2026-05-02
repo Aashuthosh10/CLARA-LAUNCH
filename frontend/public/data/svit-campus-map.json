@@ -1,0 +1,59 @@
+{
+  "version": "1-recovered-stub",
+  "institution": "Sai Vidya Institute of Technology (SVIT)",
+  "coordinate_space": { "unit": "px", "note": "Minimal stub map — replace with full SVIT JSON from backup." },
+  "floors": [
+    {
+      "floor_id": "GF",
+      "floor_number": 0,
+      "floor_name": "Ground Floor",
+      "image_ref": "/maps/ground-floor.png",
+      "blocks": [
+        {
+          "block_id": "blk-a",
+          "block_code": "A",
+          "block_name": "Block A",
+          "rooms": [
+            {
+              "id": "room-a001",
+              "code": "A-001",
+              "name": "CAED Lab",
+              "polygon": [[120, 140], [280, 140], [280, 260], [120, 260]],
+              "door": { "x": 200, "y": 140 }
+            }
+          ]
+        },
+        {
+          "block_id": "blk-b",
+          "block_code": "B",
+          "block_name": "Block B",
+          "rooms": [
+            {
+              "id": "room-b004",
+              "code": "B-004",
+              "name": "Principal Chamber",
+              "polygon": [[320, 160], [480, 160], [480, 280], [320, 280]],
+              "door": { "x": 400, "y": 160 }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "floor_id": "FF",
+      "floor_number": 1,
+      "floor_name": "First Floor",
+      "image_ref": "/maps/first-floor.png",
+      "blocks": []
+    },
+    {
+      "floor_id": "SF",
+      "floor_number": 2,
+      "floor_name": "Second Floor",
+      "image_ref": "/maps/second-floor.png",
+      "blocks": []
+    }
+  ],
+  "nodes": [],
+  "edges": []
+}

@@ -5,6 +5,8 @@ export type CampusDirection = {
   to: string;
   block: 'A' | 'B' | 'C';
   floor: string;
+  /** When set (e.g. from map match), overrides code-based floor heuristics in the map UI. */
+  floor_id?: 'GF' | 'FF' | 'SF';
   steps: string[];
   estimated_steps: number;
   estimated_time_seconds: number;
@@ -82,6 +84,32 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'Walk straight',
     keepGoing: 'Keep going',
     reached: 'You reached',
+    voiceDestinationPrompt:
+      "Which room or place would you like to visit? Tap below to speak—for example 'A-001' or 'seminar hall'.",
+    voiceNotUnderstood: "I didn't catch a confident room match. Try saying the room code or a shorter name.",
+    voiceNoSpeechHeard: "I didn't hear speech. Tap the orb and try again.",
+    voiceMatchedIntro: 'Showing directions for {name}.',
+    floorPlanTabs: 'Floor',
+    floorTabGF: 'Ground',
+    floorTabFF: 'First',
+    floorTabSF: 'Second',
+    campusAsideVoiceHint: 'Tap the orb to say where you want to go.',
+    campusRouteMetaRouteMode: 'Route mode',
+    campusWhereToHeading: 'Where to?',
+    campusClarifyTapHint: 'Tap a room to get directions.',
+    campusMapLoading: 'Loading campus map…',
+    campusMapLoadError: 'Could not load campus map.',
+    campusMapOverlayUnavailable: 'Outline data for this room is not on the map yet — the floor plan still shows below.',
+    campusMapNoOverlayMatch: 'This destination has no matching room on the vector map yet.',
+    campusMapSwitchFloorHint: 'Switch the floor tab above to see this room on the map.',
+    campusRouteFloorsInvolved: 'Route uses floors:',
+    campusRouteRecalculating: 'Recalculating route…',
+    campusRouteRetryCta: 'Retry route',
+    campusRouteFallbackHint: 'Generic step-by-step directions below may still help.',
+    campusRouteNotes: 'Notes',
+    campusEta: 'ETA (est.)',
+    campusRepeat: 'Repeat',
+    campusChangeDestination: 'Change destination',
   },
   Kannada: {
     campusNavigation: 'ಕ್ಯಾಂಪಸ್ ನ್ಯಾವಿಗೇಶನ್',
@@ -247,8 +275,26 @@ const arrivalTemplates: Record<Language, string> = {
   Malayalam: '{to} Block {block}-ലെ {floor}ൽ ആണ്.',
 };
 
-export function campusLabels(language: Language) {
-  return CAMPUS_LANGUAGE_LABELS[language] ?? CAMPUS_LANGUAGE_LABELS.English;
+const _EN = CAMPUS_LANGUAGE_LABELS.English;
+
+export function campusLabels(language: Language): Record<string, string> {
+  const base = (CAMPUS_LANGUAGE_LABELS[language] ?? CAMPUS_LANGUAGE_LABELS.English) as Record<string, string>;
+  return new Proxy(base, {
+    get(target, prop: string) {
+      const v = target[prop];
+      if (v !== undefined && v !== '') return v as string;
+      const fb = (_EN as Record<string, string>)[prop];
+      return typeof fb === 'string' ? fb : '';
+    },
+  }) as Record<string, string>;
+}
+
+export function localizedFloorLabel(direction: CampusDirection, labels: Record<string, string>): string {
+  const id = direction.floor_id;
+  if (id === 'FF') return labels.floorTabFF || direction.floor;
+  if (id === 'SF') return labels.floorTabSF || direction.floor;
+  if (id === 'GF') return labels.floorTabGF || direction.floor;
+  return direction.floor || labels.groundFloor;
 }
 
 export function localizedCampusSteps(direction: CampusDirection, language: Language): string[] {
@@ -274,3 +320,5 @@ export function campusSpeechText(direction: CampusDirection, language: Language)
   const steps = localizedCampusSteps(direction, language).map(speechFriendlyRoomText);
   return speechFriendlyRoomText(`${labels.directions}. ${direction.to}. ${steps.join(' ')}`);
 }
+
+export const campusNavigationSpeechText = campusSpeechText;

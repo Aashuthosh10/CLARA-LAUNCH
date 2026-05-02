@@ -147,6 +147,8 @@ from backend.security.ws_auth import (
 )
 from backend.utils.cache import TTLRUCache
 from backend.utils.timing import TurnTiming
+from backend.services.campus_room_match import get_campus_map_json, match_campus_transcript
+from backend.services.campus_route_engine import compute_campus_route
 from backend.utils.voice_logger import (
     log_voice_capture_end,
     log_voice_capture_start,
@@ -1925,6 +1927,25 @@ def ready() -> dict[str, Any]:
         "service": "CLARA",
         "checks": checks,
     }
+
+
+@app.get("/api/campus/map")
+def campus_map_get() -> dict[str, Any]:
+    """Public campus floorplan + room geometry (same JSON the kiosk loads)."""
+    return get_campus_map_json()
+
+
+@app.post("/api/campus/match")
+def campus_match_post(payload: dict[str, Any]) -> dict[str, Any]:
+    """Match a spoken phrase to a room row from `svit-campus-map.json`."""
+    transcript = str(payload.get("transcript") or "").strip()
+    return match_campus_transcript(transcript)
+
+
+@app.post("/api/campus/route")
+def campus_route_post(payload: dict[str, Any]) -> dict[str, Any]:
+    """Deterministic graph route (Dijkstra) when nodes/edges exist in the map JSON."""
+    return compute_campus_route(payload)
 
 
 VALID_LANGUAGES = frozenset(LANGUAGE_NAME_TO_CODE_KEY.keys())
