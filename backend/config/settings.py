@@ -186,6 +186,19 @@ ENABLE_ONCE_ONLY_TTS_SEGMENTS = os.getenv("ENABLE_ONCE_ONLY_TTS_SEGMENTS", "true
     "yes",
     "on",
 )
+# Narration segmented TTS aligned with kiosk cards / teleprompter (per-segment `segment_audio` frames).
+ENABLE_NARRATION_PLAN = os.getenv("ENABLE_NARRATION_PLAN", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+try:
+    NARRATION_SEGMENT_TTS_BUDGET_S = float(os.getenv("NARRATION_SEGMENT_TTS_BUDGET_S", "12.0"))
+except ValueError:
+    NARRATION_SEGMENT_TTS_BUDGET_S = 12.0
+NARRATION_SEGMENT_TTS_BUDGET_S = max(3.0, min(120.0, NARRATION_SEGMENT_TTS_BUDGET_S))
+
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
 LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")

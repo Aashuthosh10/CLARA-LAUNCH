@@ -2,12 +2,15 @@ import React from 'react';
 import { motion } from 'motion/react';
 import SiriOrb from '../../components/SiriOrb';
 
+export type ChatOrbState = 'idle' | 'listening' | 'processing' | 'speaking' | 'ready' | 'completed';
+
 type ChatOrbControlProps = {
-  orbState: 'idle' | 'listening' | 'processing' | 'speaking' | 'ready' | 'completed';
+  orbState: ChatOrbState;
   isProcessing: boolean;
   amplitude: number;
   onTap: () => void;
   bottomClassName: string;
+  compact?: boolean;
   /** Shrinks / lowers orb when department comparison panel is dominant */
   comparisonMode?: boolean;
 };
@@ -18,6 +21,7 @@ export default function ChatOrbControl({
   amplitude,
   onTap,
   bottomClassName,
+  compact = false,
   comparisonMode = false,
 }: ChatOrbControlProps) {
   const aria =
@@ -28,7 +32,7 @@ export default function ChatOrbControl({
       className="relative flex flex-col items-center group"
       initial={false}
       animate={{
-        scale: comparisonMode ? 0.72 : 1,
+        scale: comparisonMode ? 0.72 : compact ? 0.62 : 1,
         y: comparisonMode ? 12 : 0,
       }}
       transition={{ duration: 0.55, ease: [0.16, 1, 0.28, 1] }}

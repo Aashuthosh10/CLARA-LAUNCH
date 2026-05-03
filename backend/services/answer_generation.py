@@ -251,7 +251,16 @@ def build_target_card_payload(
             }
         jkey = department_label_to_json_key(detected_department_label)
         if not jkey:
-            return None
+            # Align with narration_plan: when no department resolves, show the same all-departments deck.
+            ordered_no_key: dict[str, Any] = {}
+            for k in DEPARTMENT_JSON_KEY_ORDER:
+                if k in deps and isinstance(deps[k], dict):
+                    ordered_no_key[k] = _hod_slice_for_narrator(deps[k])
+            return {
+                "presentation_type": "all_departments_overview",
+                "locale": locale_id,
+                "departments": ordered_no_key,
+            }
         dept = deps.get(jkey)
         return {
             "presentation_type": "single_department_overview",

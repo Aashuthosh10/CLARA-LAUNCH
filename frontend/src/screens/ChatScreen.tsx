@@ -39,15 +39,16 @@ import { useCollegeData } from '../hooks/useCollegeData';
 import {
   CAMPUS_DIRECTIONS,
   type CampusDirection,
+  type CampusMatchApiRoom,
   type CampusNavigationRouteMode,
   type CampusRouteResult,
+  CampusNavigationMapOnly,
   campusDirectionFromMapMatch,
   campusLabels,
   campusSpeechText,
   getCampusRouteApi,
   legacyCampusIndexForCode,
   localizedCampusSteps,
-  CampusNavigationStage,
   matchCampusTranscriptApi,
 } from '../campus-navigation';
 import { parseRoomCodeFromDestinationLabel } from '../campus-navigation/campusMapGeometry';
@@ -1030,6 +1031,19 @@ export default function ChatScreen({
       if (idx !== null) setSelectedCampusIndex(idx);
       setHasCampusRoomSelection(true);
       requestCampusTts(campusSpeechText(direction, language), 'nav-voice');
+    },
+    [language, requestCampusTts],
+  );
+
+  const handleMappedCampusRoomSelect = useCallback(
+    (room: CampusMatchApiRoom) => {
+      const direction = campusDirectionFromMapMatch(room);
+      setCampusDirectionOverride(direction);
+      const idx = legacyCampusIndexForCode(room.code, room.floor_id as 'GF' | 'FF' | 'SF');
+      if (idx !== null) setSelectedCampusIndex(idx);
+      setCampusRouteResult(null);
+      setHasCampusRoomSelection(true);
+      requestCampusTts(campusSpeechText(direction, language), `nav-map-${room.code}`);
     },
     [language, requestCampusTts],
   );
@@ -2957,15 +2971,21 @@ export default function ChatScreen({
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
           ) : (
-            <motion.div key="split" className="split-cards-layout">
-              <div className="visual-stage-70 flex flex-col items-center">
+            <motion.div
+              key="split"
+              className={`split-cards-layout ${isCampusNavigationStage ? 'split-cards-layout--campus-map-and-panel' : ''}`}
+            >
+              <div className={`visual-stage-70 flex flex-col items-center ${isCampusNavigationStage ? 'visual-stage-70--campus-map-only' : ''}`}>
                 {/* Content Layer */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 
                 {isCampusNavigationStage && selectedCampusDirection ? (
-                  <CampusNavigationStage
+                  <CampusNavigationMapOnly
                     direction={selectedCampusDirection}
                     language={language}
+                    routeMode={campusRouteMode}
+                    routeResult={campusRouteResult}
+                    onMappedRoomSelect={handleMappedCampusRoomSelect}
                   />
                 ) : executiveLeadershipKind === 'principal' ? (
                   <PremiumPrincipalCard language={language} />
@@ -3017,7 +3037,7 @@ export default function ChatScreen({
                 </div>
               </div>
               <motion.aside
-                className="interaction-panel-30"
+                className={`interaction-panel-30 ${isCampusNavigationStage ? 'interaction-panel-30--campus-directions' : ''}`}
                 onPointerDownCapture={(ev) => {
                   // #region agent log
                   const el = ev.target as HTMLElement;
