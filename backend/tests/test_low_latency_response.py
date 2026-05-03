@@ -105,9 +105,11 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(visible["isProcessing"])
         self.assertTrue(visible["audioPending"])
         self.assertNotIn("audioBase64", visible)
+        self.assertIsNone(visible.get("showCard"))
         self.assertIsNotNone(first_stream)
         self.assertEqual(first_stream["turn_id"], visible["turn_id"])
         self.assertEqual(first_stream["audioBase64"], fake_audio)
+        self.assertIsNotNone(first_stream.get("showCard"))
         self.assertFalse(first_stream["audioPending"])
         self.assertGreaterEqual(first_stream["tts_total_duration_estimate_ms"], 2500)
         self.assertGreater(first_stream["tts_total_chars"], 0)
@@ -129,6 +131,9 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
             main, "AUDIO_UPDATE_TIMEOUT_S", 0.01
+        ), patch.object(main, "TTS_CHUNK_FIRST_TIMEOUT_S", 0.01), patch.object(
+            main, "TTS_CHUNK_TIMEOUT_S", 0.01
+        ), patch.object(main, "FULL_TTS_FALLBACK_TIMEOUT", 0.01
         ), patch.object(main, "split_tts_chunks", return_value=["one"]), patch.object(
             main, "ENABLE_ACK_EARCON", False
         ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
@@ -163,7 +168,7 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(ws.events), 2)
         self.assertEqual([event["payload"]["wire_seq"] for event in ws.events], [1, 2])
 
-    async def test_chunk_failure_falls_back_to_single_clip_retry(self) -> None:
+    async def test_chunk_failure_falls_back_to_final_backup(self) -> None:
         session = _low_latency_test_session()
         ws = _FakeWebSocket()
         timing = main.TurnTiming()
@@ -173,7 +178,7 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         async def _fake_tts(text: str, language_code: str, **kwargs):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
             kind = kwargs.get("utterance_kind", "")
-            if kind == "assistant_full_reply_retry":
+            if kind == "assistant_full_reply_backup":
                 return retry_audio, False
             return None, False
 
@@ -193,20 +198,125 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         payloads = _unwrap_payloads(ws.events)
         streaming_payloads = _streaming_audio_payloads(payloads)
         utterance_kinds = [p.get("utterance_kind") for p in streaming_payloads]
+        final_audio = _final_assistant_audio_payload(payloads)
 
-        self.assertIn("assistant_full_reply_retry", utterance_kinds)
-        retry_payload = next(
-            p for p in streaming_payloads if p.get("utterance_kind") == "assistant_full_reply_retry"
-        )
-        self.assertEqual(retry_payload["audioBase64"], retry_audio)
-        self.assertFalse(retry_payload["audioPending"])
+        self.assertEqual(streaming_payloads, [])
+        self.assertEqual(final_audio["utterance_kind"], "assistant_full_reply_backup")
+        self.assertEqual(final_audio["audioBase64"], retry_audio)
+        self.assertFalse(final_audio["audioPending"])
+        self.assertFalse(final_audio["audioUnavailable"])
 
         self.assertNotIn("assistant_tts_failsafe", utterance_kinds)
         retry_kinds_called = [
             call.get("utterance_kind") for call in tts_calls
         ]
-        self.assertIn("assistant_full_reply_retry", retry_kinds_called)
+        self.assertGreaterEqual(retry_kinds_called.count("assistant_full_reply_chunk_0"), 3)
+        self.assertIn("assistant_full_reply_backup", retry_kinds_called)
         self.assertNotIn("assistant_tts_failsafe", retry_kinds_called)
+
+    async def test_tts_total_failure_does_not_speak_delay_failsafe(self) -> None:
+        session = _low_latency_test_session()
+        ws = _FakeWebSocket()
+        timing = main.TurnTiming()
+        tts_calls: list[dict] = []
+
+        async def _fake_tts(text: str, language_code: str, **kwargs):
+            tts_calls.append({"text": text, "language_code": language_code, **kwargs})
+            return None, False
+
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
+            main, "ENABLE_ACK_EARCON", False
+        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
+        ), patch.object(main, "split_tts_chunks", return_value=["chunk one"]), patch.object(
+            main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
+        ):
+            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+
+        payloads = _unwrap_payloads(ws.events)
+        final_audio = _final_assistant_audio_payload(payloads)
+        called_kinds = [call.get("utterance_kind") for call in tts_calls]
+
+        self.assertTrue(final_audio["audioUnavailable"])
+        self.assertNotIn("assistant_tts_failsafe", called_kinds)
+        self.assertFalse(
+            any("slight delay" in str(call.get("text", "")).lower() for call in tts_calls)
+        )
+
+    async def test_chunk_empty_retries_then_streams_and_sends_final_backup(self) -> None:
+        session = _low_latency_test_session()
+        ws = _FakeWebSocket()
+        timing = main.TurnTiming()
+        chunk_audio = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+        backup_audio = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAB="
+        chunk_attempts = 0
+
+        async def _fake_tts(text: str, language_code: str, **kwargs):
+            nonlocal chunk_attempts
+            kind = kwargs.get("utterance_kind", "")
+            if kind == "assistant_full_reply_chunk_0":
+                chunk_attempts += 1
+                if chunk_attempts == 1:
+                    return None, False
+                return chunk_audio, False
+            if kind == "assistant_full_reply_backup":
+                return backup_audio, False
+            return None, False
+
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
+            main, "ENABLE_ACK_EARCON", False
+        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
+        ), patch.object(main, "split_tts_chunks", return_value=["chunk one"]), patch.object(
+            main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
+        ):
+            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+
+        payloads = _unwrap_payloads(ws.events)
+        streaming_payloads = _streaming_audio_payloads(payloads)
+        final_audio = _final_assistant_audio_payload(payloads)
+
+        self.assertEqual(chunk_attempts, 2)
+        self.assertEqual(len(streaming_payloads), 1)
+        self.assertEqual(streaming_payloads[0]["audioBase64"], chunk_audio)
+        self.assertEqual(final_audio["audioBase64"], backup_audio)
+        self.assertFalse(final_audio["audioUnavailable"])
+        allowed_keys = {
+            "messages",
+            "isProcessing",
+            "isSpeaking",
+            "audioPending",
+            "turn_id",
+            "assistantText",
+            "spokenText",
+            "utterance_kind",
+            "segment_index",
+            "is_final_segment",
+            "showCard",
+            "intent",
+            "direct_reply",
+            "rag_used",
+            "llm_used",
+            "tts_cache_hit",
+            "llm_cache_hit",
+            "audioUnavailable",
+            "type",
+            "audioBase64",
+            "tts_streaming",
+            "tts_chunk_index",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "debug",
+            "session_gen",
+            "wire_seq",
+            "options",
+            "departmentId",
+            "comparisonDepartments",
+            "comparisonRecommendFocus",
+            "comparisonHighlightId",
+        }
+        for payload in streaming_payloads + [final_audio]:
+            self.assertLessEqual(set(payload.keys()), allowed_keys)
 
     async def test_ws_send_json_falls_back_when_lock_contended(self) -> None:
         class _StallingFakeWebSocket:

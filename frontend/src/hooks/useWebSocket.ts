@@ -360,16 +360,6 @@ export function useWebSocket(url: string) {
             const prevQueue = Array.isArray(pp.tts_audio_queue)
               ? ([...(pp.tts_audio_queue as string[])] as string[])
               : [];
-            const lastB64 =
-              typeof rp.audioBase64 === 'string' && rp.audioBase64.length > 0
-                ? (rp.audioBase64 as string)
-                : null;
-            if (
-              lastB64 &&
-              (prevQueue.length === 0 || prevQueue[prevQueue.length - 1] !== lastB64)
-            ) {
-              prevQueue.push(lastB64);
-            }
             outgoingPayload = {
               ...rp,
               tts_audio_queue: prevQueue.length ? prevQueue : pp.tts_audio_queue,

@@ -546,6 +546,15 @@ export default function ChatScreen({
   >([]);
   const appliedBackendTtsQueueLenRef = useRef(0);
   const lastBackendTtsStreamTurnRef = useRef<string>('');
+  const receivedTtsChunkIndicesRef = useRef<Set<number>>(new Set());
+  const firstTtsChunkSeenAtRef = useRef<number | null>(null);
+  const ttsBufferTimerRef = useRef<number | null>(null);
+  const pendingFinalBackupRef = useRef<{
+    audioBase64: string;
+    segmentKey: string;
+    turnId: string;
+  } | null>(null);
+  const audioLockRef = useRef(false);
   const handleAudioPlaybackRef = useRef<
     | ((
         audioBase64: string,
@@ -574,6 +583,18 @@ export default function ChatScreen({
       appliedBackendTtsQueueLenRef.current = 0;
       ttsStreamQueueRef.current = [];
       lastBackendTtsStreamTurnRef.current = '';
+      receivedTtsChunkIndicesRef.current.clear();
+      firstTtsChunkSeenAtRef.current = null;
+      if (ttsBufferTimerRef.current) {
+        window.clearTimeout(ttsBufferTimerRef.current);
+        ttsBufferTimerRef.current = null;
+      }
+      pendingFinalBackupRef.current = null;
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      audioLockRef.current = false;
       streamAudioLayoutRef.current = null;
       assistantAudioTurnOwnerRef.current = null;
       playedSegmentKeysRef.current.clear();
@@ -1112,6 +1133,19 @@ export default function ChatScreen({
     ) {
       return;
     }
+    if (audioLockRef.current && currentAudioRef.current && !currentAudioRef.current.paused) {
+      if (audioChainFollowUp) {
+        ttsStreamQueueRef.current.unshift({
+          audioBase64,
+          segmentKey,
+          isOverview,
+          cardsToSync,
+          turnId: tid,
+          totalDurationEstimateMs,
+        });
+      }
+      return;
+    }
 
     playedSegmentKeysRef.current.add(segmentKey);
 
@@ -1131,6 +1165,7 @@ export default function ChatScreen({
 
     const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
     currentAudioRef.current = audio;
+    audioLockRef.current = true;
     setIsPlayingBackendAudio(true);
 
     let comparisonTimeHandler: (() => void) | null = null;
@@ -1238,6 +1273,7 @@ export default function ChatScreen({
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
+        audioLockRef.current = false;
         setIsCampusSpeaking(false);
         setHasGreeted(true); // Session is active after any Clara audio completes
         if (isOverview && cardsToSync && cardsToSync.length > 0 && !moreQueued) {
@@ -1253,11 +1289,14 @@ export default function ChatScreen({
             next.turnId,
             true,
           );
+        } else if (pendingFinalBackupRef.current) {
+          pendingFinalBackupRef.current = null;
         }
     };
 
     audio.play().catch(err => {
         detachComparisonAudio();
+        audioLockRef.current = false;
         // Helps debug when the browser blocks autoplay or decoding fails.
         if (import.meta.env.DEV) {
           console.error('[CLARA_TTS] audio.play() failed', {
@@ -1329,6 +1368,20 @@ export default function ChatScreen({
       if (assistantAudioTurnOwnerRef.current !== nextOwner) {
         playedSegmentKeysRef.current.clear();
         assistantAudioTurnOwnerRef.current = nextOwner;
+        appliedBackendTtsQueueLenRef.current = 0;
+        ttsStreamQueueRef.current = [];
+        receivedTtsChunkIndicesRef.current.clear();
+        firstTtsChunkSeenAtRef.current = null;
+        if (ttsBufferTimerRef.current) {
+          window.clearTimeout(ttsBufferTimerRef.current);
+          ttsBufferTimerRef.current = null;
+        }
+        pendingFinalBackupRef.current = null;
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+        audioLockRef.current = false;
       }
     }
 
@@ -1345,7 +1398,10 @@ export default function ChatScreen({
     // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
     const nativeTrigger = payload?.showCard;
     const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
-    const isResponseReady = payload?.isProcessing !== true && payloadMessageList.length > 0;
+    const isResponseReady =
+      payload?.isProcessing !== true &&
+      payload?.audioPending !== true &&
+      payloadMessageList.length > 0;
 
     const lastUserForInference = [...payloadMessageList].reverse().find((m: any) => {
       const role = String(m?.role ?? '').toLowerCase();
@@ -2134,6 +2190,60 @@ export default function ChatScreen({
       lastBackendTtsStreamTurnRef.current = tid;
       appliedBackendTtsQueueLenRef.current = 0;
       ttsStreamQueueRef.current = [];
+      receivedTtsChunkIndicesRef.current.clear();
+      firstTtsChunkSeenAtRef.current = null;
+      if (ttsBufferTimerRef.current) {
+        window.clearTimeout(ttsBufferTimerRef.current);
+        ttsBufferTimerRef.current = null;
+      }
+      pendingFinalBackupRef.current = null;
+    }
+    const chunkIndex =
+      typeof payload.tts_chunk_index === 'number' && Number.isInteger(payload.tts_chunk_index)
+        ? payload.tts_chunk_index
+        : null;
+    if (payload.tts_streaming === true && chunkIndex !== null) {
+      receivedTtsChunkIndicesRef.current.add(chunkIndex);
+    }
+    const hasContiguousChunks = () => {
+      const indices = [...receivedTtsChunkIndicesRef.current].sort((a, b) => a - b);
+      if (indices.length === 0) return false;
+      return indices.every((value, idx) => value === idx);
+    };
+    const finalBackupAudio =
+      payload.tts_streaming === false &&
+      typeof payload.audioBase64 === 'string' &&
+      payload.audioBase64.length > 0
+        ? payload.audioBase64
+        : null;
+    if (finalBackupAudio) {
+      const finalSig = `${finalBackupAudio.length}:${finalBackupAudio.slice(0, 24)}`;
+      pendingFinalBackupRef.current = {
+        audioBase64: finalBackupAudio,
+        segmentKey: `${tid}|tts_final_backup|${finalSig}`,
+        turnId: tid,
+      };
+      if (!hasContiguousChunks()) {
+        ttsStreamQueueRef.current = [];
+        appliedBackendTtsQueueLenRef.current = Array.isArray(payload.tts_audio_queue)
+          ? payload.tts_audio_queue.length
+          : appliedBackendTtsQueueLenRef.current;
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+        audioLockRef.current = false;
+        handleAudioPlaybackRef.current?.(
+          finalBackupAudio,
+          pendingFinalBackupRef.current.segmentKey,
+          false,
+          null,
+          tid,
+          false,
+        );
+        pendingFinalBackupRef.current = null;
+        return;
+      }
     }
     const q = payload.tts_audio_queue;
     if (!Array.isArray(q) || q.length === 0) return;
@@ -2167,6 +2277,31 @@ export default function ChatScreen({
     }
     if (!added) return;
     if (isPlayingBackendAudio) return;
+    if (firstTtsChunkSeenAtRef.current === null) {
+      firstTtsChunkSeenAtRef.current = Date.now();
+    }
+    const bufferedEnough =
+      ttsStreamQueueRef.current.length >= 2 ||
+      Date.now() - firstTtsChunkSeenAtRef.current >= 300 ||
+      payload.tts_streaming === false;
+    if (!bufferedEnough) {
+      if (ttsBufferTimerRef.current) return;
+      ttsBufferTimerRef.current = window.setTimeout(() => {
+        ttsBufferTimerRef.current = null;
+        const next = ttsStreamQueueRef.current.shift();
+        if (!next || isPlayingBackendAudio) return;
+        handleAudioPlaybackRef.current?.(
+          next.audioBase64,
+          next.segmentKey,
+          next.isOverview,
+          next.cardsToSync,
+          next.turnId,
+          false,
+          next.totalDurationEstimateMs,
+        );
+      }, 300);
+      return;
+    }
     const delayMs =
       layout === 'SPLIT_CARDS' ? CARD_AUDIO_START_DELAY_MS : FULL_TEXT_AUDIO_START_DELAY_MS;
     const timer = window.setTimeout(() => {
