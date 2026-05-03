@@ -20,6 +20,7 @@ _ALLOWED_ACTIONS = {
     "mic_start",
     "mic_stop",
     "mic_cancel",
+    "cancel_turn",
     "menu_select",
 }
 
@@ -65,6 +66,13 @@ class MicControlMessage(_BaseWsMessage):
     action: Literal["toggle_mic", "mic_start", "mic_stop", "mic_cancel"]
 
 
+class CancelTurnMessage(BaseModel):
+    """Client aborts the in-flight assistant reply (orb interrupt / new intent)."""
+
+    model_config = ConfigDict(extra="allow")
+    action: Literal["cancel_turn"]
+
+
 class MenuSelectMessage(_BaseWsMessage):
     # Keep extra fields because frontend may include menu metadata.
     model_config = ConfigDict(extra="allow")
@@ -90,6 +98,7 @@ _ACTION_TO_MODEL = {
     "mic_start": MicControlMessage,
     "mic_stop": MicControlMessage,
     "mic_cancel": MicControlMessage,
+    "cancel_turn": CancelTurnMessage,
     "menu_select": MenuSelectMessage,
 }
 

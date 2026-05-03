@@ -174,9 +174,10 @@
 
 /* Comparison mode: deterministic vertical budget (nav + orb + gap + Tap label). */
 .full-text-layout.full-text-layout--comparison-active {
-  --comparison-top-inset: clamp(108px, 11.8vh, 132px);
-  /* Orb visuals + Tap to speak + 80–120px calm gap below panel */
-  --comparison-orb-bottom-band: clamp(220px, 30vh, 288px);
+  --comparison-top-inset: clamp(52px, 7.5vh, 72px);
+  /* Reserve enough space for FAQ ticker + orb so nothing overlaps the panel */
+  --comparison-bottom-inset: clamp(200px, 26vh, 280px);
+  --comparison-available-height: calc(100dvh - var(--comparison-top-inset) - var(--comparison-bottom-inset));
 }
 
 .full-text-message-stage {
@@ -248,12 +249,28 @@
   pointer-events: auto;
 }
 
+.full-text-comparison-faq-layer {
+  position: fixed;
+  left: 50%;
+  bottom: calc(clamp(168px, 20vh, 210px) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 58;
+  width: min(980px, 94vw);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.full-text-comparison-faq-layer .faq-carousel-shell-full {
+  pointer-events: auto;
+}
+
 /* ─── Inline department comparison (lavender glass) ─── */
 .comparison-embed-slot {
   pointer-events: auto;
   flex: 1 1 auto;
   min-height: 0;
-  margin-bottom: clamp(22px, 2.75vh, 38px);
+  margin-bottom: clamp(20px, 2.6vh, 34px);
   overflow: visible;
   position: relative;
   z-index: 32;
@@ -267,38 +284,37 @@
 }
 
 .comparison-embed-leading-filler {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: 0px;
   width: 100%;
   pointer-events: none;
+  height: 0;
+  max-height: 0;
+  display: none;
 }
 
 /* Consume upper slack with a capped spacer so panel sits nearer the message ribbon (~110–130px vibe). */
 .full-text-layout.full-text-layout--comparison-active .comparison-embed-leading-filler {
-  flex: 0 0 auto;
-  min-height: 0;
-  flex-grow: 0;
-  max-height: clamp(10px, 2.2vh, 22px);
-  height: clamp(8px, 1.75vh, 18px);
+  height: 0;
+  max-height: 0;
+  display: none;
 }
 
 .comparison-embed-panel-shell {
   pointer-events: auto;
   width: 100%;
-  max-width: min(90vw, 1600px);
+  max-width: min(94vw, 1440px);
   margin-left: auto;
   margin-right: auto;
-  max-height: min(97vh, 1280px);
+  height: min(var(--comparison-available-height), 760px);
+  max-height: min(var(--comparison-available-height), 760px);
   overflow: hidden;
   position: relative;
 }
 
 .full-text-layout.full-text-layout--comparison-active .comparison-embed-panel-shell {
-  max-height: min(
-    calc(100vh - var(--comparison-top-inset) - var(--comparison-orb-bottom-band)),
-    calc(100dvh - var(--comparison-top-inset) - var(--comparison-orb-bottom-band)),
-    1274px
-  );
+  height: min(var(--comparison-available-height), 760px);
+  max-height: min(var(--comparison-available-height), 760px);
   overflow: hidden;
 }
 
@@ -312,9 +328,8 @@
     rgba(237, 233, 254, 0.5) 100%
   );
   box-shadow:
-    0 20px 50px rgba(24, 10, 44, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
-    0 -24px 48px rgba(167, 139, 250, 0.06) inset;
+    0 10px 28px rgba(24, 10, 44, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -327,24 +342,24 @@
 }
 
 .department-comparison-eyebrow {
-  font-size: clamp(0.75rem, 1.35vmin, 0.8125rem);
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #5b21b6;
 }
 
 .department-comparison-title {
-  font-size: clamp(1.75rem, 2.85vw, 2rem);
+  font-size: clamp(1.1rem, 2.2vw, 1.25rem);
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.25;
   color: #0f172a;
 }
 
 .department-comparison-focus {
-  font-size: clamp(0.9375rem, 1.85vmin, 1rem);
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .department-comparison-close {
@@ -352,8 +367,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 9999px;
   border: 1px solid rgba(58, 24, 112, 0.12);
   background: rgba(255, 255, 255, 0.45);
@@ -367,15 +382,16 @@
 }
 
 .department-comparison-select {
-  min-width: 10.5rem;
-  max-width: 18rem;
-  min-height: 2.75rem;
+  min-width: 8.5rem;
+  max-width: 14rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
   cursor: pointer;
-  border-radius: 0.875rem;
+  border-radius: 0.65rem;
   border: 1px solid rgba(58, 24, 112, 0.2);
   background: rgba(255, 255, 255, 0.72);
-  padding: 0.72rem 1rem;
-  font-size: clamp(1rem, 2.05vmin, 1.0625rem);
+  padding: 0 0.65rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #1e1b4b;
   outline: none;
@@ -389,12 +405,13 @@
 }
 
 .department-comparison-add-dept {
-  border-radius: 0.875rem;
+  border-radius: 0.65rem;
   border: 1px solid rgba(58, 24, 112, 0.2);
   background: rgba(255, 255, 255, 0.65);
-  min-height: 2.75rem;
-  padding: 0.65rem 1rem;
-  font-size: clamp(0.75rem, 1.5vmin, 0.8125rem);
+  min-height: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.7rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -423,9 +440,240 @@
   border-radius: 9999px;
 }
 
+/* Cinematic auto-flip comparison (no scroll in content stage) */
+.department-comparison-cinema-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  -webkit-overflow-scrolling: auto;
+}
+
+.comparison-cinema-inner {
+  min-height: 0;
+}
+
+.comparison-root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-16px);
+}
+
+.comparison-body {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  gap: 14px;
+}
+
+.comparison-cards-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  align-items: stretch;
+  gap: 14px;
+  height: 100%;
+}
+
+.compare-card {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 12px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.compare-card.highlight {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.45);
+}
+
+.compare-card-title {
+  margin: 0;
+  font-size: clamp(0.98rem, 1.25vw, 1.12rem);
+  font-weight: 720;
+  line-height: 1.28;
+  text-align: center;
+  color: #0f172a;
+}
+
+.compare-card-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  text-align: center;
+  color: #475569;
+}
+
+.compare-card-media {
+  margin-top: 8px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.compare-card-media-inner {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: clamp(88px, 14vh, 120px);
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(237, 233, 254, 0.2));
+}
+
+.compare-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compare-card-narrative {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compare-card .points {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.compare-card .point-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Section title — clear but not oversized on 13" panels */
+.compare-card .point-group-label {
+  margin: 0;
+  font-size: clamp(0.84rem, 1.2vmin, 0.95rem);
+  font-weight: 750;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  color: #312e81;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Subpoint pills — balanced for ~1 m viewing without dominating the card */
+.compare-card .point {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: clamp(14px, 1.1vw, 16.5px);
+  line-height: 1.38;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  text-align: center;
+}
+
+@media (min-width: 1100px) {
+  .compare-card .point {
+    font-size: clamp(14.5px, 1.05vw, 17px);
+    padding: 11px 13px;
+    line-height: 1.4;
+  }
+
+  .compare-card .point-group-label {
+    font-size: clamp(0.88rem, 1.25vmin, 1rem);
+  }
+}
+
+@media (max-width: 1080px) {
+  .comparison-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .comparison-cards-track {
+    height: auto;
+    min-height: 0;
+  }
+}
+
+.comparison-cinema-section-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.38;
+  color: #312e81;
+  margin: 0;
+}
+
+.comparison-cinema-bubble-grid {
+  align-items: start;
+}
+
+.comparison-cinema-cards-layer {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.comparison-cinema-col {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  transform: scale(1);
+  opacity: 0.7;
+}
+
+.comparison-cinema-col--highlight {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.comparison-bubble {
+  width: fit-content;
+  max-width: 260px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 14px 16px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: none;
+}
+
 .department-comparison-hint {
-  font-size: clamp(0.875rem, 1.9vmin, 0.9375rem);
-  line-height: 1.5;
+  font-size: 0.78rem;
+  line-height: 1.35;
   color: #64748b;
 }
 
@@ -498,39 +746,42 @@
 }
 
 .department-comparison-col-head-title {
-  font-size: clamp(1.125rem, 2.2vmin, 1.25rem);
+  font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.35;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   color: #0f172a;
 }
 
 .department-comparison-col-head {
   border: 1px solid rgba(226, 232, 240, 0.95);
   background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: transform 0.35s ease, opacity 0.35s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transform: scale(1);
+  opacity: 0.7;
 }
 
 .department-comparison-col-head--highlight {
   border-color: rgba(139, 92, 246, 0.42);
   background: linear-gradient(165deg, rgba(237, 233, 254, 0.95), rgba(250, 245, 255, 0.88));
-  box-shadow:
-    0 10px 28px rgba(91, 33, 182, 0.12),
-    0 0 0 1px rgba(167, 139, 250, 0.2) inset;
+  box-shadow: 0 4px 16px rgba(91, 33, 182, 0.08);
+  transform: scale(1.05);
+  opacity: 1;
 }
 
 .department-comparison-highlight-badge {
-  font-size: clamp(0.75rem, 1.65vmin, 0.8125rem);
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  margin-top: 0.35rem;
+  margin-top: 0.18rem;
   color: #6d28d9;
 }
 
 .department-comparison-remove-slot {
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -617,6 +868,19 @@
   align-items: center;
   gap: 16px;
   pointer-events: auto;
+}
+
+/* FAQ sits before the orb in DOM; later siblings paint on top, so the orb stack
+   can steal hits when layouts tighten. Force suggestions above the orb hit area. */
+.full-text-orb-zone .faq-carousel-shell-full,
+.full-text-orb-zone .faq-panel-suggestion-row {
+  position: relative;
+  z-index: 25;
+}
+
+.full-text-orb-zone .chat-orb-stack-below-faq {
+  position: relative;
+  z-index: 2;
 }
 
 .course-menu-overlay {
@@ -846,6 +1110,17 @@
     0 30px 80px rgba(0, 0, 0, 0.2),
     0 15px 40px rgba(46, 16, 101, 0.15);
   overflow: hidden;
+}
+
+.interaction-panel-30 .faq-carousel-shell-panel,
+.interaction-panel-30 .faq-panel-suggestion-row {
+  position: relative;
+  z-index: 25;
+}
+
+.interaction-panel-30 .chat-orb-stack-below-faq {
+  position: relative;
+  z-index: 2;
 }
 
 .panel-header {

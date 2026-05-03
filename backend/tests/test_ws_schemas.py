@@ -46,6 +46,11 @@ class TestWsSchemas(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(msg["action"], "language_gate_prompt")
 
+    def test_accepts_cancel_turn(self) -> None:
+        msg, err = parse_inbound_ws_message('{"action":"cancel_turn"}')
+        self.assertIsNone(err)
+        self.assertEqual(msg["action"], "cancel_turn")
+
     def test_accepts_campus_navigation_tts_with_extra_fields(self) -> None:
         msg, err = parse_inbound_ws_message(
             '{"action":"campus_navigation_tts","text":"Go straight","language":"English","turn_id":"campus-1"}'

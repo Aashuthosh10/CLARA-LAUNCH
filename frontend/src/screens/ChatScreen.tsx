@@ -169,6 +169,16 @@ type PendingAudio = {
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
 };
 
+/** Backend may stream multiple WAV chunks under one turn; defer single-clip pending until queue drains. */
+function shouldDeferAssistantTtsToStream(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false;
+  const o = p as Record<string, unknown>;
+  if (o.type !== 'assistant_audio_update') return false;
+  if (o.tts_streaming === true) return true;
+  if (Array.isArray(o.tts_audio_queue) && o.tts_audio_queue.length > 0) return true;
+  return false;
+}
+
 type VisibleFaqSuggestion = {
   id: string;
   text: string;
@@ -182,6 +192,8 @@ const FAQ_TICKER_VIEWPORT_WIDTH = (FAQ_TICKER_CARD_WIDTH * 3) + (FAQ_TICKER_CARD
 const FAQ_TICKER_SPEED_PX_PER_MS = 0.035;
 const GENERAL_FAQ_CATEGORIES: FaqSuggestionCategory[] = ['college', 'campus', 'admissions', 'placements'];
 const TEXT_SCROLL_PX_PER_SECOND = 30;
+/** Must match `row_order.length` in `departmentComparison.json` (3 narrative beats). */
+const COMPARISON_NARRATION_SECTIONS = 3;
 
 function processResponseSentences(value: unknown): string[] {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -191,8 +203,37 @@ function processResponseSentences(value: unknown): string[] {
 }
 
 function payloadResponseText(payload: any, fallback: string): string {
-  return String(payload?.message ?? payload?.responseText ?? payload?.assistantText ?? fallback ?? '');
+  if (payload?.event === 'error' || payload?.errorCode) return fallback ?? '';
+  return String(payload?.responseText ?? payload?.assistantText ?? fallback ?? '');
 }
+
+// #region agent log
+const _agentDbg = (
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>,
+  runId = 'pre',
+) => {
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug('[CLARA_AGENT]', hypothesisId, message, { ...data, location, runId });
+  }
+  void fetch('http://127.0.0.1:7562/ingest/4f3b26e3-ebcc-4469-a396-5caaeb295ee3', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ba7e8c' },
+    body: JSON.stringify({
+      sessionId: 'ba7e8c',
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+};
+// #endregion
 
 function FaqTickerCard({
   suggestion,
@@ -228,7 +269,10 @@ function FaqTickerCard({
       style={{ scale, opacity, filter }}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(suggestion.id, suggestion.text)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(suggestion.id, suggestion.text);
+      }}
     >
       {suggestion.text}
     </motion.button>
@@ -390,7 +434,14 @@ export default function ChatScreen({
   const [comparisonDeptIds, setComparisonDeptIds] = useState<string[]>([]);
   const [comparisonHighlightId, setComparisonHighlightId] = useState<string | null>(null);
   const [comparisonRecommendFocus, setComparisonRecommendFocus] = useState<string | null>(null);
+  const [comparisonNarrationSection, setComparisonNarrationSection] = useState(0);
   const comparisonLayoutSnapRef = useRef<ChatLayoutMode | null>(null);
+  const comparisonTtsSyncActiveRef = useRef(false);
+  const comparisonSyncModeRef = useRef<'time' | 'clip'>('time');
+  const comparisonTotalEstimateSecRef = useRef<number | null>(null);
+  const comparisonAccumulatedSecRef = useRef(0);
+  const comparisonClipPlayIndexRef = useRef(0);
+  const comparisonSlideSinkRef = useRef<(idx: number) => void>(() => {});
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
   const isE2EFlow = useMemo(() => {
@@ -477,6 +528,38 @@ export default function ChatScreen({
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const cardProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamAudioLayoutRef = useRef<{
+    isOverview: boolean;
+    cardsToSync: any[] | null;
+    targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
+    turnId: string;
+  } | null>(null);
+  const ttsStreamQueueRef = useRef<
+    {
+      audioBase64: string;
+      segmentKey: string;
+      isOverview: boolean;
+      cardsToSync: any[] | null;
+      turnId: string;
+      totalDurationEstimateMs?: number | null;
+    }[]
+  >([]);
+  const appliedBackendTtsQueueLenRef = useRef(0);
+  const lastBackendTtsStreamTurnRef = useRef<string>('');
+  const handleAudioPlaybackRef = useRef<
+    | ((
+        audioBase64: string,
+        segmentKey: string,
+        isOverview: boolean,
+        cardsToSync: any[] | null,
+        _turnId?: string | null,
+        audioChainFollowUp?: boolean,
+        totalDurationEstimateMs?: number | null,
+      ) => void)
+    | null
+  >(null);
+  /** Server `turn_id` for the in-flight assistant reply (set from isProcessing payload). */
+  const assistantAudioTurnOwnerRef = useRef<string | null>(null);
 
   // Wraps original sendMessage to sniff for intents dynamically on dispatch.
   // Deterministic FAQ answers are resolved by the backend before Groq/RAG.
@@ -488,6 +571,12 @@ export default function ChatScreen({
         return;
       }
       clearSuggestionLayer();
+      appliedBackendTtsQueueLenRef.current = 0;
+      ttsStreamQueueRef.current = [];
+      lastBackendTtsStreamTurnRef.current = '';
+      streamAudioLayoutRef.current = null;
+      assistantAudioTurnOwnerRef.current = null;
+      playedSegmentKeysRef.current.clear();
       // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
       if (source === 'VOICE') {
         setDepartmentComparisonOpen(false);
@@ -757,11 +846,29 @@ export default function ChatScreen({
   }, [language, collegeData]);
 
   const handleCloseDepartmentComparison = useCallback(() => {
+    comparisonTtsSyncActiveRef.current = false;
+    setComparisonNarrationSection(0);
     setDepartmentComparisonOpen(false);
     const snap = comparisonLayoutSnapRef.current;
     if (snap !== null) setLayoutMode(snap);
     comparisonLayoutSnapRef.current = null;
   }, [setLayoutMode]);
+
+  useEffect(() => {
+    comparisonSlideSinkRef.current = (idx: number) => {
+      setComparisonNarrationSection((prev) => {
+        const next = Math.max(0, Math.min(COMPARISON_NARRATION_SECTIONS - 1, idx));
+        return prev === next ? prev : next;
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!departmentComparisonOpen) {
+      comparisonTtsSyncActiveRef.current = false;
+      setComparisonNarrationSection(0);
+    }
+  }, [departmentComparisonOpen]);
   const clearCardStages = useCallback(() => {
     setActiveCards(null);
     setCurrentCardIdx(0);
@@ -834,6 +941,12 @@ export default function ChatScreen({
     clearSuggestionLayer();
     stopTextReveal(true);
     setPendingAudio(null);
+    appliedBackendTtsQueueLenRef.current = 0;
+    ttsStreamQueueRef.current = [];
+    lastBackendTtsStreamTurnRef.current = '';
+    streamAudioLayoutRef.current = null;
+    assistantAudioTurnOwnerRef.current = null;
+    playedSegmentKeysRef.current.clear();
     if (cardProgressTimerRef.current) {
       clearInterval(cardProgressTimerRef.current);
       cardProgressTimerRef.current = null;
@@ -971,24 +1084,91 @@ export default function ChatScreen({
 
   // Sync Card Progression with Backend Audio Duration
   const handleAudioPlayback = useCallback(
-    (audioBase64: string, segmentKey: string, isOverview: boolean, cardsToSync: any[] | null, _turnId?: string) => {
+    (
+      audioBase64: string,
+      segmentKey: string,
+      isOverview: boolean,
+      cardsToSync: any[] | null,
+      _turnId?: string,
+      audioChainFollowUp?: boolean,
+      totalDurationEstimateMs?: number | null,
+    ) => {
     // Dedupe by a per-segment key (not just per-turn), because the backend can stream
     // multiple TTS segments for the same `turn_id` (ack + first sentence + remainder).
     if (playedSegmentKeysRef.current.has(segmentKey)) return;
+
+    const tid = typeof _turnId === 'string' ? _turnId : '';
+    const skipTurnOwnerGuard =
+      !tid ||
+      tid.startsWith('campus-') ||
+      tid.startsWith('greeting') ||
+      tid.includes('language_gate') ||
+      tid.includes('name_after') ||
+      tid.includes('ready_after');
+    if (
+      !skipTurnOwnerGuard &&
+      assistantAudioTurnOwnerRef.current &&
+      tid !== assistantAudioTurnOwnerRef.current
+    ) {
+      return;
+    }
+
     playedSegmentKeysRef.current.add(segmentKey);
 
-    if (cardProgressTimerRef.current) {
+    if (!audioChainFollowUp) {
+      if (cardProgressTimerRef.current) {
         clearInterval(cardProgressTimerRef.current);
         cardProgressTimerRef.current = null;
-    }
-    if (currentAudioRef.current) {
+      }
+      if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
+      }
+    } else if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
 
     const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
     currentAudioRef.current = audio;
     setIsPlayingBackendAudio(true);
+
+    let comparisonTimeHandler: (() => void) | null = null;
+    const detachComparisonAudio = () => {
+      if (comparisonTimeHandler) {
+        audio.removeEventListener('timeupdate', comparisonTimeHandler);
+        comparisonTimeHandler = null;
+      }
+    };
+
+    if (comparisonTtsSyncActiveRef.current) {
+      if (!audioChainFollowUp) {
+        comparisonAccumulatedSecRef.current = 0;
+      }
+      if (comparisonSyncModeRef.current === 'clip') {
+        if (!audioChainFollowUp) {
+          comparisonClipPlayIndexRef.current = 0;
+          comparisonSlideSinkRef.current(0);
+        }
+      } else {
+        comparisonTimeHandler = () => {
+          const total =
+            comparisonTotalEstimateSecRef.current && comparisonTotalEstimateSecRef.current > 0
+              ? comparisonTotalEstimateSecRef.current
+              : audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
+                ? audio.duration
+                : 0;
+          if (!total) return;
+          const elapsed = comparisonAccumulatedSecRef.current + audio.currentTime;
+          const idx = Math.min(
+            COMPARISON_NARRATION_SECTIONS - 1,
+            Math.floor((elapsed / total) * COMPARISON_NARRATION_SECTIONS),
+          );
+          comparisonSlideSinkRef.current(idx);
+        };
+        audio.addEventListener('timeupdate', comparisonTimeHandler);
+      }
+    }
 
     const startSync = (duration: number) => {
         if (!isOverview || !cardsToSync) return;
@@ -1012,31 +1192,72 @@ export default function ChatScreen({
         cardProgressTimerRef.current = interval;
     };
 
+    const preferredSyncDurationSeconds = () =>
+      !audioChainFollowUp &&
+      typeof totalDurationEstimateMs === 'number' &&
+      Number.isFinite(totalDurationEstimateMs) &&
+      totalDurationEstimateMs > 0
+        ? totalDurationEstimateMs / 1000
+        : audio.duration;
+
     audio.onloadedmetadata = () => {
-        setCurrentAudioDuration(audio.duration);
-        startSync(audio.duration);
+        const syncDurationSeconds = preferredSyncDurationSeconds();
+        setCurrentAudioDuration(syncDurationSeconds);
+        if (!audioChainFollowUp) {
+          startSync(syncDurationSeconds);
+        }
     };
-    setTimeout(() => { 
-        if (isOverview && audio.duration) {
-            setCurrentAudioDuration(audio.duration);
-            startSync(audio.duration); 
+    setTimeout(() => {
+        if (!audioChainFollowUp && isOverview && audio.duration) {
+            const syncDurationSeconds = preferredSyncDurationSeconds();
+            setCurrentAudioDuration(syncDurationSeconds);
+            startSync(syncDurationSeconds);
         }
     }, 1000);
 
     audio.onended = () => {
-        if (cardProgressTimerRef.current) {
+        detachComparisonAudio();
+        const moreQueued = ttsStreamQueueRef.current.length > 0;
+        if (comparisonTtsSyncActiveRef.current) {
+          if (comparisonSyncModeRef.current === 'time') {
+            comparisonAccumulatedSecRef.current += audio.duration || 0;
+            if (!moreQueued) {
+              comparisonSlideSinkRef.current(COMPARISON_NARRATION_SECTIONS - 1);
+            }
+          } else if (comparisonSyncModeRef.current === 'clip') {
+            const next = Math.min(
+              COMPARISON_NARRATION_SECTIONS - 1,
+              comparisonClipPlayIndexRef.current + 1,
+            );
+            comparisonClipPlayIndexRef.current = next;
+            comparisonSlideSinkRef.current(next);
+          }
+        }
+        if (cardProgressTimerRef.current && (!audioChainFollowUp || !moreQueued)) {
             clearInterval(cardProgressTimerRef.current);
             cardProgressTimerRef.current = null;
         }
         setIsPlayingBackendAudio(false);
         setIsCampusSpeaking(false);
         setHasGreeted(true); // Session is active after any Clara audio completes
-        if (isOverview && cardsToSync && cardsToSync.length > 0) {
+        if (isOverview && cardsToSync && cardsToSync.length > 0 && !moreQueued) {
             setCurrentCardIdx(cardsToSync.length - 1);
+        }
+        if (moreQueued) {
+          const next = ttsStreamQueueRef.current.shift()!;
+          handleAudioPlaybackRef.current?.(
+            next.audioBase64,
+            next.segmentKey,
+            next.isOverview,
+            next.cardsToSync,
+            next.turnId,
+            true,
+          );
         }
     };
 
     audio.play().catch(err => {
+        detachComparisonAudio();
         // Helps debug when the browser blocks autoplay or decoding fails.
         if (import.meta.env.DEV) {
           console.error('[CLARA_TTS] audio.play() failed', {
@@ -1052,8 +1273,23 @@ export default function ChatScreen({
         setIsCampusSpeaking(false);
         setHasGreeted(true); // Fallback so they can progress
         setShowUnmuteHint(true);
+        if (ttsStreamQueueRef.current.length > 0) {
+          const next = ttsStreamQueueRef.current.shift()!;
+          handleAudioPlaybackRef.current?.(
+            next.audioBase64,
+            next.segmentKey,
+            next.isOverview,
+            next.cardsToSync,
+            next.turnId,
+            true,
+          );
+        }
     });
   }, []);
+
+  useEffect(() => {
+    handleAudioPlaybackRef.current = handleAudioPlayback;
+  }, [handleAudioPlayback]);
 
   useEffect(() => {
     if (!showLanguageOverlay || !inlineLanguageGate || languageGateSatisfied) return;
@@ -1087,6 +1323,14 @@ export default function ChatScreen({
   useEffect(() => {
     if (!payload) return;
     if (isPayloadStale?.(payload)) return;
+
+    if (payload.isProcessing === true && typeof payload.turn_id === 'string' && payload.turn_id.length > 0) {
+      const nextOwner = String(payload.turn_id);
+      if (assistantAudioTurnOwnerRef.current !== nextOwner) {
+        playedSegmentKeysRef.current.clear();
+        assistantAudioTurnOwnerRef.current = nextOwner;
+      }
+    }
 
     // Helper to detect if the backend is sending us a fallback message ("Go to admissions block")
     const isFallbackMessage = (text: string) => {
@@ -1168,9 +1412,39 @@ export default function ChatScreen({
       }
     }
 
+    const deferAssistantTtsToStream = shouldDeferAssistantTtsToStream(payload);
+    const offerAssistantAudio = (opts: {
+      audioBase64: string | undefined;
+      segmentKey: string;
+      turnId: string;
+      isOverview: boolean;
+      cardsToSync: any[] | null;
+      targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
+    }) => {
+      streamAudioLayoutRef.current = {
+        isOverview: opts.isOverview,
+        cardsToSync: opts.cardsToSync,
+        targetLayout: opts.targetLayout,
+        turnId: opts.turnId,
+      };
+      if (typeof opts.audioBase64 !== 'string' || opts.audioBase64.length === 0) {
+        return;
+      }
+      if (!deferAssistantTtsToStream) {
+        setPendingAudio({
+          audioBase64: opts.audioBase64,
+          segmentKey: opts.segmentKey,
+          turnId: opts.turnId,
+          isOverview: opts.isOverview,
+          cardsToSync: opts.cardsToSync,
+          targetLayout: opts.targetLayout,
+        });
+      }
+    };
+
     if (type === 'campus_navigation_tts') {
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1194,7 +1468,7 @@ export default function ChatScreen({
     // Defer all split-card transitions until the turn has finalized messages.
     if (cardTrigger && cardTrigger !== 'documents' && !isResponseReady) {
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1226,12 +1500,26 @@ export default function ChatScreen({
           ? payload.comparisonRecommendFocus
           : null,
       );
+      comparisonTtsSyncActiveRef.current = true;
+      comparisonAccumulatedSecRef.current = 0;
+      comparisonClipPlayIndexRef.current = 0;
+      const estMs = payload?.tts_total_duration_estimate_ms;
+      if (typeof estMs === 'number' && Number.isFinite(estMs) && estMs > 0) {
+        comparisonTotalEstimateSecRef.current = estMs / 1000;
+        comparisonSyncModeRef.current = 'time';
+      } else {
+        comparisonTotalEstimateSecRef.current = null;
+        const q = payload?.tts_audio_queue;
+        comparisonSyncModeRef.current = Array.isArray(q) && q.length > 1 ? 'clip' : 'time';
+      }
+      setComparisonNarrationSection(0);
       setDepartmentComparisonOpen(true);
       setLayoutMode('FULL_TEXT');
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'FULL_TEXT',
@@ -1246,7 +1534,7 @@ export default function ChatScreen({
     if (isFeesStage && currentUiLockRef.current === 'CARD' && cardTrigger !== 'department_fees') {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1267,9 +1555,10 @@ export default function ChatScreen({
     ) {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1296,7 +1585,7 @@ export default function ChatScreen({
       setIsDocumentsStage(false);
       setCourseMenuOptions(menuOptionsFromPayload.length ? menuOptionsFromPayload : DEFAULT_COURSE_MENU_OPTIONS);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1324,7 +1613,7 @@ export default function ChatScreen({
       currentUiLockRef.current = 'TEXT';
       setLayoutMode('FULL_TEXT');
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1355,7 +1644,7 @@ export default function ChatScreen({
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1409,9 +1698,10 @@ export default function ChatScreen({
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1436,9 +1726,10 @@ export default function ChatScreen({
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
+          turnId: turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'SPLIT_CARDS',
@@ -1474,7 +1765,7 @@ export default function ChatScreen({
           content: s.content,
           type: 'dept',
         }));
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1514,7 +1805,7 @@ export default function ChatScreen({
         setActiveCards(allDeptCards);
         setSuppressedTurnId(assistantMessageId ?? turnId);
         if (audioBase64) {
-          setPendingAudio({
+          offerAssistantAudio({
             audioBase64,
             segmentKey,
             turnId: turnId,
@@ -1553,7 +1844,7 @@ export default function ChatScreen({
       setActiveCards(null);
       setSuppressedTurnId(assistantMessageId ?? turnId);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1591,7 +1882,7 @@ export default function ChatScreen({
       setLayoutMode('SPLIT_CARDS');
 
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1620,7 +1911,7 @@ export default function ChatScreen({
       setActiveCards(null);
       setSuppressedTurnId(null);
       if (audioBase64) {
-        setPendingAudio({
+        offerAssistantAudio({
           audioBase64,
           segmentKey,
           turnId: turnId,
@@ -1655,7 +1946,7 @@ export default function ChatScreen({
         setActiveCards(cardsForTrigger);
         setSuppressedTurnId(assistantMessageId ?? turnId);
         if (audioBase64) {
-          setPendingAudio({
+          offerAssistantAudio({
             audioBase64,
             segmentKey,
             turnId: turnId,
@@ -1680,7 +1971,7 @@ export default function ChatScreen({
             setLayoutMode('SPLIT_CARDS'); 
         }
         if (audioBase64) {
-          setPendingAudio({
+          offerAssistantAudio({
             audioBase64,
             segmentKey,
             turnId: turnId,
@@ -1698,7 +1989,7 @@ export default function ChatScreen({
     // Resetting behavior completely removed from backend completion chunk parsing (Rule 5)
     // We strictly use `interceptAndSendMessage` to reset on explicitly new inquiries!
     if (audioBase64) {
-      setPendingAudio({
+          offerAssistantAudio({
         audioBase64,
         segmentKey,
         turnId: turnId,
@@ -1828,6 +2119,78 @@ export default function ChatScreen({
     return () => clearTimeout(timer);
   }, [pendingAudio, layoutMode, handleAudioPlayback]);
 
+  // Progressive backend TTS: `tts_audio_queue` is merged in useWebSocket; drain clips sequentially.
+  useEffect(() => {
+    if (!payload || isPayloadStale?.(payload)) return;
+    const tid = String(payload.turn_id ?? '');
+    if (
+      assistantAudioTurnOwnerRef.current &&
+      tid &&
+      tid !== assistantAudioTurnOwnerRef.current
+    ) {
+      return;
+    }
+    if (tid !== lastBackendTtsStreamTurnRef.current) {
+      lastBackendTtsStreamTurnRef.current = tid;
+      appliedBackendTtsQueueLenRef.current = 0;
+      ttsStreamQueueRef.current = [];
+    }
+    const q = payload.tts_audio_queue;
+    if (!Array.isArray(q) || q.length === 0) return;
+    const layout = streamAudioLayoutRef.current?.targetLayout ?? 'FULL_TEXT';
+    if (layoutMode !== layout) return;
+
+    let added = false;
+    while (appliedBackendTtsQueueLenRef.current < q.length) {
+      const idx = appliedBackendTtsQueueLenRef.current;
+      const b64 = q[idx];
+      appliedBackendTtsQueueLenRef.current += 1;
+      if (typeof b64 !== 'string' || !b64.length) continue;
+      added = true;
+      const st = streamAudioLayoutRef.current;
+      const isOv = Boolean(st?.isOverview) && idx === 0;
+      const totalDurationEstimateMs =
+        idx === 0 &&
+        typeof payload.tts_total_duration_estimate_ms === 'number' &&
+        Number.isFinite(payload.tts_total_duration_estimate_ms)
+          ? payload.tts_total_duration_estimate_ms
+          : null;
+      const segKey = `${tid}|tts_stream|${idx}|${b64.length}:${b64.slice(0, 24)}`;
+      ttsStreamQueueRef.current.push({
+        audioBase64: b64,
+        segmentKey: segKey,
+        isOverview: isOv,
+        cardsToSync: isOv ? st?.cardsToSync ?? null : null,
+        turnId: tid,
+        totalDurationEstimateMs,
+      });
+    }
+    if (!added) return;
+    if (isPlayingBackendAudio) return;
+    const delayMs =
+      layout === 'SPLIT_CARDS' ? CARD_AUDIO_START_DELAY_MS : FULL_TEXT_AUDIO_START_DELAY_MS;
+    const timer = window.setTimeout(() => {
+      const next = ttsStreamQueueRef.current.shift();
+      if (!next) return;
+      handleAudioPlaybackRef.current?.(
+        next.audioBase64,
+        next.segmentKey,
+        next.isOverview,
+        next.cardsToSync,
+        next.turnId,
+        false,
+        next.totalDurationEstimateMs,
+      );
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [
+    payload,
+    isPayloadStale,
+    layoutMode,
+    isPlayingBackendAudio,
+    handleAudioPlayback,
+  ]);
+
   useEffect(() => {
     if (!isCampusNavigationStage) {
       stopCampusSpeech();
@@ -1888,7 +2251,17 @@ export default function ChatScreen({
       if (hasGreeted && !showUnmuteHint) setOrbState('ready');
       else setOrbState('idle');
     }
-  }, [propIsListening, propIsSpeaking, payload?.audioPending, isProcessing, isPlayingBackendAudio, isCampusSpeaking, hasGreeted, showUnmuteHint]);
+  }, [
+    propIsListening,
+    propIsSpeaking,
+    payload?.audioPending,
+    isProcessing,
+    isPlayingBackendAudio,
+    isCampusSpeaking,
+    hasGreeted,
+    showUnmuteHint,
+    orbState,
+  ]);
 
   useEffect(() => {
     if (!hasStartedRef.current) {
@@ -1905,9 +2278,23 @@ export default function ChatScreen({
   }, [propIsListening]);
 
   const handleOrbTap = () => {
+    // #region agent log
+    _agentDbg('A', 'ChatScreen.tsx:handleOrbTap', 'handleOrbTap_enter', {
+      speechListening,
+      pendingListen: isPendingListeningRef.current,
+      propIsListening,
+      voiceInputMode,
+      audioPending: Boolean(payload?.audioPending),
+      isProcessing,
+    });
+    // #endregion
     const browserListening = speechListening || isPendingListeningRef.current;
     const backendListening = voiceInputMode === 'backend' && propIsListening;
     const shouldStopMic = browserListening || backendListening;
+
+    sendMessage({ action: 'cancel_turn' });
+    assistantAudioTurnOwnerRef.current = null;
+    playedSegmentKeysRef.current.clear();
 
     clearSuggestionLayer();
     setIsFaqCarouselPaused(true);
@@ -2008,14 +2395,27 @@ export default function ChatScreen({
       : latestTextAssistantMsg;
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
-    isLanguageGateOpen || isResponsePending || departmentComparisonOpen;
+    isLanguageGateOpen || isResponsePending;
   const submitFaqSuggestion = useCallback(
     (_id: string, question: string) => {
+      // #region agent log
+      _agentDbg('B', 'ChatScreen.tsx:submitFaqSuggestion', 'faq_submit', {
+        qLen: question.length,
+        audioPending: Boolean(payload?.audioPending),
+        isProcessing,
+        propIsListening,
+      });
+      // #endregion
       stopListening();
       isPendingListeningRef.current = false;
       if (voiceInputMode === 'backend' && propIsListening) {
         sendMessage({ action: 'mic_stop' });
       }
+      // Force orb out of any optimistic listening state before the new turn
+      // begins so a stuck `processing` visual cannot be misread as the mic
+      // being live. The orb effect will switch to `processing`/`speaking`
+      // shortly after based on backend state.
+      setOrbState('idle');
       clearSuggestionLayer();
       interceptAndSendMessage({ action: 'user_message', text: question }, 'VOICE');
     },
@@ -2040,6 +2440,15 @@ export default function ChatScreen({
   useEffect(() => {
     if (!lastAssistantMsg || isAwaitingReadyPrompt || isResponsePending) return;
     if (payload && isPayloadStale?.(payload)) return;
+    if (
+      payload &&
+      (payload.showCard ||
+        payload.event === 'error' ||
+        payload.errorCode ||
+        (payload.type === 'assistant_audio_update' && payload.tts_streaming))
+    ) {
+      return;
+    }
 
     const sourceText = payloadResponseText(payload, lastAssistantMsg.text);
     const processedSentences = processResponseSentences(sourceText);
@@ -2125,7 +2534,6 @@ export default function ChatScreen({
   }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
 
   const renderFaqCarousel = (placement: 'full' | 'panel') => {
-    if (placement === 'full' && departmentComparisonOpen) return null;
     if (placement === 'panel') {
       const activeSuggestion = faqSuggestions[faqCarouselIndex % faqSuggestions.length];
       if (!activeSuggestion) return null;
@@ -2140,7 +2548,10 @@ export default function ChatScreen({
             className="faq-suggestion-pill faq-suggestion-pill-panel"
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => submitFaqSuggestion(activeSuggestion.id, activeSuggestion.text)}
+            onClick={(event) => {
+              event.stopPropagation();
+              submitFaqSuggestion(activeSuggestion.id, activeSuggestion.text);
+            }}
           >
             {activeSuggestion.text}
           </motion.button>
@@ -2371,15 +2782,29 @@ export default function ChatScreen({
                 </div>
 
                 {!departmentComparisonOpen ? (
-                  <div className="full-text-orb-zone">
+                  <div
+                    className="full-text-orb-zone"
+                    onPointerDownCapture={(ev) => {
+                      // #region agent log
+                      const el = ev.target as HTMLElement;
+                      _agentDbg('A', 'ChatScreen.tsx:full-text-orb-zone', 'pointer_capture', {
+                        placement: 'full',
+                        tag: el?.tagName,
+                        cls: typeof el?.className === 'string' ? el.className.slice(0, 120) : '',
+                      });
+                      // #endregion
+                    }}
+                  >
                     {renderFaqCarousel('full')}
-                    <ChatOrbControl
-                      orbState={orbState}
-                      isProcessing={isResponsePending}
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
-                      onTap={handleOrbTap}
-                      bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
-                    />
+                    <div className="chat-orb-stack-below-faq">
+                      <ChatOrbControl
+                        orbState={orbState}
+                        isProcessing={isResponsePending}
+                        amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+                        onTap={handleOrbTap}
+                        bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -2390,6 +2815,7 @@ export default function ChatScreen({
                 initialDepartmentIds={comparisonDeptIds}
                 highlightId={comparisonHighlightId}
                 recommendFocus={comparisonRecommendFocus}
+                narrationSectionIndex={comparisonNarrationSection}
                 onClose={handleCloseDepartmentComparison}
               />
             </motion.div>
@@ -2455,7 +2881,19 @@ export default function ChatScreen({
                 ) : null}
                 </div>
               </div>
-              <motion.aside className="interaction-panel-30">
+              <motion.aside
+                className="interaction-panel-30"
+                onPointerDownCapture={(ev) => {
+                  // #region agent log
+                  const el = ev.target as HTMLElement;
+                  _agentDbg('A', 'ChatScreen.tsx:interaction-panel-30', 'pointer_capture', {
+                    placement: 'panel30',
+                    tag: el?.tagName,
+                    cls: typeof el?.className === 'string' ? el.className.slice(0, 120) : '',
+                  });
+                  // #endregion
+                }}
+              >
 
                 <header className="panel-header">
                   <div className="panel-title flex items-center gap-2">
@@ -2538,7 +2976,7 @@ export default function ChatScreen({
                 {renderFaqCarousel('panel')}
                 
                 {!isCampusNavigationStage && (
-                  <motion.div className="w-full flex justify-center pb-12">
+                  <motion.div className="chat-orb-stack-below-faq w-full flex justify-center pb-12">
                     <ChatOrbControl
                       orbState={orbState}
                       isProcessing={isResponsePending}
@@ -2556,16 +2994,21 @@ export default function ChatScreen({
       {/* Comparison mode: orb lives outside the FULL_TEXT motion wrapper so position:fixed is viewport-anchored
           (transform on layoutId/main would otherwise trap fixed positioning and overlap the panel). */}
       {layoutMode === 'FULL_TEXT' && departmentComparisonOpen ? (
-        <div className="full-text-comparison-orb-layer">
-          <ChatOrbControl
-            orbState={orbState}
-            isProcessing={isResponsePending}
-            amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
-            onTap={handleOrbTap}
-            comparisonMode
-            bottomClassName="pointer-events-none mt-1 w-full text-center"
-          />
-        </div>
+        <>
+          <div className="full-text-comparison-faq-layer">
+            {renderFaqCarousel('full')}
+          </div>
+          <div className="full-text-comparison-orb-layer">
+            <ChatOrbControl
+              orbState={orbState}
+              isProcessing={isResponsePending}
+              amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+              onTap={handleOrbTap}
+              comparisonMode
+              bottomClassName="pointer-events-none mt-1 w-full text-center"
+            />
+          </div>
+        </>
       ) : null}
 
       <AnimatePresence>

@@ -336,7 +336,48 @@ export function useWebSocket(url: string) {
 
         const nextAfterGuard = next;
         entry!.state = nextAfterGuard;
-        entry!.payload = rawPayload ?? null;
+
+        let outgoingPayload = rawPayload;
+        const prevPayload = entry!.payload;
+        if (
+          rawPayload &&
+          typeof rawPayload === 'object' &&
+          (rawPayload as { type?: unknown }).type === 'assistant_audio_update' &&
+          typeof (rawPayload as { turn_id?: unknown }).turn_id === 'string' &&
+          prevPayload &&
+          typeof prevPayload === 'object' &&
+          (prevPayload as { turn_id?: unknown }).turn_id === (rawPayload as { turn_id: string }).turn_id
+        ) {
+          const rp = rawPayload as Record<string, unknown>;
+          const pp = prevPayload as Record<string, unknown>;
+          if (rp.tts_streaming === true && typeof rp.audioBase64 === 'string' && rp.audioBase64.length > 0) {
+            const prevQueue = Array.isArray(pp.tts_audio_queue)
+              ? ([...(pp.tts_audio_queue as string[])] as string[])
+              : [];
+            prevQueue.push(rp.audioBase64 as string);
+            outgoingPayload = { ...rp, tts_audio_queue: prevQueue } as typeof rawPayload;
+          } else if (rp.tts_streaming === false) {
+            const prevQueue = Array.isArray(pp.tts_audio_queue)
+              ? ([...(pp.tts_audio_queue as string[])] as string[])
+              : [];
+            const lastB64 =
+              typeof rp.audioBase64 === 'string' && rp.audioBase64.length > 0
+                ? (rp.audioBase64 as string)
+                : null;
+            if (
+              lastB64 &&
+              (prevQueue.length === 0 || prevQueue[prevQueue.length - 1] !== lastB64)
+            ) {
+              prevQueue.push(lastB64);
+            }
+            outgoingPayload = {
+              ...rp,
+              tts_audio_queue: prevQueue.length ? prevQueue : pp.tts_audio_queue,
+            } as typeof rawPayload;
+          }
+        }
+
+        entry!.payload = outgoingPayload ?? null;
         entry!.onMessage(nextAfterGuard, entry!.payload);
       } catch (err) {
         console.error('Failed to parse WS message:', err);

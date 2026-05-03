@@ -162,6 +162,8 @@ REQUIRE_WS_AUTH_IN_PRODUCTION = os.getenv(
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
+# Longer spoken comparison: full walkthrough of every section × every program on the card.
+LLM_MAX_TOKENS_DEPARTMENT_COMPARISON = int(os.getenv("LLM_MAX_TOKENS_DEPARTMENT_COMPARISON", "900"))
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS", "80"))
 LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "8.0"))
@@ -189,6 +191,12 @@ ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip
 LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")
 FIRST_SENTENCE_TTS_MAX_CHARS = int(os.getenv("FIRST_SENTENCE_TTS_MAX_CHARS", "160"))
 AUDIO_UPDATE_TIMEOUT_S = float(os.getenv("AUDIO_UPDATE_TIMEOUT_S", "3.0"))
+# Chunked low-latency TTS: per-chapter budgets (full reply is never generated in one blocking call).
+TTS_CHUNK_MAX_CHARS = int(os.getenv("TTS_CHUNK_MAX_CHARS", "220"))
+TTS_CHUNK_MAX_CHARS_NARRATOR = int(os.getenv("TTS_CHUNK_MAX_CHARS_NARRATOR", "260"))
+TTS_CHUNK_MAX_CHARS_COMPARISON = int(os.getenv("TTS_CHUNK_MAX_CHARS_COMPARISON", "340"))
+TTS_CHUNK_FIRST_TIMEOUT_S = float(os.getenv("TTS_CHUNK_FIRST_TIMEOUT_S", "10.0"))
+TTS_CHUNK_TIMEOUT_S = float(os.getenv("TTS_CHUNK_TIMEOUT_S", "15.0"))
 
 # Shared HTTP client configuration
 HTTP_TIMEOUT_CONNECT_S = float(os.getenv("HTTP_TIMEOUT_CONNECT_S", "2.0"))
