@@ -110,6 +110,7 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
             transparent 72%)`,
           filter: 'blur(30px)',
           animation: `_so_ambient ${ambientDur} ease-in-out infinite`,
+          pointerEvents: 'none',
         }} />
 
         {/* ── DOTTED CONCENTRIC RINGS ── */}
@@ -123,6 +124,7 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
             transform: 'translate(-50%,-50%)',
             animation: `_so_rings ${ambientDur} ease-in-out infinite`,
             animationDelay: `${i * 0.45}s`,
+            pointerEvents: 'none',
           }} />
         ))}
 

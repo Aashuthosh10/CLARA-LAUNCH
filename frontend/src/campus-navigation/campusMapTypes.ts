@@ -1,4 +1,11 @@
-export type CampusDoor = { x: number; y: number };
+export type CampusPoint = {
+  x: number;
+  y: number;
+};
+
+export type CampusDoor = CampusPoint & {
+  label?: string;
+};
 
 export type CampusRoom = {
   id: string;
@@ -8,8 +15,16 @@ export type CampusRoom = {
   type?: string;
   category?: string;
   department?: string | null;
+  floor_id?: string;
+  block_code?: string;
   door?: CampusDoor;
   polygon?: [number, number][];
+  /** Only "exact_image" geometry is rendered on the PNG floor plan. Legacy schematic geometry is ignored. */
+  geometry_source?: 'exact_image' | 'schematic' | string;
+  route_polyline_from_kiosk?: [number, number][];
+  route_polyline_from_lift?: [number, number][];
+  clickable?: boolean;
+  routable?: boolean;
   location_note?: string;
   landmark?: string;
 };
@@ -26,7 +41,21 @@ export type CampusFloor = {
   floor_number: number;
   floor_name: string;
   image_ref: string;
+  /** Exact rendered floor-plan image dimensions when available. */
+  width?: number;
+  height?: number;
+  /** Legacy authored SVG/logical size. Do not use for exact PNG overlays unless geometry_source is exact_image. */
+  map_width?: number;
+  map_height?: number;
   blocks: CampusBlock[];
+};
+
+/** Navigation graph vertices from svit-campus-map.json (subset used for overlay bounds). */
+export type CampusGraphNode = {
+  id: string;
+  floor_id?: string;
+  x?: number;
+  y?: number;
 };
 
 /** Optional kiosk / default map origin marker in map pixel space. */
@@ -41,8 +70,9 @@ export type CampusMapData = {
   version: string;
   institution: string;
   address?: string;
-  coordinate_space?: { unit: string; note?: string };
+  coordinate_space?: { unit?: string; note?: string; width?: number; height?: number };
   kiosk?: CampusMapKiosk;
+  nodes?: CampusGraphNode[];
   floors: CampusFloor[];
 };
 
@@ -77,6 +107,13 @@ export type CampusRouteFloorSegment = {
   polyline?: [number, number][];
   steps?: string[];
 };
+
+export type CampusRouteSegment = {
+  floor_id: string;
+  polyline: [number, number][];
+};
+
+export type CampusNavigationRouteMode = 'default' | 'accessible' | 'lift' | 'stairs';
 
 export type CampusRouteResult = {
   status: 'ok' | 'error' | 'no_route';

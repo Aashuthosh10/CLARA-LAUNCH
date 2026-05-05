@@ -15,7 +15,10 @@ function blockFromCode(code: string): CampusDirection['block'] {
 }
 
 export function campusDirectionFromMapMatch(room: CampusMatchApiRoom): CampusDirection {
-  const idx = legacyCampusIndexForCode(room.code);
+  const idx = legacyCampusIndexForCode(
+    room.code,
+    parseFloorId(room.floor_id) ?? undefined,
+  );
   const floor_id = parseFloorId(room.floor_id);
   if (idx !== null) {
     const base = CAMPUS_DIRECTIONS[idx]!;

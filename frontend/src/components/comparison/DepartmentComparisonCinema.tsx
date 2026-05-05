@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { Plus, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Language } from '../../context/LanguageContext';
 import { DEPARTMENT_JSON_KEY_ORDER } from '../../lib/collegeLocaleUtils';
 import comparisonRegistry from '../../data/departmentComparison.json';
@@ -12,6 +12,8 @@ import type {
 } from './comparisonTypes';
 
 const REG = comparisonRegistry as DepartmentComparisonRegistry;
+
+const SECTION_FADE = { duration: 0.42, ease: 'easeInOut' } as const;
 
 const langToCode = (language: Language): ComparisonLangCode => {
   switch (language) {
@@ -50,8 +52,87 @@ type Props = {
   highlightId: string | null;
   /** e.g. placements | future | child — shown as subtle subtitle */
   recommendFocus?: string | null;
+  /** Which comparison row (0..row_order.length-1) is shown; driven by TTS progress in ChatScreen. */
+  narrationSectionIndex: number;
   onClose: () => void;
 };
+
+/** Layer 1 — static chrome; must not re-render on point/section tick (memo). */
+const ComparisonHeaderLayer = memo(function ComparisonHeaderLayer({
+  chrome,
+  dynamicTitle,
+  recommendFocus,
+  onClose,
+}: {
+  chrome: ComparisonChrome;
+  dynamicTitle: string;
+  recommendFocus?: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-2 px-4 pb-2 pt-2 sm:gap-3 sm:px-5 sm:pb-2 sm:pt-2.5">
+      <div className="min-w-0 pr-2">
+        <p className="department-comparison-eyebrow">{chrome.compareHeading}</p>
+        <h2 id="comparison-cinema-title" className="department-comparison-title mt-1 text-balance">
+          {dynamicTitle}
+        </h2>
+        {recommendFocus && recommendFocus !== 'generic' ? (
+          <p className="department-comparison-focus mt-1.5 capitalize text-slate-600">
+            {chrome.highlighted}: {recommendFocus}
+          </p>
+        ) : null}
+      </div>
+      <motion.button
+        type="button"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onClose}
+        aria-label={chrome.close}
+        className="department-comparison-close"
+      >
+        <X className="h-6 w-6 text-slate-500" strokeWidth={2} aria-hidden />
+      </motion.button>
+    </header>
+  );
+});
+
+/** Dept selectors — isolated from flip layer; only re-renders when selection changes. */
+const ComparisonDeptToolbarLayer = memo(function ComparisonDeptToolbarLayer({
+  selectedIds,
+  validDeptIds,
+  deptLabel,
+  setDeptAt,
+}: {
+  selectedIds: string[];
+  validDeptIds: string[];
+  deptLabel: (id: string) => string;
+  setDeptAt: (index: number, value: string) => void;
+}) {
+  return (
+    <div className="relative flex flex-wrap items-center gap-2 px-4 pb-2 sm:gap-3 sm:px-5 sm:pb-2">
+      <div className="flex flex-wrap gap-2 sm:gap-2.5">
+        {selectedIds.map((id, idx) => (
+          <div key={`${id}-${idx}`} className="flex items-center gap-2">
+            <label className="sr-only">
+              Department {idx + 1}
+            </label>
+            <select
+              value={id}
+              onChange={(e) => setDeptAt(idx, e.target.value)}
+              className="department-comparison-select"
+            >
+              {validDeptIds.map((did) => (
+                <option key={did} value={did}>
+                  {deptLabel(did)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 export default function DepartmentComparisonCinema({
   language,
@@ -59,6 +140,7 @@ export default function DepartmentComparisonCinema({
   initialDepartmentIds,
   highlightId,
   recommendFocus,
+  narrationSectionIndex,
   onClose,
 }: Props) {
   const lc = langToCode(language);
@@ -103,33 +185,53 @@ export default function DepartmentComparisonCinema({
     return chrome.compareHeading;
   }, [selectedIds, deptLabel, chrome.compareHeading]);
 
-  const canAdd = selectedIds.length < 3;
-  const showRemoveSlot = selectedIds.length === 3;
+  const setDeptAt = useCallback(
+    (index: number, value: string) => {
+      setSelectedIds((prev) => {
+        const next = [...prev];
+        if (!value || next.includes(value)) return prev;
+        next[index] = value;
+        return normalizeInitial(next);
+      });
+    },
+    [normalizeInitial],
+  );
 
-  const setDeptAt = (index: number, value: string) => {
-    setSelectedIds((prev) => {
-      const next = [...prev];
-      if (!value || next.includes(value)) return prev;
-      next[index] = value;
-      return normalizeInitial(next);
-    });
-  };
+  const comparisonRows = useMemo(
+    () =>
+      REG.row_order.map((rowKey) => ({
+        key: rowKey,
+        label: localizedCell(REG.row_labels[rowKey], lc),
+      })),
+    [lc],
+  );
 
-  const addDept = () => {
-    setSelectedIds((prev) => {
-      if (prev.length >= 3) return prev;
-      const filler = validDeptIds.find((id) => !prev.includes(id));
-      return filler ? normalizeInitial([...prev, filler]) : prev;
-    });
-  };
+  const sectionIndex = Math.max(0, Math.min(comparisonRows.length - 1, narrationSectionIndex));
+  const activeRow = comparisonRows[sectionIndex];
 
-  const removeDept = (index: number) => {
-    setSelectedIds((prev) => {
-      if (prev.length <= 2) return prev;
-      const next = prev.filter((_, i) => i !== index);
-      return normalizeInitial(next);
-    });
-  };
+  const extractPointLines = useCallback((value: string): string[] => {
+    const normalized = value
+      .split('\n')
+      .map((line) => line.replace(/^\s*[•\-]\s*/, '').trim())
+      .filter(Boolean);
+    if (normalized.length) return normalized;
+    return [value.trim()].filter(Boolean);
+  }, []);
+
+  const getRowPoints = useCallback(
+    (deptId: string, rowKey: string): string[] => {
+      const cells = REG.departments[deptId]?.cells ?? {};
+      const rowValue = localizedCell(
+        cells[rowKey] as Partial<Record<ComparisonLangCode, string>> | undefined,
+        lc,
+      );
+      if (rowValue === '—') return [rowValue];
+      return extractPointLines(rowValue);
+    },
+    [extractPointLines, lc],
+  );
+
+  const visibleDeptIds = useMemo(() => selectedIds.slice(0, 3), [selectedIds]);
 
   return (
     <AnimatePresence mode="sync">
@@ -142,12 +244,10 @@ export default function DepartmentComparisonCinema({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="comparison-embed-slot flex w-full flex-1 flex-col items-stretch px-1 sm:px-3"
+          className="comparison-embed-slot flex w-full flex-1 flex-col items-stretch px-1 sm:px-2"
         >
-          {/* Absorb upper flex space so the panel sits low above the orb */}
           <div className="comparison-embed-leading-filler" aria-hidden />
           <motion.div
-            layout
             initial={{ opacity: 0.85, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
@@ -157,159 +257,63 @@ export default function DepartmentComparisonCinema({
             <div className="department-comparison-panel relative mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[2rem]">
             <div className="department-comparison-panel-glow pointer-events-none absolute inset-0" aria-hidden />
 
-            <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-5 px-7 pb-7 pt-8 sm:gap-6 sm:px-12 sm:pb-8 sm:pt-10 lg:px-14">
-              <div className="min-w-0 pr-2">
-                <p className="department-comparison-eyebrow">{chrome.compareHeading}</p>
-                <h2 id="comparison-cinema-title" className="department-comparison-title mt-2 text-balance">
-                  {dynamicTitle}
-                </h2>
-                {recommendFocus && recommendFocus !== 'generic' ? (
-                  <p className="department-comparison-focus mt-2.5 capitalize text-slate-600">
-                    {chrome.highlighted}: {recommendFocus}
-                  </p>
-                ) : null}
-              </div>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onClose}
-                aria-label={chrome.close}
-                className="department-comparison-close"
-              >
-                <X className="h-6 w-6 text-slate-500" strokeWidth={2} aria-hidden />
-              </motion.button>
-            </header>
+            <ComparisonHeaderLayer
+              chrome={chrome}
+              dynamicTitle={dynamicTitle}
+              recommendFocus={recommendFocus}
+              onClose={onClose}
+            />
 
-            <div className="relative flex flex-wrap items-center gap-5 px-7 pb-6 sm:gap-6 sm:px-12 sm:pb-7 lg:px-14">
-              <div className="flex flex-wrap gap-4 sm:gap-5">
-                {selectedIds.map((id, idx) => (
-                  <div key={`${id}-${idx}`} className="flex items-center gap-2">
-                    <label className="sr-only">
-                      {chrome.pickDept} {idx + 1}
-                    </label>
-                    <select
-                      value={id}
-                      onChange={(e) => setDeptAt(idx, e.target.value)}
-                      className="department-comparison-select"
-                    >
-                      {validDeptIds.map((did) => (
-                        <option key={did} value={did}>
-                          {deptDisplayName(REG.departments[did], lc, did)}
-                        </option>
-                      ))}
-                    </select>
-                    {showRemoveSlot ? (
-                      <motion.button
-                        type="button"
-                        whileTap={{ scale: 0.95 }}
-                        aria-label={`${chrome.removeDept} ${deptLabel(id)}`}
-                        onClick={() => removeDept(idx)}
-                        className="department-comparison-remove-slot rounded-xl border border-rose-200/80 bg-rose-50/90 text-rose-600 shadow-sm transition-colors hover:bg-rose-100/95"
-                      >
-                        <X className="h-5 w-5" aria-hidden />
-                      </motion.button>
-                    ) : null}
+            <ComparisonDeptToolbarLayer
+              selectedIds={selectedIds}
+              validDeptIds={validDeptIds}
+              deptLabel={deptLabel}
+              setDeptAt={setDeptAt}
+            />
+
+            <div className="department-comparison-cinema-root relative min-h-0 flex-1 overflow-hidden px-2 sm:px-4">
+              <div className="comparison-root comparison-cinema-inner mx-auto flex h-full min-h-0 max-w-[1600px] flex-col pb-2 pt-0.5 sm:pb-3">
+                <div className={`comparison-body ${visibleDeptIds.length >= 3 ? 'comparison-body--triple' : ''}`}>
+                  <div
+                    className="comparison-cards-track"
+                    style={{
+                      gridTemplateColumns: `repeat(${Math.max(visibleDeptIds.length, 1)}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {visibleDeptIds.map((deptId) => (
+                      <section key={deptId} className={`compare-card ${highlightId === deptId ? 'highlight' : ''}`}>
+                        <h3 className="compare-card-title">{deptLabel(deptId)}</h3>
+                        <div className="compare-card-media" aria-hidden>
+                          <div className="compare-card-media-inner" />
+                        </div>
+                        <div className="compare-card-body">
+                          <AnimatePresence mode="wait">
+                            {activeRow ? (
+                              <motion.div
+                                key={`${deptId}-${activeRow.key}`}
+                                role="group"
+                                aria-label={activeRow.label}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={SECTION_FADE}
+                                className="compare-card-narrative"
+                              >
+                                <p className="point-group-label">{activeRow.label}</p>
+                                <div className="points">
+                                  {getRowPoints(deptId, activeRow.key).map((pointText, pointIndex) => (
+                                    <p key={`${deptId}-${activeRow.key}-${pointIndex}`} className="point">
+                                      {pointText}
+                                    </p>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
+                        </div>
+                      </section>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {canAdd ? (
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={addDept}
-                  className="department-comparison-add-dept inline-flex items-center gap-2"
-                >
-                  <Plus className="h-5 w-5 shrink-0" aria-hidden />
-                  {chrome.addDept}
-                </motion.button>
-              ) : null}
-            </div>
-
-            <div className="department-comparison-scroll relative min-h-0 flex-1 overflow-auto px-5 sm:px-11 lg:px-14 [-webkit-overflow-scrolling:touch]">
-              <div className="comparison-insight-stack mx-auto pb-7 sm:pb-9">
-                <p className="department-comparison-hint mb-6 text-center sm:mb-7">{chrome.swipeHint}</p>
-
-                <div
-                  className="comparison-insight-colheaders-grid mb-4 grid gap-7 sm:mb-5 sm:gap-10"
-                  style={{
-                    gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
-                  }}
-                >
-                  {selectedIds.map((id, colIdx) => {
-                    const isHi = highlightId === id;
-                    return (
-                      <motion.div
-                        key={`head-${id}-${colIdx}`}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.03 * colIdx, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                        className={`department-comparison-col-head rounded-xl px-6 py-5 text-center sm:px-7 sm:py-6 ${
-                          isHi ? 'department-comparison-col-head--highlight' : ''
-                        }`}
-                      >
-                        <span className="department-comparison-col-head-title">{deptLabel(id)}</span>
-                        {isHi ? (
-                          <div className="department-comparison-highlight-badge uppercase">{chrome.highlighted}</div>
-                        ) : null}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                <div className="comparison-insight-section-list flex flex-col gap-12 sm:gap-[4.25rem]">
-                  {REG.row_order.map((rowKey, sectionIdx) => (
-                    <motion.section
-                      key={rowKey}
-                      aria-labelledby={`comparison-section-${rowKey}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.04 * sectionIdx, duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-                      className="comparison-insight-section rounded-[1.35rem] border border-white/55 bg-white/35 px-6 py-9 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-md sm:px-10 sm:py-11"
-                    >
-                      <h3
-                        id={`comparison-section-${rowKey}`}
-                        className="comparison-insight-section-title text-balance"
-                      >
-                        {localizedCell(REG.row_labels[rowKey], lc)}
-                      </h3>
-                      <div
-                        className="comparison-insight-grid mt-6 grid gap-6 sm:mt-8 sm:gap-9"
-                        style={{
-                          gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
-                        }}
-                      >
-                        {selectedIds.map((did, ci) => {
-                          const dept = REG.departments[did];
-                          const cells = dept?.cells ?? {};
-                          const isHiCol = highlightId === did;
-                          const body = localizedCell(
-                            cells[rowKey] as Partial<Record<ComparisonLangCode, string>> | undefined,
-                            lc,
-                          );
-                          return (
-                            <motion.div
-                              key={`${rowKey}-${did}-${ci}`}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{
-                                delay: 0.04 + 0.02 * sectionIdx + 0.03 * ci,
-                                duration: 0.36,
-                                ease: [0.22, 1, 0.36, 1],
-                              }}
-                              className={`comparison-insight-card rounded-[1rem] px-6 py-8 sm:px-8 sm:py-9 ${
-                                isHiCol ? 'comparison-insight-card--highlight' : ''
-                              }`}
-                            >
-                              <p className="comparison-insight-card-dept">{deptLabel(did)}</p>
-                              <div className="comparison-insight-card-body whitespace-pre-line">{body}</div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </motion.section>
-                  ))}
                 </div>
               </div>
             </div>

@@ -251,7 +251,16 @@ def build_target_card_payload(
             }
         jkey = department_label_to_json_key(detected_department_label)
         if not jkey:
-            return None
+            # Align with narration_plan: when no department resolves, show the same all-departments deck.
+            ordered_no_key: dict[str, Any] = {}
+            for k in DEPARTMENT_JSON_KEY_ORDER:
+                if k in deps and isinstance(deps[k], dict):
+                    ordered_no_key[k] = _hod_slice_for_narrator(deps[k])
+            return {
+                "presentation_type": "all_departments_overview",
+                "locale": locale_id,
+                "departments": ordered_no_key,
+            }
         dept = deps.get(jkey)
         return {
             "presentation_type": "single_department_overview",
@@ -343,8 +352,11 @@ def build_narrator_system_prompt(language_name: str, target_card_data_json: str)
         "- Do NOT read raw JSON keys, field names, snake_case, or bracketed citation tags aloud.\n"
         "- Do NOT say things like 'HOD colon' or list labels; weave facts into full sentences.\n"
         "- Example style: instead of 'HOD: Dr. Smith. Intake: 120', say the department is led by Dr. Smith and takes about a hundred twenty students each year.\n"
-        "- Follow the flow of the data: introduce the topic, highlight one or two key numbers or facts, mention people or focus areas where it helps.\n"
-        "- Keep the script to 3 or 4 short sentences maximum so the audio paces well with a short multi-slide presentation.\n"
+        "- Follow the flow of the data: introduce the topic, then walk through the material in the same order a visitor would read the slides "
+        "(overview → programmes or labs → outcomes or placements → distinctive strengths → a brief closing).\n"
+        "- For multi-slide department or campus presentations, aim for **8 to 16 short sentences** so audio can span the full card deck without "
+        "stopping after a single paragraph. Do not end as if the tour is finished while major sections of TARGET_CARD_DATA are still unused.\n"
+        "- For very small single-fact cards, keep it to **3 to 5 short sentences**.\n"
         "- Plain text only. No markdown, no bullet points, no numbered lists.\n"
         "- If TARGET_CARD_DATA is empty or missing detail, give one short sentence and suggest visiting the Admission Block or the relevant office.\n"
     )
@@ -361,6 +373,22 @@ CONCISE_VOICE_RULE = (
     "Do NOT output long lists, bullet points, or markdown formatting. "
     "If the user asks for fees or specific details, extract ONLY the exact number/fact from the context and deliver it immediately. "
     "Tone: Warm, direct, and highly impactful."
+)
+
+# Department comparison is the one intent where a longer spoken narration is required (TTS + on-screen table).
+COMPARISON_VOICE_RULE = (
+    "You are CLARA, a warm, clear campus guide for SVIT. "
+    "Families see a side-by-side comparison on screen. "
+    "Deliver ONE continuous spoken narration for text-to-speech that FULLY covers the comparison. "
+    "Do NOT stop after a teaser, a generic opener, or only the first topic — you must cover every section and every program listed below. "
+    "Follow the SAME section order as the headings in the facts block. "
+    "For EACH section: (1) briefly name the theme in one short phrase, "
+    "(2) then for EACH program give ONE smooth sentence that neatly explains what that program's sub-points mean in practice "
+    "(paraphrase the ideas; do not read bullet symbols or labels robotically). "
+    "Use flowing sentences suitable for listening aloud. Plain text only — no markdown, no headings syntax, no bullet characters, no emojis. "
+    "Do NOT invent salaries, rankings, placement packages, or statistics that are not in the facts. "
+    "If session hints mention recommend_focus, reflect that gently only when the facts support it; otherwise stay balanced. "
+    "Aim for roughly 220–480 spoken words so nothing important is left unsaid."
 )
 
 
@@ -2566,17 +2594,13 @@ def build_system_prompt(intent: str, language: str, context: str | None) -> str:
         return f"{prefix}{ctx}" if ctx else prefix.rstrip()
     if intent == INTENT_DEPARTMENT_COMPARISON:
         prefix = (
-            CONCISE_VOICE_RULE
+            COMPARISON_VOICE_RULE
             + "\n\n"
             + rag_language_enforcement_directive(language)
             + "\n\n"
-            "A friendly 3-topic comparison is on screen for 2–3 programs (what students learn in four years; future job directions; outlook for roughly the next five to ten years). "
-            "You sound like CLARA helping a family choose a path — warm, plain language, zero spreadsheet tone. "
-            "In two or three SHORT sentences ONLY, contrast the programs using STRICTLY the facts below. "
-            "Do NOT invent salaries, percentages, rankings, or placement numbers. "
-            "If recommend_focus suggests placements, future growth, ease, or fit for a younger student, lean gently toward the highlight "
-            "when the insights support it; otherwise stay neutral. "
-            "Plain text only. No markdown or bullet lists.\n"
+            "The on-screen table shows the same three insight topics for each program (typically: what students learn across four years; "
+            "future job directions; outlook for roughly the next five to ten years). "
+            "Use ONLY the facts in the block below — they are authoritative for this narration.\n"
             + MULTI_ENTITY_RULE
             + "\n\nProgram comparison insights:\n"
         )

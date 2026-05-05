@@ -4,6 +4,8 @@ import type { CampusRouteResult } from './campusMapTypes';
 export type GetCampusRouteParams = {
   origin_node_id?: string | null;
   destination_room_code: string;
+  /** Disambiguate lift / stairs room codes that repeat on every floor. */
+  destination_floor_id?: 'GF' | 'FF' | 'SF' | null;
   /** Backend: shortest | accessible | lift | stairs */
   mode?: string;
   /** BCP-47 or short code; MVP steps are English regardless. */
@@ -80,6 +82,7 @@ export async function getCampusRouteApi(params: GetCampusRouteParams): Promise<C
       body: JSON.stringify({
         origin_node_id: params.origin_node_id ?? undefined,
         destination_room_code: code,
+        destination_floor_id: params.destination_floor_id ?? undefined,
         mode,
         language: params.language ?? 'en',
       }),

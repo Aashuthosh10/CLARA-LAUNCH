@@ -1,0 +1,20 @@
+Campus navigation — on-site QA (paired with automated golden routes in backend/tools/validate_campus_map.py)
+
+Map data version 4 uses a 1320×920 canonical canvas per floor; in dev enable polygon/door overlay alignment with localStorage clara_campus_map_debug = 1 (reload). See docs/campus-map-maintainer-notes.txt.
+
+For each walk: start from the physical kiosk (match GF-NAV-KIOSK-MAIN). Compare spoken/UI steps + highlighted route on the GF/FF/SF tab vs signage and corridors. Record pass/fail and notes.
+
+1. Admissions B-011 (GF) — same spine as kiosk→B-004 validation.
+2. Library C-003 (GF).
+3. Block B corridor office B-004 (GF) — baseline path.
+4. Principal / admin cluster B-008 or B-010 (GF) — pick one representative from priority list near B spine.
+5. First floor dept B-101 (FF) — multi-floor via lift segment; polyline visible only on GF then FF tabs.
+6. Second floor dept B-201 (SF) — three-floor if routed via lift chain.
+7. Lift destination B-LIFT on SF — confirms floor-specific code disambiguation.
+8. Stair A descent: FF A-STR or GF A-STR — enter from one floor, exit instruction matches stairs mode if used.
+9. Stair C descent: analogous C-STR pair.
+10. Math HOD A-HOD-MATH (FF) — room code + floor routing.
+11. Toggle “accessible” vs stairs-only — edge should reroute where graph differs.
+12. Voice/dropdown phrase spot-check: “principal chamber”, “B-011”, “where is library”, “CSE HOD” — destination matches catalogue.
+
+Pass criteria per walk: destination room highlight matches labeled door; corridor summary does not contradict major turns; no mixed-floor polyline on a single floor view.

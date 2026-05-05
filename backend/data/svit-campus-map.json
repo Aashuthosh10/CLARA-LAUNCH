@@ -1,13 +1,32 @@
 {
-  "version": "1-recovered-stub",
+  "version": "4.1.0-kiosk-near-b011",
   "institution": "Sai Vidya Institute of Technology (SVIT)",
-  "coordinate_space": { "unit": "px", "note": "Minimal stub map — replace with full SVIT JSON from backup." },
+  "coordinate_space": {
+    "unit": "svg_user",
+    "width": 1320,
+    "height": 920,
+    "note": "Logical layout scaled from 1k authoring grid; overlays match authored SVG intrinsic size."
+  },
+  "kiosk": {
+    "floor_id": "GF",
+    "x": 636.24,
+    "y": 303.6,
+    "label": "Kiosk"
+  },
+  "kiosks": [
+    {
+      "id": "default-kiosk",
+      "node_id": "GF-NAV-KIOSK-MAIN"
+    }
+  ],
   "floors": [
     {
       "floor_id": "GF",
       "floor_number": 0,
       "floor_name": "Ground Floor",
-      "image_ref": "/maps/ground-floor.png",
+      "image_ref": "/maps/ground-floor.svg",
+      "map_width": 1320,
+      "map_height": 920,
       "blocks": [
         {
           "block_id": "blk-a",
@@ -15,11 +34,255 @@
           "block_name": "Block A",
           "rooms": [
             {
-              "id": "room-a001",
-              "code": "A-001",
+              "id": "gf-a-a_002",
+              "code": "A-002",
               "name": "CAED Lab",
-              "polygon": [[120, 140], [280, 140], [280, 260], [120, 260]],
-              "door": { "x": 200, "y": 140 }
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  252.07999999999998
+                ],
+                [
+                  504.24,
+                  252.07999999999998
+                ],
+                [
+                  504.24,
+                  299.92
+                ],
+                [
+                  382.79999999999995,
+                  299.92
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 276.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_005",
+              "code": "A-005",
+              "name": "Railway Skills Development Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  331.2
+                ],
+                [
+                  504.24,
+                  331.2
+                ],
+                [
+                  504.24,
+                  379.04
+                ],
+                [
+                  382.79999999999995,
+                  379.04
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 355.12
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_008",
+              "code": "A-008",
+              "name": "Department of Physics",
+              "category": "department",
+              "type": "department",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  410.32
+                ],
+                [
+                  504.24,
+                  410.32
+                ],
+                [
+                  504.24,
+                  458.16
+                ],
+                [
+                  382.79999999999995,
+                  458.16
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 434.24
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_009",
+              "code": "A-009",
+              "name": "Department of Chemistry",
+              "category": "department",
+              "type": "department",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  489.44
+                ],
+                [
+                  504.24,
+                  489.44
+                ],
+                [
+                  504.24,
+                  537.28
+                ],
+                [
+                  382.79999999999995,
+                  537.28
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 513.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_010",
+              "code": "A-010",
+              "name": "Research Center — CSE",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  568.5600000000001
+                ],
+                [
+                  504.24,
+                  568.5600000000001
+                ],
+                [
+                  504.24,
+                  616.4
+                ],
+                [
+                  382.79999999999995,
+                  616.4
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 592.48
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_011",
+              "code": "A-011",
+              "name": "NCC Room",
+              "category": "activity",
+              "type": "activity",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  647.6800000000001
+                ],
+                [
+                  504.24,
+                  647.6800000000001
+                ],
+                [
+                  504.24,
+                  695.52
+                ],
+                [
+                  382.79999999999995,
+                  695.52
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 671.6
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-a_012",
+              "code": "A-012",
+              "name": "Store Room",
+              "category": "utility",
+              "type": "utility",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  726.8000000000001
+                ],
+                [
+                  504.24,
+                  726.8000000000001
+                ],
+                [
+                  504.24,
+                  774.64
+                ],
+                [
+                  382.79999999999995,
+                  774.64
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 750.72
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-a-str",
+              "code": "A-STR",
+              "name": "Stairs — Block A",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  138.60000000000002,
+                  554.76
+                ],
+                [
+                  209.88,
+                  554.76
+                ],
+                [
+                  209.88,
+                  622.8399999999999
+                ],
+                [
+                  138.60000000000002,
+                  622.8399999999999
+                ]
+              ],
+              "door": {
+                "x": 155.76000000000002,
+                "y": 588.8
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
             }
           ]
         },
@@ -29,11 +292,687 @@
           "block_name": "Block B",
           "rooms": [
             {
-              "id": "room-b004",
+              "id": "gf-b-002",
+              "code": "B-002",
+              "name": "Entrepreneurship Incubation Cell",
+              "category": "startup",
+              "type": "startup",
+              "polygon": [
+                [
+                  364.32,
+                  170.2
+                ],
+                [
+                  480.47999999999996,
+                  170.2
+                ],
+                [
+                  480.47999999999996,
+                  216.2
+                ],
+                [
+                  364.32,
+                  216.2
+                ]
+              ],
+              "door": {
+                "x": 403.91999999999996,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-003",
+              "code": "B-003",
+              "name": "Training & Placement Centre",
+              "category": "placement",
+              "type": "placement",
+              "polygon": [
+                [
+                  506.88,
+                  170.2
+                ],
+                [
+                  633.6,
+                  170.2
+                ],
+                [
+                  633.6,
+                  216.2
+                ],
+                [
+                  506.88,
+                  216.2
+                ]
+              ],
+              "door": {
+                "x": 588.72,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": [
+                "t&p",
+                "tnp",
+                "placement cell"
+              ]
+            },
+            {
+              "id": "gf-b-004",
               "code": "B-004",
               "name": "Principal Chamber",
-              "polygon": [[320, 160], [480, 160], [480, 280], [320, 280]],
-              "door": { "x": 400, "y": 160 }
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  652.0799999999999,
+                  130.64
+                ],
+                [
+                  768.24,
+                  130.64
+                ],
+                [
+                  768.24,
+                  178.48000000000002
+                ],
+                [
+                  652.0799999999999,
+                  178.48000000000002
+                ]
+              ],
+              "door": {
+                "x": 728.64,
+                "y": 154.56
+              },
+              "department": null,
+              "aliases": [
+                "principal office",
+                "principal cabin"
+              ]
+            },
+            {
+              "id": "gf-b-005",
+              "code": "B-005",
+              "name": "Board Room",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  793.3199999999999,
+                  129.72000000000003
+                ],
+                [
+                  891.0,
+                  129.72000000000003
+                ],
+                [
+                  891.0,
+                  173.88
+                ],
+                [
+                  793.3199999999999,
+                  173.88
+                ]
+              ],
+              "door": {
+                "x": 860.64,
+                "y": 151.8
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-006",
+              "code": "B-006",
+              "name": "Director Room",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  901.56,
+                  130.64
+                ],
+                [
+                  999.24,
+                  130.64
+                ],
+                [
+                  999.24,
+                  174.8
+                ],
+                [
+                  901.56,
+                  174.8
+                ]
+              ],
+              "door": {
+                "x": 968.88,
+                "y": 152.72
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-008",
+              "code": "B-008",
+              "name": "Gymnasium & Fitness",
+              "category": "facility",
+              "type": "facility",
+              "polygon": [
+                [
+                  864.6,
+                  195.04
+                ],
+                [
+                  1020.36,
+                  195.04
+                ],
+                [
+                  1020.36,
+                  264.96
+                ],
+                [
+                  864.6,
+                  264.96
+                ]
+              ],
+              "door": {
+                "x": 960.96,
+                "y": 230.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-009",
+              "code": "B-009",
+              "name": "Administrative Office",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  649.4399999999999,
+                  201.48
+                ],
+                [
+                  776.16,
+                  201.48
+                ],
+                [
+                  776.16,
+                  251.16
+                ],
+                [
+                  649.4399999999999,
+                  251.16
+                ]
+              ],
+              "door": {
+                "x": 731.28,
+                "y": 226.32
+              },
+              "department": null,
+              "aliases": [
+                "admin office",
+                "administration"
+              ]
+            },
+            {
+              "id": "gf-b-010",
+              "code": "B-010",
+              "name": "Medical Room",
+              "category": "medical",
+              "type": "medical",
+              "polygon": [
+                [
+                  542.52,
+                  282.44
+                ],
+                [
+                  640.2,
+                  282.44
+                ],
+                [
+                  640.2,
+                  324.76000000000005
+                ],
+                [
+                  542.52,
+                  324.76000000000005
+                ]
+              ],
+              "door": {
+                "x": 609.84,
+                "y": 303.6
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-011",
+              "code": "B-011",
+              "name": "Admission Room",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  704.88,
+                  280.6
+                ],
+                [
+                  826.32,
+                  280.6
+                ],
+                [
+                  826.32,
+                  326.6
+                ],
+                [
+                  704.88,
+                  326.6
+                ]
+              ],
+              "door": {
+                "x": 784.08,
+                "y": 303.6
+              },
+              "department": null,
+              "aliases": [
+                "admissions",
+                "admission office"
+              ]
+            },
+            {
+              "id": "gf-b-012",
+              "code": "B-012",
+              "name": "Examination Section",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  852.72,
+                  279.68
+                ],
+                [
+                  984.72,
+                  279.68
+                ],
+                [
+                  984.72,
+                  327.52000000000004
+                ],
+                [
+                  852.72,
+                  327.52000000000004
+                ]
+              ],
+              "door": {
+                "x": 937.2,
+                "y": 303.6
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-015",
+              "code": "B-015",
+              "name": "Stationery / SVIT Store",
+              "category": "facility",
+              "type": "facility",
+              "polygon": [
+                [
+                  554.4,
+                  366.15999999999997
+                ],
+                [
+                  649.4399999999999,
+                  366.15999999999997
+                ],
+                [
+                  649.4399999999999,
+                  406.64
+                ],
+                [
+                  554.4,
+                  406.64
+                ]
+              ],
+              "door": {
+                "x": 620.4,
+                "y": 386.4
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-b-lift",
+              "code": "B-LIFT",
+              "name": "Lift — Block B",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  439.56,
+                  256.68
+                ],
+                [
+                  510.84,
+                  256.68
+                ],
+                [
+                  510.84,
+                  313.71999999999997
+                ],
+                [
+                  439.56,
+                  313.71999999999997
+                ]
+              ],
+              "door": {
+                "x": 456.71999999999997,
+                "y": 285.2
+              },
+              "department": null,
+              "aliases": [
+                "lift",
+                "elevator"
+              ]
+            }
+          ]
+        },
+        {
+          "block_id": "blk-c",
+          "block_code": "C",
+          "block_name": "Block C",
+          "rooms": [
+            {
+              "id": "gf-c-001",
+              "code": "C-001",
+              "name": "Department of ISE Lab (1)",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  830.28,
+                  161.92000000000002
+                ],
+                [
+                  949.0799999999999,
+                  161.92000000000002
+                ],
+                [
+                  949.0799999999999,
+                  206.07999999999998
+                ],
+                [
+                  830.28,
+                  206.07999999999998
+                ]
+              ],
+              "door": {
+                "x": 871.1999999999999,
+                "y": 184.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-002",
+              "code": "C-002",
+              "name": "Department of ISE Lab (2)",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  988.6800000000001,
+                  161.92000000000002
+                ],
+                [
+                  1102.2,
+                  161.92000000000002
+                ],
+                [
+                  1102.2,
+                  206.07999999999998
+                ],
+                [
+                  988.6800000000001,
+                  206.07999999999998
+                ]
+              ],
+              "door": {
+                "x": 1063.92,
+                "y": 184.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-003",
+              "code": "C-003",
+              "name": "Library & Information Center",
+              "category": "library",
+              "type": "library",
+              "polygon": [
+                [
+                  1114.08,
+                  142.6
+                ],
+                [
+                  1256.6399999999999,
+                  142.6
+                ],
+                [
+                  1256.6399999999999,
+                  199.64000000000001
+                ],
+                [
+                  1114.08,
+                  199.64000000000001
+                ]
+              ],
+              "door": {
+                "x": 1203.84,
+                "y": 171.12
+              },
+              "department": null,
+              "aliases": [
+                "library",
+                "lic",
+                "central library"
+              ]
+            },
+            {
+              "id": "gf-c-005",
+              "code": "C-005",
+              "name": "Survey Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1145.76,
+                  286.11999999999995
+                ],
+                [
+                  1246.0800000000002,
+                  286.11999999999995
+                ],
+                [
+                  1246.0800000000002,
+                  328.44
+                ],
+                [
+                  1145.76,
+                  328.44
+                ]
+              ],
+              "door": {
+                "x": 1214.4,
+                "y": 307.28
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-006",
+              "code": "C-006",
+              "name": "Geology Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1022.9999999999999,
+                  308.2
+                ],
+                [
+                  1120.6799999999998,
+                  308.2
+                ],
+                [
+                  1120.6799999999998,
+                  350.52000000000004
+                ],
+                [
+                  1022.9999999999999,
+                  350.52000000000004
+                ]
+              ],
+              "door": {
+                "x": 1090.32,
+                "y": 329.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-007",
+              "code": "C-007",
+              "name": "Swamy Vivekananda Main Seminar Hall",
+              "category": "seminar",
+              "type": "seminar",
+              "polygon": [
+                [
+                  792.0,
+                  315.56
+                ],
+                [
+                  960.96,
+                  315.56
+                ],
+                [
+                  960.96,
+                  398.35999999999996
+                ],
+                [
+                  792.0,
+                  398.35999999999996
+                ]
+              ],
+              "door": {
+                "x": 858.0,
+                "y": 356.96
+              },
+              "department": null,
+              "aliases": [
+                "seminar hall"
+              ]
+            },
+            {
+              "id": "gf-c-008",
+              "code": "C-008",
+              "name": "Medical Room",
+              "category": "medical",
+              "type": "medical",
+              "polygon": [
+                [
+                  872.52,
+                  438.84
+                ],
+                [
+                  970.2,
+                  438.84
+                ],
+                [
+                  970.2,
+                  481.16
+                ],
+                [
+                  872.52,
+                  481.16
+                ]
+              ],
+              "door": {
+                "x": 902.88,
+                "y": 460.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-011",
+              "code": "C-011",
+              "name": "UPS Room",
+              "category": "utility",
+              "type": "utility",
+              "polygon": [
+                [
+                  1149.72,
+                  439.76
+                ],
+                [
+                  1226.28,
+                  439.76
+                ],
+                [
+                  1226.28,
+                  480.24
+                ],
+                [
+                  1149.72,
+                  480.24
+                ]
+              ],
+              "door": {
+                "x": 1206.48,
+                "y": 460.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "gf-c-str",
+              "code": "C-STR",
+              "name": "Stairs — Block C",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  761.64,
+                  243.79999999999998
+                ],
+                [
+                  832.92,
+                  243.79999999999998
+                ],
+                [
+                  832.92,
+                  311.88
+                ],
+                [
+                  761.64,
+                  311.88
+                ]
+              ],
+              "door": {
+                "x": 778.8,
+                "y": 277.84
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
             }
           ]
         }
@@ -43,17 +982,3750 @@
       "floor_id": "FF",
       "floor_number": 1,
       "floor_name": "First Floor",
-      "image_ref": "/maps/first-floor.png",
-      "blocks": []
+      "image_ref": "/maps/first-floor.svg",
+      "map_width": 1320,
+      "map_height": 920,
+      "blocks": [
+        {
+          "block_id": "blk-a",
+          "block_code": "A",
+          "block_name": "Block A",
+          "rooms": [
+            {
+              "id": "ff-a-108",
+              "code": "A-108",
+              "name": "E&C HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  382.79999999999995,
+                  265.88
+                ],
+                [
+                  483.12,
+                  265.88
+                ],
+                [
+                  483.12,
+                  304.52
+                ],
+                [
+                  382.79999999999995,
+                  304.52
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 285.2
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "ff-a_109",
+              "code": "A-109",
+              "name": "Carver Lab — E&C Lab 6",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  326.59999999999997
+                ],
+                [
+                  495.0,
+                  326.59999999999997
+                ],
+                [
+                  495.0,
+                  368.92
+                ],
+                [
+                  370.91999999999996,
+                  368.92
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 347.76
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a_110",
+              "code": "A-110",
+              "name": "Richard Feynman Lab — E&C Lab 5",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  392.84
+                ],
+                [
+                  495.0,
+                  392.84
+                ],
+                [
+                  495.0,
+                  435.16
+                ],
+                [
+                  370.91999999999996,
+                  435.16
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 414.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a_111",
+              "code": "A-111",
+              "name": "David Huffman Lab — E&C Lab 4",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  459.08
+                ],
+                [
+                  495.0,
+                  459.08
+                ],
+                [
+                  495.0,
+                  501.40000000000003
+                ],
+                [
+                  370.91999999999996,
+                  501.40000000000003
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 480.24
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a_112",
+              "code": "A-112",
+              "name": "Claude Shannon Lab — E&C Lab 3",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  525.32
+                ],
+                [
+                  495.0,
+                  525.32
+                ],
+                [
+                  495.0,
+                  567.64
+                ],
+                [
+                  370.91999999999996,
+                  567.64
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 546.48
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a_113",
+              "code": "A-113",
+              "name": "James Clerk Maxwell Lab — E&C Lab 2",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  591.5600000000001
+                ],
+                [
+                  495.0,
+                  591.5600000000001
+                ],
+                [
+                  495.0,
+                  633.88
+                ],
+                [
+                  370.91999999999996,
+                  633.88
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 612.72
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a_114",
+              "code": "A-114",
+              "name": "William Shockley Lab — E&C Lab 1",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  657.8000000000001
+                ],
+                [
+                  495.0,
+                  657.8000000000001
+                ],
+                [
+                  495.0,
+                  700.12
+                ],
+                [
+                  370.91999999999996,
+                  700.12
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 678.96
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a-115",
+              "code": "A-115",
+              "name": "Department of Mathematics",
+              "category": "department",
+              "type": "department",
+              "polygon": [
+                [
+                  368.28,
+                  690.0
+                ],
+                [
+                  497.64,
+                  690.0
+                ],
+                [
+                  497.64,
+                  737.8399999999999
+                ],
+                [
+                  368.28,
+                  737.8399999999999
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 713.92
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-a-hod-math",
+              "code": "A-HOD-MATH",
+              "name": "Maths HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  125.4,
+                  685.4
+                ],
+                [
+                  223.08,
+                  685.4
+                ],
+                [
+                  223.08,
+                  724.0400000000001
+                ],
+                [
+                  125.4,
+                  724.0400000000001
+                ]
+              ],
+              "door": {
+                "x": 155.76000000000002,
+                "y": 704.72
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "ff-a-str",
+              "code": "A-STR",
+              "name": "Stairs — Block A",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  138.60000000000002,
+                  543.72
+                ],
+                [
+                  209.88,
+                  543.72
+                ],
+                [
+                  209.88,
+                  611.8
+                ],
+                [
+                  138.60000000000002,
+                  611.8
+                ]
+              ],
+              "door": {
+                "x": 155.76000000000002,
+                "y": 577.76
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
+            }
+          ]
+        },
+        {
+          "block_id": "blk-b",
+          "block_code": "B",
+          "block_name": "Block B",
+          "rooms": [
+            {
+              "id": "ff-b-101",
+              "code": "B-101",
+              "name": "CSE HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  475.20000000000005,
+                  146.28
+                ],
+                [
+                  575.52,
+                  146.28
+                ],
+                [
+                  575.52,
+                  184.92
+                ],
+                [
+                  475.20000000000005,
+                  184.92
+                ]
+              ],
+              "door": {
+                "x": 506.88,
+                "y": 165.6
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "ff-b-102",
+              "code": "B-102",
+              "name": "ISE HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  624.36,
+                  146.28
+                ],
+                [
+                  727.32,
+                  146.28
+                ],
+                [
+                  727.32,
+                  184.92
+                ],
+                [
+                  624.36,
+                  184.92
+                ]
+              ],
+              "door": {
+                "x": 694.32,
+                "y": 165.6
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "ff-b-103",
+              "code": "B-103",
+              "name": "ISE Faculty Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  761.64,
+                  149.96
+                ],
+                [
+                  880.4399999999999,
+                  149.96
+                ],
+                [
+                  880.4399999999999,
+                  192.28
+                ],
+                [
+                  761.64,
+                  192.28
+                ]
+              ],
+              "door": {
+                "x": 839.52,
+                "y": 171.12
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-107",
+              "code": "B-107",
+              "name": "L2M Cyber Signaling Lab — 2",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  376.2,
+                  249.32
+                ],
+                [
+                  526.68,
+                  249.32
+                ],
+                [
+                  526.68,
+                  295.32
+                ],
+                [
+                  376.2,
+                  295.32
+                ]
+              ],
+              "door": {
+                "x": 432.96,
+                "y": 272.32
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-110",
+              "code": "B-110",
+              "name": "L2M AIML Lab for Railways R&D",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  563.64,
+                  258.52000000000004
+                ],
+                [
+                  729.9599999999999,
+                  258.52000000000004
+                ],
+                [
+                  729.9599999999999,
+                  308.2
+                ],
+                [
+                  563.64,
+                  308.2
+                ]
+              ],
+              "door": {
+                "x": 665.28,
+                "y": 283.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-111",
+              "code": "B-111",
+              "name": "CSE Faculty Room — 2",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  794.64,
+                  262.2
+                ],
+                [
+                  921.36,
+                  262.2
+                ],
+                [
+                  921.36,
+                  304.52000000000004
+                ],
+                [
+                  794.64,
+                  304.52000000000004
+                ]
+              ],
+              "door": {
+                "x": 876.48,
+                "y": 283.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-112",
+              "code": "B-112",
+              "name": "Dr. Vikram Sarabhai Computer Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  475.2,
+                  353.28
+                ],
+                [
+                  633.6,
+                  353.28
+                ],
+                [
+                  633.6,
+                  401.12
+                ],
+                [
+                  475.2,
+                  401.12
+                ]
+              ],
+              "door": {
+                "x": 572.88,
+                "y": 377.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-113",
+              "code": "B-113",
+              "name": "Dr. Radhakrishnan Seminar Hall",
+              "category": "seminar",
+              "type": "seminar",
+              "polygon": [
+                [
+                  700.92,
+                  351.44
+                ],
+                [
+                  840.84,
+                  351.44
+                ],
+                [
+                  840.84,
+                  402.96
+                ],
+                [
+                  700.92,
+                  402.96
+                ]
+              ],
+              "door": {
+                "x": 789.36,
+                "y": 377.2
+              },
+              "department": null,
+              "aliases": [
+                "seminar hall"
+              ]
+            },
+            {
+              "id": "ff-b-114",
+              "code": "B-114",
+              "name": "CSE Faculty Room — 1",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  360.35999999999996,
+                  449.88
+                ],
+                [
+                  484.44,
+                  449.88
+                ],
+                [
+                  484.44,
+                  492.20000000000005
+                ],
+                [
+                  360.35999999999996,
+                  492.20000000000005
+                ]
+              ],
+              "door": {
+                "x": 403.91999999999996,
+                "y": 471.04
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-115",
+              "code": "B-115",
+              "name": "Dept of Mechanical Faculty Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  549.12,
+                  450.8
+                ],
+                [
+                  686.4,
+                  450.8
+                ],
+                [
+                  686.4,
+                  494.96
+                ],
+                [
+                  549.12,
+                  494.96
+                ]
+              ],
+              "door": {
+                "x": 636.24,
+                "y": 472.88
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-116",
+              "code": "B-116",
+              "name": "CSE Faculty Room — 3",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  744.48,
+                  453.56
+                ],
+                [
+                  871.2,
+                  453.56
+                ],
+                [
+                  871.2,
+                  495.88000000000005
+                ],
+                [
+                  744.48,
+                  495.88000000000005
+                ]
+              ],
+              "door": {
+                "x": 826.32,
+                "y": 474.72
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-117",
+              "code": "B-117",
+              "name": "Centre for Research & Development — E&C",
+              "category": "rd",
+              "type": "rd",
+              "polygon": [
+                [
+                  464.64,
+                  555.6800000000001
+                ],
+                [
+                  638.88,
+                  555.6800000000001
+                ],
+                [
+                  638.88,
+                  607.2
+                ],
+                [
+                  464.64,
+                  607.2
+                ]
+              ],
+              "door": {
+                "x": 533.28,
+                "y": 581.44
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-119",
+              "code": "B-119",
+              "name": "KSCST Room",
+              "category": "activity",
+              "type": "activity",
+              "polygon": [
+                [
+                  768.24,
+                  566.7199999999999
+                ],
+                [
+                  894.96,
+                  566.7199999999999
+                ],
+                [
+                  894.96,
+                  610.88
+                ],
+                [
+                  768.24,
+                  610.88
+                ]
+              ],
+              "door": {
+                "x": 850.08,
+                "y": 588.8
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-b-lift",
+              "code": "B-LIFT",
+              "name": "Lift — Block B",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  444.84000000000003,
+                  264.04
+                ],
+                [
+                  516.12,
+                  264.04
+                ],
+                [
+                  516.12,
+                  321.08
+                ],
+                [
+                  444.84000000000003,
+                  321.08
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 292.56
+              },
+              "department": null,
+              "aliases": [
+                "lift",
+                "elevator"
+              ]
+            }
+          ]
+        },
+        {
+          "block_id": "blk-c",
+          "block_code": "C",
+          "block_name": "Block C",
+          "rooms": [
+            {
+              "id": "ff-c-101",
+              "code": "C-101",
+              "name": "Dept of CSE Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  834.24,
+                  172.04
+                ],
+                [
+                  950.4000000000001,
+                  172.04
+                ],
+                [
+                  950.4000000000001,
+                  214.35999999999999
+                ],
+                [
+                  834.24,
+                  214.35999999999999
+                ]
+              ],
+              "door": {
+                "x": 873.84,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-c-102",
+              "code": "C-102",
+              "name": "Dept of CSE Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  966.2399999999999,
+                  172.04
+                ],
+                [
+                  1082.3999999999999,
+                  172.04
+                ],
+                [
+                  1082.3999999999999,
+                  214.35999999999999
+                ],
+                [
+                  966.2399999999999,
+                  214.35999999999999
+                ]
+              ],
+              "door": {
+                "x": 1042.8,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-c-103",
+              "code": "C-103",
+              "name": "Dept of CSE Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1098.24,
+                  172.04
+                ],
+                [
+                  1214.3999999999999,
+                  172.04
+                ],
+                [
+                  1214.3999999999999,
+                  214.35999999999999
+                ],
+                [
+                  1098.24,
+                  214.35999999999999
+                ]
+              ],
+              "door": {
+                "x": 1174.8,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-c-104",
+              "code": "C-104",
+              "name": "Dept of CSE Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1243.44,
+                  172.04
+                ],
+                [
+                  1359.6,
+                  172.04
+                ],
+                [
+                  1359.6,
+                  214.35999999999999
+                ],
+                [
+                  1243.44,
+                  214.35999999999999
+                ]
+              ],
+              "door": {
+                "x": 1320.0,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-c-112",
+              "code": "C-112",
+              "name": "ISE R&D Center",
+              "category": "rd",
+              "type": "rd",
+              "polygon": [
+                [
+                  1016.4,
+                  298.08
+                ],
+                [
+                  1153.68,
+                  298.08
+                ],
+                [
+                  1153.68,
+                  345.92
+                ],
+                [
+                  1016.4,
+                  345.92
+                ]
+              ],
+              "door": {
+                "x": 1103.52,
+                "y": 322.0
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "ff-c-str",
+              "code": "C-STR",
+              "name": "Stairs — Block C",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  772.2,
+                  241.96
+                ],
+                [
+                  843.48,
+                  241.96
+                ],
+                [
+                  843.48,
+                  310.04
+                ],
+                [
+                  772.2,
+                  310.04
+                ]
+              ],
+              "door": {
+                "x": 789.36,
+                "y": 276.0
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "floor_id": "SF",
       "floor_number": 2,
       "floor_name": "Second Floor",
-      "image_ref": "/maps/second-floor.png",
-      "blocks": []
+      "image_ref": "/maps/second-floor.svg",
+      "map_width": 1320,
+      "map_height": 920,
+      "blocks": [
+        {
+          "block_id": "blk-a",
+          "block_code": "A",
+          "block_name": "Block A",
+          "rooms": [
+            {
+              "id": "sf-a-207",
+              "code": "A-207",
+              "name": "NSS Cell",
+              "category": "activity",
+              "type": "activity",
+              "polygon": [
+                [
+                  374.88,
+                  282.44
+                ],
+                [
+                  480.48,
+                  282.44
+                ],
+                [
+                  480.48,
+                  321.08
+                ],
+                [
+                  374.88,
+                  321.08
+                ]
+              ],
+              "door": {
+                "x": 446.16,
+                "y": 301.76
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-a-209",
+              "code": "A-209",
+              "name": "Photonics Lab for Railways R&D",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  359.03999999999996,
+                  385.48
+                ],
+                [
+                  506.88,
+                  385.48
+                ],
+                [
+                  506.88,
+                  435.15999999999997
+                ],
+                [
+                  359.03999999999996,
+                  435.15999999999997
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 410.32
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-a-217",
+              "code": "A-217",
+              "name": "IQAC Cell",
+              "category": "admin",
+              "type": "admin",
+              "polygon": [
+                [
+                  370.91999999999996,
+                  525.32
+                ],
+                [
+                  495.0,
+                  525.32
+                ],
+                [
+                  495.0,
+                  571.32
+                ],
+                [
+                  370.91999999999996,
+                  571.32
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 548.32
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-a-218",
+              "code": "A-218",
+              "name": "Dept of ECE Faculty Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  364.32,
+                  652.28
+                ],
+                [
+                  501.59999999999997,
+                  652.28
+                ],
+                [
+                  501.59999999999997,
+                  698.28
+                ],
+                [
+                  364.32,
+                  698.28
+                ]
+              ],
+              "door": {
+                "x": 451.44,
+                "y": 675.28
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-a-str",
+              "code": "A-STR",
+              "name": "Stairs — Block A",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  138.60000000000002,
+                  547.4000000000001
+                ],
+                [
+                  209.88,
+                  547.4000000000001
+                ],
+                [
+                  209.88,
+                  615.48
+                ],
+                [
+                  138.60000000000002,
+                  615.48
+                ]
+              ],
+              "door": {
+                "x": 155.76000000000002,
+                "y": 581.44
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
+            }
+          ]
+        },
+        {
+          "block_id": "blk-b",
+          "block_code": "B",
+          "block_name": "Block B",
+          "rooms": [
+            {
+              "id": "sf-b-201",
+              "code": "B-201",
+              "name": "Dept of CSE Data Science HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  463.32,
+                  142.6
+                ],
+                [
+                  587.4,
+                  142.6
+                ],
+                [
+                  587.4,
+                  181.23999999999998
+                ],
+                [
+                  463.32,
+                  181.23999999999998
+                ]
+              ],
+              "door": {
+                "x": 506.88,
+                "y": 161.92
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "sf-b-202",
+              "code": "B-202",
+              "name": "Dept of AIML HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  644.16,
+                  142.6
+                ],
+                [
+                  770.88,
+                  142.6
+                ],
+                [
+                  770.88,
+                  181.23999999999998
+                ],
+                [
+                  644.16,
+                  181.23999999999998
+                ]
+              ],
+              "door": {
+                "x": 726.0,
+                "y": 161.92
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "sf-b-210",
+              "code": "B-210",
+              "name": "Civil & Mechanical CAD Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  818.4,
+                  149.96
+                ],
+                [
+                  982.08,
+                  149.96
+                ],
+                [
+                  982.08,
+                  199.64000000000001
+                ],
+                [
+                  818.4,
+                  199.64000000000001
+                ]
+              ],
+              "door": {
+                "x": 918.72,
+                "y": 174.8
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-211",
+              "code": "B-211",
+              "name": "Dept of Mechanical Engineering HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  542.52,
+                  268.64
+                ],
+                [
+                  687.72,
+                  268.64
+                ],
+                [
+                  687.72,
+                  309.12
+                ],
+                [
+                  542.52,
+                  309.12
+                ]
+              ],
+              "door": {
+                "x": 633.6,
+                "y": 288.88
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "sf-b-212",
+              "code": "B-212",
+              "name": "Dept of Civil Engineering HOD Room",
+              "category": "hod",
+              "type": "hod",
+              "polygon": [
+                [
+                  764.28,
+                  273.24
+                ],
+                [
+                  904.2,
+                  273.24
+                ],
+                [
+                  904.2,
+                  311.88
+                ],
+                [
+                  764.28,
+                  311.88
+                ]
+              ],
+              "door": {
+                "x": 852.72,
+                "y": 292.56
+              },
+              "department": null,
+              "aliases": [
+                "head of department"
+              ]
+            },
+            {
+              "id": "sf-b-213",
+              "code": "B-213",
+              "name": "Dept of CSE AIML Staff Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  351.12,
+                  374.44
+                ],
+                [
+                  488.4,
+                  374.44
+                ],
+                [
+                  488.4,
+                  416.76000000000005
+                ],
+                [
+                  351.12,
+                  416.76000000000005
+                ]
+              ],
+              "door": {
+                "x": 401.28,
+                "y": 395.6
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-214",
+              "code": "B-214",
+              "name": "Dept of CSE DS Staff Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  572.88,
+                  376.28
+                ],
+                [
+                  710.16,
+                  376.28
+                ],
+                [
+                  710.16,
+                  418.6
+                ],
+                [
+                  572.88,
+                  418.6
+                ]
+              ],
+              "door": {
+                "x": 660.0,
+                "y": 397.44
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-215",
+              "code": "B-215",
+              "name": "Sir M. Visvesvaraya Seminar Hall",
+              "category": "seminar",
+              "type": "seminar",
+              "polygon": [
+                [
+                  753.72,
+                  368.0
+                ],
+                [
+                  909.48,
+                  368.0
+                ],
+                [
+                  909.48,
+                  419.52
+                ],
+                [
+                  753.72,
+                  419.52
+                ]
+              ],
+              "door": {
+                "x": 850.08,
+                "y": 393.76
+              },
+              "department": null,
+              "aliases": [
+                "seminar hall"
+              ]
+            },
+            {
+              "id": "sf-b-216",
+              "code": "B-216",
+              "name": "Civil & Mechanical Staff Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  326.04,
+                  492.2
+                ],
+                [
+                  481.8,
+                  492.2
+                ],
+                [
+                  481.8,
+                  534.52
+                ],
+                [
+                  326.04,
+                  534.52
+                ]
+              ],
+              "door": {
+                "x": 385.44,
+                "y": 513.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-217",
+              "code": "B-217",
+              "name": "CSE DS Lab — 2",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  566.28,
+                  489.44
+                ],
+                [
+                  722.04,
+                  489.44
+                ],
+                [
+                  722.04,
+                  537.28
+                ],
+                [
+                  566.28,
+                  537.28
+                ]
+              ],
+              "door": {
+                "x": 662.64,
+                "y": 513.36
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-218",
+              "code": "B-218",
+              "name": "CSE AIML Lab — 2",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  784.0799999999999,
+                  487.59999999999997
+                ],
+                [
+                  942.48,
+                  487.59999999999997
+                ],
+                [
+                  942.48,
+                  535.4399999999999
+                ],
+                [
+                  784.0799999999999,
+                  535.4399999999999
+                ]
+              ],
+              "door": {
+                "x": 881.76,
+                "y": 511.52
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-219",
+              "code": "B-219",
+              "name": "Sangama Cultural Club",
+              "category": "activity",
+              "type": "activity",
+              "polygon": [
+                [
+                  505.55999999999995,
+                  610.88
+                ],
+                [
+                  656.04,
+                  610.88
+                ],
+                [
+                  656.04,
+                  658.7199999999999
+                ],
+                [
+                  505.55999999999995,
+                  658.7199999999999
+                ]
+              ],
+              "door": {
+                "x": 599.28,
+                "y": 634.8
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-222",
+              "code": "B-222",
+              "name": "Faculty Room",
+              "category": "faculty",
+              "type": "faculty",
+              "polygon": [
+                [
+                  781.4399999999999,
+                  618.24
+                ],
+                [
+                  897.6,
+                  618.24
+                ],
+                [
+                  897.6,
+                  658.72
+                ],
+                [
+                  781.4399999999999,
+                  658.72
+                ]
+              ],
+              "door": {
+                "x": 858.0,
+                "y": 638.48
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-b-lift",
+              "code": "B-LIFT",
+              "name": "Lift — Block B",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  444.84000000000003,
+                  264.04
+                ],
+                [
+                  516.12,
+                  264.04
+                ],
+                [
+                  516.12,
+                  321.08
+                ],
+                [
+                  444.84000000000003,
+                  321.08
+                ]
+              ],
+              "door": {
+                "x": 462.0,
+                "y": 292.56
+              },
+              "department": null,
+              "aliases": [
+                "lift",
+                "elevator"
+              ]
+            }
+          ]
+        },
+        {
+          "block_id": "blk-c",
+          "block_code": "C",
+          "block_name": "Block C",
+          "rooms": [
+            {
+              "id": "sf-c-201",
+              "code": "C-201",
+              "name": "CoE AIML Skill Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1037.52,
+                  168.35999999999999
+                ],
+                [
+                  1201.1999999999998,
+                  168.35999999999999
+                ],
+                [
+                  1201.1999999999998,
+                  218.04
+                ],
+                [
+                  1037.52,
+                  218.04
+                ]
+              ],
+              "door": {
+                "x": 1137.84,
+                "y": 193.2
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-c-202",
+              "code": "C-202",
+              "name": "CSE DS Lab — 1 / John Tukey Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  1004.5200000000001,
+                  289.8
+                ],
+                [
+                  1170.8400000000001,
+                  289.8
+                ],
+                [
+                  1170.8400000000001,
+                  339.47999999999996
+                ],
+                [
+                  1004.5200000000001,
+                  339.47999999999996
+                ]
+              ],
+              "door": {
+                "x": 1106.16,
+                "y": 314.64
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-c-203",
+              "code": "C-203",
+              "name": "CSE AIML Lab — 1 / John McCarthy Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  992.64,
+                  411.24
+                ],
+                [
+                  1166.88,
+                  411.24
+                ],
+                [
+                  1166.88,
+                  460.91999999999996
+                ],
+                [
+                  992.64,
+                  460.91999999999996
+                ]
+              ],
+              "door": {
+                "x": 1098.24,
+                "y": 436.08
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-c-206",
+              "code": "C-206",
+              "name": "Dept of ISE Lab",
+              "category": "lab",
+              "type": "lab",
+              "polygon": [
+                [
+                  776.16,
+                  345.91999999999996
+                ],
+                [
+                  934.5600000000001,
+                  345.91999999999996
+                ],
+                [
+                  934.5600000000001,
+                  393.76
+                ],
+                [
+                  776.16,
+                  393.76
+                ]
+              ],
+              "door": {
+                "x": 836.88,
+                "y": 369.84
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-c-214",
+              "code": "C-214",
+              "name": "CSE DS R&D Center",
+              "category": "rd",
+              "type": "rd",
+              "polygon": [
+                [
+                  772.2,
+                  515.2
+                ],
+                [
+                  922.6800000000001,
+                  515.2
+                ],
+                [
+                  922.6800000000001,
+                  563.04
+                ],
+                [
+                  772.2,
+                  563.04
+                ]
+              ],
+              "door": {
+                "x": 828.96,
+                "y": 539.12
+              },
+              "department": null,
+              "aliases": []
+            },
+            {
+              "id": "sf-c-str",
+              "code": "C-STR",
+              "name": "Stairs — Block C",
+              "category": "circulation",
+              "type": "circulation",
+              "polygon": [
+                [
+                  772.2,
+                  241.96
+                ],
+                [
+                  843.48,
+                  241.96
+                ],
+                [
+                  843.48,
+                  310.04
+                ],
+                [
+                  772.2,
+                  310.04
+                ]
+              ],
+              "door": {
+                "x": 789.36,
+                "y": 276.0
+              },
+              "department": null,
+              "aliases": [
+                "stairs",
+                "staircase"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": "GF-NAV-KIOSK-MAIN",
+      "type": "kiosk",
+      "floor_id": "GF",
+      "label": "Main entrance kiosk",
+      "x": 636.24,
+      "y": 303.6
+    },
+    {
+      "id": "GF-J-AB-CORE",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "A-B junction",
+      "x": 451.44,
+      "y": 288.03
+    },
+    {
+      "id": "GF-J-A-SPINE",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Block A spine",
+      "x": 300.96,
+      "y": 472.88
+    },
+    {
+      "id": "GF-J-B-SPINE",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Block B spine",
+      "x": 712.8,
+      "y": 235.52
+    },
+    {
+      "id": "GF-J-C-WEST",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Block C west",
+      "x": 757.68,
+      "y": 246.56
+    },
+    {
+      "id": "GF-J-LIFT-WING",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Lift lobby",
+      "x": 543.84,
+      "y": 274.16
+    },
+    {
+      "id": "GF-J-A-STAIR-WING",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Stairs A",
+      "x": 237.6,
+      "y": 590.64
+    },
+    {
+      "id": "GF-J-C-STAIR-WING",
+      "type": "junction",
+      "floor_id": "GF",
+      "label": "Stairs C",
+      "x": 813.12,
+      "y": 270.48
+    },
+    {
+      "id": "FF-J-AB-CORE",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "A-B junction",
+      "x": 451.44,
+      "y": 284.06
+    },
+    {
+      "id": "FF-J-A-SPINE",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Block A spine",
+      "x": 300.96,
+      "y": 472.88
+    },
+    {
+      "id": "FF-J-B-SPINE",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Block B spine",
+      "x": 712.8,
+      "y": 235.52
+    },
+    {
+      "id": "FF-J-C-WEST",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Block C west",
+      "x": 757.68,
+      "y": 246.56
+    },
+    {
+      "id": "FF-J-LIFT-WING",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Lift lobby",
+      "x": 543.84,
+      "y": 274.16
+    },
+    {
+      "id": "FF-J-A-STAIR-WING",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Stairs A",
+      "x": 237.6,
+      "y": 590.64
+    },
+    {
+      "id": "FF-J-C-STAIR-WING",
+      "type": "junction",
+      "floor_id": "FF",
+      "label": "Stairs C",
+      "x": 813.12,
+      "y": 270.48
+    },
+    {
+      "id": "SF-J-AB-CORE",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "A-B junction",
+      "x": 451.44,
+      "y": 286.05
+    },
+    {
+      "id": "SF-J-A-SPINE",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Block A spine",
+      "x": 300.96,
+      "y": 472.88
+    },
+    {
+      "id": "SF-J-B-SPINE",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Block B spine",
+      "x": 712.8,
+      "y": 235.52
+    },
+    {
+      "id": "SF-J-C-WEST",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Block C west",
+      "x": 757.68,
+      "y": 246.56
+    },
+    {
+      "id": "SF-J-LIFT-WING",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Lift lobby",
+      "x": 543.84,
+      "y": 274.16
+    },
+    {
+      "id": "SF-J-A-STAIR-WING",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Stairs A",
+      "x": 237.6,
+      "y": 590.64
+    },
+    {
+      "id": "SF-J-C-STAIR-WING",
+      "type": "junction",
+      "floor_id": "SF",
+      "label": "Stairs C",
+      "x": 813.12,
+      "y": 270.48
+    },
+    {
+      "id": "DOOR-GF-A-A_002",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-002",
+      "x": 480.47999999999996,
+      "y": 276.0,
+      "room_code": "A-002"
+    },
+    {
+      "id": "DOOR-GF-A-A_005",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-005",
+      "x": 480.47999999999996,
+      "y": 355.12,
+      "room_code": "A-005"
+    },
+    {
+      "id": "DOOR-GF-A-A_008",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-008",
+      "x": 480.47999999999996,
+      "y": 434.24,
+      "room_code": "A-008"
+    },
+    {
+      "id": "DOOR-GF-A-A_009",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-009",
+      "x": 480.47999999999996,
+      "y": 513.36,
+      "room_code": "A-009"
+    },
+    {
+      "id": "DOOR-GF-A-A_010",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-010",
+      "x": 480.47999999999996,
+      "y": 592.48,
+      "room_code": "A-010"
+    },
+    {
+      "id": "DOOR-GF-A-A_011",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-011",
+      "x": 480.47999999999996,
+      "y": 671.6,
+      "room_code": "A-011"
+    },
+    {
+      "id": "DOOR-GF-A-A_012",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-012",
+      "x": 480.47999999999996,
+      "y": 750.72,
+      "room_code": "A-012"
+    },
+    {
+      "id": "DOOR-GF-A-STR",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "A-STR",
+      "x": 147.84,
+      "y": 588.8,
+      "room_code": "A-STR"
+    },
+    {
+      "id": "DOOR-GF-B-002",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-002",
+      "x": 385.44,
+      "y": 193.2,
+      "room_code": "B-002"
+    },
+    {
+      "id": "DOOR-GF-B-003",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-003",
+      "x": 607.2,
+      "y": 193.2,
+      "room_code": "B-003"
+    },
+    {
+      "id": "DOOR-GF-B-004",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-004",
+      "x": 747.12,
+      "y": 154.56,
+      "room_code": "B-004"
+    },
+    {
+      "id": "DOOR-GF-B-005",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-005",
+      "x": 879.12,
+      "y": 151.8,
+      "room_code": "B-005"
+    },
+    {
+      "id": "DOOR-GF-B-006",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-006",
+      "x": 987.36,
+      "y": 152.72,
+      "room_code": "B-006"
+    },
+    {
+      "id": "DOOR-GF-B-008",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-008",
+      "x": 979.44,
+      "y": 230.0,
+      "room_code": "B-008"
+    },
+    {
+      "id": "DOOR-GF-B-009",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-009",
+      "x": 749.76,
+      "y": 226.32,
+      "room_code": "B-009"
+    },
+    {
+      "id": "DOOR-GF-B-010",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-010",
+      "x": 628.32,
+      "y": 303.6,
+      "room_code": "B-010"
+    },
+    {
+      "id": "DOOR-GF-B-011",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-011",
+      "x": 802.5600000000001,
+      "y": 303.6,
+      "room_code": "B-011"
+    },
+    {
+      "id": "DOOR-GF-B-012",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-012",
+      "x": 955.6800000000001,
+      "y": 303.6,
+      "room_code": "B-012"
+    },
+    {
+      "id": "DOOR-GF-B-015",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-015",
+      "x": 638.88,
+      "y": 386.4,
+      "room_code": "B-015"
+    },
+    {
+      "id": "DOOR-GF-B-LIFT",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "B-LIFT",
+      "x": 504.24,
+      "y": 285.2,
+      "room_code": "B-LIFT"
+    },
+    {
+      "id": "DOOR-GF-C-001",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-001",
+      "x": 852.7199999999999,
+      "y": 184.0,
+      "room_code": "C-001"
+    },
+    {
+      "id": "DOOR-GF-C-002",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-002",
+      "x": 1082.4,
+      "y": 184.0,
+      "room_code": "C-002"
+    },
+    {
+      "id": "DOOR-GF-C-003",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-003",
+      "x": 1222.32,
+      "y": 171.12,
+      "room_code": "C-003"
+    },
+    {
+      "id": "DOOR-GF-C-005",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-005",
+      "x": 1232.88,
+      "y": 307.28,
+      "room_code": "C-005"
+    },
+    {
+      "id": "DOOR-GF-C-006",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-006",
+      "x": 1108.8,
+      "y": 329.36,
+      "room_code": "C-006"
+    },
+    {
+      "id": "DOOR-GF-C-007",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-007",
+      "x": 839.52,
+      "y": 356.96,
+      "room_code": "C-007"
+    },
+    {
+      "id": "DOOR-GF-C-008",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-008",
+      "x": 884.4,
+      "y": 460.0,
+      "room_code": "C-008"
+    },
+    {
+      "id": "DOOR-GF-C-011",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-011",
+      "x": 1224.96,
+      "y": 460.0,
+      "room_code": "C-011"
+    },
+    {
+      "id": "DOOR-GF-C-STR",
+      "type": "room_door",
+      "floor_id": "GF",
+      "label": "C-STR",
+      "x": 773.52,
+      "y": 277.84,
+      "room_code": "C-STR"
+    },
+    {
+      "id": "DOOR-FF-A-108",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-108",
+      "x": 469.91999999999996,
+      "y": 285.2,
+      "room_code": "A-108"
+    },
+    {
+      "id": "DOOR-FF-A_109",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-109",
+      "x": 469.91999999999996,
+      "y": 347.76,
+      "room_code": "A-109"
+    },
+    {
+      "id": "DOOR-FF-A_110",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-110",
+      "x": 469.91999999999996,
+      "y": 414.0,
+      "room_code": "A-110"
+    },
+    {
+      "id": "DOOR-FF-A_111",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-111",
+      "x": 469.91999999999996,
+      "y": 480.24,
+      "room_code": "A-111"
+    },
+    {
+      "id": "DOOR-FF-A_112",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-112",
+      "x": 469.91999999999996,
+      "y": 546.48,
+      "room_code": "A-112"
+    },
+    {
+      "id": "DOOR-FF-A_113",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-113",
+      "x": 469.91999999999996,
+      "y": 612.72,
+      "room_code": "A-113"
+    },
+    {
+      "id": "DOOR-FF-A_114",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-114",
+      "x": 469.91999999999996,
+      "y": 678.96,
+      "room_code": "A-114"
+    },
+    {
+      "id": "DOOR-FF-A-115",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-115",
+      "x": 469.91999999999996,
+      "y": 713.92,
+      "room_code": "A-115"
+    },
+    {
+      "id": "DOOR-FF-A-HOD-MATH",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-HOD-MATH",
+      "x": 137.28,
+      "y": 704.72,
+      "room_code": "A-HOD-MATH"
+    },
+    {
+      "id": "DOOR-FF-A-STR",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "A-STR",
+      "x": 147.84,
+      "y": 577.76,
+      "room_code": "A-STR"
+    },
+    {
+      "id": "DOOR-FF-B-101",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-101",
+      "x": 488.40000000000003,
+      "y": 165.6,
+      "room_code": "B-101"
+    },
+    {
+      "id": "DOOR-FF-B-102",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-102",
+      "x": 712.8000000000001,
+      "y": 165.6,
+      "room_code": "B-102"
+    },
+    {
+      "id": "DOOR-FF-B-103",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-103",
+      "x": 858.0,
+      "y": 171.12,
+      "room_code": "B-103"
+    },
+    {
+      "id": "DOOR-FF-B-107",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-107",
+      "x": 414.48,
+      "y": 272.32,
+      "room_code": "B-107"
+    },
+    {
+      "id": "DOOR-FF-B-110",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-110",
+      "x": 683.76,
+      "y": 283.36,
+      "room_code": "B-110"
+    },
+    {
+      "id": "DOOR-FF-B-111",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-111",
+      "x": 894.96,
+      "y": 283.36,
+      "room_code": "B-111"
+    },
+    {
+      "id": "DOOR-FF-B-112",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-112",
+      "x": 591.36,
+      "y": 377.2,
+      "room_code": "B-112"
+    },
+    {
+      "id": "DOOR-FF-B-113",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-113",
+      "x": 807.84,
+      "y": 377.2,
+      "room_code": "B-113"
+    },
+    {
+      "id": "DOOR-FF-B-114",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-114",
+      "x": 385.44,
+      "y": 471.04,
+      "room_code": "B-114"
+    },
+    {
+      "id": "DOOR-FF-B-115",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-115",
+      "x": 654.72,
+      "y": 472.88,
+      "room_code": "B-115"
+    },
+    {
+      "id": "DOOR-FF-B-116",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-116",
+      "x": 844.8000000000001,
+      "y": 474.72,
+      "room_code": "B-116"
+    },
+    {
+      "id": "DOOR-FF-B-117",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-117",
+      "x": 514.8,
+      "y": 581.44,
+      "room_code": "B-117"
+    },
+    {
+      "id": "DOOR-FF-B-119",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-119",
+      "x": 868.5600000000001,
+      "y": 588.8,
+      "room_code": "B-119"
+    },
+    {
+      "id": "DOOR-FF-B-LIFT",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "B-LIFT",
+      "x": 509.52000000000004,
+      "y": 292.56,
+      "room_code": "B-LIFT"
+    },
+    {
+      "id": "DOOR-FF-C-101",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-101",
+      "x": 855.36,
+      "y": 193.2,
+      "room_code": "C-101"
+    },
+    {
+      "id": "DOOR-FF-C-102",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-102",
+      "x": 1061.28,
+      "y": 193.2,
+      "room_code": "C-102"
+    },
+    {
+      "id": "DOOR-FF-C-103",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-103",
+      "x": 1193.28,
+      "y": 193.2,
+      "room_code": "C-103"
+    },
+    {
+      "id": "DOOR-FF-C-104",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-104",
+      "x": 1338.48,
+      "y": 193.2,
+      "room_code": "C-104"
+    },
+    {
+      "id": "DOOR-FF-C-112",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-112",
+      "x": 1122.0,
+      "y": 322.0,
+      "room_code": "C-112"
+    },
+    {
+      "id": "DOOR-FF-C-STR",
+      "type": "room_door",
+      "floor_id": "FF",
+      "label": "C-STR",
+      "x": 784.08,
+      "y": 276.0,
+      "room_code": "C-STR"
+    },
+    {
+      "id": "DOOR-SF-A-207",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "A-207",
+      "x": 464.64,
+      "y": 301.76,
+      "room_code": "A-207"
+    },
+    {
+      "id": "DOOR-SF-A-209",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "A-209",
+      "x": 469.91999999999996,
+      "y": 410.32,
+      "room_code": "A-209"
+    },
+    {
+      "id": "DOOR-SF-A-217",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "A-217",
+      "x": 469.91999999999996,
+      "y": 548.32,
+      "room_code": "A-217"
+    },
+    {
+      "id": "DOOR-SF-A-218",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "A-218",
+      "x": 469.91999999999996,
+      "y": 675.28,
+      "room_code": "A-218"
+    },
+    {
+      "id": "DOOR-SF-A-STR",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "A-STR",
+      "x": 147.84,
+      "y": 581.44,
+      "room_code": "A-STR"
+    },
+    {
+      "id": "DOOR-SF-B-201",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-201",
+      "x": 488.40000000000003,
+      "y": 161.92,
+      "room_code": "B-201"
+    },
+    {
+      "id": "DOOR-SF-B-202",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-202",
+      "x": 744.48,
+      "y": 161.92,
+      "room_code": "B-202"
+    },
+    {
+      "id": "DOOR-SF-B-210",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-210",
+      "x": 937.2,
+      "y": 174.8,
+      "room_code": "B-210"
+    },
+    {
+      "id": "DOOR-SF-B-211",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-211",
+      "x": 652.08,
+      "y": 288.88,
+      "room_code": "B-211"
+    },
+    {
+      "id": "DOOR-SF-B-212",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-212",
+      "x": 871.2,
+      "y": 292.56,
+      "room_code": "B-212"
+    },
+    {
+      "id": "DOOR-SF-B-213",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-213",
+      "x": 382.8,
+      "y": 395.6,
+      "room_code": "B-213"
+    },
+    {
+      "id": "DOOR-SF-B-214",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-214",
+      "x": 678.48,
+      "y": 397.44,
+      "room_code": "B-214"
+    },
+    {
+      "id": "DOOR-SF-B-215",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-215",
+      "x": 868.5600000000001,
+      "y": 393.76,
+      "room_code": "B-215"
+    },
+    {
+      "id": "DOOR-SF-B-216",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-216",
+      "x": 366.96000000000004,
+      "y": 513.36,
+      "room_code": "B-216"
+    },
+    {
+      "id": "DOOR-SF-B-217",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-217",
+      "x": 681.12,
+      "y": 513.36,
+      "room_code": "B-217"
+    },
+    {
+      "id": "DOOR-SF-B-218",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-218",
+      "x": 900.24,
+      "y": 511.52,
+      "room_code": "B-218"
+    },
+    {
+      "id": "DOOR-SF-B-219",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-219",
+      "x": 617.76,
+      "y": 634.8,
+      "room_code": "B-219"
+    },
+    {
+      "id": "DOOR-SF-B-222",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-222",
+      "x": 876.48,
+      "y": 638.48,
+      "room_code": "B-222"
+    },
+    {
+      "id": "DOOR-SF-B-LIFT",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "B-LIFT",
+      "x": 509.52000000000004,
+      "y": 292.56,
+      "room_code": "B-LIFT"
+    },
+    {
+      "id": "DOOR-SF-C-201",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-201",
+      "x": 1156.32,
+      "y": 193.2,
+      "room_code": "C-201"
+    },
+    {
+      "id": "DOOR-SF-C-202",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-202",
+      "x": 1124.64,
+      "y": 314.64,
+      "room_code": "C-202"
+    },
+    {
+      "id": "DOOR-SF-C-203",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-203",
+      "x": 1116.72,
+      "y": 436.08,
+      "room_code": "C-203"
+    },
+    {
+      "id": "DOOR-SF-C-206",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-206",
+      "x": 818.4,
+      "y": 369.84,
+      "room_code": "C-206"
+    },
+    {
+      "id": "DOOR-SF-C-214",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-214",
+      "x": 810.48,
+      "y": 539.12,
+      "room_code": "C-214"
+    },
+    {
+      "id": "DOOR-SF-C-STR",
+      "type": "room_door",
+      "floor_id": "SF",
+      "label": "C-STR",
+      "x": 784.08,
+      "y": 276.0,
+      "room_code": "C-STR"
+    }
+  ],
+  "edges": [
+    {
+      "id": "n-GF-ab-a",
+      "from": "GF-J-AB-CORE",
+      "to": "GF-J-A-SPINE",
+      "type": "corridor",
+      "distance_m": 15.49,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-ab-b",
+      "from": "GF-J-AB-CORE",
+      "to": "GF-J-B-SPINE",
+      "type": "corridor",
+      "distance_m": 17.33,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-b-c",
+      "from": "GF-J-B-SPINE",
+      "to": "GF-J-C-WEST",
+      "type": "corridor",
+      "distance_m": 3.0,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-b-lift",
+      "from": "GF-J-B-SPINE",
+      "to": "GF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 11.27,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-ab-lift",
+      "from": "GF-J-AB-CORE",
+      "to": "GF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 8.5,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-sa",
+      "from": "GF-J-A-SPINE",
+      "to": "GF-J-A-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 8.69,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-GF-sc",
+      "from": "GF-J-C-WEST",
+      "to": "GF-J-C-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 3.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-ab-a",
+      "from": "FF-J-AB-CORE",
+      "to": "FF-J-A-SPINE",
+      "type": "corridor",
+      "distance_m": 15.69,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-ab-b",
+      "from": "FF-J-AB-CORE",
+      "to": "FF-J-B-SPINE",
+      "type": "corridor",
+      "distance_m": 17.28,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-b-c",
+      "from": "FF-J-B-SPINE",
+      "to": "FF-J-C-WEST",
+      "type": "corridor",
+      "distance_m": 3.0,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-b-lift",
+      "from": "FF-J-B-SPINE",
+      "to": "FF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 11.27,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-ab-lift",
+      "from": "FF-J-AB-CORE",
+      "to": "FF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 8.5,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-sa",
+      "from": "FF-J-A-SPINE",
+      "to": "FF-J-A-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 8.69,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-FF-sc",
+      "from": "FF-J-C-WEST",
+      "to": "FF-J-C-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 3.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-ab-a",
+      "from": "SF-J-AB-CORE",
+      "to": "SF-J-A-SPINE",
+      "type": "corridor",
+      "distance_m": 15.59,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-ab-b",
+      "from": "SF-J-AB-CORE",
+      "to": "SF-J-B-SPINE",
+      "type": "corridor",
+      "distance_m": 17.3,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-b-c",
+      "from": "SF-J-B-SPINE",
+      "to": "SF-J-C-WEST",
+      "type": "corridor",
+      "distance_m": 3.0,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-b-lift",
+      "from": "SF-J-B-SPINE",
+      "to": "SF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 11.27,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-ab-lift",
+      "from": "SF-J-AB-CORE",
+      "to": "SF-J-LIFT-WING",
+      "type": "corridor",
+      "distance_m": 8.5,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-sa",
+      "from": "SF-J-A-SPINE",
+      "to": "SF-J-A-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 8.69,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "n-SF-sc",
+      "from": "SF-J-C-WEST",
+      "to": "SF-J-C-STAIR-WING",
+      "type": "corridor",
+      "distance_m": 3.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "e-enter",
+      "from": "GF-NAV-KIOSK-MAIN",
+      "to": "GF-J-B-SPINE",
+      "type": "entrance_path",
+      "distance_m": 6.66,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_002",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_002",
+      "type": "door_access",
+      "distance_m": 28.32,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_005",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_005",
+      "type": "door_access",
+      "distance_m": 24.96,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_008",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_008",
+      "type": "door_access",
+      "distance_m": 22.94,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_009",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_009",
+      "type": "door_access",
+      "distance_m": 22.96,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_010",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_010",
+      "type": "door_access",
+      "distance_m": 25.02,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_011",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_011",
+      "type": "door_access",
+      "distance_m": 28.41,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-a_012",
+      "from": "GF-J-A-SPINE",
+      "to": "DOOR-GF-A-A_012",
+      "type": "door_access",
+      "distance_m": 32.5,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-a-str",
+      "from": "GF-J-A-STAIR-WING",
+      "to": "DOOR-GF-A-STR",
+      "type": "door_access",
+      "distance_m": 16.84,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-002",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-002",
+      "type": "door_access",
+      "distance_m": 32.46,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-003",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-003",
+      "type": "door_access",
+      "distance_m": 18.39,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-004",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-004",
+      "type": "door_access",
+      "distance_m": 16.72,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-005",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-005",
+      "type": "door_access",
+      "distance_m": 23.1,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-006",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-006",
+      "type": "door_access",
+      "distance_m": 29.64,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-008",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-008",
+      "type": "door_access",
+      "distance_m": 28.34,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-009",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-009",
+      "type": "door_access",
+      "distance_m": 13.48,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-010",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-010",
+      "type": "door_access",
+      "distance_m": 18.05,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-011",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-011",
+      "type": "door_access",
+      "distance_m": 18.32,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-012",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-012",
+      "type": "door_access",
+      "distance_m": 27.4,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-015",
+      "from": "GF-J-B-SPINE",
+      "to": "DOOR-GF-B-015",
+      "type": "door_access",
+      "distance_m": 21.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-b-lift",
+      "from": "GF-J-LIFT-WING",
+      "to": "DOOR-GF-B-LIFT",
+      "type": "door_access",
+      "distance_m": 13.67,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-001",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-001",
+      "type": "door_access",
+      "distance_m": 18.4,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-002",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-002",
+      "type": "door_access",
+      "distance_m": 32.49,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-003",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-003",
+      "type": "door_access",
+      "distance_m": 41.6,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-005",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-005",
+      "type": "door_access",
+      "distance_m": 42.14,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-006",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-006",
+      "type": "door_access",
+      "distance_m": 34.45,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-007",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-007",
+      "type": "door_access",
+      "distance_m": 19.93,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-008",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-008",
+      "type": "door_access",
+      "distance_m": 27.13,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-011",
+      "from": "GF-J-C-WEST",
+      "to": "DOOR-GF-C-011",
+      "type": "door_access",
+      "distance_m": 44.39,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-gf-c-str",
+      "from": "GF-J-C-STAIR-WING",
+      "to": "DOOR-GF-C-STR",
+      "type": "door_access",
+      "distance_m": 13.62,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a-108",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A-108",
+      "type": "door_access",
+      "distance_m": 27.41,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_109",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_109",
+      "type": "door_access",
+      "distance_m": 24.67,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_110",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_110",
+      "type": "door_access",
+      "distance_m": 22.63,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_111",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_111",
+      "type": "door_access",
+      "distance_m": 21.99,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_112",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_112",
+      "type": "door_access",
+      "distance_m": 22.98,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_113",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_113",
+      "type": "door_access",
+      "distance_m": 25.26,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a_114",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A_114",
+      "type": "door_access",
+      "distance_m": 28.32,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a-115",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A-115",
+      "type": "door_access",
+      "distance_m": 30.13,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a-hod-math",
+      "from": "FF-J-A-SPINE",
+      "to": "DOOR-FF-A-HOD-MATH",
+      "type": "door_access",
+      "distance_m": 29.45,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-a-str",
+      "from": "FF-J-A-STAIR-WING",
+      "to": "DOOR-FF-A-STR",
+      "type": "door_access",
+      "distance_m": 16.89,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-101",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-101",
+      "type": "door_access",
+      "distance_m": 26.28,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-102",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-102",
+      "type": "door_access",
+      "distance_m": 15.54,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-103",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-103",
+      "type": "door_access",
+      "distance_m": 21.32,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-107",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-107",
+      "type": "door_access",
+      "distance_m": 30.54,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-110",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-110",
+      "type": "door_access",
+      "distance_m": 14.64,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-111",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-111",
+      "type": "door_access",
+      "distance_m": 23.24,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-112",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-112",
+      "type": "door_access",
+      "distance_m": 23.13,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-113",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-113",
+      "type": "door_access",
+      "distance_m": 22.09,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-114",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-114",
+      "type": "door_access",
+      "distance_m": 37.21,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-115",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-115",
+      "type": "door_access",
+      "distance_m": 26.88,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-116",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-116",
+      "type": "door_access",
+      "distance_m": 28.76,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-117",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-117",
+      "type": "door_access",
+      "distance_m": 36.91,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-119",
+      "from": "FF-J-B-SPINE",
+      "to": "DOOR-FF-B-119",
+      "type": "door_access",
+      "distance_m": 36.1,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-b-lift",
+      "from": "FF-J-LIFT-WING",
+      "to": "DOOR-FF-B-LIFT",
+      "type": "door_access",
+      "distance_m": 13.53,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-101",
+      "from": "FF-J-C-WEST",
+      "to": "DOOR-FF-C-101",
+      "type": "door_access",
+      "distance_m": 18.23,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-102",
+      "from": "FF-J-C-WEST",
+      "to": "DOOR-FF-C-102",
+      "type": "door_access",
+      "distance_m": 31.04,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-103",
+      "from": "FF-J-C-WEST",
+      "to": "DOOR-FF-C-103",
+      "type": "door_access",
+      "distance_m": 39.53,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-104",
+      "from": "FF-J-C-WEST",
+      "to": "DOOR-FF-C-104",
+      "type": "door_access",
+      "distance_m": 48.91,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-112",
+      "from": "FF-J-C-WEST",
+      "to": "DOOR-FF-C-112",
+      "type": "door_access",
+      "distance_m": 35.18,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-ff-c-str",
+      "from": "FF-J-C-STAIR-WING",
+      "to": "DOOR-FF-C-STR",
+      "type": "door_access",
+      "distance_m": 12.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-a-207",
+      "from": "SF-J-A-SPINE",
+      "to": "DOOR-SF-A-207",
+      "type": "door_access",
+      "distance_m": 26.39,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-a-209",
+      "from": "SF-J-A-SPINE",
+      "to": "DOOR-SF-A-209",
+      "type": "door_access",
+      "distance_m": 22.71,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-a-217",
+      "from": "SF-J-A-SPINE",
+      "to": "DOOR-SF-A-217",
+      "type": "door_access",
+      "distance_m": 23.03,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-a-218",
+      "from": "SF-J-A-SPINE",
+      "to": "DOOR-SF-A-218",
+      "type": "door_access",
+      "distance_m": 28.14,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-a-str",
+      "from": "SF-J-A-STAIR-WING",
+      "to": "DOOR-SF-A-STR",
+      "type": "door_access",
+      "distance_m": 16.86,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-201",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-201",
+      "type": "door_access",
+      "distance_m": 26.35,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-202",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-202",
+      "type": "door_access",
+      "distance_m": 16.21,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-210",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-210",
+      "type": "door_access",
+      "distance_m": 26.11,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-211",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-211",
+      "type": "door_access",
+      "distance_m": 16.25,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-212",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-212",
+      "type": "door_access",
+      "distance_m": 21.94,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-213",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-213",
+      "type": "door_access",
+      "distance_m": 34.84,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-214",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-214",
+      "type": "door_access",
+      "distance_m": 21.76,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-215",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-215",
+      "type": "door_access",
+      "distance_m": 25.43,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-216",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-216",
+      "type": "door_access",
+      "distance_m": 39.84,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-217",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-217",
+      "type": "door_access",
+      "distance_m": 29.18,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-218",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-218",
+      "type": "door_access",
+      "distance_m": 32.69,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-219",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-219",
+      "type": "door_access",
+      "distance_m": 37.68,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-222",
+      "from": "SF-J-B-SPINE",
+      "to": "DOOR-SF-B-222",
+      "type": "door_access",
+      "distance_m": 39.27,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-b-lift",
+      "from": "SF-J-LIFT-WING",
+      "to": "DOOR-SF-B-LIFT",
+      "type": "door_access",
+      "distance_m": 13.53,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-201",
+      "from": "SF-J-C-WEST",
+      "to": "DOOR-SF-C-201",
+      "type": "door_access",
+      "distance_m": 37.14,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-202",
+      "from": "SF-J-C-WEST",
+      "to": "DOOR-SF-C-202",
+      "type": "door_access",
+      "distance_m": 35.26,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-203",
+      "from": "SF-J-C-WEST",
+      "to": "DOOR-SF-C-203",
+      "type": "door_access",
+      "distance_m": 37.39,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-206",
+      "from": "SF-J-C-WEST",
+      "to": "DOOR-SF-C-206",
+      "type": "door_access",
+      "distance_m": 19.93,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-214",
+      "from": "SF-J-C-WEST",
+      "to": "DOOR-SF-C-214",
+      "type": "door_access",
+      "distance_m": 30.32,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "eda-sf-c-str",
+      "from": "SF-J-C-STAIR-WING",
+      "to": "DOOR-SF-C-STR",
+      "type": "door_access",
+      "distance_m": 12.92,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "vlift-GF-FF",
+      "from": "GF-J-LIFT-WING",
+      "to": "FF-J-LIFT-WING",
+      "type": "lift",
+      "distance_m": 15.0,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "vlift-FF-SF",
+      "from": "FF-J-LIFT-WING",
+      "to": "SF-J-LIFT-WING",
+      "type": "lift",
+      "distance_m": 15.0,
+      "bidirectional": true,
+      "accessible": true
+    },
+    {
+      "id": "vs-J-A-STAIR-WING-gf-ff",
+      "from": "GF-J-A-STAIR-WING",
+      "to": "FF-J-A-STAIR-WING",
+      "type": "stairs",
+      "distance_m": 17.0,
+      "bidirectional": true,
+      "accessible": false
+    },
+    {
+      "id": "vs-J-A-STAIR-WING-ff-sf",
+      "from": "FF-J-A-STAIR-WING",
+      "to": "SF-J-A-STAIR-WING",
+      "type": "stairs",
+      "distance_m": 17.0,
+      "bidirectional": true,
+      "accessible": false
+    },
+    {
+      "id": "vs-J-C-STAIR-WING-gf-ff",
+      "from": "GF-J-C-STAIR-WING",
+      "to": "FF-J-C-STAIR-WING",
+      "type": "stairs",
+      "distance_m": 17.0,
+      "bidirectional": true,
+      "accessible": false
+    },
+    {
+      "id": "vs-J-C-STAIR-WING-ff-sf",
+      "from": "FF-J-C-STAIR-WING",
+      "to": "SF-J-C-STAIR-WING",
+      "type": "stairs",
+      "distance_m": 17.0,
+      "bidirectional": true,
+      "accessible": false
+    }
+  ]
 }

@@ -10,7 +10,7 @@ export function useCampusMapData(): { data: CampusMapData | null; error: string 
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/data/svit-campus-map.json', { cache: 'force-cache' });
+        const res = await fetch('/data/svit-campus-map.json', { cache: 'no-cache' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as CampusMapData;
         if (!cancelled) {

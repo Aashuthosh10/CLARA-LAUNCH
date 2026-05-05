@@ -36,4 +36,6 @@ def build_error_payload(
         "recoverable": recoverable,
         "hint": error_hint(code),
         "isProcessing": False,
+        # Clear any in-flight low-latency audio gate so the kiosk never sticks on "thinking".
+        "audioPending": False,
     }

@@ -74,10 +74,10 @@ export default function CardStackComponent({
     }
 
     hasAdvancedSinceSendRef.current = false;
-    sendMessage({ action: 'diary_tts', text });
+    // Backend has no diary_tts handler; advance locally on fallback or incoming audio.
     fallbackTimerRef.current = setTimeout(advance, READ_ALOUD_FALLBACK_MS);
     return clearFallback;
-  }, [idx, cards, skipFirstAudio, sendMessage]);
+  }, [idx, cards, skipFirstAudio]);
 
   // Play incoming audio only if it matches the current card; advance on end.
   useEffect(() => {

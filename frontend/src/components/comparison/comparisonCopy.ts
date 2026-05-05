@@ -17,7 +17,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'Remove',
     compareHeading: 'Program comparison',
     pickDept: 'Select program',
-    swipeHint: 'Insight cards scroll if needed.',
+    swipeHint: 'Insights advance automatically — one beat per program, in sync.',
     highlighted: 'Recommended focus',
   },
   Kannada: {
@@ -26,7 +26,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'ತೆಗೆ',
     compareHeading: 'ಕಾರ್ಯಕ್ರಮ ಹೋಲಿಕೆ',
     pickDept: 'ಕಾರ್ಯಕ್ರಮ ಆರಿಸಿ',
-    swipeHint: 'ಅಗತ್ಯವಿದ್ದಲ್ಲಿ ಇನ್‍ಸೈಟ್ ಕಾರ್ಡ್‍ಗಳನ್ನು ಸ್ಕ್ರೋಲ್ ಮಾಡಿ.',
+    swipeHint: 'ಒಳನೋಟಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮುಂದುವರಿಯುತ್ತವೆ — ಪ್ರತಿ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಒಂದೇ ತಾಳ.',
     highlighted: 'ಶಿಫಾರಸು',
   },
   Hindi: {
@@ -35,7 +35,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'हटाएँ',
     compareHeading: 'कार्यक्रम तुलना',
     pickDept: 'कार्यक्रम चुनें',
-    swipeHint: 'ज़रूरत हो तो कार्ड्स स्क्रॉल करें।',
+    swipeHint: 'इनसाइट्स अपने आप आगे बढ़ती हैं — सभी कार्यक्रम एक साथ।',
     highlighted: 'सिफारिश',
   },
   Tamil: {
@@ -44,7 +44,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'அகற்று',
     compareHeading: 'திட்ட ஒப்பீடு',
     pickDept: 'திட்டத்தைத் தேர்வு செய்',
-    swipeHint: 'தேவைப்பட்டால் அட்டைகளை உருளவும்.',
+    swipeHint: 'உள்ளடக்கங்கள் தானாக முன்னேறும் — அனைத்து திட்டங்களும் ஒரே நேரத்தில்.',
     highlighted: 'பரிந்துரை',
   },
   Telugu: {
@@ -53,7 +53,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'తొలగించు',
     compareHeading: 'ప్రొగ్రాం పోలిక',
     pickDept: 'ప్రొగ్రాం ఎంచుకోండి',
-    swipeHint: 'అవసరమైతే కార్డులను స్క్రోల్ చేయండి.',
+    swipeHint: 'ఇన్‌సైట్‌లు స్వయంచాలకంగా మారతాయి — అన్ని ప్రొగ్రామ్‌లు ఒకే లయలో.',
     highlighted: 'సిఫార్సు',
   },
   Malayalam: {
@@ -62,7 +62,7 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     removeDept: 'നീക്കം ചെയ്യുക',
     compareHeading: 'പ്രോഗ്രാം താരതമ്യം',
     pickDept: 'പ്രോഗ്രാം തിരഞ്ഞെടുക്കുക',
-    swipeHint: 'ആവശ്യമുണ്ടെങ്കിൽ കാർഡുകൾ സ്ക്രോൾ ചെയ്യുക.',
+    swipeHint: 'ഇൻസൈറ്റുകൾ സ്വയം മുന്നോട്ട് — എല്ലാ പ്രോഗ്രാമുകളും ഒരേ താളത്തിൽ.',
     highlighted: 'നിർദ്ദേശം',
   },
 };

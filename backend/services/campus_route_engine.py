@@ -47,23 +47,36 @@ def _public_edge(e: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _find_room_by_code(data: dict[str, Any], room_code: str) -> dict[str, Any] | None:
+def _find_room_by_code(
+    data: dict[str, Any], room_code: str, floor_id: str | None = None
+) -> dict[str, Any] | None:
     want = room_code.strip().upper()
+    found: list[dict[str, Any]] = []
     for floor in data.get("floors") or []:
         for block in floor.get("blocks") or []:
             for room in block.get("rooms") or []:
                 if not isinstance(room, dict):
                     continue
-                if str(room.get("code") or "").strip().upper() == want:
-                    out = dict(room)
-                    out["_floor_id"] = str(floor.get("floor_id") or "")
-                    out["_floor_name"] = str(floor.get("floor_name") or "")
-                    out["_block_code"] = str(block.get("block_code") or "")
-                    return out
-    return None
+                if str(room.get("code") or "").strip().upper() != want:
+                    continue
+                out = dict(room)
+                out["_floor_id"] = str(floor.get("floor_id") or "")
+                out["_floor_name"] = str(floor.get("floor_name") or "")
+                out["_block_code"] = str(block.get("block_code") or "")
+                found.append(out)
+    if not found:
+        return None
+    fid = str(floor_id or "").strip().upper()
+    if fid in {"GF", "FF", "SF"}:
+        for r in found:
+            if str(r.get("_floor_id")) == fid:
+                return r
+    return found[0]
 
 
-def _find_room_door_nodes(data: dict[str, Any], room_code: str) -> list[dict[str, Any]]:
+def _find_room_door_nodes(
+    data: dict[str, Any], room_code: str, floor_id: str | None = None
+) -> list[dict[str, Any]]:
     want = room_code.strip().upper()
     out: list[dict[str, Any]] = []
     for n in data.get("nodes") or []:
@@ -71,9 +84,190 @@ def _find_room_door_nodes(data: dict[str, Any], room_code: str) -> list[dict[str
             continue
         if str(n.get("type")) != "room_door":
             continue
-        if str(n.get("room_code") or "").strip().upper() == want:
-            out.append(n)
+        if str(n.get("room_code") or "").strip().upper() != want:
+            continue
+        out.append(n)
+    fid = str(floor_id or "").strip().upper()
+    if fid in {"GF", "FF", "SF"}:
+        hit = [n for n in out if str(n.get("floor_id") or "").upper() == fid]
+        return hit if hit else out
     return out
+
+
+def _synthesize_room_door_target(
+    *,
+    data: dict[str, Any],
+    room_code: str,
+    floor_id: str | None,
+    nodes_by_id: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]] | None:
+    """
+    Build a temporary destination door node for rooms missing explicit room_door graph nodes.
+    Returns (synthetic_goal_node, synthetic_edge, anchor_node).
+    """
+    room = _find_room_by_code(data, room_code, floor_id)
+    if not room:
+        return None
+    door = room.get("door")
+    if not isinstance(door, dict):
+        return None
+    x = door.get("x")
+    y = door.get("y")
+    if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+        return None
+
+    fid = str(room.get("_floor_id") or "").upper()
+    if fid not in {"GF", "FF", "SF"}:
+        return None
+
+    block_code = str(room.get("_block_code") or room.get("block_code") or "").strip().upper()
+    candidates: list[dict[str, Any]] = []
+    for n in nodes_by_id.values():
+        if str(n.get("floor_id") or "").upper() != fid:
+            continue
+        if str(n.get("type") or "") != "junction":
+            continue
+        nx = n.get("x")
+        ny = n.get("y")
+        if not isinstance(nx, (int, float)) or not isinstance(ny, (int, float)):
+            continue
+        candidates.append(n)
+    if not candidates:
+        return None
+
+    # Prefer same-block junction ids (e.g. "...-C-...") to keep paths in correct wing.
+    preferred = candidates
+    if block_code in {"A", "B", "C"}:
+        scoped = [n for n in candidates if f"-{block_code}-" in str(n.get("id") or "").upper()]
+        if scoped:
+            preferred = scoped
+
+    anchor = min(
+        preferred,
+        key=lambda n: math.hypot(float(n.get("x") or 0.0) - float(x), float(n.get("y") or 0.0) - float(y)),
+    )
+    anchor_id = str(anchor.get("id") or "")
+    if not anchor_id:
+        return None
+
+    goal_id = f"TMP-DOOR-{fid}-{room_code.strip().upper().replace(' ', '').replace('_', '-')}"
+    synthetic_goal = {
+        "id": goal_id,
+        "type": "room_door",
+        "floor_id": fid,
+        "label": str(room.get("code") or room_code).strip().upper(),
+        "x": float(x),
+        "y": float(y),
+        "room_code": str(room.get("code") or room_code).strip().upper(),
+        "block_code": block_code,
+        "accessible": True,
+    }
+    # Convert map-pixel-ish distance to coarse meters for weighting.
+    px = math.hypot(float(anchor.get("x") or 0.0) - float(x), float(anchor.get("y") or 0.0) - float(y))
+    synthetic_edge = {
+        "id": f"TMP-EDGE-{anchor_id}-TO-{goal_id}",
+        "from": anchor_id,
+        "to": goal_id,
+        "type": "door_access",
+        "distance_m": max(1.0, round(px * 0.05, 2)),
+        "bidirectional": True,
+        "accessible": True,
+        "active": True,
+    }
+    return synthetic_goal, synthetic_edge, anchor
+
+
+_FLOOR_LABEL_EN = {"GF": "Ground floor", "FF": "First floor", "SF": "Second floor"}
+
+
+def _node_floor(nodes_by_id: dict[str, dict[str, Any]], nid: str) -> str:
+    return str(nodes_by_id.get(nid, {}).get("floor_id") or "")
+
+
+def _floor_runs(path: list[str], nodes_by_id: dict[str, dict[str, Any]]) -> list[tuple[str, list[str]]]:
+    if not path:
+        return []
+    runs: list[tuple[str, list[str]]] = []
+    i0 = 0
+    cur_f = _node_floor(nodes_by_id, path[0])
+    for i in range(1, len(path)):
+        f = _node_floor(nodes_by_id, path[i])
+        if f != cur_f:
+            runs.append((cur_f, path[i0:i]))
+            i0 = i
+            cur_f = f
+    runs.append((cur_f, path[i0:]))
+    return runs
+
+
+def _tagged_steps(
+    path: list[str],
+    path_edges: list[dict[str, Any]],
+    nodes_by_id: dict[str, dict[str, Any]],
+    room: dict[str, Any] | None,
+) -> list[tuple[str, str]]:
+    msgs: list[tuple[str, str]] = []
+    if not path:
+        return msgs
+    start = nodes_by_id.get(path[0]) or {}
+    msgs.append((_node_floor(nodes_by_id, path[0]), f"Start at {str(start.get('label') or 'Kiosk')}."))
+
+    for i, e in enumerate(path_edges):
+        et = str(e.get("type") or "corridor")
+        u, v = str(e.get("from")), str(e.get("to"))
+        if i + 1 < len(path) and path[i] == u and path[i + 1] == v:
+            pass
+        elif i + 1 < len(path) and path[i] == v and path[i + 1] == u:
+            u, v = v, u
+        uf = _node_floor(nodes_by_id, u)
+        vf = _node_floor(nodes_by_id, v)
+        n_to = nodes_by_id.get(path[i + 1]) if i + 1 < len(path) else {}
+        seg_label = str(n_to.get("label") or "the next point")
+
+        if et == "lift":
+            dest = _FLOOR_LABEL_EN.get(vf, vf or "your floor")
+            msgs.append((uf, f"Take the lift to {dest}."))
+            msgs.append((vf, f"Exit the lift on {dest}; continue toward {seg_label}."))
+        elif et == "stairs":
+            dest = _FLOOR_LABEL_EN.get(vf, vf or "your floor")
+            msgs.append((uf, f"Use the stairs to {dest}."))
+            msgs.append((vf, f"On {dest}, continue toward {seg_label}."))
+        elif et == "door_access":
+            msgs.append((uf, f"Use the doorway access toward {seg_label}."))
+        elif et == "corridor":
+            msgs.append((uf, f"Continue along the corridor toward {seg_label}."))
+        elif et == "entrance_path":
+            msgs.append((uf, f"From the entrance, move toward {seg_label}."))
+        else:
+            msgs.append((uf, f"Proceed toward {seg_label}."))
+
+    if room:
+        name = str(room.get("name") or room.get("code") or "destination")
+        code = str(room.get("code") or "")
+        lf = str(room.get("_floor_id") or "") or _node_floor(nodes_by_id, path[-1])
+        msgs.append((lf, f"You have arrived at {name} ({code})."))
+    else:
+        msgs.append((_node_floor(nodes_by_id, path[-1]), "You have arrived at the destination."))
+    return msgs
+
+
+def _build_floor_segments_for_path(
+    path: list[str],
+    path_edges: list[dict[str, Any]],
+    nodes_by_id: dict[str, dict[str, Any]],
+    room: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    tagged = _tagged_steps(path, path_edges, nodes_by_id, room)
+    flat = [msg for (_, msg) in tagged]
+    runs = _floor_runs(path, nodes_by_id)
+    segments: list[dict[str, Any]] = []
+    for fid, node_ids in runs:
+        poly = _densify_polyline(_polyline_from_nodes(nodes_by_id, node_ids))
+        steps_here = [m for (sf, m) in tagged if sf == fid]
+        if not steps_here:
+            steps_here = [flat[0]] if flat else []
+        segments.append({"floor_id": fid, "polyline": poly, "steps": steps_here})
+    return segments, flat
 
 
 def _resolve_origin_node_id(data: dict[str, Any], origin_node_id: str | None) -> str | None:
@@ -217,60 +411,32 @@ def _polyline_from_nodes(nodes_by_id: dict[str, dict[str, Any]], path: list[str]
     return line
 
 
-def _steps_for_path(
-    path: list[str],
-    path_edges: list[dict[str, Any]],
-    nodes_by_id: dict[str, dict[str, Any]],
-    room: dict[str, Any] | None,
-    language: str,
-) -> list[str]:
-    """Deterministic English (en) strings; other languages fall back to en for MVP."""
-    lang = (language or "en").lower().split("-", 1)[0]
-    _ = lang  # future: branch per locale
-
-    steps: list[str] = []
-    if not path:
-        return steps
-
-    start = nodes_by_id.get(path[0]) or {}
-    start_label = str(start.get("label") or "Kiosk")
-    steps.append(f"Start at {start_label}.")
-
-    for i, e in enumerate(path_edges):
-        et = str(e.get("type") or "corridor")
-        u = str(e.get("from"))
-        v = str(e.get("to"))
-        # orient edge along path direction
-        if i + 1 < len(path) and path[i] == u and path[i + 1] == v:
-            pass
-        elif i + 1 < len(path) and path[i] == v and path[i + 1] == u:
-            u, v = v, u
-        n_to = nodes_by_id.get(path[i + 1]) if i + 1 < len(path) else {}
-        seg_label = str(n_to.get("label") or "the next point")
-
-        if et == "door_access":
-            steps.append(f"Use the doorway access toward {seg_label}.")
-        elif et == "corridor":
-            steps.append(f"Continue along the corridor toward {seg_label}.")
-        elif et in ("lift", "stairs"):
-            steps.append(f"Use the {et} connection toward {seg_label}.")
-        else:
-            steps.append(f"Proceed toward {seg_label}.")
-
-    if room:
-        name = str(room.get("name") or room.get("code") or "destination")
-        code = str(room.get("code") or "")
-        steps.append(f"You have arrived at {name} ({code}).")
-    else:
-        steps.append("You have arrived at the destination.")
-
-    return steps
+def _densify_polyline(points: list[list[float]], *, max_step: float = 56.0) -> list[list[float]]:
+    """Insert points along straight segments for smoother on-map polylines (map x/y units, ~px)."""
+    if len(points) < 2:
+        return list(points)
+    out: list[list[float]] = [points[0]]
+    for i in range(len(points) - 1):
+        x0, y0 = float(points[i][0]), float(points[i][1])
+        x1, y1 = float(points[i + 1][0]), float(points[i + 1][1])
+        dx, dy = x1 - x0, y1 - y0
+        span = math.hypot(dx, dy)
+        if span < max_step * 2:
+            out.append([x1, y1])
+            continue
+        n_chunks = max(1, int(math.ceil(span / max_step)))
+        for s in range(1, n_chunks):
+            t = s / n_chunks
+            out.append([x0 + dx * t, y0 + dy * t])
+        out.append([x1, y1])
+    return out
 
 
 def compute_campus_route(
     *,
     origin_node_id: str | None,
     destination_room_code: str,
+    destination_floor_id: str | None = None,
     mode: str = "shortest",
     language: str = "en",
 ) -> dict[str, Any]:
@@ -279,6 +445,9 @@ def compute_campus_route(
     On failure, status is 'no_route' or 'error' with warnings / reason.
     """
     warnings: list[str] = []
+    dest_floor_hint = str(destination_floor_id or "").strip().upper()
+    if dest_floor_hint not in {"GF", "FF", "SF"}:
+        dest_floor_hint = None
     mode_l = str(mode or "shortest").strip().lower()
     if mode_l not in ROUTE_MODES:
         mode_l = "shortest"
@@ -347,31 +516,50 @@ def compute_campus_route(
             + [f"Unknown or missing origin node: {origin_node_id!r} (resolved={origin_resolved!r})."],
         }
 
-    dest_nodes = _find_room_door_nodes(data, destination_room_code)
+    dest_nodes = _find_room_door_nodes(data, destination_room_code, dest_floor_hint)
+    synthetic_goal: dict[str, Any] | None = None
+    synthetic_edge: dict[str, Any] | None = None
     if not dest_nodes:
-        return {
-            "status": "no_route",
-            "route_id": str(uuid.uuid4()),
-            "mode": mode_l,
-            "origin": _public_node(nodes_by_id[origin_resolved]),
-            "destination": {"room_code": destination_room_code.strip().upper()},
-            "distance_m": 0.0,
-            "eta_s": 0,
-            "floors_involved": [],
-            "path_nodes": [],
-            "path_edges": [],
-            "floor_segments": [],
-            "warnings": warnings
-            + [f"No room_door graph node for room code {destination_room_code.strip().upper()!r}."],
-        }
+        synth = _synthesize_room_door_target(
+            data=data,
+            room_code=destination_room_code,
+            floor_id=dest_floor_hint,
+            nodes_by_id=nodes_by_id,
+        )
+        if synth:
+            synthetic_goal, synthetic_edge, _ = synth
+            nodes_by_id[str(synthetic_goal["id"])] = synthetic_goal
+            dest_nodes = [synthetic_goal]
+            warnings.append(
+                f"Room {destination_room_code.strip().upper()} has no explicit graph door node; using synthesized door target."
+            )
+        else:
+            return {
+                "status": "no_route",
+                "route_id": str(uuid.uuid4()),
+                "mode": mode_l,
+                "origin": _public_node(nodes_by_id[origin_resolved]),
+                "destination": {"room_code": destination_room_code.strip().upper()},
+                "distance_m": 0.0,
+                "eta_s": 0,
+                "floors_involved": [],
+                "path_nodes": [],
+                "path_edges": [],
+                "floor_segments": [],
+                "warnings": warnings
+                + [f"No room_door graph node for room code {destination_room_code.strip().upper()!r}."],
+            }
     if len(dest_nodes) > 1:
         warnings.append(
-            f"Multiple room_door nodes for {destination_room_code.strip().upper()}; using first match."
+            f"Multiple room_door nodes for {destination_room_code.strip().upper()}"
+            + ("; narrowed by destination_floor_id." if dest_floor_hint else "; using first match.")
         )
     goal_node = dest_nodes[0]
     goal_id = str(goal_node.get("id"))
 
     filtered_edges = _filter_edges_for_mode([e for e in edges_raw if isinstance(e, dict)], mode_l, warnings)
+    if synthetic_edge:
+        filtered_edges = [*filtered_edges, synthetic_edge]
     node_ids = set(nodes_by_id.keys())
     adj = _build_adjacency(node_ids, filtered_edges)
     result = _dijkstra(adj, origin_resolved, goal_id)
@@ -399,7 +587,7 @@ def compute_campus_route(
         if e:
             path_edges.append(_public_edge(e))
 
-    room = _find_room_by_code(data, destination_room_code)
+    room = _find_room_by_code(data, destination_room_code.strip(), dest_floor_hint)
     floors_involved: list[str] = []
     for nid in path:
         n = nodes_by_id.get(nid)
@@ -408,9 +596,7 @@ def compute_campus_route(
             if fid and fid not in floors_involved:
                 floors_involved.append(fid)
 
-    floor_id = floors_involved[0] if floors_involved else str(goal_node.get("floor_id") or "GF")
-    poly = _polyline_from_nodes(nodes_by_id, path)
-    steps = _steps_for_path(path, path_edges, nodes_by_id, room, language)
+    floor_segments, _ = _build_floor_segments_for_path(path, path_edges, nodes_by_id, room)
 
     eta_s = int(max(1, round(distance_m / WALK_SPEED_M_S)))
 
@@ -431,12 +617,6 @@ def compute_campus_route(
         "floors_involved": floors_involved,
         "path_nodes": [_public_node(nodes_by_id[nid]) for nid in path],
         "path_edges": path_edges,
-        "floor_segments": [
-            {
-                "floor_id": floor_id,
-                "polyline": poly,
-                "steps": steps,
-            }
-        ],
+        "floor_segments": floor_segments,
         "warnings": warnings,
     }

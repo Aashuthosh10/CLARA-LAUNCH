@@ -55,9 +55,9 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
                 return fake_remaining_audio, False
             return self._silent_wav_base64(duration_s=0.5), False
 
-        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
-            main, "ENABLE_FIRST_SENTENCE_TTS", True
-        ), patch.object(
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", False), patch.object(
+            main, "FORCE_FINAL_TTS_ONLY", False
+        ), patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
@@ -112,9 +112,9 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
             return fake_audio, False
 
-        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
-            main, "ENABLE_FIRST_SENTENCE_TTS", True
-        ), patch.object(
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", False), patch.object(
+            main, "FORCE_FINAL_TTS_ONLY", False
+        ), patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True
@@ -164,9 +164,9 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             tts_calls.append({"text": text, "language_code": language_code, **kwargs})
             return self._silent_wav_base64(duration_s=0.8), False
 
-        with patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
-            main, "ENABLE_FIRST_SENTENCE_TTS", True
-        ), patch.object(
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", False), patch.object(
+            main, "FORCE_FINAL_TTS_ONLY", False
+        ), patch.object(main, "ENABLE_FIRST_SENTENCE_TTS", True), patch.object(
             main, "ENABLE_TTS_PIPELINING", False
         ), patch.object(
             main, "ENABLE_ONCE_ONLY_TTS_SEGMENTS", True

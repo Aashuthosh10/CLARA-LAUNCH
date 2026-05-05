@@ -1,0 +1,15 @@
+Campus map maintenance (svit-campus-map.json + public/maps/*.svg)
+
+Authoritative pipeline
+- Run from CLARA-LAUNCH:  python backend/tools/gen_svit_campus_map.py
+- That writes backend/data/svit-campus-map.json and frontend/public/data/svit-campus-map.json (mirrored) and the three SVGs under frontend/public/maps/.
+- Then:  python -m backend.tools.validate_campus_map  (on Windows use PYTHONIOENCODING=utf-8 if the console mangles symbols)
+
+Coordinate contract
+- CANVAS_W x CANVAS_H are defined at the top of backend/tools/gen_svit_campus_map.py (currently 1320 x 920). Each floor object includes map_width/map_height with the same values so the React overlay viewBox matches the SVG before/after image load.
+- Room polygons, door points, kiosk, and graph node x,y must all live in that single user space per floor.
+
+CAD / Inkscape handoff
+- When official drawings are available: export each floor SVG with the same viewBox as the JSON map_width/map_height (or change those constants and re-run the generator after updating logical positions).
+- Preserve stable room code strings and navigation node IDs where possible so validation and QA scripts keep working.
+- Replace schematic rectangles by editing JSON polygons or by extending the generator to read paths from Inkscape-named groups.

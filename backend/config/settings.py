@@ -162,13 +162,15 @@ REQUIRE_WS_AUTH_IN_PRODUCTION = os.getenv(
 
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
+# Longer spoken comparison: full walkthrough of every section × every program on the card.
+LLM_MAX_TOKENS_DEPARTMENT_COMPARISON = int(os.getenv("LLM_MAX_TOKENS_DEPARTMENT_COMPARISON", "900"))
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS", "80"))
 LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "8.0"))
 ENABLE_LLM_STREAMING = os.getenv("ENABLE_LLM_STREAMING", "true").strip().lower() in ("1", "true", "yes", "on")
 PERF_DEBUG_TIMINGS = os.getenv("PERF_DEBUG_TIMINGS", "true").strip().lower() in ("1", "true", "yes", "on")
 RAG_CONTEXT_TIMEOUT_S = float(os.getenv("RAG_CONTEXT_TIMEOUT_S", "0.8"))
-TTS_TIMEOUT_S = float(os.getenv("TTS_TIMEOUT_S", "4.0"))
+TTS_TIMEOUT_S = float(os.getenv("TTS_TIMEOUT_S", "10.0"))
 STT_TIMEOUT_S = float(os.getenv("STT_TIMEOUT_S", "8.0"))
 ENABLE_FIRST_SENTENCE_TTS = os.getenv("ENABLE_FIRST_SENTENCE_TTS", "true").strip().lower() in (
     "1",
@@ -184,11 +186,31 @@ ENABLE_ONCE_ONLY_TTS_SEGMENTS = os.getenv("ENABLE_ONCE_ONLY_TTS_SEGMENTS", "true
     "yes",
     "on",
 )
+# Narration segmented TTS aligned with kiosk cards / teleprompter (per-segment `segment_audio` frames).
+ENABLE_NARRATION_PLAN = os.getenv("ENABLE_NARRATION_PLAN", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+try:
+    NARRATION_SEGMENT_TTS_BUDGET_S = float(os.getenv("NARRATION_SEGMENT_TTS_BUDGET_S", "12.0"))
+except ValueError:
+    NARRATION_SEGMENT_TTS_BUDGET_S = 12.0
+NARRATION_SEGMENT_TTS_BUDGET_S = max(3.0, min(120.0, NARRATION_SEGMENT_TTS_BUDGET_S))
+
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
 LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")
 FIRST_SENTENCE_TTS_MAX_CHARS = int(os.getenv("FIRST_SENTENCE_TTS_MAX_CHARS", "160"))
 AUDIO_UPDATE_TIMEOUT_S = float(os.getenv("AUDIO_UPDATE_TIMEOUT_S", "3.0"))
+# Chunked low-latency TTS: per-chapter budgets (full reply is never generated in one blocking call).
+TTS_CHUNK_MAX_CHARS = int(os.getenv("TTS_CHUNK_MAX_CHARS", "220"))
+TTS_CHUNK_MAX_CHARS_NARRATOR = int(os.getenv("TTS_CHUNK_MAX_CHARS_NARRATOR", "260"))
+TTS_CHUNK_MAX_CHARS_COMPARISON = int(os.getenv("TTS_CHUNK_MAX_CHARS_COMPARISON", "340"))
+TTS_CHUNK_FIRST_TIMEOUT_S = float(os.getenv("TTS_CHUNK_FIRST_TIMEOUT_S", "6.0"))
+TTS_CHUNK_TIMEOUT_S = float(os.getenv("TTS_CHUNK_TIMEOUT_S", "5.0"))
+FULL_TTS_FALLBACK_TIMEOUT = float(os.getenv("FULL_TTS_FALLBACK_TIMEOUT", "20.0"))
 
 # Shared HTTP client configuration
 HTTP_TIMEOUT_CONNECT_S = float(os.getenv("HTTP_TIMEOUT_CONNECT_S", "2.0"))
