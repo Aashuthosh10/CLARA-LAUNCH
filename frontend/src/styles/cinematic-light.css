@@ -1798,6 +1798,16 @@
   z-index: 1;
 }
 
+/* ─── Trustee Card Description Clamp ─── */
+.trustee-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
 @media (max-width: 1280px) {
   .premium-hod-container {
     height: 520px;
@@ -1807,6 +1817,9 @@
   }
   .premium-hod-bio {
     font-size: 1.1rem;
+  }
+  .trustee-description {
+    -webkit-line-clamp: 2;
   }
 }
 

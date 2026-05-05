@@ -22,6 +22,7 @@ import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/PremiumPrincipalCard';
 import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
+import Trustees from '../components/chat/cards/Trustees/Trustees';
 import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
@@ -425,6 +426,7 @@ export default function ChatScreen({
   const [activeFeesDepartmentId, setActiveFeesDepartmentId] = useState<string | null>(null);
   const [isDocumentsStage, setIsDocumentsStage] = useState(false);
   const [isCampusNavigationStage, setIsCampusNavigationStage] = useState(false);
+  const [isTrusteesStage, setIsTrusteesStage] = useState(false);
   const [selectedCampusIndex, setSelectedCampusIndex] = useState(0);
   const [isCampusSpeaking, setIsCampusSpeaking] = useState(false);
   const [hasCampusRoomSelection, setHasCampusRoomSelection] = useState(false);
@@ -1637,6 +1639,44 @@ export default function ChatScreen({
       return;
     }
 
+    // Keep Trustees stage sticky — suppress any backend audio that arrives
+    // during the slideshow.
+    if (isTrusteesStage && currentUiLockRef.current === 'CARD') {
+      setLayoutMode('SPLIT_CARDS');
+      // Do NOT queue backend audio — Trustees slideshow is a visual-only experience.
+      return;
+    }
+
+    // Trustees Premium Slideshow Integration
+    const userMessage = payloadMessageList.slice().reverse().find((m: any) => m.role === 'user')?.text?.toLowerCase() || '';
+    const isTrusteeKeyword = /trustee|trust member|board of trustee|ಧರ್ಮದರ್ಶಿ|ಟ್ರಸ್ಟಿ|प्रबंधक|ട്രസ്റ്റി|ధర్మకర్త|అறங்கావлер/i.test(userMessage);
+
+    if (cardTrigger === 'trustees' || type === 'TRUSTEES_UI' || isTrusteeKeyword) {
+      currentUiLockRef.current = 'CARD';
+      setCourseMenuOptions([]);
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsHodStage(false);
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
+      setIsTrusteesStage(true);
+      setLayoutMode('SPLIT_CARDS');
+      
+      // IMPORTANT: Do NOT queue backend audio for Trustees.
+      // Playing backend audio here would cause the AI fallback voice to override
+      // the slideshow experience.
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+        setIsPlayingBackendAudio(false);
+      }
+      return;
+    }
+
     if (cardTrigger === 'course_menu') {
       currentUiLockRef.current = 'CARD';
       setLayoutMode('SPLIT_CARDS');
@@ -1667,7 +1707,7 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'admissions' || cardTrigger === 'college_overview' || cardTrigger === 'trustees') {
+    if (cardTrigger === 'admissions' || cardTrigger === 'college_overview') {
       // These intents are answered by the backend LLM as text; no card UI.
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
@@ -3026,6 +3066,8 @@ export default function ChatScreen({
                     currentCardIdx={currentCardIdx}
                     onCardClick={handleCardSelect}
                   />
+                ) : isTrusteesStage ? (
+                  <Trustees />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 
