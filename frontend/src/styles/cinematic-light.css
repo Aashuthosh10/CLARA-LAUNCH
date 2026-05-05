@@ -836,11 +836,11 @@
 
 .full-text-message-wrapper {
   width: 100%;
-  min-height: 100%;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: visible;
+  min-height: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .full-text-safe-zone {
@@ -850,20 +850,27 @@
 .text-container {
   position: absolute;
   top: clamp(3.25rem, 10vh, 7rem);
-  bottom: clamp(220px, 32vh, 310px);
+  /* Keep text viewport above FAQ suggestions + orb stack */
+  bottom: clamp(300px, 40vh, 460px);
   left: 50%;
   transform: translateX(-50%);
   width: min(900px, 75%);
   max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
   scrollbar-width: none;
   -ms-overflow-style: none;
   scroll-behavior: auto;
   overscroll-behavior: contain;
   z-index: 30;
+}
+
+.text-container.text-container--overflowing {
+  justify-content: flex-start;
 }
 
 .text-container::-webkit-scrollbar {

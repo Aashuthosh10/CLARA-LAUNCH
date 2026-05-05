@@ -231,6 +231,12 @@ Known non-blocking warnings:
 - Validate with lint/tests/smoke checks relevant to touched area.
 - For production-related changes, run `scripts\production-check.ps1` when feasible.
 
+## UI Notes (Full-text chat)
+
+- Full-text replies render in the scroll container `.text-container` (see `frontend/src/styles/cinematic-light.css`) and are orchestrated in `frontend/src/screens/ChatScreen.tsx`.
+- Keep the bottom of the text viewport above the FAQ suggestions + orb stack in full-text layout.
+- Short replies should remain visually centered; only long/overflowing replies should start at the top (optionally with gentle auto-scroll).
+
 ## Quick "Where to Change What"
 
 - Greeting copy/styling token: `backend/services/greetings.py`

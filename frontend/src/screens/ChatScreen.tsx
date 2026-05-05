@@ -2927,9 +2927,22 @@ export default function ChatScreen({
 
   useEffect(() => {
     if (layoutMode !== 'FULL_TEXT') return;
-    const frame = requestAnimationFrame(animateFullTextScroll);
-    return () => cancelAnimationFrame(frame);
-  }, [layoutMode, fullTextDisplayText, animateFullTextScroll]);
+    const node = fullTextScrollRef.current;
+    if (!node) return;
+    // Only force "start at top" when the reply actually overflows the viewport.
+    // Short replies should stay visually centered via CSS, without jumpy scroll resets.
+    requestAnimationFrame(() => {
+      const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
+      const overflowing = maxScroll > 2;
+      node.classList.toggle('text-container--overflowing', overflowing);
+      if (overflowing) {
+        node.scrollTop = 0;
+        animateFullTextScroll();
+      } else {
+        node.scrollTop = 0;
+      }
+    });
+  }, [layoutMode, lastAssistantMsg?.id, animateFullTextScroll]);
 
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
