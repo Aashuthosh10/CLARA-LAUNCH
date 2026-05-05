@@ -191,7 +191,7 @@ export default function RobotFace({
           return (
             <motion.div
               key={side}
-              className="relative w-[40vw] h-[40vw]"
+              className="relative w-[28vw] h-[28vw] max-w-[420px] max-h-[420px] min-w-[200px] min-h-[200px]"
               animate={{
                 x: xOffset,
                 y: yOffset,
@@ -260,7 +260,7 @@ export default function RobotFace({
         }}
         style={{ perspective: 1200 }}
       >
-        <div className="relative w-[55vw] h-[25vw]">
+        <div className="relative w-[40vw] h-[16vw] max-w-[620px] max-h-[240px] min-w-[240px] min-h-[120px]">
           <svg viewBox="0 0 50 50" className="w-full h-full overflow-visible">
             {isSpeaking && externalMouth ? (
               <path
