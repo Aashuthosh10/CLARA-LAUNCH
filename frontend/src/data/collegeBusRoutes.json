@@ -1,0 +1,213 @@
+{
+  "routes": [
+    {
+      "route_number": 1,
+      "driver": {
+        "name": "Mr. Kishore",
+        "phone": "+919663872074"
+      },
+      "coordinator": {
+        "name": "Prof. Ningambika",
+        "phone": "+918123221835"
+      },
+      "stops": [
+        {"name": "Mallatha halli Cross", "time": "06:45"},
+        {"name": "Ambedkar College", "time": "06:50"},
+        {"name": "Deepa Complex", "time": "07:00"},
+        {"name": "Nagarabavi BDA Complex", "time": "07:05"},
+        {"name": "Kottige palya", "time": "07:10"},
+        {"name": "Sumnahalli Bridge", "time": "07:15"},
+        {"name": "Rajkumar Samadi", "time": "07:20"},
+        {"name": "Kanteerava Studio", "time": "07:25"},
+        {"name": "Laggere cross", "time": "07:30"},
+        {"name": "Jalahalli Cross", "time": "07:35"},
+        {"name": "Ayyappa temple", "time": "07:40"},
+        {"name": "Shettihalli Cross", "time": "07:45"},
+        {"name": "KG Halli", "time": "07:50"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    },
+    {
+      "route_number": 2,
+      "driver": {
+        "name": "Mr. Shankar",
+        "phone": "+919743425337"
+      },
+      "coordinator": {
+        "name": "Mr. Kumar Shetty",
+        "phone": "+919845614934"
+      },
+      "stops": [
+        {"name": "Nagarabavi Circle", "time": "06:55"},
+        {"name": "Moodalapalya Main Road", "time": "06:57"},
+        {"name": "Shoba Hospital", "time": "06:59"},
+        {"name": "Govindaraja Nagara Junction", "time": "07:02"},
+        {"name": "KHB quarters", "time": "07:07"},
+        {"name": "Basaveshwaranagar Water tank", "time": "07:10"},
+        {"name": "Shankar Mutt", "time": "07:12"},
+        {"name": "Modi Hospital", "time": "07:14"},
+        {"name": "Navarang Bridge", "time": "07:14"},
+        {"name": "Mahalakshmi Layout Entrance", "time": "07:18"},
+        {"name": "Yeshwanthpura", "time": "07:22"},
+        {"name": "Mathikere", "time": "07:25"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    },
+    {
+      "route_number": 3,
+      "driver": {
+        "name": "Mr. Prasanna",
+        "phone": "+919008198001"
+      },
+      "coordinator": {
+        "name": "Dr. Shankar P",
+        "phone": "+919740145249"
+      },
+      "stops": [
+        {"name": "Ramakrishna Ashrama", "time": "07:00"},
+        {"name": "Majestic Railway station", "time": "07:07"},
+        {"name": "Sujatha Theatre", "time": "07:12"},
+        {"name": "Navarang", "time": "07:15"},
+        {"name": "Devaiah park", "time": "07:20"},
+        {"name": "Malleswaram", "time": "07:25"},
+        {"name": "Malleswaram 8th Cross", "time": "07:28"},
+        {"name": "Malleswaram 18th Cross", "time": "07:30"},
+        {"name": "Bhasham Circle", "time": "07:32"},
+        {"name": "Cauvery Junction", "time": "07:34"},
+        {"name": "Mekhri Circle", "time": "07:39"},
+        {"name": "CBI", "time": "07:40"},
+        {"name": "Hebbala", "time": "07:42"},
+        {"name": "Esteem mall", "time": "07:44"},
+        {"name": "Kodigehalli Gate", "time": "07:45"},
+        {"name": "Byatarayanapura", "time": "07:47"},
+        {"name": "GKVK", "time": "07:48"},
+        {"name": "Jakkur Aerodrum", "time": "07:50"},
+        {"name": "Allalasandra", "time": "07:51"},
+        {"name": "SVIT Campus", "time": "08:20"}
+      ]
+    },
+    {
+      "route_number": 4,
+      "driver": {
+        "name": "Mr. Ravi",
+        "phone": "+917353990152"
+      },
+      "coordinator": {
+        "name": "Prof. Nayana",
+        "phone": "+919035866401"
+      },
+      "stops": [
+        {"name": "K.R Puram", "time": "07:00"},
+        {"name": "Ramamurthy Nagar", "time": "07:05"},
+        {"name": "Horamavu Junction", "time": "07:09"},
+        {"name": "Hennur Cross", "time": "07:13"},
+        {"name": "Nagavara", "time": "07:15"},
+        {"name": "Hebbala ring road", "time": "07:20"},
+        {"name": "Esteem mall", "time": "07:23"},
+        {"name": "Yelahanka Old town", "time": "07:30"},
+        {"name": "Venkatala", "time": "07:35"},
+        {"name": "Bagalur cross", "time": "07:40"},
+        {"name": "Hunsamaranahalli", "time": "07:45"},
+        {"name": "MVIT Cross", "time": "07:48"},
+        {"name": "SVIT Campus", "time": "08:10"}
+      ]
+    },
+    {
+      "route_number": 5,
+      "driver": {
+        "name": "Mr. Ravikumar A",
+        "phone": "+919972229876"
+      },
+      "coordinator": {
+        "name": "Prof. Monisha",
+        "phone": "+919449277920"
+      },
+      "stops": [
+        {"name": "Sanjay nagar", "time": "07:10"},
+        {"name": "Nagashetti halli", "time": "07:13"},
+        {"name": "Badrappa layout", "time": "07:17"},
+        {"name": "Tata nagar", "time": "07:20"},
+        {"name": "Kodigehalli Ganapathi temple", "time": "07:23"},
+        {"name": "More stop", "time": "07:26"},
+        {"name": "Tennis court", "time": "07:29"},
+        {"name": "Tindlu", "time": "07:35"},
+        {"name": "Vidyaranyapura Post office", "time": "07:38"},
+        {"name": "Vidyaranyapura Eechalamara", "time": "07:40"},
+        {"name": "Vidyaranyapura Bus stop", "time": "07:42"},
+        {"name": "Jelli Machine", "time": "07:45"},
+        {"name": "Doddabettahalli", "time": "07:48"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    },
+    {
+      "route_number": 6,
+      "driver": {
+        "name": "Mr. Vijay Kumar",
+        "phone": "+919449656098"
+      },
+      "coordinator": null,
+      "stops": [
+        {"name": "8th Mile", "time": "07:15"},
+        {"name": "Bagalagunte", "time": "07:20"},
+        {"name": "Chikkabanavara bus stop", "time": "07:25"},
+        {"name": "Abbigere", "time": "07:30"},
+        {"name": "Gangamma circle", "time": "07:40"},
+        {"name": "MS Palya", "time": "07:47"},
+        {"name": "Sambhram College", "time": "07:50"},
+        {"name": "Byalakere", "time": "07:55"},
+        {"name": "Mylapanahalli", "time": "07:58"},
+        {"name": "Yelahanka RTO", "time": "08:00"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    },
+    {
+      "route_number": 7,
+      "driver": {
+        "name": "Mr. Narasimha Murthy",
+        "phone": "+919731175546"
+      },
+      "coordinator": {
+        "name": "Dr. Chaya B M",
+        "phone": "+919620688396"
+      },
+      "stops": [
+        {"name": "Mathikere", "time": "07:20"},
+        {"name": "Gokula", "time": "07:22"},
+        {"name": "BEL Circle", "time": "07:25"},
+        {"name": "Dodda bommasandra", "time": "07:28"},
+        {"name": "Nanjappa Circle", "time": "07:30"},
+        {"name": "Vidyaranyapura 1st Block", "time": "07:35"},
+        {"name": "Thirumala Dhaba", "time": "07:40"},
+        {"name": "Attur layout", "time": "07:42"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    },
+    {
+      "route_number": 8,
+      "driver": {
+        "name": "Mr. Manjunath",
+        "phone": "+919019318165"
+      },
+      "coordinator": {
+        "name": "Prof. Sunil Kumar",
+        "phone": "+919740328007"
+      },
+      "stops": [
+        {"name": "Kogilu cross", "time": "07:30"},
+        {"name": "Yelahanka Old Town", "time": "07:32"},
+        {"name": "NES", "time": "07:37"},
+        {"name": "Sharavathi", "time": "07:40"},
+        {"name": "Chikkabommasandra cross", "time": "07:42"},
+        {"name": "Agarwal Eye hospital", "time": "07:44"},
+        {"name": "Yelahanka Newtown", "time": "07:45"},
+        {"name": "Dairy Circle", "time": "07:47"},
+        {"name": "Yelahanka 4th Phase", "time": "07:52"},
+        {"name": "Shivamandira", "time": "07:55"},
+        {"name": "Ananathapura Gate", "time": "08:00"},
+        {"name": "Nagenagahalli", "time": "08:05"},
+        {"name": "Singanayakanahalli", "time": "08:10"},
+        {"name": "SVIT Campus", "time": "08:15"}
+      ]
+    }
+  ]
+}

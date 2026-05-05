@@ -174,9 +174,9 @@
 
 /* Comparison mode: deterministic vertical budget (nav + orb + gap + Tap label). */
 .full-text-layout.full-text-layout--comparison-active {
-  --comparison-top-inset: clamp(108px, 11.8vh, 132px);
-  /* Orb visuals + Tap to speak + 80–120px calm gap below panel */
-  --comparison-orb-bottom-band: clamp(220px, 30vh, 288px);
+  --comparison-top-inset: clamp(96px, 10.8vh, 124px);
+  /* Orb visuals + Tap to speak; slightly tighter frees vertical space for the table */
+  --comparison-orb-bottom-band: clamp(196px, 26vh, 256px);
 }
 
 .full-text-message-stage {
@@ -253,7 +253,7 @@
   pointer-events: auto;
   flex: 1 1 auto;
   min-height: 0;
-  margin-bottom: clamp(22px, 2.75vh, 38px);
+  margin-bottom: clamp(12px, 1.65vh, 26px);
   overflow: visible;
   position: relative;
   z-index: 32;
@@ -278,14 +278,14 @@
   flex: 0 0 auto;
   min-height: 0;
   flex-grow: 0;
-  max-height: clamp(10px, 2.2vh, 22px);
-  height: clamp(8px, 1.75vh, 18px);
+  max-height: clamp(6px, 1.45vh, 16px);
+  height: clamp(4px, 1.15vh, 14px);
 }
 
 .comparison-embed-panel-shell {
   pointer-events: auto;
   width: 100%;
-  max-width: min(90vw, 1600px);
+  max-width: min(94vw, 1760px);
   margin-left: auto;
   margin-right: auto;
   max-height: min(97vh, 1280px);
@@ -294,12 +294,28 @@
 }
 
 .full-text-layout.full-text-layout--comparison-active .comparison-embed-panel-shell {
-  max-height: min(
+  --comparison-panel-max-h: min(
     calc(100vh - var(--comparison-top-inset) - var(--comparison-orb-bottom-band)),
     calc(100dvh - var(--comparison-top-inset) - var(--comparison-orb-bottom-band)),
-    1274px
+    1380px
   );
+  max-height: var(--comparison-panel-max-h);
+  /* Use more of the viewport (~70%+ where cap allows); never exceed max-height */
+  min-height: min(max(520px, 71vh), var(--comparison-panel-max-h));
   overflow: hidden;
+}
+
+/* Mobile: full-bleed width; tablet: slightly narrower cap than desktop */
+@media (max-width: 640px) {
+  .comparison-embed-panel-shell {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .comparison-embed-panel-shell {
+    max-width: min(92vw, 1580px);
+  }
 }
 
 .department-comparison-panel {
@@ -327,7 +343,7 @@
 }
 
 .department-comparison-eyebrow {
-  font-size: clamp(0.75rem, 1.35vmin, 0.8125rem);
+  font-size: clamp(0.78125rem, 1.42vmin, 0.84375rem);
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -335,16 +351,16 @@
 }
 
 .department-comparison-title {
-  font-size: clamp(1.75rem, 2.85vw, 2rem);
+  font-size: clamp(1.85rem, 2.95vw, 2.125rem);
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.22;
   color: #0f172a;
 }
 
 .department-comparison-focus {
-  font-size: clamp(0.9375rem, 1.85vmin, 1rem);
-  line-height: 1.45;
+  font-size: clamp(0.9375rem, 1.9vmin, 1.0625rem);
+  line-height: 1.55;
 }
 
 .department-comparison-close {
@@ -369,13 +385,13 @@
 .department-comparison-select {
   min-width: 10.5rem;
   max-width: 18rem;
-  min-height: 2.75rem;
+  min-height: 2.85rem;
   cursor: pointer;
   border-radius: 0.875rem;
   border: 1px solid rgba(58, 24, 112, 0.2);
   background: rgba(255, 255, 255, 0.72);
-  padding: 0.72rem 1rem;
-  font-size: clamp(1rem, 2.05vmin, 1.0625rem);
+  padding: 0.875rem 1.15rem;
+  font-size: clamp(1.0625rem, 2.08vmin, 1.125rem);
   font-weight: 600;
   color: #1e1b4b;
   outline: none;
@@ -410,7 +426,7 @@
 .department-comparison-scroll {
   scrollbar-color: rgba(91, 33, 182, 0.35) transparent;
   padding-top: 0.55rem;
-  padding-bottom: max(2.75rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(2.1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .department-comparison-scroll::-webkit-scrollbar {
@@ -424,8 +440,8 @@
 }
 
 .department-comparison-hint {
-  font-size: clamp(0.875rem, 1.9vmin, 0.9375rem);
-  line-height: 1.5;
+  font-size: clamp(0.9375rem, 1.95vmin, 1rem);
+  line-height: 1.55;
   color: #64748b;
 }
 
@@ -435,10 +451,10 @@
 }
 
 .comparison-insight-section-title {
-  font-size: clamp(1.2rem, 2.35vmin, 1.375rem);
+  font-size: clamp(1.28rem, 2.45vmin, 1.5rem);
   font-weight: 700;
   letter-spacing: -0.025em;
-  line-height: 1.42;
+  line-height: 1.52;
   color: #312e81;
   padding-bottom: 0.35rem;
   margin-bottom: 0.15rem;
@@ -446,7 +462,7 @@
 }
 
 .comparison-insight-card-dept {
-  font-size: clamp(0.75rem, 1.65vmin, 0.8125rem);
+  font-size: clamp(0.8125rem, 1.72vmin, 0.875rem);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -455,9 +471,9 @@
 }
 
 .comparison-insight-card-body {
-  font-size: clamp(1.0625rem, 2.08vmin, 1.125rem);
+  font-size: clamp(1.0625rem, 2.12vmin, 1.1875rem);
   font-weight: 600;
-  line-height: 1.62;
+  line-height: 1.58;
   color: #1e293b;
 }
 
@@ -490,7 +506,7 @@
 }
 
 .comparison-insight-stack .department-comparison-col-head {
-  min-height: 4.85rem;
+  min-height: 5.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -498,9 +514,9 @@
 }
 
 .department-comparison-col-head-title {
-  font-size: clamp(1.125rem, 2.2vmin, 1.25rem);
+  font-size: clamp(1.1875rem, 2.32vmin, 1.3125rem);
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.42;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #0f172a;
@@ -541,13 +557,14 @@
   border: 1px solid rgba(226, 232, 240, 0.95);
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(10px);
-  padding: 0.98rem 0.85rem;
+  padding: 1.15rem 1rem;
   min-height: 3.55rem;
   text-align: left;
+  font-size: clamp(0.8125rem, 1.65vmin, 0.875rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  line-height: 1.35;
+  line-height: 1.45;
   color: #334155;
 }
 

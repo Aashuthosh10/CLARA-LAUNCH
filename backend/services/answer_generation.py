@@ -392,6 +392,7 @@ INTENT_TRUSTEES_PROFILE = "TRUSTEES_PROFILE"
 INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_DEPARTMENT_FEES = "DEPARTMENT_FEES"
 INTENT_DOCUMENTS = "DOCUMENTS"
+INTENT_BUS_ROUTES = "BUS_ROUTES"
 INTENT_DEPARTMENT_COMPARISON = "DEPARTMENT_COMPARISON"
 INTENT_PRINCIPAL_PROFILE = "PRINCIPAL_PROFILE"
 INTENT_VICE_PRINCIPAL_PROFILE = "VICE_PRINCIPAL_PROFILE"
@@ -454,6 +455,15 @@ COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
     "Tamil": "எங்கள் கல்லூரியில் உள்ள துறைகள் இங்கே உள்ளன. தயவுசெய்து ஒன்றைத் தேர்வு செய்யுங்கள்.",
     "Telugu": "మా కాలేజీలో అందుబాటులో ఉన్న విభాగాలు ఇవి. దయచేసి ఒకదాన్ని ఎంచుకోండి.",
     "Malayalam": "ഞങ്ങളുടെ കോളേജിലെ ലഭ്യമായ വിഭാഗങ്ങൾ ഇതാ. ദയവായി ഒന്ന് തിരഞ്ഞെടുക്കൂ.",
+}
+
+BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
+    "English": "Here are our college bus routes. Select a route to see pickup stops and timings.",
+    "Kannada": "ನಮ್ಮ ಕಾಲೇಜು ಬಸ್ ಮಾರ್ಗಗಳನ್ನು ತೋರಿಸುತ್ತಿದ್ದೇನೆ. ನಿಲ್ಲುವ ಸ್ಥಳಗಳು ಹಾಗೂ ಸಮಯಕ್ಕಾಗಿ ಮಾರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "Hindi": "यहाँ कॉलेज बस के रूट दिखा रही हूँ। स्टॉप और समय देखने के लिए एक रूट चुनें।",
+    "Tamil": "கல்லூரி பேருந்து வழிகளைக் காட்டுகிறேன். நிறுத்தங்கள் மற்றும் நேரத்திற்கு ஒரு வழியைத் தேர்வு செய்யவும்.",
+    "Telugu": "కాలేజీ బస్ రూట్లను చూపిస్తున్నాను. స్టాప్లు మరియు సమయాల కోసం ఒక రూట్‌ను ఎంచుకోండి.",
+    "Malayalam": "കോളേജ് ബസ് റൂട്ടുകൾ കാണിക്കുന്നു. നിർത്തലിടങ്ങളും സമയവും കാണാൻ ഒരു റൂട്ട് തിരഞ്ഞെടുക്കൂ.",
 }
 
 SUPPORTED_LANGUAGES = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
@@ -769,6 +779,7 @@ class QueryFeatures:
     is_fee_query: bool
     is_course_query: bool
     is_documents_query: bool
+    is_bus_routes_query: bool
     is_placement_query: bool
     is_overview_query: bool
     is_comparison_query: bool
@@ -1320,6 +1331,15 @@ def get_course_menu_spoken_prompt(language: str | None) -> str:
     return COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE.get(language, COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE["English"])
 
 
+def get_bus_routes_spoken_prompt(language: str | None) -> str:
+    if not language:
+        return BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE["English"]
+    return BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE.get(
+        language,
+        BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE["English"],
+    )
+
+
 def detect_department_name(text: str | None) -> str | None:
     normalized = _normalize_department_match_text(text)
     return _detect_department(normalized)
@@ -1627,6 +1647,8 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         (fee_like or is_course_query) and not explicit_comparison_cue
     )
 
+    is_bus_routes_query = text_has_bus_routes_cue(raw)
+
     return QueryFeatures(
         has_department=has_department,
         department_name=detected_department,
@@ -1634,6 +1656,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         is_fee_query=fee_like,
         is_course_query=is_course_query,
         is_documents_query=documents_flag,
+        is_bus_routes_query=is_bus_routes_query,
         is_placement_query=_is_placements_query(normalized),
         is_overview_query=_is_college_overview_query(normalized),
         is_comparison_query=is_comparison_query,
@@ -2034,6 +2057,9 @@ def resolve_intent_from_features(features: QueryFeatures) -> str:
         return INTENT_HOD_PROFILE
     if features.is_documents_query:
         return INTENT_DOCUMENTS
+    # Explicit bus/transport college shuttle queries before comparison/course routing.
+    if features.is_bus_routes_query:
+        return INTENT_BUS_ROUTES
     if features.is_comparison_query:
         return INTENT_DEPARTMENT_COMPARISON
     if features.is_fee_query and features.has_department:
@@ -2072,6 +2098,8 @@ def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
         return {"showCard": "course_menu", "departmentId": None}
     if intent == INTENT_DOCUMENTS:
         return {"showCard": "documents", "departmentId": None}
+    if intent == INTENT_BUS_ROUTES:
+        return {"showCard": "bus_routes", "departmentId": None}
     if intent == INTENT_PRINCIPAL_PROFILE:
         return {"showCard": "principal_profile", "departmentId": None}
     if intent == INTENT_VICE_PRINCIPAL_PROFILE:
@@ -2159,6 +2187,8 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
         return "course_menu"
     if intent == INTENT_DOCUMENTS:
         return "documents"
+    if intent == INTENT_BUS_ROUTES:
+        return "bus_routes"
     if intent == INTENT_DEPARTMENT_COMPARISON:
         return "department_comparison"
     if intent == INTENT_PRINCIPAL_PROFILE:
@@ -2166,6 +2196,85 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
     if intent == INTENT_VICE_PRINCIPAL_PROFILE:
         return "vice_principal_profile"
     return None
+
+
+def text_has_bus_routes_cue(text: str | None) -> bool:
+    """Multilingual deterministic cues for college bus / shuttle / pickup queries (avoid bare 'routes')."""
+    if not text or not isinstance(text, str):
+        return False
+    raw = text.strip().lower()
+    if not raw:
+        return False
+    t = re.sub(r"[.,!?;:'\"()\[\]{}<>|/\\@#$%^&*_+=~`-]", " ", raw)
+    t = re.sub(r"\s+", " ", t).strip()
+    if not t:
+        return False
+    spaced = f" {t} "
+
+    # Full phrases (mixed scripts; lower() is harmless for Unicode letters we use).
+    if any(
+        p in spaced
+        for p in (
+            "bus routes",
+            "bus route",
+            "transport facility",
+            "college bus",
+            "route availability",
+            "pickup points",
+            "pickup locations",
+            "travel to college",
+            "travel to svit",
+            "bus for ",
+            " bus from ",
+            "transport from",
+            "shuttle",
+            "is there a bus ",
+            "do you have transport",
+            "how can my child travel",
+            "how can child travel",
+            "बस रूट",
+            "कॉलेज बस",
+            "परिवहन सुविधा",
+            "ಬಸ್ ಮಾರ್ಗಗಳು",
+            "ಕಾಲೇಜು ಬಸ್",
+            "பேருந்து வழிகள்",
+            "బస్ రూట్లు",
+            "ബസ് റൂട്ടുകൾ",
+        )
+    ):
+        return True
+
+    # Latin anchors: must pair a transport/bus signal with commuting/listing cues (not lone "routes").
+    bus_markers = (
+        "bus",
+        "buses",
+        "shuttle",
+        "transport",
+        "pickup",
+        "pick-up",
+        "pick up",
+    )
+    commute_markers = (
+        "route",
+        "routes",
+        "stop",
+        "stops",
+        "timing",
+        "timings",
+        "pickup",
+        "pick up",
+        "college",
+        "svit",
+        "campus",
+        "child",
+        "kid",
+        "reach",
+        "commute",
+    )
+    if any(m in spaced for m in bus_markers) and any(c in spaced for c in commute_markers):
+        return True
+
+    return False
 
 
 def is_documents_query(text: str) -> bool:

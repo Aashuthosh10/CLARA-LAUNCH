@@ -23,6 +23,7 @@ import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/Premi
 import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
+import BusRoutesFullscreen from '../components/bus/BusRoutesFullscreen';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
@@ -69,9 +70,11 @@ import {
   selectFaqSuggestions,
   type FaqSuggestionCategory,
 } from '../data/faqSuggestions';
+import { inferForcedBusRoutesFromUserText } from '../lib/busRoutesIntent';
 import { inferForcedDepartmentComparisonFromUserText } from '../lib/departmentComparisonIntent';
 import { inferExecutiveProfileFromUserText } from '../lib/executiveLeadershipIntent';
 import type { ExecutiveLeadershipKind } from '../lib/executiveLeadershipIntent';
+import type { ClaraChatSurface } from '../types/chatSurface';
 
 declare global {
   interface Window {
@@ -312,6 +315,9 @@ const normalizeCardTrigger = (trigger: unknown): string | null => {
   ) {
     return 'vice_principal_profile';
   }
+  if (n === 'bus_route' || n === 'bus_routes' || n === 'college_bus_routes') {
+    return 'bus_routes';
+  }
   return n;
 };
 
@@ -386,7 +392,11 @@ export default function ChatScreen({
   const [campusRouteMode, setCampusRouteMode] = useState<CampusNavigationRouteMode>('default');
   const [campusRouteResult, setCampusRouteResult] = useState<CampusRouteResult | null>(null);
   const [campusDirectionOverride, setCampusDirectionOverride] = useState<CampusDirection | null>(null);
-  const [departmentComparisonOpen, setDepartmentComparisonOpen] = useState(false);
+  const [surface, setSurface] = useState<ClaraChatSurface>('chat');
+  const departmentComparisonOpen = surface === 'department_comparison';
+  const isBrochureOpen = surface === 'brochure';
+  const isBusRoutesSurface = surface === 'bus_routes';
+
   const [comparisonDeptIds, setComparisonDeptIds] = useState<string[]>([]);
   const [comparisonHighlightId, setComparisonHighlightId] = useState<string | null>(null);
   const [comparisonRecommendFocus, setComparisonRecommendFocus] = useState<string | null>(null);
@@ -407,11 +417,15 @@ export default function ChatScreen({
   );
   const [faqCarouselIndex, setFaqCarouselIndex] = useState(0);
   const [isFaqCarouselPaused, setIsFaqCarouselPaused] = useState(false);
-  const [isBrochureOpen, setIsBrochureOpen] = useState(false);
+  const [busRoutesMountKey, setBusRoutesMountKey] = useState(0);
+  const [busRoutesHighlightQuery, setBusRoutesHighlightQuery] = useState<string | null>(null);
+  const lastPayloadTurnIdRef = useRef<string | null>(null);
+  const busRoutesDismissedTurnIdRef = useRef<string | null>(null);
+  const closingBusRef = useRef(false);
 
   useEffect(() => {
-    onChatIdleOverlayChange?.(isBrochureOpen);
-  }, [isBrochureOpen, onChatIdleOverlayChange]);
+    onChatIdleOverlayChange?.(isBrochureOpen || isBusRoutesSurface);
+  }, [isBrochureOpen, isBusRoutesSurface, onChatIdleOverlayChange]);
 
   useEffect(
     () => () => {
@@ -490,8 +504,10 @@ export default function ChatScreen({
       clearSuggestionLayer();
       // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
       if (source === 'VOICE') {
-        setDepartmentComparisonOpen(false);
+        setSurface('chat');
         comparisonLayoutSnapRef.current = null;
+        busRoutesDismissedTurnIdRef.current = null;
+        setBusRoutesHighlightQuery(null);
         setLayoutMode('FULL_TEXT');
         setActiveCards(null);
         setCurrentCardIdx(0);
@@ -757,11 +773,26 @@ export default function ChatScreen({
   }, [language, collegeData]);
 
   const handleCloseDepartmentComparison = useCallback(() => {
-    setDepartmentComparisonOpen(false);
+    setSurface('chat');
     const snap = comparisonLayoutSnapRef.current;
     if (snap !== null) setLayoutMode(snap);
     comparisonLayoutSnapRef.current = null;
   }, [setLayoutMode]);
+
+  const handleCloseBusRoutes = useCallback(() => {
+    if (closingBusRef.current) return;
+    closingBusRef.current = true;
+    const tid = lastPayloadTurnIdRef.current;
+    if (tid !== null) busRoutesDismissedTurnIdRef.current = tid;
+    setSurface('chat');
+    setBusRoutesHighlightQuery(null);
+    currentUiLockRef.current = 'IDLE';
+    const scrollEl = fullTextScrollRef.current;
+    if (scrollEl) scrollEl.scrollTop = 0;
+    window.setTimeout(() => {
+      closingBusRef.current = false;
+    }, 220);
+  }, []);
   const clearCardStages = useCallback(() => {
     setActiveCards(null);
     setCurrentCardIdx(0);
@@ -845,8 +876,10 @@ export default function ChatScreen({
     }
     setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
-    setDepartmentComparisonOpen(false);
+    setSurface('chat');
     comparisonLayoutSnapRef.current = null;
+    busRoutesDismissedTurnIdRef.current = null;
+    setBusRoutesHighlightQuery(null);
     if (onHome) onHome();
   }, [clearSuggestionLayer, stopTextReveal, stopListening, onHome]);
 
@@ -938,7 +971,7 @@ export default function ChatScreen({
           }
         : null);
     clearCardStages();
-    setDepartmentComparisonOpen(false);
+    setSurface('chat');
     comparisonLayoutSnapRef.current = null;
     setIsCampusNavigationStage(true);
     setSelectedCampusIndex(0);
@@ -1111,6 +1144,7 @@ export default function ChatScreen({
       ? getPayloadMessageText(lastUserForInference).trim()
       : '';
     const forcedDeptComparison = inferForcedDepartmentComparisonFromUserText(lastUserTextForInference);
+    const forcedBus = inferForcedBusRoutesFromUserText(lastUserTextForInference);
 
     let cardTrigger = normalizeCardTrigger(nativeTrigger);
     if (isResponseReady && !cardTrigger) {
@@ -1124,6 +1158,14 @@ export default function ChatScreen({
       forcedDeptComparison.departmentIds.length >= 2
     ) {
       cardTrigger = 'department_comparison';
+    }
+    if (
+      isResponseReady &&
+      cardTrigger !== 'department_comparison' &&
+      forcedBus.force &&
+      !(forcedDeptComparison.force && forcedDeptComparison.departmentIds.length >= 2)
+    ) {
+      cardTrigger = 'bus_routes';
     }
 
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
@@ -1152,6 +1194,7 @@ export default function ChatScreen({
       : [];
     const audioBase64 = payload?.audioBase64;
     const turnId = payload?.turn_id ?? 'greeting';
+    lastPayloadTurnIdRef.current = String(turnId);
     const type = payload?.type ?? '';
     const utteranceKind = payload?.utterance_kind ?? '';
     const segmentIndex = payload?.segment_index ?? 0;
@@ -1226,12 +1269,52 @@ export default function ChatScreen({
           ? payload.comparisonRecommendFocus
           : null,
       );
-      setDepartmentComparisonOpen(true);
+      setSurface('department_comparison');
+      setBusRoutesHighlightQuery(null);
       setLayoutMode('FULL_TEXT');
       if (audioBase64) {
         setPendingAudio({
           audioBase64,
           segmentKey,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'FULL_TEXT',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'bus_routes' && isResponseReady) {
+      const turnIdStr = String(turnId);
+      if (busRoutesDismissedTurnIdRef.current !== turnIdStr) {
+        currentUiLockRef.current = 'CARD';
+        comparisonLayoutSnapRef.current = null;
+        setBusRoutesHighlightQuery(lastUserTextForInference);
+        setBusRoutesMountKey((k) => k + 1);
+        setSurface('bus_routes');
+        setLayoutMode('FULL_TEXT');
+        if (audioBase64) {
+          setPendingAudio({
+            audioBase64,
+            segmentKey,
+            turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'FULL_TEXT',
+          });
+        }
+        return;
+      }
+    }
+
+    // Keep Bus routes fullscreen sticky while TTS trailing frames omit `showCard`.
+    if (isBusRoutesSurface && currentUiLockRef.current === 'CARD' && cardTrigger !== 'bus_routes') {
+      setLayoutMode('FULL_TEXT');
+      if (audioBase64) {
+        setPendingAudio({
+          audioBase64,
+          segmentKey,
+          turnId,
           isOverview: false,
           cardsToSync: null,
           targetLayout: 'FULL_TEXT',
@@ -1719,6 +1802,8 @@ export default function ChatScreen({
     executiveLeadershipKind,
     isFeesStage,
     isDepartmentOverviewStage,
+    isBusRoutesSurface,
+    layoutMode,
   ]);
 
   useEffect(() => {
@@ -1759,7 +1844,13 @@ export default function ChatScreen({
   }, [payload, language, isPayloadStale, ensureSuggestions]);
 
   useEffect(() => {
-    if (departmentComparisonOpen || faqSuggestions.length <= 1 || isFaqCarouselPaused || isBrochureOpen)
+    if (
+      departmentComparisonOpen ||
+      isBusRoutesSurface ||
+      faqSuggestions.length <= 1 ||
+      isFaqCarouselPaused ||
+      isBrochureOpen
+    )
       return;
     const maxIndex = Math.max(0, faqSuggestions.length - 1);
     const timer = setInterval(() => {
@@ -1768,6 +1859,7 @@ export default function ChatScreen({
     return () => clearInterval(timer);
   }, [
     departmentComparisonOpen,
+    isBusRoutesSurface,
     faqSuggestions.length,
     isFaqCarouselPaused,
     isBrochureOpen,
@@ -1776,6 +1868,7 @@ export default function ChatScreen({
   useAnimationFrame((_time, delta) => {
     if (
       departmentComparisonOpen ||
+      isBusRoutesSurface ||
       !faqSuggestions.length ||
       isFaqCarouselPaused ||
       isBrochureOpen ||
@@ -2008,7 +2101,7 @@ export default function ChatScreen({
       : latestTextAssistantMsg;
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
-    isLanguageGateOpen || isResponsePending || departmentComparisonOpen;
+    isLanguageGateOpen || isResponsePending || departmentComparisonOpen || isBusRoutesSurface;
   const submitFaqSuggestion = useCallback(
     (_id: string, question: string) => {
       stopListening();
@@ -2125,7 +2218,7 @@ export default function ChatScreen({
   }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
 
   const renderFaqCarousel = (placement: 'full' | 'panel') => {
-    if (placement === 'full' && departmentComparisonOpen) return null;
+    if (placement === 'full' && (departmentComparisonOpen || isBusRoutesSurface)) return null;
     if (placement === 'panel') {
       const activeSuggestion = faqSuggestions[faqCarouselIndex % faqSuggestions.length];
       if (!activeSuggestion) return null;
@@ -2197,6 +2290,23 @@ export default function ChatScreen({
 
   return (
     <div className="light-chat-container" data-testid="chat-screen">
+      <AnimatePresence mode="wait" initial={false}>
+        {surface === 'bus_routes' ? (
+          React.createElement(BusRoutesFullscreen, {
+            key: `bus-routes-${busRoutesMountKey}`,
+            highlightQuery: busRoutesHighlightQuery,
+            onClose: handleCloseBusRoutes,
+          })
+        ) : (
+          <motion.div
+            key="main-chat-shell"
+            role="presentation"
+            className="relative flex h-full min-h-0 w-full flex-1 flex-col"
+            initial={false}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          >
       <div className="cinematic-overlay" />
 
       {/* Global Home Button */}
@@ -2240,7 +2350,7 @@ export default function ChatScreen({
           onClick={() => {
             if (isCampusNavigationStage) returnToChatFromCampus();
             onChatUserActivity?.();
-            setIsBrochureOpen(true);
+            setSurface('brochure');
           }}
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
@@ -2580,7 +2690,7 @@ export default function ChatScreen({
             transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
             onClick={() => {
               onChatUserActivity?.();
-              setIsBrochureOpen(false);
+              setSurface('chat');
             }}
           >
             <motion.div
@@ -2599,7 +2709,7 @@ export default function ChatScreen({
                 className="brochure-modal-close"
                 onClick={() => {
                   onChatUserActivity?.();
-                  setIsBrochureOpen(false);
+                  setSurface('chat');
                 }}
                 aria-label="Close college brochure"
               >
@@ -2633,6 +2743,10 @@ export default function ChatScreen({
                 </div>
               </object>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
           </motion.div>
         )}
       </AnimatePresence>

@@ -157,7 +157,7 @@ export default function DepartmentComparisonCinema({
             <div className="department-comparison-panel relative mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[2rem]">
             <div className="department-comparison-panel-glow pointer-events-none absolute inset-0" aria-hidden />
 
-            <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-5 px-8 pb-7 pt-8 sm:gap-6 sm:px-14 sm:pb-8 sm:pt-10">
+            <header className="department-comparison-header relative flex flex-wrap items-start justify-between gap-5 px-7 pb-7 pt-8 sm:gap-6 sm:px-12 sm:pb-8 sm:pt-10 lg:px-14">
               <div className="min-w-0 pr-2">
                 <p className="department-comparison-eyebrow">{chrome.compareHeading}</p>
                 <h2 id="comparison-cinema-title" className="department-comparison-title mt-2 text-balance">
@@ -181,7 +181,7 @@ export default function DepartmentComparisonCinema({
               </motion.button>
             </header>
 
-            <div className="relative flex flex-wrap items-center gap-5 px-8 pb-6 sm:gap-6 sm:px-14 sm:pb-6">
+            <div className="relative flex flex-wrap items-center gap-5 px-7 pb-6 sm:gap-6 sm:px-12 sm:pb-7 lg:px-14">
               <div className="flex flex-wrap gap-4 sm:gap-5">
                 {selectedIds.map((id, idx) => (
                   <div key={`${id}-${idx}`} className="flex items-center gap-2">
@@ -227,12 +227,12 @@ export default function DepartmentComparisonCinema({
               ) : null}
             </div>
 
-            <div className="department-comparison-scroll relative min-h-0 flex-1 overflow-auto px-6 sm:px-14 [-webkit-overflow-scrolling:touch]">
-              <div className="comparison-insight-stack mx-auto pb-8 sm:pb-10">
+            <div className="department-comparison-scroll relative min-h-0 flex-1 overflow-auto px-5 sm:px-11 lg:px-14 [-webkit-overflow-scrolling:touch]">
+              <div className="comparison-insight-stack mx-auto pb-7 sm:pb-9">
                 <p className="department-comparison-hint mb-6 text-center sm:mb-7">{chrome.swipeHint}</p>
 
                 <div
-                  className="comparison-insight-colheaders-grid mb-4 grid gap-6 sm:mb-5 sm:gap-8"
+                  className="comparison-insight-colheaders-grid mb-4 grid gap-7 sm:mb-5 sm:gap-10"
                   style={{
                     gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
                   }}
@@ -245,7 +245,7 @@ export default function DepartmentComparisonCinema({
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.03 * colIdx, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                        className={`department-comparison-col-head rounded-xl px-5 py-4 text-center sm:px-6 sm:py-5 ${
+                        className={`department-comparison-col-head rounded-xl px-6 py-5 text-center sm:px-7 sm:py-6 ${
                           isHi ? 'department-comparison-col-head--highlight' : ''
                         }`}
                       >
@@ -258,7 +258,7 @@ export default function DepartmentComparisonCinema({
                   })}
                 </div>
 
-                <div className="comparison-insight-section-list flex flex-col gap-12 sm:gap-[3.75rem]">
+                <div className="comparison-insight-section-list flex flex-col gap-12 sm:gap-[4.25rem]">
                   {REG.row_order.map((rowKey, sectionIdx) => (
                     <motion.section
                       key={rowKey}
@@ -266,7 +266,7 @@ export default function DepartmentComparisonCinema({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.04 * sectionIdx, duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-                      className="comparison-insight-section rounded-[1.35rem] border border-white/55 bg-white/35 px-5 py-7 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-md sm:px-9 sm:py-10"
+                      className="comparison-insight-section rounded-[1.35rem] border border-white/55 bg-white/35 px-6 py-9 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-md sm:px-10 sm:py-11"
                     >
                       <h3
                         id={`comparison-section-${rowKey}`}
@@ -275,7 +275,7 @@ export default function DepartmentComparisonCinema({
                         {localizedCell(REG.row_labels[rowKey], lc)}
                       </h3>
                       <div
-                        className="comparison-insight-grid mt-6 grid gap-5 sm:mt-8 sm:gap-7"
+                        className="comparison-insight-grid mt-6 grid gap-6 sm:mt-8 sm:gap-9"
                         style={{
                           gridTemplateColumns: `repeat(${selectedIds.length}, minmax(0,1fr))`,
                         }}
@@ -298,7 +298,7 @@ export default function DepartmentComparisonCinema({
                                 duration: 0.36,
                                 ease: [0.22, 1, 0.36, 1],
                               }}
-                              className={`comparison-insight-card rounded-[1rem] px-5 py-6 sm:px-7 sm:py-8 ${
+                              className={`comparison-insight-card rounded-[1rem] px-6 py-8 sm:px-8 sm:py-9 ${
                                 isHiCol ? 'comparison-insight-card--highlight' : ''
                               }`}
                             >

@@ -100,6 +100,7 @@ from backend.services.faq_answers import get_faq_answer_for_question
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
+    INTENT_BUS_ROUTES,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -120,6 +121,7 @@ from backend.services.answer_generation import (
     department_label_to_json_key,
     extract_comparison_department_canonical_labels,
     extract_features,
+    get_bus_routes_spoken_prompt,
     get_course_menu_options,
     get_course_menu_spoken_prompt,
     get_off_topic_reply,
@@ -1067,6 +1069,8 @@ async def process_user_text_and_reply(
                     intent = INTENT_DEPARTMENT_FEES
                 elif frontend_trigger == "documents":
                     intent = INTENT_DOCUMENTS
+                elif frontend_trigger in {"bus_routes", "bus routes", "bus"}:
+                    intent = INTENT_BUS_ROUTES
                 elif frontend_trigger in {"principal_profile", "principal"}:
                     intent = INTENT_PRINCIPAL_PROFILE
                 elif frontend_trigger in {"vice_principal_profile", "vice_principal"}:
@@ -1101,7 +1105,7 @@ async def process_user_text_and_reply(
         # Force location/address questions through vector RAG context instead of narrator-only flow.
         # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
         is_location_turn = False if faq_direct_reply else (_is_location_query(text) or _is_location_query(query_en))
-        if is_location_turn:
+        if is_location_turn and intent != INTENT_BUS_ROUTES:
             intent = INTENT_NORMAL_QUERY
 
         is_broad_course_menu = False
@@ -1204,7 +1208,7 @@ async def process_user_text_and_reply(
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
-        elif intent == INTENT_DOCUMENTS or is_location_turn:
+        elif intent == INTENT_DOCUMENTS or intent == INTENT_BUS_ROUTES or is_location_turn:
             context = ""
             timing.mark("rag_end")
         elif intent == INTENT_DEPARTMENT_COMPARISON:
@@ -1351,6 +1355,8 @@ async def process_user_text_and_reply(
             direct_reply = "Please specify the department to know the HOD."
         if intent == INTENT_COURSE_MENU:
             direct_reply = get_course_menu_spoken_prompt(lang_name)
+        elif intent == INTENT_BUS_ROUTES:
+            direct_reply = get_bus_routes_spoken_prompt(lang_name)
         elif intent == INTENT_DOCUMENTS:
             direct_reply = _documents_card_direct_reply(lang_key)
         elif intent == INTENT_DEPARTMENT_FEES:
@@ -1534,6 +1540,7 @@ async def process_user_text_and_reply(
         assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": reply_text}
         if (not faq_direct_reply) and intent in (
             INTENT_COURSE_MENU,
+            INTENT_BUS_ROUTES,
             INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
             INTENT_DEPARTMENT_FEES,
@@ -1592,6 +1599,11 @@ async def process_user_text_and_reply(
         elif intent == INTENT_DOCUMENTS:
             show_card = "documents"
             assistant_msg["text"] = _documents_card_direct_reply(lang_key)
+            assistant_msg["isHidden"] = True
+        elif intent == INTENT_BUS_ROUTES:
+            show_card = "bus_routes"
+            reply_text = get_bus_routes_spoken_prompt(lang_name)
+            assistant_msg["text"] = reply_text
             assistant_msg["isHidden"] = True
         elif intent == INTENT_PRINCIPAL_PROFILE:
             show_card = "principal_profile"
