@@ -106,7 +106,7 @@ export default function ChatOrbControl({
               : 'text-slate-400 group-hover:text-indigo-500'
           }`}
           style={{
-            opacity: comparisonMode ? 0.92 : 1,
+            opacity: comparisonMode ? 0.88 : isProcessing || orbState === 'listening' ? 0.9 : 0.7,
           }}
         >
           {isProcessing ? 'Thinking...' : orbState === 'listening' ? 'Listening...' : 'Tap to speak'}

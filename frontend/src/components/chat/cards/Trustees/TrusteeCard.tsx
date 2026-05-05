@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 
 interface TrusteeCardProps {
   key?: React.Key;
+  direction: 1 | -1;
   name: string;
   role: string;
   description: string;
@@ -10,6 +11,7 @@ interface TrusteeCardProps {
 }
 
 export default function TrusteeCard({
+  direction,
   name,
   role,
   description,
@@ -17,27 +19,27 @@ export default function TrusteeCard({
 }: TrusteeCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -20 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="premium-hod-container"
+      initial={{ opacity: 0, x: direction > 0 ? 24 : -24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: direction > 0 ? -24 : 24 }}
+      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      className="trustee-card"
     >
       {/* Decorative Borders */}
-      <div className="premium-hod-border-outer" />
-      <div className="premium-hod-border-inner" />
-      <div className="premium-hod-vignette" />
-      <div className="premium-hod-glow" />
+      <div className="trustee-card-border-outer" />
+      <div className="trustee-card-border-inner" />
+      <div className="trustee-card-vignette" />
+      <div className="trustee-card-glow" />
 
-      <div className="premium-hod-content">
+      <div className="trustee-card-content">
         {/* Left Side: Content */}
-        <div className="premium-hod-left">
-          <div className="premium-hod-text-box">
+        <div className="trustee-card-left">
+          <div className="trustee-card-text-box">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="premium-hod-label"
+              className="trustee-card-label"
             >
               Board of Trustees
             </motion.div>
@@ -46,7 +48,7 @@ export default function TrusteeCard({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="premium-hod-name"
+              className="trustee-card-name"
             >
               {name}
             </motion.h2>
@@ -55,7 +57,7 @@ export default function TrusteeCard({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="premium-hod-title"
+              className="trustee-card-role"
             >
               {role}
             </motion.div>
@@ -64,7 +66,7 @@ export default function TrusteeCard({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6, duration: 0.5 }}
-              className="premium-hod-bio trustee-description"
+              className="trustee-card-description trustee-description"
             >
               {description}
             </motion.p>
@@ -72,14 +74,14 @@ export default function TrusteeCard({
         </div>
 
         {/* Right Side: Portrait */}
-        <div className="premium-hod-right">
+        <div className="trustee-card-right">
           <motion.img
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
             src={image}
             alt={name}
-            className="premium-hod-portrait"
+            className="trustee-card-portrait"
           />
         </div>
       </div>

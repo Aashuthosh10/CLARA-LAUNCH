@@ -544,6 +544,7 @@ export default function ChatScreen({
   const lastPayloadTurnIdRef = useRef<string | null>(null);
   const busRoutesDismissedTurnIdRef = useRef<string | null>(null);
   const closingBusRef = useRef(false);
+  const lastTrusteeNarrationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     onChatIdleOverlayChange?.(isBrochureOpen || isBusRoutesSurface);
@@ -1008,6 +1009,30 @@ export default function ChatScreen({
     };
   }, []);
 
+  const applyComparisonNarrationSegment = useCallback(
+    (seg: NarrationPlan['segments'][number]) => {
+      if (!seg || typeof seg !== 'object') return;
+      if (seg.cardId?.startsWith('comparison_')) {
+        comparisonTtsSyncActiveRef.current = false;
+        // Prefer explicit card index if available; fallback to known card id phases.
+        if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
+          comparisonSlideSinkRef.current(seg.cardIndex);
+        } else if (seg.cardId === 'comparison_learning') {
+          comparisonSlideSinkRef.current(0);
+        } else if (seg.cardId === 'comparison_jobs') {
+          comparisonSlideSinkRef.current(1);
+        }
+      }
+      if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
+        setCurrentCardIdx(Math.max(0, seg.cardIndex));
+      }
+      if (typeof seg.displayText === 'string' && seg.displayText.trim()) {
+        setNarrationCaption(seg.displayText.trim());
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!departmentComparisonOpen) {
       comparisonTtsSyncActiveRef.current = false;
@@ -1184,6 +1209,23 @@ export default function ChatScreen({
     requestCampusTts(labels.selectRoomPrompt || labels.selectPrompt, 'select-room');
   }, [language, requestCampusTts]);
 
+  const handleTrusteeNarration = useCallback(
+    (summary: string, trusteeIndex: number) => {
+      const cleanSummary = summary.trim();
+      if (!isTrusteesStage || !cleanSummary) return;
+      const key = `${trusteeIndex}:${cleanSummary}`;
+      if (lastTrusteeNarrationKeyRef.current === key) return;
+      lastTrusteeNarrationKeyRef.current = key;
+      sendMessage({
+        action: 'campus_navigation_tts',
+        language,
+        text: cleanSummary,
+        turn_id: `trustee-card-${trusteeIndex}-${language}-${Date.now()}`,
+      });
+    },
+    [isTrusteesStage, language, sendMessage],
+  );
+
   const openCampusNavigation = useCallback(() => {
     onChatUserActivity?.();
     stopListening();
@@ -1313,19 +1355,7 @@ export default function ChatScreen({
       const plan = narrationPlanRef.current;
       const seg = plan?.segments?.[payload.tts_chunk_index];
       if (plan && seg && plan.turnId === tid) {
-        if (seg.cardId === 'comparison_learning') {
-          comparisonTtsSyncActiveRef.current = false;
-          setComparisonNarrationSection(0);
-        } else if (seg.cardId === 'comparison_jobs') {
-          comparisonTtsSyncActiveRef.current = false;
-          setComparisonNarrationSection(1);
-        }
-        if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
-          setCurrentCardIdx(Math.max(0, seg.cardIndex));
-        }
-        if (typeof seg.displayText === 'string' && seg.displayText.trim()) {
-          setNarrationCaption(seg.displayText.trim());
-        }
+        applyComparisonNarrationSegment(seg);
       }
     }
 
@@ -1459,6 +1489,12 @@ export default function ChatScreen({
             );
             comparisonClipPlayIndexRef.current = next;
             comparisonSlideSinkRef.current(next);
+          }
+        } else if (!moreQueued) {
+          // Narration-plan mode: ensure we settle on final section after last chunk.
+          const plan = narrationPlanRef.current;
+          if (plan && plan.turnId === tid) {
+            comparisonSlideSinkRef.current(COMPARISON_NARRATION_SECTIONS - 1);
           }
         }
         if (cardProgressTimerRef.current && (!audioChainFollowUp || !moreQueued)) {
@@ -1895,8 +1931,9 @@ export default function ChatScreen({
     // during the slideshow.
     if (isTrusteesStage && currentUiLockRef.current === 'CARD') {
       setLayoutMode('SPLIT_CARDS');
-      // Do NOT queue backend audio — Trustees slideshow is a visual-only experience.
-      return;
+      const isTrusteeNarrationTurn = String(turnId).startsWith('trustee-card-');
+      // Block unrelated backend audio while trustees are active, but allow trustee summaries.
+      if (!isTrusteeNarrationTurn) return;
     }
 
     // Trustees Premium Slideshow Integration
@@ -1917,10 +1954,9 @@ export default function ChatScreen({
       setIsDocumentsStage(false);
       setIsTrusteesStage(true);
       setLayoutMode('SPLIT_CARDS');
+      lastTrusteeNarrationKeyRef.current = null;
       
-      // IMPORTANT: Do NOT queue backend audio for Trustees.
-      // Playing backend audio here would cause the AI fallback voice to override
-      // the slideshow experience.
+      // Avoid stale non-trustee audio continuing when trustees UI takes over.
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
@@ -3286,7 +3322,7 @@ export default function ChatScreen({
                         isProcessing={isResponsePending}
                         amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
                         onTap={handleOrbTap}
-                        bottomClassName="absolute -bottom-12 left-1/2 -translate-x-1/2 w-full text-center"
+                        bottomClassName="mt-2 mb-5 w-full text-center"
                       />
                     </div>
                   </div>
@@ -3362,7 +3398,7 @@ export default function ChatScreen({
                     onCardClick={handleCardSelect}
                   />
                 ) : isTrusteesStage ? (
-                  <Trustees />
+                  <Trustees onNarrateTrustee={handleTrusteeNarration} />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 

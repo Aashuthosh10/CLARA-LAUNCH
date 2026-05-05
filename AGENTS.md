@@ -128,3 +128,25 @@ Known non-blocking warnings:
 - Relevant lint/tests/smoke checks pass for touched area.
 - For production-related work, run `scripts\production-check.ps1` when feasible.
 - Final report includes: changed files, why changed, verification done, remaining risks.
+
+## Latest Implemented Changes (2026-05-05)
+
+- Chat surface management is now explicit for fullscreen cards:
+  - `frontend/src/types/chatSurface.ts` introduces a single chat surface model (`chat`, `department_comparison`, `brochure`, `bus_routes`).
+  - `frontend/src/screens/ChatScreen.tsx` uses surface-based exclusive rendering, so bus routes unmount cleanly on close and do not overlay chat.
+- Bus routes flow is fully integrated end-to-end:
+  - Backend bus intent and `showCard="bus_routes"` hints are implemented in `backend/services/answer_generation.py` and consumed by `backend/app/main.py`.
+  - Frontend bus UX is in `frontend/src/components/bus/BusRoutesFullscreen.tsx`, with open/close lifecycle owned by `ChatScreen`.
+  - Bus data/types/helpers are in `frontend/src/data/collegeBusRoutes.json`, `frontend/src/data/collegeBusRoutes.types.ts`, `frontend/src/lib/busRoutesIntent.ts`, and `frontend/src/lib/busRoutesMatch.ts`.
+  - Backend validation coverage exists in `backend/tests/test_bus_routes_intent.py`.
+- Department comparison cinematic/TTS sync behavior has been hardened:
+  - `frontend/src/screens/ChatScreen.tsx` supports narration-plan-aware section sync and safer fallback sync for streamed TTS chunks.
+  - Comparison panel sizing/readability CSS has been tuned in `frontend/src/styles/cinematic-light.css`.
+- Full-text chat bottom-stack alignment has been rebalanced:
+  - FAQ + orb + tap-to-speak spacing/centering was adjusted to reduce clipping and floating behavior in `frontend/src/styles/cinematic-light.css` and `frontend/src/screens/ChatScreen.tsx`.
+- Trustees/founders card system was upgraded from static slideshow to interactive carousel:
+  - Navigation (prev/next + dots), richer card scale, and per-card backend TTS summary triggers were added across:
+    - `frontend/src/components/chat/cards/Trustees/Trustees.tsx`
+    - `frontend/src/components/chat/cards/Trustees/TrusteeCard.tsx`
+    - `frontend/src/screens/ChatScreen.tsx`
+    - `frontend/src/styles/cinematic-light.css`

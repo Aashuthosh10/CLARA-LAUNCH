@@ -253,3 +253,58 @@ Known non-blocking warnings:
 - Frontend WS lifecycle: `frontend/src/hooks/useWebSocket.ts`
 - Chat UI rendering: `frontend/src/screens/ChatScreen.tsx`
 - Kiosk shell/reset flow: `frontend/src/App.tsx`
+
+## Session Update Log (2026-05-05)
+
+### 1) Bus Routes Feature (Backend + Frontend)
+
+- Added deterministic bus intent detection and routing:
+  - `INTENT_BUS_ROUTES`, multilingual cue detection, and card hints in `backend/services/answer_generation.py`.
+  - Backend WebSocket flow now maps bus trigger to `showCard="bus_routes"` in `backend/app/main.py`.
+- Added backend test coverage:
+  - `backend/tests/test_bus_routes_intent.py`.
+- Added frontend bus routes module set:
+  - Data: `frontend/src/data/collegeBusRoutes.json`, `frontend/src/data/collegeBusRoutes.types.ts`
+  - Intent helpers: `frontend/src/lib/busRoutesIntent.ts`, `frontend/src/lib/busRoutesMatch.ts`
+  - UI: `frontend/src/components/bus/BusRoutesFullscreen.tsx`
+
+### 2) Single-Surface Chat Screen State + Unmount Semantics
+
+- Introduced single-surface state model for mutually exclusive fullscreen content:
+  - `frontend/src/types/chatSurface.ts`.
+- Updated `frontend/src/screens/ChatScreen.tsx` to render one active surface at a time (`chat`, `department_comparison`, `brochure`, `bus_routes`), preventing overlay/ghost stacking.
+- Bus routes close now returns to chat with surface reset and fresh remount behavior.
+
+### 3) Comparison Table Readability + Narration Sync
+
+- Increased comparison panel readability and usable area in:
+  - `frontend/src/styles/cinematic-light.css`
+  - `frontend/src/components/comparison/DepartmentComparisonCinema.tsx`
+- Improved comparison TTS alignment logic in `frontend/src/screens/ChatScreen.tsx`:
+  - narration-plan aware section application,
+  - safer final section settling for streamed audio completion paths.
+
+### 4) Chat Full-Text Bottom Alignment
+
+- Rebalanced FAQ/orb/tap-to-speak stack in:
+  - `frontend/src/styles/cinematic-light.css`
+  - `frontend/src/screens/ChatScreen.tsx`
+  - `frontend/src/screens/chat/ChatOrbControl.tsx`
+- Goal achieved: cleaner bottom anchoring and reduced tap-text clipping risk.
+
+### 5) Trustees / Founders Card System Upgrade
+
+- Replaced passive slideshow with explicit interactive navigation:
+  - prev/next controls, disabled edge states, dot indicators in `frontend/src/components/chat/cards/Trustees/Trustees.tsx`.
+- Upgraded card visual hierarchy and dimensions (premium scale, no truncation) in:
+  - `frontend/src/components/chat/cards/Trustees/TrusteeCard.tsx`
+  - `frontend/src/styles/cinematic-light.css`
+- Added per-card concise `tts_summary` metadata and auto-play-on-index-change backend narration trigger via `ChatScreen` callbacks (backend TTS path reused).
+
+### 6) Repo Sync and Merge Notes
+
+- Local branch was synchronized with upstream `origin/main` during this session and merge conflicts were resolved in:
+  - `frontend/src/screens/ChatScreen.tsx`
+  - `frontend/src/styles/cinematic-light.css`
+  - `frontend/src/components/comparison/DepartmentComparisonCinema.tsx`
+- Frontend typecheck (`npm run lint`, TypeScript noEmit) passed after each major conflict/feature integration step.
