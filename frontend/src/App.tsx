@@ -18,6 +18,7 @@ import { agentLog, registerClaraDebugInteractionAudit } from './debug/interactio
 import { runHardResetTransaction } from './session/hardResetTransaction';
 import { kioskStore } from './store/kiosk/kioskStore';
 import { KioskState } from './store/kiosk/types';
+import { useFaceChannel } from './hooks/useFaceChannel';
 
 // Screens
 import SleepScreen from './screens/SleepScreen';
@@ -71,6 +72,7 @@ function ClaraKioskRuntime({
   scheduleFullRuntimeRemount,
 }: ClaraKioskRuntimeProps) {
   const { resetToDefaultLanguage } = useLanguage();
+  const faceChannel = useFaceChannel();
   const {
     state,
     payload,
@@ -92,6 +94,7 @@ function ClaraKioskRuntime({
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
   const effectiveStateRef = useRef(effectiveState);
   effectiveStateRef.current = effectiveState;
+  const attemptedFaceWindowForChatRef = useRef(false);
 
   const chatIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatInactivityGenerationRef = useRef(0);
@@ -175,8 +178,16 @@ function ClaraKioskRuntime({
   useEffect(() => {
     if (effectiveState === 0) {
       setShowChatLanguageGate(false);
+      attemptedFaceWindowForChatRef.current = false;
     }
   }, [effectiveState]);
+
+  useEffect(() => {
+    if (!isChatRouteState(effectiveState) || attemptedFaceWindowForChatRef.current) return;
+    attemptedFaceWindowForChatRef.current = true;
+    // Browsers may block this without a user gesture; the banner control remains the reliable path.
+    faceChannel.openFaceWindow();
+  }, [effectiveState, faceChannel]);
 
   useEffect(() => {
     // Re-read ?state= on every ClaraKioskRuntime remount used to FORCE ChatScreen after Home whenever
@@ -310,6 +321,7 @@ function ClaraKioskRuntime({
                 onChatUserActivity={reportChatUserActivity}
                 onChatIdleOverlayChange={setSuppressChatIdleForOverlay}
                 sendMessage={sendMessage}
+                faceChannel={faceChannel}
               />
             </Fragment>
           </motion.div>
@@ -348,6 +360,19 @@ function ClaraKioskRuntime({
           <button type="button" onClick={retryConnect} className="underline font-bold">
             Retry Connection
           </button>
+          {faceChannel.enabled && (
+            <>
+              {' '}
+              |{' '}
+              <button
+                type="button"
+                onClick={() => faceChannel.openFaceWindow()}
+                className="underline font-bold"
+              >
+                Enable Face Display
+              </button>
+            </>
+          )}
         </div>
       )}
 

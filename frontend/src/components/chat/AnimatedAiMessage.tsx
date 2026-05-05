@@ -40,7 +40,7 @@ export default function AnimatedAiMessage({
     }
     const timer = setTimeout(() => {
       setIsReady(true);
-    }, 100); // reduced intelligence delay since audio might start immediately
+    }, 0); // reveal immediately; speech already conveys pacing
     return () => clearTimeout(timer);
   }, [animate]);
 
@@ -51,8 +51,16 @@ export default function AnimatedAiMessage({
     [text, toGraphemes]
   );
   
-  // Stagger roughly finishes just before the TTS ends
-  const expectedStagger = audioDuration ? (audioDuration * 1000 * 0.9) / Math.max(totalChars, 1) : 20;
+  // Match TTS timing: the last character's reveal animation has a 0.6s duration (chat.css),
+  // so schedule the last *start* at (audioMs - tailMs) to end right as audio ends.
+  const expectedStagger = useMemo(() => {
+    const tailMs = 600; // must match `.letter-reveal { animation: ... 0.6s ... }`
+    const audioMs = Math.max(0, audioDuration * 1000);
+    const budgetMs = audioMs > 0 ? Math.max(0, audioMs - tailMs) : 0;
+    const base = budgetMs > 0 ? budgetMs / Math.max(totalChars, 1) : 18;
+    // Guardrails so long audio doesn't make UI crawl, and short audio doesn't become unreadable.
+    return Math.max(10, Math.min(26, base));
+  }, [audioDuration, totalChars]);
 
   if (!isReady) {
     // Hidden initially to prevent layout shift before animation
