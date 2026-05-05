@@ -74,6 +74,8 @@ import {
 import { inferForcedDepartmentComparisonFromUserText } from '../lib/departmentComparisonIntent';
 import { inferExecutiveProfileFromUserText } from '../lib/executiveLeadershipIntent';
 import type { ExecutiveLeadershipKind } from '../lib/executiveLeadershipIntent';
+import type { FaceChannel } from '../hooks/useFaceChannel';
+import { inferEmotionFromPayload } from '../lib/faceEmotion';
 
 declare global {
   interface Window {
@@ -186,6 +188,19 @@ type VisibleFaqSuggestion = {
   text: string;
 };
 
+type NarrationPlan = {
+  turnId: string;
+  mode: 'card_narration';
+  segments: {
+    segmentId: string;
+    displayText: string;
+    ttsText: string;
+    cardIndex: number | null;
+    cardId: string | null;
+    isFinalSegment: boolean;
+  }[];
+};
+
 const FAQ_CAROUSEL_INTERVAL_MS = 3600;
 const FAQ_TICKER_CARD_WIDTH = 300;
 const FAQ_TICKER_CARD_GAP = 14;
@@ -207,6 +222,55 @@ function processResponseSentences(value: unknown): string[] {
 function payloadResponseText(payload: any, fallback: string): string {
   if (payload?.event === 'error' || payload?.errorCode) return fallback ?? '';
   return String(payload?.responseText ?? payload?.assistantText ?? fallback ?? '');
+}
+
+/** Face lip-sync needs text; streaming often plays audio before `responseText` is populated. */
+function payloadAssistantSpeechText(payload: any): string {
+  const direct = payloadResponseText(payload, '').trim();
+  if (direct.length > 0) return direct;
+  const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i] as { role?: string; text?: string; isHidden?: boolean; isCardData?: boolean };
+    if (!m || String(m.role ?? '').toLowerCase() !== 'clara') continue;
+    if (m.isHidden || m.isCardData) continue;
+    const t = typeof m.text === 'string' ? m.text.trim() : '';
+    if (t.length > 0) return t;
+  }
+  const spoken = typeof payload?.spokenText === 'string' ? payload.spokenText.trim() : '';
+  if (spoken.length > 0) return spoken;
+  return '';
+}
+
+function finitePositiveMs(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function fallbackSentenceDurationMs(sentence: string): number {
+  return Math.max(600, sentence.length * 40);
+}
+
+function allocateSentenceDurations(sentences: string[], totalMs: number | null): number[] {
+  if (!sentences.length) return [];
+  if (!totalMs || totalMs <= 0) {
+    return sentences.map(fallbackSentenceDurationMs);
+  }
+
+  const roundedTotal = Math.max(sentences.length, Math.round(totalMs));
+  const weights = sentences.map((sentence) => Math.max(1, sentence.replace(/\s+/g, '').length));
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+  const durations = weights.map((weight) => Math.max(1, Math.round((roundedTotal * weight) / weightTotal)));
+  let delta = roundedTotal - durations.reduce((sum, duration) => sum + duration, 0);
+  let i = 0;
+  while (delta !== 0 && durations.length > 0) {
+    const idx = i % durations.length;
+    const step = delta > 0 ? 1 : -1;
+    if (durations[idx] + step > 0) {
+      durations[idx] += step;
+      delta -= step;
+    }
+    i += 1;
+  }
+  return durations;
 }
 
 // #region agent log
@@ -382,6 +446,7 @@ interface ChatScreenProps {
   sendMessage: (msg: object) => void;
   /** When true, discard payload-driven updates (ghost session prevention). */
   isPayloadStale?: (p: unknown) => boolean;
+  faceChannel?: FaceChannel;
 }
 
 export default function ChatScreen({
@@ -401,6 +466,7 @@ export default function ChatScreen({
   onChatIdleOverlayChange,
   sendMessage,
   isPayloadStale,
+  faceChannel,
 }: ChatScreenProps) {
   const { language, setLanguage, t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -410,6 +476,8 @@ export default function ChatScreen({
   const { layoutMode, setLayoutMode } = useChatLayoutReducer('FULL_TEXT');
   const [activeCards, setActiveCards] = useState<any[] | null>(null);
   const [currentCardIdx, setCurrentCardIdx] = useState(0);
+  const [narrationCaption, setNarrationCaption] = useState<string>('');
+  const narrationPlanRef = useRef<NarrationPlan | null>(null);
   const [suppressedTurnId, setSuppressedTurnId] = useState<string | null>(null);
   const [currentAudioDuration, setCurrentAudioDuration] = useState<number>(0);
   const [courseMenuOptions, setCourseMenuOptions] = useState<string[]>([]);
@@ -526,6 +594,8 @@ export default function ChatScreen({
   const sentenceRevealKeyRef = useRef<string | null>(null);
   const fullTextScrollRef = useRef<HTMLDivElement | null>(null);
   const textScrollFrameRef = useRef<number | null>(null);
+  const latestPayloadRef = useRef<any | null>(payload ?? null);
+  const faceChannelRef = useRef<FaceChannel | undefined>(faceChannel);
 
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
@@ -572,6 +642,27 @@ export default function ChatScreen({
   >(null);
   /** Server `turn_id` for the in-flight assistant reply (set from isProcessing payload). */
   const assistantAudioTurnOwnerRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    latestPayloadRef.current = payload ?? null;
+    const plan = payload?.narration_plan;
+    if (plan && typeof plan === 'object' && plan.mode === 'card_narration' && Array.isArray(plan.segments)) {
+      narrationPlanRef.current = plan as NarrationPlan;
+    }
+  }, [payload]);
+
+  useEffect(() => {
+    faceChannelRef.current = faceChannel;
+  }, [faceChannel]);
+
+  // Face display: push "thinking" state as soon as backend marks turn processing.
+  useEffect(() => {
+    if (!payload || isPayloadStale?.(payload)) return;
+    if (payload.isProcessing !== true) return;
+    const tid = typeof payload.turn_id === 'string' ? payload.turn_id.trim() : '';
+    if (!tid) return;
+    faceChannelRef.current?.postThinking?.(tid);
+  }, [payload, isPayloadStale]);
 
   // Wraps original sendMessage to sniff for intents dynamically on dispatch.
   // Deterministic FAQ answers are resolved by the backend before Groq/RAG.
@@ -1184,6 +1275,57 @@ export default function ChatScreen({
     audioLockRef.current = true;
     setIsPlayingBackendAudio(true);
 
+    // Narration-plan sync: each streamed TTS chunk is one visual beat.
+    // The backend sets `tts_chunk_index` to match narration plan segment index.
+    if (payload?.tts_streaming === true && typeof payload?.tts_chunk_index === 'number') {
+      const plan = narrationPlanRef.current;
+      const seg = plan?.segments?.[payload.tts_chunk_index];
+      if (plan && seg && plan.turnId === tid) {
+        if (seg.cardId === 'comparison_learning') {
+          comparisonTtsSyncActiveRef.current = false;
+          setComparisonNarrationSection(0);
+        } else if (seg.cardId === 'comparison_jobs') {
+          comparisonTtsSyncActiveRef.current = false;
+          setComparisonNarrationSection(1);
+        }
+        if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
+          setCurrentCardIdx(Math.max(0, seg.cardIndex));
+        }
+        if (typeof seg.displayText === 'string' && seg.displayText.trim()) {
+          setNarrationCaption(seg.displayText.trim());
+        }
+      }
+    }
+
+    const liveFaceChannel = faceChannelRef.current;
+    if (!audioChainFollowUp && liveFaceChannel?.enabled && tid) {
+      const latestPayload = latestPayloadRef.current;
+      let text = payloadAssistantSpeechText(latestPayload);
+      const explicitTotalMs =
+        finitePositiveMs(totalDurationEstimateMs) ??
+        finitePositiveMs(latestPayload?.tts_total_duration_estimate_ms);
+      let sentences = processResponseSentences(text);
+      let durationsMs = allocateSentenceDurations(sentences, explicitTotalMs);
+      if (!sentences.length) {
+        const fallbackMs =
+          finitePositiveMs(explicitTotalMs) ??
+          finitePositiveMs(latestPayload?.tts_total_duration_estimate_ms);
+        if (fallbackMs !== null && fallbackMs > 0) {
+          sentences = ['Audio'];
+          durationsMs = [fallbackMs];
+        }
+      }
+      if (sentences.length && durationsMs.length === sentences.length) {
+        liveFaceChannel.postSpeech({
+          turnId: tid,
+          sentences,
+          durationsMs,
+          emotion: inferEmotionFromPayload(latestPayload),
+          emotionHint: 'calm',
+        });
+      }
+    }
+
     let comparisonTimeHandler: (() => void) | null = null;
     const detachComparisonAudio = () => {
       if (comparisonTimeHandler) {
@@ -1223,6 +1365,9 @@ export default function ChatScreen({
 
     const startSync = (duration: number) => {
         if (!isOverview || !cardsToSync) return;
+        // Narration-plan mode: card index is driven by tts_chunk_index/segments, not time slicing.
+        const plan = narrationPlanRef.current;
+        if (plan && plan.turnId === tid) return;
         const totalDurationMs = duration * 1000;
         const intervalTime = totalDurationMs / cardsToSync.length;
         let idx = 0;
@@ -1308,6 +1453,8 @@ export default function ChatScreen({
         } else if (pendingFinalBackupRef.current) {
           pendingFinalBackupRef.current = null;
         }
+        if (!moreQueued) faceChannelRef.current?.postIdle(tid);
+        if (!moreQueued) setNarrationCaption('');
     };
 
     audio.play().catch(err => {
@@ -1358,7 +1505,15 @@ export default function ChatScreen({
       const promptAudio = payload?.languagePromptAudioBase64;
       if (typeof promptAudio === 'string' && promptAudio.length > 0) {
         const audioSig = `${promptAudio.length}:${promptAudio.slice(0, 24)}`;
-        handleAudioPlayback(promptAudio, `language_gate_prompt|${audioSig}`, false, null);
+        handleAudioPlayback(
+          promptAudio,
+          `language_gate_prompt|${audioSig}`,
+          false,
+          null,
+          'language_gate_prompt',
+          false,
+          null,
+        );
       } else {
         sendMessage({ action: 'language_gate_prompt' });
       }
@@ -1572,7 +1727,22 @@ export default function ChatScreen({
           ? payload.comparisonRecommendFocus
           : null,
       );
-      comparisonTtsSyncActiveRef.current = true;
+      // If backend provided a narration plan for comparison, do NOT run time/clip-based drift sync.
+      // Section + point are driven by narration_plan segment index (tts_chunk_index) instead.
+      const plan = payload?.narration_plan;
+      const hasComparisonNarrationPlan =
+        plan &&
+        typeof plan === 'object' &&
+        plan.mode === 'card_narration' &&
+        typeof plan.turnId === 'string' &&
+        Array.isArray(plan.segments) &&
+        plan.segments.some(
+          (s: any) =>
+            s &&
+            typeof s === 'object' &&
+            (s.cardId === 'comparison_learning' || s.cardId === 'comparison_jobs'),
+        );
+      comparisonTtsSyncActiveRef.current = !hasComparisonNarrationPlan;
       comparisonAccumulatedSecRef.current = 0;
       comparisonClipPlayIndexRef.current = 0;
       const estMs = payload?.tts_total_duration_estimate_ms;
@@ -2481,7 +2651,9 @@ export default function ChatScreen({
     const backendListening = voiceInputMode === 'backend' && propIsListening;
     const shouldStopMic = browserListening || backendListening;
 
+    const interruptedTurnId = assistantAudioTurnOwnerRef.current;
     sendMessage({ action: 'cancel_turn' });
+    faceChannel?.postInterrupt(interruptedTurnId);
     assistantAudioTurnOwnerRef.current = null;
     playedSegmentKeysRef.current.clear();
 
@@ -3097,6 +3269,13 @@ export default function ChatScreen({
                     <Sparkles size={18} /> {isCampusNavigationStage ? campusCopy.campusNavigation : 'CLARA'}
                   </div>
                 </header>
+                {narrationCaption ? (
+                  <div className="px-4 pb-2 pt-1">
+                    <div className="rounded-2xl bg-white/5 px-4 py-3 text-[13px] leading-snug text-white/90 backdrop-blur-sm">
+                      {narrationCaption}
+                    </div>
+                  </div>
+                ) : null}
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
                   {isCampusNavigationStage && selectedCampusDirection ? (
                     <div className="campus-direction-panel">

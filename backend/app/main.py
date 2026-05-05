@@ -40,6 +40,7 @@ from backend.app.audio_utils import (
     normalize_tts_pronunciation,
     split_first_sentence,
 )
+from backend.services.narration_plan import build_pre_llm_narration_plan, finalize_segment_list
 from backend.app.session_state import (
     append_session_history,
     assistant_last_reply_used_guest_name,
@@ -1721,6 +1722,7 @@ async def process_user_text_and_reply(
             await _await_first_sentence_task()
 
         tts_text = reply_text
+        narration_segments = None
         utterance_kind = "assistant_full_reply"
         segment_index = 0
         is_final_segment = True
@@ -1745,6 +1747,30 @@ async def process_user_text_and_reply(
                 tts_text = ""
                 utterance_kind = "assistant_remaining_reply"
                 segment_index = 1
+
+        # Card narration plan: replace raw text with deterministic, short segment text.
+        # Each segment will be streamed as its own TTS chunk so UI can flip exactly on chunk boundaries.
+        if show_card is not None and intent:
+            try:
+                narration_segments = build_pre_llm_narration_plan(
+                    intent,
+                    lang_key,
+                    user_text=text,
+                    detected_department_label=detected_department_label,
+                    menu_department_json_key=menu_department_json_key,
+                    comparison_department_ids=list(comparison_dept_ids) if comparison_dept_ids else None,
+                )
+            except Exception:
+                narration_segments = None
+                logger.exception("Failed to build narration plan (fallback to legacy tts_text)")
+        if narration_segments:
+            finalize_segment_list(timing.turn_id, narration_segments)
+            tts_text = "\n\n".join([s.tts_text for s in narration_segments if s.tts_text]).strip()
+            visible_payload["narration_plan"] = {
+                "turnId": timing.turn_id,
+                "mode": "card_narration",
+                "segments": [s.public_dict() for s in narration_segments],
+            }
 
         timing.mark("tts_start")
         full_audio_b64 = None
@@ -1834,7 +1860,10 @@ async def process_user_text_and_reply(
                 max_chars = TTS_CHUNK_MAX_CHARS_COMPARISON
             else:
                 max_chars = TTS_CHUNK_MAX_CHARS
-            chunks = split_tts_chunks(chunk_source_text, max_chars=max_chars)
+            if narration_segments:
+                chunks = [s.tts_text for s in narration_segments if s.tts_text and s.tts_text.strip()]
+            else:
+                chunks = split_tts_chunks(chunk_source_text, max_chars=max_chars)
             if not chunks:
                 chunks = [chunk_source_text]
             faq_chunk_t0 = max(TTS_CHUNK_FIRST_TIMEOUT_S, 8.0)
@@ -1931,6 +1960,8 @@ async def process_user_text_and_reply(
                     tts_streaming=True,
                     tts_chunk_index=i,
                 )
+                if narration_segments:
+                    interim["narration_plan"] = visible_payload.get("narration_plan")
                 if _turn_stale(session, turn_gen_marker):
                     logger.info("Stale streaming TTS chunk dropped (session_generation advanced)")
                     return

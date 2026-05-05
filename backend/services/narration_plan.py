@@ -20,6 +20,7 @@ from backend.services.answer_generation import (
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_FEES,
     INTENT_DEPARTMENT_OVERVIEW,
+    INTENT_DEPARTMENT_COMPARISON,
     INTENT_DOCUMENTS,
     INTENT_HOD_PROFILE,
     INTENT_PLACEMENTS,
@@ -37,6 +38,7 @@ from backend.config.settings import ENABLE_NARRATION_PLAN as SETTINGS_ENABLE_FLA
 logger = logging.getLogger(__name__)
 
 STATIC_CARDS_PATH = Path(__file__).resolve().parent.parent / "data" / "narration" / "static_cards.json"
+COMPARISON_DEFAULTS_PATH = Path(__file__).resolve().parent.parent / "data" / "comparison_insight_defaults.json"
 
 LANG_KEY_FALLBACK_ORDER = ("en", "hi", "kn", "ta", "te", "ml")
 
@@ -302,6 +304,18 @@ def _load_static_cards() -> dict[str, Any]:
         return {}
 
 
+@lru_cache(maxsize=2)
+def _load_comparison_defaults() -> dict[str, Any]:
+    if not COMPARISON_DEFAULTS_PATH.is_file():
+        logger.warning("comparison_insight_defaults.json missing: %s", COMPARISON_DEFAULTS_PATH)
+        return {}
+    try:
+        return json.loads(COMPARISON_DEFAULTS_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Could not parse comparison_insight_defaults.json: %s", exc)
+        return {}
+
+
 def _clean(val: Any) -> str:
     return re.sub(r"\s+", " ", str(val or "").strip())
 
@@ -316,6 +330,78 @@ def _dedupe_join(lines: list[str]) -> str:
         seen.add(k)
         out.append(ln.strip())
     return "\n".join(out)
+
+
+def _split_bullets(value: str) -> list[str]:
+    raw = (value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not raw:
+        return []
+    out: list[str] = []
+    for line in raw.split("\n"):
+        ln = line.strip()
+        ln = re.sub(r"^[•\-\u2022]+\s*", "", ln).strip()
+        if ln:
+            out.append(ln)
+    return out
+
+
+def _compact_list(items: list[str], *, max_items: int) -> str:
+    picked = [it.strip() for it in items if it and it.strip()][:max_items]
+    if not picked:
+        return ""
+    return ", ".join(picked)
+
+
+_STOPWORDS = {
+    "and",
+    "or",
+    "with",
+    "for",
+    "to",
+    "of",
+    "in",
+    "on",
+    "the",
+    "a",
+    "an",
+    "your",
+    "student",
+    "roles",
+    "role",
+    "positions",
+    "position",
+    "teams",
+    "team",
+    "basics",
+    "fundamentals",
+    "foundations",
+}
+
+
+def _short_phrase(value: str, *, max_words: int = 3) -> str:
+    """
+    Aggressive compression for comparison narration:
+    keep 2–3 keywords per bullet so the full compare fits under 20–30s.
+    """
+    s = _clean(value)
+    if not s:
+        return ""
+    # Split on common separators and keep the first meaningful chunk.
+    s = re.split(r"[/,;]|\\band\\b|\\b&\\b", s, maxsplit=1, flags=re.IGNORECASE)[0].strip()
+    words = [w for w in re.split(r"\\s+", s) if w]
+    kept: list[str] = []
+    for w in words:
+        w0 = re.sub(r"[^a-zA-Z0-9+]+", "", w).strip()
+        if not w0:
+            continue
+        if w0.lower() in _STOPWORDS:
+            continue
+        kept.append(w0)
+        if len(kept) >= max_words:
+            break
+    if not kept:
+        return words[0] if words else ""
+    return " ".join(kept)
 
 
 def _format_inr(value: int) -> str:
@@ -958,6 +1044,60 @@ def segment_documents(locale_id: str) -> list[NarrationSegment]:
     return out
 
 
+def build_department_comparison_segments(
+    department_ids: list[str],
+    locale_id: str,
+) -> list[NarrationSegment]:
+    """
+    Token-efficient comparison plan (UI sync via tts_chunk_index):
+    - Phase 1: ONE short 'learns' line per dept (3 subjects max)
+    - Phase 2: ONE short 'jobs' line per dept (2 roles max)
+    """
+    lk = _effective_lang(locale_id)
+    data = _load_comparison_defaults()
+    deps = data.get("departments") if isinstance(data, dict) else None
+    if not isinstance(deps, dict) or not department_ids:
+        return [
+            NarrationSegment(
+                display_text=_clip_caption("Comparison will appear on screen shortly.", 120),
+                card_index=0,
+                card_id="comparison_learning",
+            )
+        ]
+
+    segs: list[NarrationSegment] = []
+    name_map = _DEPT_DISPLAY.get(lk, _DEPT_DISPLAY["en"])
+
+    def dept_name(did: str) -> str:
+        return name_map.get(did, did.replace("_", " ").upper())
+
+    # Phase 1: learning
+    for i, did in enumerate(department_ids):
+        row = deps.get(did) if isinstance(deps.get(did), dict) else {}
+        learn_pack = row.get("student_learning_4y") if isinstance(row, dict) else None
+        learn_raw = ""
+        if isinstance(learn_pack, dict):
+            learn_raw = str(learn_pack.get(lk) or learn_pack.get("en") or "")
+        learn_items = [_short_phrase(x, max_words=3) for x in _split_bullets(learn_raw)]
+        learn_short = _compact_list([x for x in learn_items if x], max_items=3)
+        txt = _clip_caption(f"{dept_name(did)}: {learn_short}".strip(" :"), 90)
+        segs.append(NarrationSegment(display_text=txt, card_index=i, card_id="comparison_learning"))
+
+    # Phase 2: jobs
+    for i, did in enumerate(department_ids):
+        row = deps.get(did) if isinstance(deps.get(did), dict) else {}
+        jobs_pack = row.get("future_job_opportunities") if isinstance(row, dict) else None
+        jobs_raw = ""
+        if isinstance(jobs_pack, dict):
+            jobs_raw = str(jobs_pack.get(lk) or jobs_pack.get("en") or "")
+        job_items = [_short_phrase(x, max_words=3) for x in _split_bullets(jobs_raw)]
+        jobs_short = _compact_list([x for x in job_items if x], max_items=2)
+        txt = _clip_caption(f"{dept_name(did)} jobs: {jobs_short}".strip(" :"), 90)
+        segs.append(NarrationSegment(display_text=txt, card_index=i, card_id="comparison_jobs"))
+
+    return segs
+
+
 def segment_hod_single(dept_rec: dict[str, Any], json_key: str, locale_id: str) -> NarrationSegment:
     lk = _effective_lang(locale_id)
     lbl = dept_labels(lk)
@@ -976,6 +1116,7 @@ def build_pre_llm_narration_plan(
     user_text: str,
     detected_department_label: str | None,
     menu_department_json_key: str | None,
+    comparison_department_ids: list[str] | None = None,
 ) -> list[NarrationSegment] | None:
     """Return narration segments before LLM for deterministic card flows; None = use legacy pipeline."""
     if not SETTINGS_ENABLE_FLAG:
@@ -1048,6 +1189,10 @@ def build_pre_llm_narration_plan(
             NarrationSegment(display_text=f"{t}\n{b}".strip(), card_index=i, card_id="admissions")
             for i, (t, b) in enumerate(slides_pairs)
         ]
+
+    if intent == INTENT_DEPARTMENT_COMPARISON:
+        ids = [x for x in (comparison_department_ids or []) if isinstance(x, str) and x.strip()]
+        return build_department_comparison_segments(ids, locale_id)
 
     if intent == INTENT_DEPARTMENT_OVERVIEW:
         if not isinstance(deps, dict):
