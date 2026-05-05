@@ -35,7 +35,7 @@ const VOICE_INPUT_MODE = (import.meta.env.VITE_VOICE_INPUT_MODE || 'browser').to
 
 const _parsedInactivityMs = Number(import.meta.env.VITE_KIOSK_INACTIVITY_MS);
 const CHAT_USER_INACTIVITY_MS =
-  Number.isFinite(_parsedInactivityMs) && _parsedInactivityMs > 0 ? _parsedInactivityMs : 60_000;
+  Number.isFinite(_parsedInactivityMs) && _parsedInactivityMs > 0 ? _parsedInactivityMs : 240_000;
 
 function isChatRouteState(state: number): boolean {
   return state === 3 || state === 4 || state === 5;
@@ -95,6 +95,8 @@ function ClaraKioskRuntime({
   const effectiveStateRef = useRef(effectiveState);
   effectiveStateRef.current = effectiveState;
   const attemptedFaceWindowForChatRef = useRef(false);
+  const latestPayloadRef = useRef<any>(null);
+  latestPayloadRef.current = payload;
 
   const chatIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatInactivityGenerationRef = useRef(0);
@@ -149,6 +151,18 @@ function ClaraKioskRuntime({
       chatIdleTimerRef.current = null;
       if (gen !== chatInactivityGenerationRef.current) return;
       if (!isChatRouteState(effectiveStateRef.current)) return;
+      const p = latestPayloadRef.current;
+      const shouldSuppressReset =
+        p &&
+        typeof p === 'object' &&
+        (p.isProcessing === true ||
+          p.audioPending === true ||
+          p.isSpeaking === true ||
+          (p.type === 'assistant_audio_update' && (p.tts_streaming === true || (Array.isArray(p.tts_audio_queue) && p.tts_audio_queue.length > 0))));
+      if (shouldSuppressReset) {
+        scheduleChatUserInactivityTimer();
+        return;
+      }
       resetClaraSession();
     }, CHAT_USER_INACTIVITY_MS);
   }, [clearChatUserInactivityTimer, resetClaraSession]);

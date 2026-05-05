@@ -237,6 +237,23 @@ Known non-blocking warnings:
 - Keep the bottom of the text viewport above the FAQ suggestions + orb stack in full-text layout.
 - Short replies should remain visually centered; only long/overflowing replies should start at the top (optionally with gentle auto-scroll).
 
+## Kiosk Inactivity Timer Notes
+
+- The chat inactivity timer is owned by `frontend/src/App.tsx` (`CHAT_USER_INACTIVITY_MS`).
+- The inactivity timer must **never** hard-reset the session while CLARA is mid-turn (processing) or playing TTS audio. When the timer fires during speaking/processing, it should reschedule itself instead of resetting.
+
+## Facial Display Notes (eyes)
+
+- Facial UI eye shapes live in `facial-display/src/components/RobotFace.tsx`.
+- Eyes should visually occupy ~60% of the upper face region (bigger rounded-rect forms) while preserving blink/wink and gaze drift.
+- If eyes feel too small on the kiosk display, increase both the eye container sizing (Tailwind width/height + max sizes) and expand the eye SVG viewBox/path extents together so glow + gaze remain proportional.
+- Eye sizing can be tuned aggressively for distant viewing (external monitor): prefer larger eye containers over increasing face scale globally so mouth/eyes maintain proportions.
+
+## Facial Display Notes (mouth placement)
+
+- Mouth layout is in `facial-display/src/components/RobotFace.tsx` under the lower face container.
+- Keep the mouth centered between the two eyes (horizontally) and sized proportionally to the eye scale so it remains readable from a distance.
+
 ## Quick "Where to Change What"
 
 - Greeting copy/styling token: `backend/services/greetings.py`

@@ -21,28 +21,28 @@ function buildTalkingPillPath(talkPulse: number): string {
 
 const EYE_PATHS: Record<IdleEyeVariant | 'speaking', { left: string; right: string }> = {
   happy: {
-    left: 'M 20,10 H 80 A 30,30 0 0 1 110,40 V 80 A 30,30 0 0 1 80,110 H 20 A 30,30 0 0 1 -10,80 V 40 A 30,30 0 0 1 20,10 Z',
-    right: 'M 20,10 H 80 A 30,30 0 0 1 110,40 V 80 A 30,30 0 0 1 80,110 H 20 A 30,30 0 0 1 -10,80 V 40 A 30,30 0 0 1 20,10 Z',
+    left: 'M 0,-18 H 100 A 52,52 0 0 1 152,34 V 106 A 52,52 0 0 1 100,158 H 0 A 52,52 0 0 1 -52,106 V 34 A 52,52 0 0 1 0,-18 Z',
+    right: 'M 0,-18 H 100 A 52,52 0 0 1 152,34 V 106 A 52,52 0 0 1 100,158 H 0 A 52,52 0 0 1 -52,106 V 34 A 52,52 0 0 1 0,-18 Z',
   },
   curious: {
-    left: 'M 30,30 H 70 A 20,20 0 0 1 90,50 V 80 A 20,20 0 0 1 70,100 H 30 A 20,20 0 0 1 10,80 V 50 A 20,20 0 0 1 30,30 Z',
-    right: 'M 25,5 H 75 A 35,35 0 0 1 110,40 V 80 A 35,35 0 0 1 75,115 H 25 A 35,35 0 0 1 -10,80 V 40 A 35,35 0 0 1 25,5 Z',
+    left: 'M 10,4 H 90 A 44,44 0 0 1 134,48 V 92 A 44,44 0 0 1 90,136 H 10 A 44,44 0 0 1 -34,92 V 48 A 44,44 0 0 1 10,4 Z',
+    right: 'M 2,-20 H 98 A 54,54 0 0 1 152,34 V 108 A 54,54 0 0 1 98,162 H 2 A 54,54 0 0 1 -52,108 V 34 A 54,54 0 0 1 2,-20 Z',
   },
   heart: {
     left: 'M 50,90 C 50,90 -10,60 -10,20 C -10,0 10,-10 30,-10 C 40,-10 45,-5 50,10 C 55,-5 60,-10 70,-10 C 90,-10 110,0 110,20 C 110,60 50,90 50,90 Z',
     right: 'M 50,90 C 50,90 -10,60 -10,20 C -10,0 10,-10 30,-10 C 40,-10 45,-5 50,10 C 55,-5 60,-10 70,-10 C 90,-10 110,0 110,20 C 110,60 50,90 50,90 Z',
   },
   sad: {
-    left: 'M 15,20 H 85 A 35,35 0 0 1 120,55 V 90 A 35,35 0 0 1 85,125 H 15 A 35,35 0 0 1 -20,90 V 55 A 35,35 0 0 1 15,20 Z',
-    right: 'M 15,20 H 85 A 35,35 0 0 1 120,55 V 90 A 35,35 0 0 1 85,125 H 15 A 35,35 0 0 1 -20,90 V 55 A 35,35 0 0 1 15,20 Z',
+    left: 'M 0,-6 H 100 A 58,58 0 0 1 158,52 V 114 A 58,58 0 0 1 100,172 H 0 A 58,58 0 0 1 -58,114 V 52 A 58,58 0 0 1 0,-6 Z',
+    right: 'M 0,-6 H 100 A 58,58 0 0 1 158,52 V 114 A 58,58 0 0 1 100,172 H 0 A 58,58 0 0 1 -58,114 V 52 A 58,58 0 0 1 0,-6 Z',
   },
   sleep: {
     left: 'M 12,46 H 88 Q 94,46 94,50 Q 94,54 88,54 H 12 Q 6,54 6,50 Q 6,46 12,46 Z',
     right: 'M 12,46 H 88 Q 94,46 94,50 Q 94,54 88,54 H 12 Q 6,54 6,50 Q 6,46 12,46 Z',
   },
   speaking: {
-    left: 'M 22,14 H 78 A 28,28 0 0 1 106,42 V 76 A 28,28 0 0 1 78,104 H 22 A 28,28 0 0 1 -6,76 V 42 A 28,28 0 0 1 22,14 Z',
-    right: 'M 22,14 H 78 A 28,28 0 0 1 106,42 V 76 A 28,28 0 0 1 78,104 H 22 A 28,28 0 0 1 -6,76 V 42 A 28,28 0 0 1 22,14 Z',
+    left: 'M 0,-14 H 100 A 54,54 0 0 1 154,40 V 100 A 54,54 0 0 1 100,154 H 0 A 54,54 0 0 1 -54,100 V 40 A 54,54 0 0 1 0,-14 Z',
+    right: 'M 0,-14 H 100 A 54,54 0 0 1 154,40 V 100 A 54,54 0 0 1 100,154 H 0 A 54,54 0 0 1 -54,100 V 40 A 54,54 0 0 1 0,-14 Z',
   },
 };
 
@@ -191,7 +191,7 @@ export default function RobotFace({
           return (
             <motion.div
               key={side}
-              className="relative w-[28vw] h-[28vw] max-w-[420px] max-h-[420px] min-w-[200px] min-h-[200px]"
+              className="relative w-[56vw] h-[56vw] max-w-[980px] max-h-[980px] min-w-[360px] min-h-[360px]"
               animate={{
                 x: xOffset,
                 y: yOffset,
@@ -211,13 +211,14 @@ export default function RobotFace({
                 scaleY: { duration: 0.52, ease: GAZE_EASE },
               }}
             >
-              <svg viewBox="-40 -20 180 150" className="w-full h-full overflow-visible">
+              {/* Center viewBox around x≈50 so oversized eyes don't drift left in the container. */}
+              <svg viewBox="-140 -140 380 380" className="w-full h-full overflow-visible">
                 <filter id={`glow-${side}`}>
                   <feGaussianBlur stdDeviation={isSpeaking ? 3 : 4} result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
                 {!isSpeaking && idleVariant === 'happy' && (
-                  <ellipse cx="50" cy="58" rx="38" ry="28" fill="url(#idleEyeGlow)" opacity={0.45} />
+                  <ellipse cx="50" cy="58" rx="74" ry="56" fill="url(#idleEyeGlow)" opacity={0.45} />
                 )}
                 <motion.path
                   animate={{ d: eyePathForSide(side) }}
@@ -249,7 +250,7 @@ export default function RobotFace({
       </motion.div>
 
       <motion.div
-        className="w-full h-[35%] flex items-center justify-center pb-8"
+        className="w-full h-[40%] flex items-center justify-center"
         animate={{
           rotateX: isSpeaking ? 0 : macroDriftY * 0.08,
           scale: isSpeaking ? 1 : [1, 1.04, 1],
@@ -260,7 +261,8 @@ export default function RobotFace({
         }}
         style={{ perspective: 1200 }}
       >
-        <div className="relative w-[40vw] h-[16vw] max-w-[620px] max-h-[240px] min-w-[240px] min-h-[120px]">
+        {/* Scale mouth with oversized eyes; keep centered between them. */}
+        <div className="relative -mt-[2vh] w-[46vw] h-[20vw] max-w-[760px] max-h-[320px] min-w-[320px] min-h-[160px]">
           <svg viewBox="0 0 50 50" className="w-full h-full overflow-visible">
             {isSpeaking && externalMouth ? (
               <path
