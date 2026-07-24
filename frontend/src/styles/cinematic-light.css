@@ -180,6 +180,7 @@
 }
 
 .full-text-message-stage {
+  --ft-breathing-gap: clamp(48px, 5.5vh, 64px);
   width: 100%;
   height: 100%;
   max-width: none;
@@ -188,10 +189,12 @@
   min-height: 0;
   flex-direction: column;
   align-items: stretch;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: var(--ft-breathing-gap);
   overflow: hidden;
   margin: 0 auto;
-  padding: clamp(68px, 8vh, 92px) 0 clamp(42px, 6vh, 58px);
+  /* Extra top inset + minimal bottom inset settles the whole stack lower (~10vh toward bottom). */
+  padding: clamp(76px, 12vh, 110px) 0 max(0.5rem, env(safe-area-inset-bottom, 0px), clamp(8px, 1.2vh, 14px));
   position: relative;
 }
 
@@ -848,6 +851,11 @@
   max-height: 100%;
 }
 
+/**
+ * Response safe zone: flex sibling above FAQ/orb.
+ * Height is whatever remains after .full-text-orb-zone + breathing gap — never overlaps bottom chrome.
+ * Overflow is handled by Response Layout Engine (typography / pagination), not auto-scroll.
+ */
 .text-container {
   position: relative;
   inset: auto;
@@ -858,7 +866,7 @@
   min-height: 0;
   max-height: none;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -870,12 +878,46 @@
   z-index: 30;
 }
 
-.text-container.text-container--overflowing {
+/**
+ * Optical centering for assistant answers only (not thinking / language gate).
+ * Free space splits ~52% above / ~48% below: still optically balanced, but ~8%
+ * lower in the response zone than the prior 44/56 bias (fixes top-heavy feel).
+ * Tall fitted replies collapse free space so spacers shrink away without clipping.
+ */
+.text-container--optical {
   justify-content: flex-start;
+}
+
+.text-container--optical::before {
+  content: "";
+  flex: 0.52 1 0;
+  pointer-events: none;
+  min-height: 0;
+}
+
+.text-container--optical::after {
+  content: "";
+  flex: 0.48 1 0;
+  pointer-events: none;
+  min-height: 0;
+}
+
+.text-container--optical > * {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
 }
 
 .text-container::-webkit-scrollbar {
   display: none;
+}
+
+/* Off-DOM measure node for Response Layout Engine (mirrors .full-text-readable). */
+.response-layout-measure {
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.02em;
 }
 
 .full-text-orb-zone {
@@ -884,6 +926,7 @@
   bottom: auto;
   transform: none;
   z-index: 40;
+  flex: 0 0 auto;
   display: flex;
   width: min(980px, 68vw);
   max-width: 980px;
@@ -892,7 +935,8 @@
   justify-content: flex-end;
   gap: 10px;
   margin: 0 auto;
-  padding-bottom: clamp(34px, 4.7vh, 50px);
+  /* Reduced bottom chrome so FAQ+orb+label sit nearer the viewport edge (~6vh of the 10vh shift). */
+  padding-bottom: clamp(12px, 1.6vh, 22px);
   pointer-events: auto;
 }
 
@@ -931,8 +975,9 @@
 
 @media (max-width: 640px) {
   .full-text-message-stage {
-    padding-top: clamp(62px, 9vh, 82px);
-    padding-bottom: clamp(36px, 6vh, 48px);
+    --ft-breathing-gap: clamp(40px, 5vh, 56px);
+    padding-top: clamp(70px, 11vh, 96px);
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), clamp(8px, 1.2vh, 14px));
   }
 
   .text-container {
@@ -941,7 +986,7 @@
 
   .full-text-orb-zone {
     width: min(980px, 90vw);
-    padding-bottom: clamp(30px, 4.8vh, 40px);
+    padding-bottom: clamp(10px, 1.5vh, 18px);
   }
 }
 
@@ -1687,15 +1732,17 @@
 
 /* ─── FAQ Suggestion Carousel ─── */
 .faq-carousel-shell {
-  --faq-card-width: 300px;
   --faq-card-gap: 14px;
   position: relative;
   z-index: 38;
-  width: calc((var(--faq-card-width) * 3) + (var(--faq-card-gap) * 2));
-  max-width: min(92vw, 980px);
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0;
   filter: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .faq-suggestions-hidden {
@@ -1711,11 +1758,13 @@
 .faq-carousel-shell-full {
   position: relative;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
 }
 
 .faq-carousel-shell-panel {
   width: calc(100% - 2rem);
-  --faq-card-width: min(260px, calc(35vw - 126px));
   flex-shrink: 0;
   margin: 0 auto 0.85rem;
 }
@@ -1731,10 +1780,15 @@
 }
 
 .faq-carousel-viewport {
-  width: 100%;
+  /* Visible pill group width is set inline from measured layout; center in shell/orb zone. */
+  width: auto;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   overflow: hidden;
   padding: 0.2rem 0;
   scroll-snap-type: x mandatory;
+  flex-shrink: 0;
 }
 
 .faq-carousel-track {
@@ -1745,8 +1799,10 @@
 }
 
 .faq-suggestion-pill {
-  width: var(--faq-card-width);
-  min-width: var(--faq-card-width);
+  width: max-content;
+  min-width: unset;
+  max-width: min(92vw, 420px);
+  flex-shrink: 0;
   min-height: 54px;
   scroll-snap-align: start;
   border-radius: 9999px;
@@ -1759,11 +1815,13 @@
   font-weight: 750;
   line-height: 1.18;
   letter-spacing: -0.01em;
+  white-space: nowrap;
   box-shadow: none !important;
   filter: none;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   transition: border-color 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
 }
 
 .faq-suggestion-pill:hover {
@@ -1775,9 +1833,44 @@
 .faq-suggestion-pill-panel {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   padding: 0.78rem 0.95rem;
   font-size: 0.94rem;
+  white-space: normal;
+}
+
+/* Script-aware typography helpers */
+.script-typo-en {
+  letter-spacing: -0.02em;
+}
+
+.script-typo-kn,
+.script-typo-ta,
+.script-typo-te,
+.script-typo-hi,
+.script-typo-ml {
+  letter-spacing: normal;
+}
+
+.script-typo-kn {
+  font-family: "Noto Sans Kannada", "Noto Sans", sans-serif;
+}
+
+.script-typo-ta {
+  font-family: "Noto Sans Tamil", "Noto Sans", sans-serif;
+}
+
+.script-typo-te {
+  font-family: "Noto Sans Telugu", "Noto Sans", sans-serif;
+}
+
+.script-typo-hi {
+  font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif;
+}
+
+.script-typo-ml {
+  font-family: "Noto Sans Malayalam", "Noto Sans", sans-serif;
 }
 
 .brochure-modal-backdrop {

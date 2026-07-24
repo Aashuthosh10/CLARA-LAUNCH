@@ -670,5 +670,27 @@
 .letter-reveal {
   display: inline-block;
   opacity: 0;
-  animation: letterReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  /* Longhand only — avoids React warning when animationDelay is set inline. */
+  animation-name: letterReveal;
+  animation-duration: 0.6s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+  animation-delay: 0s;
+}
+/* Playback-progress reveal (FULL_TEXT sync with live audio).
+   Timing of *which* grapheme is visible stays driven by playbackProgress;
+   this only softens the visual entrance of each newly revealed grapheme. */
+.letter-reveal-sync {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(5px);
+  transition:
+    opacity 0.11s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.11s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.letter-reveal-sync--on {
+  opacity: 1;
+  transform: translateY(0);
 }

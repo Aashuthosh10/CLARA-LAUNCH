@@ -27,6 +27,14 @@ import DepartmentComparisonCinema from '../components/comparison/DepartmentCompa
 import BusRoutesFullscreen from '../components/bus/BusRoutesFullscreen';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
+import { countGraphemes, useResponseLayout } from '../features/chat/layout';
+import {
+  FAQ_TICKER_SPEED_PX_PER_MS,
+  useFaqTickerLayout,
+  type FaqTickerLayout,
+} from '../features/chat/faq';
+import { getScriptTypography } from '../features/chat/typography';
+import { resolvePagedPlayback, useAudioPlaybackClock } from '../features/chat/reveal';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
@@ -205,13 +213,7 @@ type NarrationPlan = {
 };
 
 const FAQ_CAROUSEL_INTERVAL_MS = 3600;
-const FAQ_TICKER_CARD_WIDTH = 300;
-const FAQ_TICKER_CARD_GAP = 14;
-const FAQ_TICKER_ITEM_SPAN = FAQ_TICKER_CARD_WIDTH + FAQ_TICKER_CARD_GAP;
-const FAQ_TICKER_VIEWPORT_WIDTH = (FAQ_TICKER_CARD_WIDTH * 3) + (FAQ_TICKER_CARD_GAP * 2);
-const FAQ_TICKER_SPEED_PX_PER_MS = 0.035;
 const GENERAL_FAQ_CATEGORIES: FaqSuggestionCategory[] = ['college', 'campus', 'admissions', 'placements'];
-const TEXT_SCROLL_PX_PER_SECOND = 30;
 /** Must match `row_order.length` in `departmentComparison.json` (3 narrative beats). */
 const COMPARISON_NARRATION_SECTIONS = 3;
 
@@ -284,58 +286,54 @@ const _agentDbg = (
   data: Record<string, unknown>,
   runId = 'pre',
 ) => {
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug('[CLARA_AGENT]', hypothesisId, message, { ...data, location, runId });
-  }
-  void fetch('http://127.0.0.1:7562/ingest/4f3b26e3-ebcc-4469-a396-5caaeb295ee3', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ba7e8c' },
-    body: JSON.stringify({
-      sessionId: 'ba7e8c',
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
+  if (!import.meta.env.DEV) return;
+  // eslint-disable-next-line no-console
+  console.debug('[CLARA_AGENT]', hypothesisId, message, { ...data, location, runId });
 };
 // #endregion
 
 function FaqTickerCard({
   suggestion,
   index,
-  totalItems,
+  layout,
+  cycleLength,
   x,
   onSelect,
+  scriptClass,
 }: {
   suggestion: VisibleFaqSuggestion;
   index: number;
-  totalItems: number;
+  layout: FaqTickerLayout;
+  cycleLength: number;
   x: ReturnType<typeof useMotionValue<number>>;
   onSelect: (id: string, question: string) => void;
+  scriptClass: string;
 }) {
-  const totalWidth = Math.max(1, totalItems) * FAQ_TICKER_ITEM_SPAN;
-  const center = FAQ_TICKER_VIEWPORT_WIDTH / 2;
+  const totalWidth = Math.max(1, layout.totalTrackWidth);
+  const center = layout.viewportWidth / 2;
+  const itemWidth = layout.widths[index % cycleLength] ?? 160;
+  const itemOffset = layout.offsets[index % cycleLength] ?? 0;
+  const cycleIndex = Math.floor(index / cycleLength);
+  const baseOffset = itemOffset + cycleIndex * totalWidth;
+
   const distanceFromCenter = useTransform(x, (value) => {
-    const raw = index * FAQ_TICKER_ITEM_SPAN + FAQ_TICKER_CARD_WIDTH / 2 + value;
+    const raw = baseOffset + itemWidth / 2 + value;
     const wrapped = ((raw % totalWidth) + totalWidth) % totalWidth;
     const direct = Math.abs(wrapped - center);
     return Math.min(direct, Math.abs(direct - totalWidth));
   });
-  const scale = useTransform(distanceFromCenter, [0, FAQ_TICKER_ITEM_SPAN * 1.25], [1.2, 0.85]);
-  const opacity = useTransform(distanceFromCenter, [0, FAQ_TICKER_ITEM_SPAN * 1.4], [1, 0.6]);
+  const span = Math.max(120, itemWidth);
+  const scale = useTransform(distanceFromCenter, [0, span * 1.25], [1.2, 0.85]);
+  const opacity = useTransform(distanceFromCenter, [0, span * 1.4], [1, 0.6]);
   const filter = useTransform(distanceFromCenter, (distance) =>
-    distance > FAQ_TICKER_ITEM_SPAN * 0.75 ? 'blur(1px)' : 'blur(0px)',
+    distance > span * 0.75 ? 'blur(1px)' : 'blur(0px)',
   );
 
   return (
     <motion.button
       type="button"
-      className="faq-suggestion-pill"
-      style={{ scale, opacity, filter }}
+      className={`faq-suggestion-pill ${scriptClass}`}
+      style={{ scale, opacity, filter, width: itemWidth, minWidth: itemWidth }}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.98 }}
       onClick={(event) => {
@@ -557,6 +555,17 @@ export default function ChatScreen({
     [onChatIdleOverlayChange],
   );
   const tickerX = useMotionValue(0);
+  const scriptPreset = useMemo(() => getScriptTypography(language), [language]);
+  const [faqViewportWidth, setFaqViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? Math.min(980, window.innerWidth * 0.92) : 900,
+  );
+  useEffect(() => {
+    const update = () => setFaqViewportWidth(Math.min(980, window.innerWidth * 0.92));
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const faqTickerLayout = useFaqTickerLayout(faqSuggestions, language, faqViewportWidth);
   const isResponsePending = isProcessing || Boolean(payload?.audioPending);
   const ensureSuggestions = useCallback(
     (nextSuggestions?: VisibleFaqSuggestion[]) => {
@@ -608,7 +617,6 @@ export default function ChatScreen({
   const sentenceRevealAbortRef = useRef(0);
   const sentenceRevealKeyRef = useRef<string | null>(null);
   const fullTextScrollRef = useRef<HTMLDivElement | null>(null);
-  const textScrollFrameRef = useRef<number | null>(null);
   const latestPayloadRef = useRef<any | null>(payload ?? null);
   const faceChannelRef = useRef<FaceChannel | undefined>(faceChannel);
 
@@ -820,6 +828,15 @@ export default function ChatScreen({
     };
     setDisplayMessages((prev) => [...prev, errorBubble]);
     setVisuallyFocusedMessage(errorBubble);
+
+    // Transient browser-STT failures should not permanently own the kiosk answer stage.
+    if (errorCode === 'network' || errorCode === 'no-speech') {
+      window.setTimeout(() => {
+        setVisuallyFocusedMessage((current) =>
+          current?.id === errorBubble.id ? null : current,
+        );
+      }, 4500);
+    }
   }, []);
 
   const { startListening: startSpeechRecognition, stopListening, isListening: speechListening } = useSpeechRecognition(
@@ -1068,43 +1085,10 @@ export default function ChatScreen({
   const stopTextReveal = useCallback((clearText = false) => {
     sentenceRevealAbortRef.current += 1;
     sentenceRevealKeyRef.current = null;
-    if (textScrollFrameRef.current !== null) {
-      cancelAnimationFrame(textScrollFrameRef.current);
-      textScrollFrameRef.current = null;
-    }
     if (clearText) {
       setSentenceRevealText('');
       setSentenceRevealTurnId(null);
     }
-  }, []);
-
-  const animateFullTextScroll = useCallback(() => {
-    const node = fullTextScrollRef.current;
-    if (!node) return;
-    if (textScrollFrameRef.current !== null) {
-      cancelAnimationFrame(textScrollFrameRef.current);
-      textScrollFrameRef.current = null;
-    }
-
-    const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
-    if (maxScroll <= 2) {
-      return;
-    }
-
-    const startTop = node.scrollTop;
-    const distance = maxScroll - startTop;
-    const duration = Math.max(1200, Math.abs(distance / TEXT_SCROLL_PX_PER_SECOND) * 1000);
-    const startedAt = performance.now();
-    const step = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / duration);
-      node.scrollTop = startTop + distance * progress;
-      if (progress < 1) {
-        textScrollFrameRef.current = requestAnimationFrame(step);
-      } else {
-        textScrollFrameRef.current = null;
-      }
-    };
-    textScrollFrameRef.current = requestAnimationFrame(step);
   }, []);
 
   const handleHomeClick = useCallback(() => {
@@ -2485,7 +2469,7 @@ export default function ChatScreen({
     ) {
       return;
     }
-    const totalWidth = faqSuggestions.length * FAQ_TICKER_ITEM_SPAN;
+    const totalWidth = faqTickerLayout.totalTrackWidth;
     if (!totalWidth) return;
     const next = tickerX.get() - delta * FAQ_TICKER_SPEED_PX_PER_MS;
     tickerX.set(next <= -totalWidth ? next + totalWidth : next);
@@ -2910,7 +2894,6 @@ export default function ChatScreen({
     },
     [clearSuggestionLayer, interceptAndSendMessage, propIsListening, sendMessage, stopListening, voiceInputMode],
   );
-  const fullTextMessageClassName = 'word-by-word-text full-text-readable';
   /** English greeting uses Didone-style stack from backend (`greetings.py` → `greetingFontFamily`). */
   const greetingFontStyle = useMemo((): React.CSSProperties | undefined => {
     if (payload && isPayloadStale?.(payload)) return undefined;
@@ -2925,6 +2908,118 @@ export default function ChatScreen({
       ? sentenceRevealText
       : lastAssistantMsg?.text ?? '';
   const fullTextAnimate = true;
+
+  const responseLayoutEnabled =
+    layoutMode === 'FULL_TEXT' &&
+    Boolean(fullTextDisplayText) &&
+    !isResponsePending &&
+    !isAwaitingReadyPrompt &&
+    !(showLanguageOverlay && inlineLanguageGate && !languageGateSatisfied);
+
+  const playbackClock = useAudioPlaybackClock(currentAudioRef, responseLayoutEnabled);
+
+  const responseLayout = useResponseLayout({
+    text: fullTextDisplayText,
+    language,
+    containerRef: fullTextScrollRef,
+    enabled: responseLayoutEnabled,
+    audioDurationSeconds: currentAudioDuration,
+    externalPlaybackSync: true,
+  });
+
+  const pageGraphemeCounts = useMemo(
+    () => responseLayout.pages.map((p) => Math.max(1, countGraphemes(p.replace(/\s+/g, '')))),
+    [responseLayout.pages],
+  );
+
+  const pagedPlayback = useMemo(() => {
+    const duration =
+      playbackClock.duration > 0
+        ? playbackClock.duration
+        : currentAudioDuration > 0
+          ? currentAudioDuration
+          : 0;
+    const t = playbackClock.currentTime;
+    if (responseLayout.overflowMode !== 'paginated' || responseLayout.pages.length <= 1) {
+      const progress =
+        duration > 0 ? Math.min(1, Math.max(0, t / duration)) : playbackClock.progress;
+      return { pageIndex: 0, localProgress: progress };
+    }
+    return resolvePagedPlayback(t, duration || 1, pageGraphemeCounts);
+  }, [
+    playbackClock.currentTime,
+    playbackClock.duration,
+    playbackClock.progress,
+    currentAudioDuration,
+    responseLayout.overflowMode,
+    responseLayout.pages.length,
+    pageGraphemeCounts,
+  ]);
+
+  useEffect(() => {
+    if (!responseLayoutEnabled) return;
+    if (responseLayout.overflowMode !== 'paginated' || responseLayout.pages.length <= 1) return;
+    if (pagedPlayback.pageIndex !== responseLayout.activePageIndex) {
+      responseLayout.setActivePageIndex(pagedPlayback.pageIndex);
+    }
+  }, [
+    responseLayoutEnabled,
+    responseLayout.overflowMode,
+    responseLayout.pages.length,
+    responseLayout.activePageIndex,
+    responseLayout.setActivePageIndex,
+    pagedPlayback.pageIndex,
+  ]);
+
+  const fullTextPageText =
+    responseLayout.pages[responseLayout.activePageIndex] ?? fullTextDisplayText;
+
+  const fullTextPageAudioDuration = useMemo(() => {
+    if (responseLayout.overflowMode !== 'paginated' || responseLayout.pages.length <= 1) {
+      return currentAudioDuration;
+    }
+    const totalGraphemes = Math.max(
+      1,
+      countGraphemes(fullTextDisplayText.replace(/\s+/g, '')),
+    );
+    const pageGraphemes = Math.max(
+      1,
+      countGraphemes(fullTextPageText.replace(/\s+/g, '')),
+    );
+    return currentAudioDuration * (pageGraphemes / totalGraphemes);
+  }, [
+    responseLayout.overflowMode,
+    responseLayout.pages.length,
+    fullTextDisplayText,
+    fullTextPageText,
+    currentAudioDuration,
+  ]);
+
+  const fullTextRevealProgress = useMemo(() => {
+    // Prefer live playback; fall back to 1 when audio finished / unavailable so text remains readable.
+    if (playbackClock.playing || playbackClock.progress > 0) {
+      return pagedPlayback.localProgress;
+    }
+    if (currentAudioDuration <= 0 && fullTextDisplayText) {
+      return 1;
+    }
+    return pagedPlayback.localProgress;
+  }, [
+    playbackClock.playing,
+    playbackClock.progress,
+    pagedPlayback.localProgress,
+    currentAudioDuration,
+    fullTextDisplayText,
+  ]);
+
+  const fullTextAnswerStyle = useMemo((): React.CSSProperties => {
+    return {
+      ...responseLayout.answerStyle,
+      ...(fullTextGreetingStyle ?? {}),
+    };
+  }, [responseLayout.answerStyle, fullTextGreetingStyle]);
+
+  const fullTextMessageClassName = `word-by-word-text full-text-readable ${scriptPreset.cssClass}`;
 
   useEffect(() => {
     if (!lastAssistantMsg || isAwaitingReadyPrompt || isResponsePending) return;
@@ -2960,25 +3055,6 @@ export default function ChatScreen({
     payload,
     isPayloadStale,
   ]);
-
-  useEffect(() => {
-    if (layoutMode !== 'FULL_TEXT') return;
-    const node = fullTextScrollRef.current;
-    if (!node) return;
-    // Only force "start at top" when the reply actually overflows the viewport.
-    // Short replies should stay visually centered via CSS, without jumpy scroll resets.
-    requestAnimationFrame(() => {
-      const maxScroll = Math.max(0, node.scrollHeight - node.clientHeight);
-      const overflowing = maxScroll > 2;
-      node.classList.toggle('text-container--overflowing', overflowing);
-      if (overflowing) {
-        node.scrollTop = 0;
-        animateFullTextScroll();
-      } else {
-        node.scrollTop = 0;
-      }
-    });
-  }, [layoutMode, lastAssistantMsg?.id, animateFullTextScroll]);
 
   const languageTaglines = THINKING_TAGLINES[language] ?? THINKING_TAGLINES.English;
   const thinkingTagline = languageTaglines[thinkingIndex % languageTaglines.length];
@@ -3048,7 +3124,7 @@ export default function ChatScreen({
         >
           <motion.button
             type="button"
-            className="faq-suggestion-pill faq-suggestion-pill-panel"
+            className={`faq-suggestion-pill faq-suggestion-pill-panel ${scriptPreset.cssClass}`}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.98 }}
             onClick={(event) => {
@@ -3063,25 +3139,31 @@ export default function ChatScreen({
     }
 
     const tickerItems = [...faqSuggestions, ...faqSuggestions, ...faqSuggestions];
+    const visibleGroupWidth = Math.max(1, faqTickerLayout.viewportWidth);
     return (
       <div
         className={`faq-carousel-shell faq-carousel-shell-full ${shouldHideFaqSuggestions ? 'faq-suggestions-hidden' : ''}`}
         onMouseEnter={() => setIsFaqCarouselPaused(true)}
         onMouseLeave={() => setIsFaqCarouselPaused(false)}
       >
-        <div className="faq-carousel-viewport">
+        <div
+          className="faq-carousel-viewport"
+          style={{ width: visibleGroupWidth }}
+        >
           <motion.div
             className="faq-carousel-track"
-            style={{ x: tickerX }}
+            style={{ x: tickerX, gap: faqTickerLayout.gap }}
           >
             {tickerItems.map((suggestion, index) => (
               <React.Fragment key={`${suggestion.id}-${index}`}>
                 <FaqTickerCard
                   suggestion={suggestion}
                   index={index}
-                  totalItems={faqSuggestions.length}
+                  layout={faqTickerLayout}
+                  cycleLength={faqSuggestions.length}
                   x={tickerX}
                   onSelect={submitFaqSuggestion}
+                  scriptClass={scriptPreset.cssClass}
                 />
               </React.Fragment>
             ))}
@@ -3202,7 +3284,35 @@ export default function ChatScreen({
               <div
                 className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${departmentComparisonOpen ? ' full-text-message-stage--with-comparison' : ''}`}
               >
-                <div ref={fullTextScrollRef} className="text-container">
+                <div
+                  ref={fullTextScrollRef}
+                  className={`text-container${
+                    !departmentComparisonOpen &&
+                    lastAssistantMsg &&
+                    isTextMessage(lastAssistantMsg) &&
+                    !isAwaitingReadyPrompt &&
+                    !isResponsePending &&
+                    !(
+                      showLanguageOverlay &&
+                      inlineLanguageGate &&
+                      !languageGateSatisfied
+                    )
+                      ? ' text-container--optical'
+                      : ''
+                  }`}
+                  style={
+                    responseLayoutEnabled
+                      ? {
+                          width: responseLayout.containerStyle.width,
+                          overflowY: responseLayout.containerStyle.overflowY,
+                          // Optical spacers own vertical placement when --optical is active.
+                          ...(departmentComparisonOpen
+                            ? { justifyContent: responseLayout.containerStyle.justifyContent }
+                            : {}),
+                        }
+                      : undefined
+                  }
+                >
                   <AnimatePresence mode="wait">
                     {showLanguageOverlay &&
                     inlineLanguageGate &&
@@ -3290,11 +3400,13 @@ export default function ChatScreen({
                         className="full-text-message-wrapper full-text-safe-zone"
                       >
                         <AnimatedAiMessage
-                          text={fullTextDisplayText}
+                          key={`${lastAssistantMsg.id ?? 'msg'}-page-${responseLayout.activePageIndex}`}
+                          text={fullTextPageText}
                           animate={fullTextAnimate}
-                          audioDuration={currentAudioDuration}
+                          audioDuration={fullTextPageAudioDuration}
+                          playbackProgress={fullTextRevealProgress}
                           className={fullTextMessageClassName}
-                          style={fullTextGreetingStyle}
+                          style={fullTextAnswerStyle}
                         />
                       </motion.div>
                     ) : null}

@@ -57,9 +57,8 @@ export default function ChatOrbControl({
           className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-0 bg-transparent p-0 outline-offset-4"
           style={{ width: 140, height: 140, pointerEvents: 'auto' }}
           onClick={(event) => {
-            // #region agent log
-            const el = event.target as HTMLElement;
             if (import.meta.env.DEV) {
+              const el = event.target as HTMLElement;
               // eslint-disable-next-line no-console
               console.debug('[CLARA_AGENT]', 'A', 'orb_hit_click', {
                 orbState,
@@ -67,25 +66,6 @@ export default function ChatOrbControl({
                 targetTag: el?.tagName,
               });
             }
-            void fetch('http://127.0.0.1:7562/ingest/4f3b26e3-ebcc-4469-a396-5caaeb295ee3', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ba7e8c' },
-              body: JSON.stringify({
-                sessionId: 'ba7e8c',
-                runId: 'post-fix',
-                hypothesisId: 'A',
-                location: 'ChatOrbControl.tsx:orb_hit',
-                message: 'orb_hit_click',
-                data: {
-                  orbState,
-                  isProcessing,
-                  targetTag: el?.tagName,
-                  targetCls: typeof el?.className === 'string' ? el.className.slice(0, 80) : '',
-                },
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-            // #endregion
             onTap();
           }}
           onKeyDown={(event) => {

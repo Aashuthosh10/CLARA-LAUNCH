@@ -1,30 +1,40 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type CSSProperties, type Key } from 'react';
 
 interface AnimatedAiMessageProps {
-  key?: React.Key;
+  key?: Key;
   text: string;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   isCardData?: boolean;
   animate?: boolean;
   audioDuration?: number;
+  /** 0–1 live playback progress. When set, drives reveal instead of estimated stagger. */
+  playbackProgress?: number;
 }
 
-export default function AnimatedAiMessage({ 
-  text, 
-  className = '', 
+export default function AnimatedAiMessage({
+  text,
+  className = '',
   style,
-  isCardData = false,
+  isCardData: _isCardData = false,
   animate = true,
-  audioDuration = 0
+  audioDuration = 0,
+  playbackProgress,
 }: AnimatedAiMessageProps) {
   const [isReady, setIsReady] = useState(false);
+  const usePlaybackSync = typeof playbackProgress === 'number' && Number.isFinite(playbackProgress);
+
   const toGraphemes = useCallback((value: string): string[] => {
     try {
-      const Segmenter = (Intl as any).Segmenter;
-      if (typeof Segmenter === 'function') {
-        const segmenter = new Segmenter(undefined, { granularity: 'grapheme' });
-        return Array.from(segmenter.segment(value), (part: any) => String(part.segment));
+      const SegmenterCtor = (Intl as unknown as {
+        Segmenter?: new (
+          locales?: string | string[],
+          options?: { granularity: string },
+        ) => { segment: (input: string) => Iterable<{ segment: string }> };
+      }).Segmenter;
+      if (typeof SegmenterCtor === 'function') {
+        const segmenter = new SegmenterCtor(undefined, { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(value), (part) => String(part.segment));
       }
     } catch {
       // no-op: fallback below
@@ -32,7 +42,6 @@ export default function AnimatedAiMessage({
     return Array.from(value);
   }, []);
 
-  // Trigger slight "thinking" delay exactly ONCE on mount, or instantly if not animating
   useEffect(() => {
     if (!animate) {
       setIsReady(true);
@@ -40,66 +49,89 @@ export default function AnimatedAiMessage({
     }
     const timer = setTimeout(() => {
       setIsReady(true);
-    }, 0); // reveal immediately; speech already conveys pacing
+    }, 0);
     return () => clearTimeout(timer);
   }, [animate]);
 
-  // Split safely by whitespace while preserving the spaces as tokens
   const tokens = useMemo(() => text.split(/(\s+)/), [text]);
   const totalChars = useMemo(
     () => toGraphemes(text.replace(/\s+/g, '')).length,
-    [text, toGraphemes]
+    [text, toGraphemes],
   );
-  
-  // Match TTS timing: the last character's reveal animation has a 0.6s duration (chat.css),
-  // so schedule the last *start* at (audioMs - tailMs) to end right as audio ends.
+
+  // Fallback path (no live playback): estimate stagger from audioDuration.
   const expectedStagger = useMemo(() => {
-    const tailMs = 600; // must match `.letter-reveal { animation: ... 0.6s ... }`
+    const tailMs = 600;
     const audioMs = Math.max(0, audioDuration * 1000);
     const budgetMs = audioMs > 0 ? Math.max(0, audioMs - tailMs) : 0;
     const base = budgetMs > 0 ? budgetMs / Math.max(totalChars, 1) : 18;
-    // Guardrails so long audio doesn't make UI crawl, and short audio doesn't become unreadable.
     return Math.max(10, Math.min(26, base));
   }, [audioDuration, totalChars]);
 
+  const visibleGraphemes = useMemo(() => {
+    if (!usePlaybackSync) return totalChars;
+    const p = Math.min(1, Math.max(0, playbackProgress ?? 0));
+    if (p >= 0.999) return totalChars;
+    return Math.floor(p * totalChars);
+  }, [usePlaybackSync, playbackProgress, totalChars]);
+
   if (!isReady) {
-    // Hidden initially to prevent layout shift before animation
-    return <div className={`opacity-0 ${className}`} style={style}>{text}</div>;
+    return (
+      <div className={`opacity-0 ${className}`} style={style}>
+        {text}
+      </div>
+    );
   }
 
   let globalCharIndex = 0;
 
   return (
-    <div 
-      className={className} 
-      style={{ 
+    <div
+      className={className}
+      style={{
         ...style,
-        color: 'inherit' // Ensures it inherits from .bubble-clara or .word-by-word-text
+        color: 'inherit',
       }}
     >
-      {tokens.map((token, tIdx) => {
-        // If it's pure whitespace, render it directly to preserve formatting.
+      {tokens.map((token: string, tIdx: number) => {
         if (/^\s+$/.test(token)) {
-          globalCharIndex += token.length;
           return <span key={`space-${tIdx}`}>{token}</span>;
         }
 
-        // For actual words, render letters
         const isAsciiToken = /^[\x00-\x7F]+$/.test(token);
         const isClara = token.includes('CLARA');
-        const tokenClass = isClara 
-          ? 'font-bold text-[#0F172A]' 
-          : 'text-[#0F172A]';
-
+        const tokenClass = isClara ? 'font-bold text-[#0F172A]' : 'text-[#0F172A]';
 
         return (
-          <span key={`word-${tIdx}`} className={`${isAsciiToken ? 'inline-block whitespace-nowrap' : 'inline-block'} ${tokenClass}`}>
-            {toGraphemes(token).map((char, cIdx) => {
+          <span
+            key={`word-${tIdx}`}
+            className={`${isAsciiToken ? 'inline-block whitespace-nowrap' : 'inline-block'} ${tokenClass}`}
+          >
+            {toGraphemes(token).map((char: string, cIdx: number) => {
               if (!animate) {
-                return <span key={`char-${cIdx}`} className="inline-block">{char}</span>;
+                return (
+                  <span key={`char-${cIdx}`} className="inline-block">
+                    {char}
+                  </span>
+                );
               }
-              const delay = globalCharIndex * expectedStagger; // synced stagger
-              globalCharIndex++;
+
+              const charIndex = globalCharIndex;
+              globalCharIndex += 1;
+
+              if (usePlaybackSync) {
+                const revealed = charIndex < visibleGraphemes;
+                return (
+                  <span
+                    key={`char-${cIdx}`}
+                    className={`letter-reveal-sync inline-block${revealed ? ' letter-reveal-sync--on' : ''}`}
+                  >
+                    {char}
+                  </span>
+                );
+              }
+
+              const delay = charIndex * expectedStagger;
               return (
                 <span
                   key={`char-${cIdx}`}

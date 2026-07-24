@@ -1,12 +1,19 @@
 /**
- * NDJSON ingest for debug-mode evidence (session d4f470).
- * Do not log secrets/tokens/user content.
+ * Optional NDJSON debug ingest. Disabled by default so dead localhost ingest
+ * ports do not spam the browser console with ERR_CONNECTION_REFUSED.
+ *
+ * Enable only when a local debug collector is running:
+ *   VITE_DEBUG_INGEST_URL=http://127.0.0.1:PORT/ingest/...
  */
 
 export const DEBUG_SESSION_ID = 'd4f470';
 
-const INGEST =
-  'http://127.0.0.1:7739/ingest/5da7a24c-c043-4caf-a29d-bf92dcf04501';
+function ingestUrl(): string | null {
+  const raw = import.meta.env.VITE_DEBUG_INGEST_URL;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 /** One-line ingest; errors ignored to avoid disrupting kiosk UX. */
 export function agentLog(
@@ -16,8 +23,15 @@ export function agentLog(
   data?: Record<string, unknown>,
   runId: string = 'pre-fix'
 ): void {
-  // #region agent log
-  fetch(INGEST, {
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug('[CLARA_AGENT]', hypothesisId, message, { location, runId, ...(data ?? {}) });
+  }
+
+  const url = ingestUrl();
+  if (!url) return;
+
+  fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +47,6 @@ export function agentLog(
       runId,
     }),
   }).catch(() => {});
-  // #endregion
 }
 
 export function auditPointerInteraction(

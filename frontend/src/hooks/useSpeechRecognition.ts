@@ -16,8 +16,15 @@ function errorCodeToMessage(code: string): string {
       return 'Microphone access denied.';
     case 'no-speech':
       return 'No speech heard. Try again.';
-    case 'network':
-      return 'Network error. Try again.';
+    case 'network': {
+      // Chrome Web Speech API talks to Google’s cloud STT — not CLARA’s backend.
+      const offline =
+        typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (offline) {
+        return 'You appear offline. Connect to the internet and tap to speak again.';
+      }
+      return 'Voice recognition could not reach the speech service. Check internet, then tap to speak again.';
+    }
     case 'audio-capture':
       return 'No microphone found.';
     case 'service-not-allowed':
