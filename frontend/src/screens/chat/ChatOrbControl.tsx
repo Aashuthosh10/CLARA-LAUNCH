@@ -38,7 +38,7 @@ export default function ChatOrbControl({
       transition={{ duration: 0.55, ease: [0.16, 1, 0.28, 1] }}
       style={{ transformOrigin: '50% 100%', pointerEvents: 'none' }}
     >
-      {/* SiriOrb draws a 320px glow outside its 200px box; that must NOT steal
+      {/* SiriOrb draws a ~280px glow outside its 200px box; that must NOT steal
           pointer events from FAQ pills stacked above the orb. Only this disc
           receives taps (defense-in-depth vs oversized decorative layers). */}
       <div className="relative shrink-0" style={{ width: 200, height: 200, pointerEvents: 'none' }}>

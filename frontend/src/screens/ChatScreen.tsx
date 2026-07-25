@@ -323,10 +323,11 @@ function FaqTickerCard({
     return Math.min(direct, Math.abs(direct - totalWidth));
   });
   const span = Math.max(120, itemWidth);
-  const scale = useTransform(distanceFromCenter, [0, span * 1.25], [1.2, 0.85]);
-  const opacity = useTransform(distanceFromCenter, [0, span * 1.4], [1, 0.6]);
+  // Milder peak scale so variable-width group stays optically centered without clipping.
+  const scale = useTransform(distanceFromCenter, [0, span * 1.25], [1.12, 0.88]);
+  const opacity = useTransform(distanceFromCenter, [0, span * 1.4], [1, 0.65]);
   const filter = useTransform(distanceFromCenter, (distance) =>
-    distance > span * 0.75 ? 'blur(1px)' : 'blur(0px)',
+    distance > span * 0.85 ? 'blur(0.6px)' : 'blur(0px)',
   );
 
   return (

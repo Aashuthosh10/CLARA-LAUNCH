@@ -32,15 +32,16 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
   const extraAmp = amplitude * 0.12;
   const glowScale = 1 + (isListening ? 0.06 : 0) + extraAmp;
 
+  // Glow spreads tightened ~12% so halo does not compete with FAQ pills; alphas unchanged.
   const outerGlow = isListening
     ? `0 0 0 2px rgba(216,70,164,0.35),
-       0 0 40px  rgba(99,102,241,0.75),
-       0 0 80px  rgba(59,130,246,0.55),
-       0 0 130px rgba(139,92,246,0.35)`
+       0 0 35px  rgba(99,102,241,0.75),
+       0 0 70px  rgba(59,130,246,0.55),
+       0 0 114px rgba(139,92,246,0.35)`
     : `0 0 0 2px rgba(216,70,164,0.2),
-       0 0 28px  rgba(99,102,241,0.48),
-       0 0 58px  rgba(59,130,246,0.28),
-       0 0 95px  rgba(139,92,246,0.16)`;
+       0 0 24px  rgba(99,102,241,0.48),
+       0 0 51px  rgba(59,130,246,0.28),
+       0 0 83px  rgba(139,92,246,0.16)`;
 
   return (
     <>
@@ -103,12 +104,12 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
 
         {/* ── AMBIENT HALO ── */}
         <div style={{
-          position: 'absolute', width: 320, height: 320, borderRadius: '50%',
+          position: 'absolute', width: 280, height: 280, borderRadius: '50%',
           background: `radial-gradient(circle at 50% 50%,
             rgba(139,92,246,${isListening ? 0.3 : 0.2})  0%,
             rgba(99,102,241,${isListening ? 0.18 : 0.12}) 40%,
             transparent 72%)`,
-          filter: 'blur(30px)',
+          filter: 'blur(26px)',
           animation: `_so_ambient ${ambientDur} ease-in-out infinite`,
           pointerEvents: 'none',
         }} />

@@ -673,7 +673,7 @@
   /* Longhand only — avoids React warning when animationDelay is set inline. */
   animation-name: letterReveal;
   animation-duration: 0.6s;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-timing-function: var(--clara-ease-premium, cubic-bezier(0.16, 1, 0.3, 1));
   animation-fill-mode: forwards;
   animation-delay: 0s;
 }
@@ -683,10 +683,10 @@
 .letter-reveal-sync {
   display: inline-block;
   opacity: 0;
-  transform: translateY(5px);
+  transform: translateY(6px);
   transition:
-    opacity 0.11s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.11s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity var(--clara-reveal-duration, 120ms) var(--clara-ease-premium, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--clara-reveal-duration, 120ms) var(--clara-ease-premium, cubic-bezier(0.16, 1, 0.3, 1));
   will-change: opacity, transform;
 }
 
