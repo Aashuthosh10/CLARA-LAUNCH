@@ -427,11 +427,14 @@ export function useWebSocket(url: string) {
             prevQueue.push(rp.audioBase64 as string);
             outgoingPayload = { ...rp, tts_audio_queue: prevQueue } as typeof rawPayload;
           } else if (rp.tts_streaming === false) {
+            const hasClipSlots =
+              Array.isArray(rp.tts_clip_slots) || Array.isArray(pp.tts_clip_slots);
             outgoingPayload = {
               ...rp,
-              tts_audio_queue: unitBacked
-                ? []
-                : mergeTtsAudioQueue(rp.tts_audio_queue, pp.tts_audio_queue),
+              tts_audio_queue:
+                unitBacked && hasClipSlots
+                  ? []
+                  : mergeTtsAudioQueue(rp.tts_audio_queue, pp.tts_audio_queue),
               tts_clip_slots: unitBacked
                 ? Array.isArray(pp.tts_clip_slots)
                   ? pp.tts_clip_slots

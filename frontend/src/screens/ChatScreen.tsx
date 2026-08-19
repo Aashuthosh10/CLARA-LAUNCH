@@ -63,9 +63,17 @@ import {
 } from '../lib/ws/ttsClipSlots';
 import {
   TURN_FENCE_PENDING,
+  adoptTurnOwner,
   shouldApplyUnitBackedPlan,
   shouldIgnorePayloadTurn,
 } from '../lib/ws/turnFence';
+import { engageCardUiLockState } from '../lib/ui/cardUiLock';
+import {
+  ANSWER_TTS_WATCHDOG_MS,
+  shouldCommitAnswerMessages,
+  shouldFocusAssistantAnswer,
+  showThinkingOverlay,
+} from '../lib/chat/answerVisibility';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
@@ -590,9 +598,9 @@ export default function ChatScreen({
   /** Turn that owns the CARD lock; prevents a prior CARD turn from blocking a new ANSWER turn. */
   const cardLockTurnIdRef = useRef<string | null>(null);
   const engageCardUiLock = useCallback((ownerTurnId: string) => {
-    engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
-    const tid = ownerTurnId.trim();
-    cardLockTurnIdRef.current = tid || null;
+    const next = engageCardUiLockState(ownerTurnId, lastPayloadTurnIdRef.current);
+    currentUiLockRef.current = next.lock;
+    cardLockTurnIdRef.current = next.turnId;
   }, []);
   const lastSuggestionIdsRef = useRef<string[]>([]);
   const lastSuggestionTurnIdRef = useRef<string | null>(null);
@@ -630,7 +638,7 @@ export default function ChatScreen({
     return () => window.removeEventListener('resize', update);
   }, []);
   const faqTickerLayout = useFaqTickerLayout(faqSuggestions, language, faqViewportWidth);
-  const isResponsePending = isProcessing || Boolean(payload?.audioPending);
+  const isResponsePending = showThinkingOverlay(Boolean(isProcessing));
   const ensureSuggestions = useCallback(
     (nextSuggestions?: VisibleFaqSuggestion[]) => {
       const base = (nextSuggestions && nextSuggestions.length > 0)
@@ -673,6 +681,7 @@ export default function ChatScreen({
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
+  const [audioPendingTimedOut, setAudioPendingTimedOut] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
   const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [thinkingIndex, setThinkingIndex] = useState(0);
@@ -757,8 +766,9 @@ export default function ChatScreen({
     | null
   >(null);
   const playQueuedClipRef = useRef<(followUp: boolean) => void>(() => {});
-  /** Server `turn_id` for the in-flight assistant reply (set from isProcessing payload). */
+  /** Server `turn_id` for the in-flight assistant reply (claimed from the first current-turn frame). */
   const assistantAudioTurnOwnerRef = useRef<string | null>(null);
+  const previousAudioTurnOwnerRef = useRef<string | null>(null);
 
   const lastLoadedPresentationTurnRef = useRef<string | null>(null);
 
@@ -785,7 +795,11 @@ export default function ChatScreen({
           : typeof plan.turnId === 'string'
             ? plan.turnId
             : '';
-      if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, payloadTid)) {
+      if (shouldIgnorePayloadTurn(
+        assistantAudioTurnOwnerRef.current,
+        payloadTid,
+        previousAudioTurnOwnerRef.current,
+      )) {
         return;
       }
       narrationPlanRef.current = plan as NarrationPlan;
@@ -978,8 +992,13 @@ export default function ChatScreen({
       }
       audioLockRef.current = false;
       streamAudioLayoutRef.current = null;
+      const leaving = assistantAudioTurnOwnerRef.current;
+      if (leaving && leaving !== TURN_FENCE_PENDING) {
+        previousAudioTurnOwnerRef.current = leaving;
+      }
       assistantAudioTurnOwnerRef.current = TURN_FENCE_PENDING;
       playedSegmentKeysRef.current.clear();
+      setAudioPendingTimedOut(false);
       if (resetLayout) {
         comparisonLayoutSnapRef.current = null;
         busRoutesDismissedTurnIdRef.current = null;
@@ -1142,22 +1161,22 @@ export default function ChatScreen({
       const hasAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
       const isWaitingForAudio = Boolean(payload?.audioPending);
       const isTerminalTurn = payload?.isProcessing === false;
-      if (isTerminalTurn && (hasAudio || isWaitingForAudio)) {
-        // Defer message commit until playback kickoff for tighter text-audio sync.
-        deferredMessagesRef.current = incomingMessages;
-        deferredTurnIdRef.current = payload?.turn_id ?? null;
-        if (isWaitingForAudio) {
-          setVisuallyFocusedMessage(null);
-        }
-      } else {
+      const isCardTurn = Boolean(payload?.showCard);
+      if (shouldCommitAnswerMessages(incomingMessages.length > 0)) {
         deferredMessagesRef.current = null;
         deferredTurnIdRef.current = null;
         setDisplayMessages(incomingMessages);
+        if (isTerminalTurn && (hasAudio || isWaitingForAudio)) {
+          deferredMessagesRef.current = incomingMessages;
+          deferredTurnIdRef.current = payload?.turn_id ?? null;
+        }
       }
-      const isCardTurn = Boolean(payload?.showCard);
       if (isCardTurn) {
         setVisuallyFocusedMessage(null);
-      } else if (payload?.isProcessing !== true && !isWaitingForAudio) {
+      } else if (shouldFocusAssistantAnswer({
+        isCardTurn,
+        isProcessing: payload?.isProcessing === true,
+      })) {
         const latestAssistant = [...incomingMessages]
           .reverse()
           .find((m: any) => m?.role === 'clara' && typeof m?.text === 'string' && !(m as any)?.isHidden && !(m as any)?.isCardData);
@@ -1581,7 +1600,12 @@ export default function ChatScreen({
 
     const tid = typeof _turnId === 'string' ? _turnId : '';
     if (assistantAudioTurnOwnerRef.current === TURN_FENCE_PENDING) {
-      return;
+      if (shouldIgnorePayloadTurn(TURN_FENCE_PENDING, tid, previousAudioTurnOwnerRef.current)) {
+        return;
+      }
+      if (tid) {
+        assistantAudioTurnOwnerRef.current = tid;
+      }
     }
     const skipTurnOwnerGuard =
       !tid ||
@@ -1824,12 +1848,13 @@ export default function ChatScreen({
     audio.play().catch(err => {
       if (startedGen !== playbackGenRef.current) return;
       audioLockRef.current = false;
-      if (import.meta.env.DEV) {
-        console.error('[CLARA_TTS] audio.play() failed', {
-          segmentKey,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+      console.error('[CLARA_TTS] audio.play() failed', {
+        turnId: tid,
+        segmentKey,
+        playbackGen: startedGen,
+        owner: assistantAudioTurnOwnerRef.current,
+        error: err instanceof Error ? err.message : String(err),
+      });
       const eng = presentationRef.current.engine.current;
       const tok = presentationRef.current.audioManager.current?.token;
       const snap = eng?.snapshot();
@@ -1979,10 +2004,24 @@ export default function ChatScreen({
         resetTurnPresentationState({ resetLayout: true });
         assistantAudioTurnOwnerRef.current = nextOwner;
       }
+    } else if (assistantAudioTurnOwnerRef.current === TURN_FENCE_PENDING) {
+      const incomingTid = typeof payload.turn_id === 'string' ? payload.turn_id : '';
+      const adopted = adoptTurnOwner(
+        assistantAudioTurnOwnerRef.current,
+        incomingTid,
+        previousAudioTurnOwnerRef.current,
+      );
+      if (adopted && adopted !== TURN_FENCE_PENDING) {
+        assistantAudioTurnOwnerRef.current = adopted;
+      }
     }
 
     const payloadTurnId = typeof payload.turn_id === 'string' ? payload.turn_id : '';
-    if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, payloadTurnId)) {
+    if (shouldIgnorePayloadTurn(
+      assistantAudioTurnOwnerRef.current,
+      payloadTurnId,
+      previousAudioTurnOwnerRef.current,
+    )) {
       return;
     }
 
@@ -2102,6 +2141,12 @@ export default function ChatScreen({
       setIsCampusSpeaking(false);
       setIsPlayingBackendAudio(false);
     }
+    if (payload?.audioUnavailable === true) {
+      audioLockRef.current = false;
+      setIsPlayingBackendAudio(false);
+      setIsCampusSpeaking(false);
+      setAudioPendingTimedOut(false);
+    }
 
     const planTurnId =
       typeof payload?.narration_plan?.turnId === 'string' ? payload.narration_plan.turnId : String(turnId);
@@ -2109,6 +2154,7 @@ export default function ChatScreen({
       activeTurnId: assistantAudioTurnOwnerRef.current,
       planTurnId,
       audioPending: payload?.audioPending === true,
+      previousTurnId: previousAudioTurnOwnerRef.current,
     }) && isUnitBackedNarrationPlan(payload);
 
     // Defer split-card transitions until the turn has finalized messages,
@@ -2987,7 +3033,11 @@ export default function ChatScreen({
   useEffect(() => {
     if (!payload || isPayloadStale?.(payload)) return;
     const tid = String(payload.turn_id ?? '');
-    if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, tid)) {
+    if (shouldIgnorePayloadTurn(
+      assistantAudioTurnOwnerRef.current,
+      tid,
+      previousAudioTurnOwnerRef.current,
+    )) {
       return;
     }
     let streamTurnReset = false;
@@ -3052,6 +3102,11 @@ export default function ChatScreen({
       // Unit-backed per_clip: keep the existing clip list. Do not replace it with a
       // single concatenated backup — that desyncs visual unitId from TTS identity.
       if (!hasContiguousChunks() && !unitBackedClipQueue) {
+        const unitBackedPlan = isUnitBackedNarrationPlan(payload);
+        if (unitBackedPlan && Array.isArray(queued) && queued.length === 0) {
+          // Slot-backed final frames may arrive with an empty legacy queue.
+          // Do not wipe a live clip list; wait for tts_clip_slots / a later queue.
+        } else {
         ttsStreamQueueRef.current = [];
         ttsPlayheadRef.current = 0;
         appliedBackendTtsQueueLenRef.current = Array.isArray(payload.tts_audio_queue)
@@ -3072,6 +3127,7 @@ export default function ChatScreen({
         );
         pendingFinalBackupRef.current = null;
         return;
+        }
       }
     }
     if (unitBackedSlots) {
@@ -3341,7 +3397,7 @@ export default function ChatScreen({
 
     if (isPlayingBackendAudio || isCampusSpeaking || backendSaysSpeaking) {
       setOrbState('speaking');
-    } else if (audioPending) {
+    } else if (audioPending && !audioPendingTimedOut) {
       setOrbState('processing');
     } else if (isProcessing) {
       setOrbState('processing');
@@ -3362,6 +3418,7 @@ export default function ChatScreen({
     propIsListening,
     propIsSpeaking,
     payload?.audioPending,
+    audioPendingTimedOut,
     isProcessing,
     isPlayingBackendAudio,
     isCampusSpeaking,
@@ -3369,6 +3426,29 @@ export default function ChatScreen({
     showUnmuteHint,
     orbState,
   ]);
+
+  useEffect(() => {
+    if (!payload?.audioPending) {
+      setAudioPendingTimedOut(false);
+      return;
+    }
+    const tid = typeof payload.turn_id === 'string' ? payload.turn_id : '';
+    const gen = playbackGenRef.current;
+    const started = Date.now();
+    const timer = window.setTimeout(() => {
+      if (playbackGenRef.current !== gen) return;
+      audioLockRef.current = false;
+      setIsPlayingBackendAudio(false);
+      setIsCampusSpeaking(false);
+      setAudioPendingTimedOut(true);
+      console.error('[CLARA_TTS] audioPending watchdog recovered', {
+        turnId: tid,
+        elapsedMs: Date.now() - started,
+        owner: assistantAudioTurnOwnerRef.current,
+      });
+    }, ANSWER_TTS_WATCHDOG_MS);
+    return () => window.clearTimeout(timer);
+  }, [payload?.audioPending, payload?.turn_id]);
 
   useEffect(() => {
     if (!hasStartedRef.current) {
