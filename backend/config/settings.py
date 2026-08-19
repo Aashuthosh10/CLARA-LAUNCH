@@ -283,6 +283,13 @@ NARRATION_SEGMENT_TTS_BUDGET_S = max(3.0, min(120.0, NARRATION_SEGMENT_TTS_BUDGE
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
 LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")
+# Complete-response TTS: hold presentation until required speech is ready (reliability > speed).
+KIOSK_COMPLETE_RESPONSE_TTS = os.getenv("KIOSK_COMPLETE_RESPONSE_TTS", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 FIRST_SENTENCE_TTS_MAX_CHARS = int(os.getenv("FIRST_SENTENCE_TTS_MAX_CHARS", "160"))
 AUDIO_UPDATE_TIMEOUT_S = float(os.getenv("AUDIO_UPDATE_TIMEOUT_S", "3.0"))
 # Chunked low-latency TTS: per-chapter budgets (full reply is never generated in one blocking call).

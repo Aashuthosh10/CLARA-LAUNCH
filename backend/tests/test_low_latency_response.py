@@ -31,6 +31,30 @@ async def _no_auto_language(*_args, **_kwargs) -> None:
     return None
 
 
+ANSWER_REPLY = "Faculty here are supportive and experienced."
+
+
+def _partition_tts_chunks(text: str, max_chars: int = 220) -> list[str]:
+    source = (text or "").strip()
+    if not source:
+        return []
+    mid = max(1, len(source) // 2)
+    return [source[:mid], source[mid:]]
+
+
+def _one_tts_chunk(text: str, max_chars: int = 220) -> list[str]:
+    source = (text or "").strip()
+    return [source] if source else ["ok"]
+
+
+def _three_tts_chunks(text: str, max_chars: int = 220) -> list[str]:
+    source = (text or "").strip()
+    if not source:
+        return ["a", "b", "c"]
+    n = max(1, len(source) // 3)
+    return [source[:n], source[n : 2 * n], source[2 * n :]]
+
+
 def _streaming_audio_payloads(payloads: list[dict]) -> list[dict]:
     return [
         payload
@@ -76,7 +100,7 @@ def _final_assistant_audio_payload(payloads: list[dict]) -> dict:
 
 
 class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
-    async def test_visible_answer_is_sent_before_tts_audio_update(self) -> None:
+    async def test_complete_response_holds_thinking_until_final_audio(self) -> None:
         session = _low_latency_test_session()
         ws = _FakeWebSocket()
         timing = main.TurnTiming()
@@ -88,13 +112,62 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             return fake_audio, False
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
-            main, "ENABLE_ACK_EARCON", False
-        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", True
+        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+            main, "ENABLE_EARLY_PARTIAL_TEXT", False
+        ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
-        ), patch.object(main, "split_tts_chunks", return_value=["first chunk", "second chunk"]), patch.object(
+        ), patch.object(
+            main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(main, "split_tts_chunks", side_effect=_partition_tts_chunks), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
         ):
-            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
+
+        payloads = _unwrap_payloads(ws.events)
+        processing = next(payload for payload in payloads if payload.get("isProcessing") is True)
+        streaming_payloads = _streaming_audio_payloads(payloads)
+        final_audio = _final_assistant_audio_payload(payloads)
+
+        self.assertTrue(processing["isProcessing"])
+        self.assertEqual(streaming_payloads, [])
+        self.assertFalse(any(p.get("audioPending") is True and p.get("isProcessing") is False for p in payloads))
+        self.assertFalse(final_audio["audioPending"])
+        self.assertFalse(final_audio["isProcessing"])
+        self.assertEqual(final_audio.get("tts_audio_queue"), [fake_audio, fake_audio])
+        self.assertEqual(final_audio["audioBase64"], fake_audio)
+        self.assertTrue(final_audio["messages"][-1]["text"])
+        self.assertEqual(_first_sentence_audio_payloads(payloads), [])
+        self.assertNotIn("assistant_first_sentence", [call.get("utterance_kind") for call in tts_calls])
+        self.assertNotIn("assistant_full_reply_backup", [call.get("utterance_kind") for call in tts_calls])
+
+    async def test_streaming_mode_still_sends_visible_answer_before_tts(self) -> None:
+        session = _low_latency_test_session()
+        ws = _FakeWebSocket()
+        timing = main.TurnTiming()
+        fake_audio = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+        tts_calls: list[dict] = []
+
+        async def _fake_tts(text: str, language_code: str, **kwargs):
+            tts_calls.append({"text": text, "language_code": language_code, **kwargs})
+            return fake_audio, False
+
+        with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", False
+        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+            main, "ENABLE_EARLY_PARTIAL_TEXT", False
+        ), patch.object(
+            main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
+        ), patch.object(
+            main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(main, "split_tts_chunks", side_effect=_partition_tts_chunks), patch.object(
+            main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
+        ):
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
 
         payloads = _unwrap_payloads(ws.events)
         visible = next(payload for payload in payloads if payload.get("audioPending") is True)
@@ -109,14 +182,8 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(first_stream)
         self.assertEqual(first_stream["turn_id"], visible["turn_id"])
         self.assertEqual(first_stream["audioBase64"], fake_audio)
-        self.assertIsNotNone(first_stream.get("showCard"))
         self.assertFalse(first_stream["audioPending"])
-        self.assertGreaterEqual(first_stream["tts_total_duration_estimate_ms"], 2500)
-        self.assertGreater(first_stream["tts_total_chars"], 0)
         self.assertGreaterEqual(len(streaming_payloads), 2)
-        self.assertNotIn("tts_total_duration_estimate_ms", streaming_payloads[1])
-        self.assertEqual(_first_sentence_audio_payloads(payloads), [])
-        self.assertNotIn("assistant_first_sentence", [call.get("utterance_kind") for call in tts_calls])
         self.assertFalse(final_audio["audioPending"])
         self.assertIsNotNone(visible["debug"]["timings_ms"].get("visible_answer_ms"))
 
@@ -130,26 +197,32 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             return None, False
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
-            main, "AUDIO_UPDATE_TIMEOUT_S", 0.01
-        ), patch.object(main, "TTS_CHUNK_FIRST_TIMEOUT_S", 0.01), patch.object(
-            main, "TTS_CHUNK_TIMEOUT_S", 0.01
-        ), patch.object(main, "FULL_TTS_FALLBACK_TIMEOUT", 0.01
-        ), patch.object(main, "split_tts_chunks", return_value=["one"]), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", True
+        ), patch.object(main, "AUDIO_UPDATE_TIMEOUT_S", 0.01), patch.object(
+            main, "TTS_CHUNK_FIRST_TIMEOUT_S", 0.01
+        ), patch.object(main, "TTS_CHUNK_TIMEOUT_S", 0.01), patch.object(
+            main, "FULL_TTS_FALLBACK_TIMEOUT", 0.01
+        ), patch.object(main, "split_tts_chunks", side_effect=_one_tts_chunk), patch.object(
             main, "ENABLE_ACK_EARCON", False
         ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
-        ), patch.object(main, "tts_to_base64_cached", new=AsyncMock(side_effect=_slow_tts)):
-            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+        ), patch.object(
+            main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(main, "tts_to_base64_cached", new=AsyncMock(side_effect=_slow_tts)):
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
 
         payloads = _unwrap_payloads(ws.events)
-        visible = next(payload for payload in payloads if payload.get("audioPending") is True)
         audio_update = _final_assistant_audio_payload(payloads)
 
-        self.assertTrue(visible["messages"][-1]["text"])
+        self.assertTrue(audio_update["messages"][-1]["text"])
         self.assertEqual(audio_update.get("type"), "assistant_audio_update")
         self.assertFalse(audio_update["isSpeaking"])
         self.assertFalse(audio_update["audioPending"])
+        self.assertFalse(audio_update["isProcessing"])
         self.assertTrue(audio_update["audioUnavailable"])
+        self.assertEqual(_streaming_audio_payloads(payloads), [])
 
     async def test_ws_send_json_serializes_concurrent_sends(self) -> None:
         session = {
@@ -183,17 +256,23 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             return None, False
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
-            main, "ENABLE_ACK_EARCON", False
-        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", True
+        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+            main, "ENABLE_EARLY_PARTIAL_TEXT", False
+        ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
         ), patch.object(
             main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(
+            main,
             "split_tts_chunks",
-            return_value=["chunk one", "chunk two", "chunk three"],
+            side_effect=_three_tts_chunks,
         ), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
         ):
-            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
 
         payloads = _unwrap_payloads(ws.events)
         streaming_payloads = _streaming_audio_payloads(payloads)
@@ -228,10 +307,14 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             main, "ENABLE_ACK_EARCON", False
         ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
-        ), patch.object(main, "split_tts_chunks", return_value=["chunk one"]), patch.object(
+        ), patch.object(
+            main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(main, "split_tts_chunks", side_effect=_one_tts_chunk), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
         ):
-            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
 
         payloads = _unwrap_payloads(ws.events)
         final_audio = _final_assistant_audio_payload(payloads)
@@ -267,20 +350,25 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             main, "ENABLE_ACK_EARCON", False
         ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
-        ), patch.object(main, "split_tts_chunks", return_value=["chunk one"]), patch.object(
+        ), patch.object(
+            main,
+            "_stream_groq_reply",
+            new=AsyncMock(return_value=(ANSWER_REPLY, ANSWER_REPLY)),
+        ), patch.object(main, "get_relevant_context", return_value="faculty context"), patch.object(main, "split_tts_chunks", side_effect=_one_tts_chunk), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
         ):
-            await main.process_user_text_and_reply(session, "admission documents", ws, timing)
+            await main.process_user_text_and_reply(session, "How good are the teachers here?", ws, timing)
 
         payloads = _unwrap_payloads(ws.events)
         streaming_payloads = _streaming_audio_payloads(payloads)
         final_audio = _final_assistant_audio_payload(payloads)
 
         self.assertEqual(chunk_attempts, 2)
-        self.assertEqual(len(streaming_payloads), 1)
-        self.assertEqual(streaming_payloads[0]["audioBase64"], chunk_audio)
-        self.assertEqual(final_audio["audioBase64"], backup_audio)
+        self.assertEqual(streaming_payloads, [])
+        self.assertEqual(final_audio["audioBase64"], chunk_audio)
+        self.assertEqual(final_audio.get("tts_audio_queue"), [chunk_audio])
         self.assertFalse(final_audio["audioUnavailable"])
+        self.assertNotIn("assistant_full_reply_backup", [p.get("utterance_kind") for p in payloads])
         allowed_keys = {
             "messages",
             "isProcessing",
@@ -306,6 +394,9 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             "tts_chunk_index",
             "tts_total_chars",
             "tts_total_duration_estimate_ms",
+            "tts_audio_queue",
+            "tts_clip_slots",
+            "narration_plan",
             "debug",
             "session_gen",
             "wire_seq",

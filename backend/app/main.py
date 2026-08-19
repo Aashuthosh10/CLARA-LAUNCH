@@ -75,6 +75,7 @@ from backend.config.settings import (
     LLM_STREAM_TIMEOUT_S,
     LLM_TEMPERATURE,
     LOW_LATENCY_VOICE_MODE,
+    KIOSK_COMPLETE_RESPONSE_TTS,
     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
     PORT,
     PRESENTATION_CONTRACT_ENFORCED,
@@ -2102,7 +2103,7 @@ async def process_user_text_and_reply(
             visible_payload["departmentId"] = department_id
         if course_menu_options and not defer_card_until_tts_ready:
             visible_payload["options"] = course_menu_options
-        if LOW_LATENCY_VOICE_MODE:
+        if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS:
             timing.mark("visible_answer")
             timing.mark("turn_end")
             visible_payload.update(debug_payload(timing))
@@ -2220,6 +2221,8 @@ async def process_user_text_and_reply(
             tts_cache_hit_val: bool,
             tts_streaming: bool | None,
             tts_chunk_index: int | None,
+            tts_audio_queue: list[str] | None = None,
+            tts_clip_slots: list[dict[str, Any]] | None = None,
         ) -> dict[str, Any]:
             merged: dict[str, Any] = {
                 "messages": session["messages"],
@@ -2258,6 +2261,10 @@ async def process_user_text_and_reply(
                 merged["tts_streaming"] = tts_streaming
             if tts_chunk_index is not None:
                 merged["tts_chunk_index"] = tts_chunk_index
+            if tts_audio_queue:
+                merged["tts_audio_queue"] = list(tts_audio_queue)
+            if tts_clip_slots:
+                merged["tts_clip_slots"] = list(tts_clip_slots)
             if tts_streaming is True and tts_chunk_index == 0:
                 total_chars = len(tts_text.strip())
                 merged["tts_total_chars"] = total_chars
@@ -2275,6 +2282,8 @@ async def process_user_text_and_reply(
         had_streaming_interim = False
         successful_chunk_chars = 0
         failed_chunk_indices: list[int] = []
+        collected_clips: list[dict[str, Any]] = []
+        emit_streaming_interims = LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS
         if tts_text and tts_text.strip() and LOW_LATENCY_VOICE_MODE:
             chunk_source_text = tts_text.strip()
             if show_card == "department_overview":
@@ -2371,6 +2380,14 @@ async def process_user_text_and_reply(
                         timeout_i,
                     )
                     if not used_bundle_plan:
+                        collected_clips.append(
+                            {
+                                "index": i,
+                                "audio": None,
+                                "unavailable": True,
+                                "unitId": None,
+                            }
+                        )
                         continue
                 else:
                     successful_chunk_chars += len(chunk_text)
@@ -2389,7 +2406,30 @@ async def process_user_text_and_reply(
                         est = estimate_wav_duration_ms(audio_b64)
                         if est is not None:
                             timing.marks["play_end"] = timing.marks["play_start"] + est
+                plan_for_clip = visible_payload.get("narration_plan")
+                segs_for_clip = (
+                    plan_for_clip.get("segments")
+                    if isinstance(plan_for_clip, dict)
+                    else None
+                )
+                seg_for_clip = (
+                    segs_for_clip[i]
+                    if isinstance(segs_for_clip, list)
+                    and i < len(segs_for_clip)
+                    and isinstance(segs_for_clip[i], dict)
+                    else {}
+                )
+                collected_clips.append(
+                    {
+                        "index": i,
+                        "audio": audio_b64,
+                        "unavailable": not bool(audio_b64),
+                        "unitId": seg_for_clip.get("unitId") if isinstance(seg_for_clip, dict) else None,
+                    }
+                )
                 streamed_any = True
+                if not emit_streaming_interims:
+                    continue
                 interim = _merge_assistant_audio_payload(
                     audio_b64=audio_b64,
                     is_speaking=True,
@@ -2432,57 +2472,63 @@ async def process_user_text_and_reply(
                     timing.turn_id,
                     needs_full_backup,
                 )
-                retry_kind = "assistant_full_reply_backup"
-                try:
-                    retry_audio, retry_hit = await asyncio.wait_for(
-                        tts_to_base64_cached(
-                            chunk_source_text,
-                            lang_code,
-                            turn_id=timing.turn_id,
-                            utterance_kind=retry_kind,
-                            timeout_s=FULL_TTS_FALLBACK_TIMEOUT,
-                        ),
-                        timeout=FULL_TTS_FALLBACK_TIMEOUT + 0.5,
-                    )
-                except asyncio.TimeoutError:
-                    logger.warning(
-                        "TTS_FULL_BACKUP_TIMEOUT turn_id=%s timeout_s=%.2f",
-                        timing.turn_id,
-                        FULL_TTS_FALLBACK_TIMEOUT,
-                    )
-                    retry_audio, retry_hit = None, False
-                if retry_audio:
-                    tts_cache_hit = tts_cache_hit or retry_hit
-                    full_audio_b64 = retry_audio
-                    final_backup_audio_b64 = retry_audio
-                    utterance_kind = retry_kind
-                    if not timing.has("play_start"):
-                        timing.mark("play_start")
-                        est = estimate_wav_duration_ms(retry_audio)
-                        if est is not None:
-                            timing.marks["play_end"] = timing.marks["play_start"] + est
+                if not needs_full_backup:
                     logger.info(
-                        "TTS_FULL_BACKUP_SUCCESS turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                        "TTS_FULL_BACKUP_SKIPPED turn_id=%s reason=primary_complete",
                         timing.turn_id,
-                        needs_full_backup,
-                        streamed_any,
-                        failed_chunk_indices,
                     )
                 else:
-                    logger.warning(
-                        "TTS_FULL_BACKUP_EMPTY turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
-                        timing.turn_id,
-                        needs_full_backup,
-                        streamed_any,
-                        failed_chunk_indices,
-                    )
+                    retry_kind = "assistant_full_reply_backup"
+                    try:
+                        retry_audio, retry_hit = await asyncio.wait_for(
+                            tts_to_base64_cached(
+                                chunk_source_text,
+                                lang_code,
+                                turn_id=timing.turn_id,
+                                utterance_kind=retry_kind,
+                                timeout_s=FULL_TTS_FALLBACK_TIMEOUT,
+                            ),
+                            timeout=FULL_TTS_FALLBACK_TIMEOUT + 0.5,
+                        )
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            "TTS_FULL_BACKUP_TIMEOUT turn_id=%s timeout_s=%.2f",
+                            timing.turn_id,
+                            FULL_TTS_FALLBACK_TIMEOUT,
+                        )
+                        retry_audio, retry_hit = None, False
+                    if retry_audio:
+                        tts_cache_hit = tts_cache_hit or retry_hit
+                        full_audio_b64 = retry_audio
+                        final_backup_audio_b64 = retry_audio
+                        utterance_kind = retry_kind
+                        if not timing.has("play_start"):
+                            timing.mark("play_start")
+                            est = estimate_wav_duration_ms(retry_audio)
+                            if est is not None:
+                                timing.marks["play_end"] = timing.marks["play_start"] + est
+                        logger.info(
+                            "TTS_FULL_BACKUP_SUCCESS turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                            timing.turn_id,
+                            needs_full_backup,
+                            streamed_any,
+                            failed_chunk_indices,
+                        )
+                    else:
+                        logger.warning(
+                            "TTS_FULL_BACKUP_EMPTY turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                            timing.turn_id,
+                            needs_full_backup,
+                            streamed_any,
+                            failed_chunk_indices,
+                        )
 
-                if not full_audio_b64 and reply_text.strip():
-                    logger.warning(
-                        "TTS_NO_AUDIBLE_FALLBACK turn_id=%s failed_chunk_indices=%s",
-                        timing.turn_id,
-                        failed_chunk_indices,
-                    )
+                    if not full_audio_b64 and reply_text.strip():
+                        logger.warning(
+                            "TTS_NO_AUDIBLE_FALLBACK turn_id=%s failed_chunk_indices=%s",
+                            timing.turn_id,
+                            failed_chunk_indices,
+                        )
         elif tts_text:
             try:
                 full_audio_b64, tts_cache_hit = await asyncio.wait_for(
@@ -2539,10 +2585,55 @@ async def process_user_text_and_reply(
 
         timing.mark("turn_end")
 
-        audible_audio_ready = bool(full_audio_b64) or had_streaming_interim
-        final_wire_audio = final_backup_audio_b64 or (None if had_streaming_interim else full_audio_b64)
+        collected_audio = [
+            clip["audio"]
+            for clip in collected_clips
+            if isinstance(clip.get("audio"), str) and clip["audio"]
+        ]
+        if collected_audio and not full_audio_b64:
+            full_audio_b64 = collected_audio[0]
+        audible_audio_ready = bool(full_audio_b64) or had_streaming_interim or bool(collected_audio)
+        clip_slots: list[dict[str, Any]] | None = None
+        if used_bundle_plan and collected_clips:
+            clip_slots = []
+            for clip in collected_clips:
+                unavailable = bool(clip.get("unavailable")) or not clip.get("audio")
+                clip_slots.append(
+                    {
+                        "turnId": timing.turn_id,
+                        "segmentIndex": int(clip.get("index") or 0),
+                        "unitId": clip.get("unitId"),
+                        "status": "FAILED" if unavailable else "PLAYABLE",
+                        "audioBase64": clip.get("audio") if not unavailable else None,
+                        "error": "audioUnavailable" if unavailable else None,
+                    }
+                )
+        final_queue = collected_audio or None
+        if final_backup_audio_b64:
+            final_queue = [final_backup_audio_b64]
+        if clip_slots:
+            final_wire_audio = next(
+                (slot.get("audioBase64") for slot in clip_slots if slot.get("audioBase64")),
+                None,
+            )
+            final_queue = None
+        elif KIOSK_COMPLETE_RESPONSE_TTS:
+            final_wire_audio = final_backup_audio_b64 or full_audio_b64
+        else:
+            final_wire_audio = final_backup_audio_b64 or (
+                None if had_streaming_interim else full_audio_b64
+            )
+        logger.info(
+            "TTS_COMPLETE_RESPONSE turn_id=%s complete_mode=%s clips=%d queue=%s slots=%s audible=%s",
+            timing.turn_id,
+            KIOSK_COMPLETE_RESPONSE_TTS,
+            len(collected_clips),
+            bool(final_queue),
+            len(clip_slots) if clip_slots else 0,
+            audible_audio_ready,
+        )
         payload = _merge_assistant_audio_payload(
-            audio_b64=final_wire_audio,
+            audio_b64=final_wire_audio if isinstance(final_wire_audio, str) else None,
             is_speaking=audible_audio_ready,
             audio_pending=False,
             audio_unavailable=not audible_audio_ready,
@@ -2552,6 +2643,8 @@ async def process_user_text_and_reply(
             tts_cache_hit_val=tts_cache_hit,
             tts_streaming=False,
             tts_chunk_index=None,
+            tts_audio_queue=final_queue,
+            tts_clip_slots=clip_slots,
         )
         if _turn_stale(session, turn_gen_marker):
             logger.info("Stale final/audio process_user_text payload dropped (session_generation advanced)")

@@ -89,15 +89,22 @@ class TestM53TtsClipSlots(unittest.IsolatedAsyncioTestCase):
             return WAV, False
 
         payloads, tts_calls = await self._run(_fake_tts)
-        streaming = _streaming(payloads)
-        self.assertGreaterEqual(len(streaming), 3, msg="expected one streaming frame per segment")
-        by_index = {p.get("tts_chunk_index"): p for p in streaming}
+        finals = [
+            p
+            for p in payloads
+            if p.get("type") == "assistant_audio_update" and p.get("tts_streaming") is False
+        ]
+        self.assertTrue(finals)
+        slots = finals[-1].get("tts_clip_slots") or []
+        self.assertGreaterEqual(len(slots), 3, msg="expected indexed clip slots on the final frame")
+        by_index = {slot.get("segmentIndex"): slot for slot in slots}
         self.assertIn(0, by_index)
         self.assertIn(1, by_index)
         self.assertIn(2, by_index)
-        self.assertTrue(by_index[2].get("audioUnavailable"))
-        self.assertNotIn("audioBase64", by_index[2])
-        self.assertFalse(by_index[0].get("audioUnavailable"))
+        self.assertEqual(by_index[2].get("status"), "FAILED")
+        self.assertFalse(by_index[2].get("audioBase64"))
+        self.assertEqual(by_index[0].get("status"), "PLAYABLE")
+        self.assertEqual(_streaming(payloads), [])
         kinds = [c.get("utterance_kind") for c in tts_calls]
         self.assertNotIn("assistant_full_reply_backup", kinds)
         chunk_calls = [c for c in tts_calls if str(c.get("utterance_kind") or "").endswith("_chunk_0") or str(c.get("utterance_kind") or "").endswith("_chunk_1") or str(c.get("utterance_kind") or "").endswith("_chunk_2")]
@@ -113,12 +120,18 @@ class TestM53TtsClipSlots(unittest.IsolatedAsyncioTestCase):
             return WAV, False
 
         payloads, tts_calls = await self._run(_fake_tts)
-        streaming = _streaming(payloads)
-        by_index = {p.get("tts_chunk_index"): p for p in streaming}
+        finals = [
+            p
+            for p in payloads
+            if p.get("type") == "assistant_audio_update" and p.get("tts_streaming") is False
+        ]
+        self.assertTrue(finals)
+        by_index = {slot.get("segmentIndex"): slot for slot in (finals[-1].get("tts_clip_slots") or [])}
         self.assertIn(0, by_index)
         self.assertIn(1, by_index)
         self.assertIn(2, by_index)
-        self.assertTrue(by_index[1].get("audioUnavailable"))
+        self.assertEqual(by_index[1].get("status"), "FAILED")
+        self.assertEqual(_streaming(payloads), [])
         self.assertNotIn("assistant_full_reply_backup", [c.get("utterance_kind") for c in tts_calls])
 
     async def test_unit_backed_success_does_not_call_full_reply_backup(self) -> None:

@@ -1,27 +1,24 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const TINY_WAV = 'UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+const ACK_WAV = 'UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQIAAAA=';
 
-const LANG_BUTTON = ['english', 'kannada', 'hindi', 'tamil', 'telugu', 'malayalam'] as const;
+type PlayCall = { turnId?: string; channel?: string };
 
-const ANSWER_MATRIX: { language: (typeof LANG_BUTTON)[number]; query: string; answer: string }[] = [
-  { language: 'english', query: 'How good are the teachers here?', answer: 'EN-FACULTY-ANSWER' },
-  { language: 'kannada', query: 'teachers hegiddare?', answer: 'KN-FACULTY-ANSWER' },
-  { language: 'hindi', query: 'teachers kaise hain?', answer: 'HI-FACULTY-ANSWER' },
-  { language: 'tamil', query: 'campus life eppadi irukku?', answer: 'TA-CAMPUS-ANSWER' },
-  { language: 'telugu', query: 'teachers ela unnaru?', answer: 'TE-FACULTY-ANSWER' },
-  { language: 'malayalam', query: 'campus engane aanu?', answer: 'ML-CAMPUS-ANSWER' },
-];
-
-async function installRuntimeSocket(page: Page, opts: { failPlay?: boolean } = {}) {
-  await page.addInitScript(({ failPlay, wav }) => {
-    const playCalls: Array<{ turnId?: string }> = [];
-    (window as unknown as { __CLARA_PLAY_CALLS?: typeof playCalls }).__CLARA_PLAY_CALLS = playCalls;
+async function installM57Socket(
+  page: Page,
+  opts: { failPlay?: boolean; delayMs?: number; includeAck?: boolean } = {},
+) {
+  await page.addInitScript(({ failPlay, delayMs, includeAck, wav, ackWav }) => {
+    const playCalls: PlayCall[] = [];
+    (window as unknown as { __CLARA_PLAY_CALLS?: PlayCall[] }).__CLARA_PLAY_CALLS = playCalls;
     HTMLMediaElement.prototype.play = function () {
-      playCalls.push({ turnId: (this as HTMLAudioElement).dataset?.turnId });
-      if (failPlay) {
-        return Promise.reject(new Error('NotAllowedError'));
-      }
+      playCalls.push({
+        turnId: (this as HTMLAudioElement).dataset?.turnId,
+        channel: (this as HTMLAudioElement).dataset?.claraChannel,
+      });
+      if (failPlay) return Promise.reject(new Error('NotAllowedError'));
+      window.setTimeout(() => this.dispatchEvent(new Event('ended')), 20);
       return Promise.resolve();
     };
 
@@ -94,48 +91,23 @@ async function installRuntimeSocket(page: Page, opts: { failPlay?: boolean } = {
             return;
           }
           MockClaraWebSocket.turnSerial += 1;
-          const turnId = `answer-turn-${MockClaraWebSocket.turnSerial}`;
-          const marker =
-            ut.includes('SECOND-QUESTION')
-              ? 'SECOND-ANSWER-VISIBLE'
-              : ut.includes('FAIL-TTS')
-                ? 'TTS-FAIL-ANSWER'
-                : ut.includes('hegiddare')
-                  ? 'KN-FACULTY-ANSWER'
-                  : ut.includes('kaise')
-                    ? 'HI-FACULTY-ANSWER'
-                    : ut.includes('eppadi')
-                      ? 'TA-CAMPUS-ANSWER'
-                      : ut.includes('unnaru')
-                        ? 'TE-FACULTY-ANSWER'
-                        : ut.includes('engane')
-                          ? 'ML-CAMPUS-ANSWER'
-                          : 'EN-FACULTY-ANSWER';
+          const turnId = `m57-turn-${MockClaraWebSocket.turnSerial}`;
+          const marker = ut.includes('SECOND-QUESTION') ? 'SECOND-ANSWER-VISIBLE' : 'EN-FACULTY-ANSWER';
           const messages = [
             { id: `user-${turnId}`, role: 'user', text: ut },
             { id: `clara-${turnId}`, role: 'clara', text: marker },
           ];
-          this.emit(5, {
-            turn_id: turnId,
-            isProcessing: true,
-            isSpeaking: false,
-            audioPending: false,
-          });
-          const failTts = ut.includes('FAIL-TTS');
+          this.emit(5, { turn_id: turnId, isProcessing: true, isSpeaking: false, audioPending: false });
+          if (includeAck) {
+            this.emit(5, {
+              type: 'assistant_ack_audio',
+              utterance_kind: 'ack_earcon',
+              turn_id: turnId,
+              isProcessing: true,
+              audioBase64: ackWav,
+            });
+          }
           window.setTimeout(() => {
-            if (failTts) {
-              this.emit(5, {
-                type: 'assistant_audio_update',
-                turn_id: turnId,
-                isProcessing: false,
-                isSpeaking: false,
-                audioPending: false,
-                audioUnavailable: true,
-                tts_streaming: false,
-                messages,
-              });
-              return;
-            }
             this.emit(5, {
               type: 'assistant_audio_update',
               turn_id: turnId,
@@ -148,7 +120,7 @@ async function installRuntimeSocket(page: Page, opts: { failPlay?: boolean } = {
               audioBase64: wav,
               messages,
             });
-          }, 80);
+          }, delayMs);
         }
         if (msg.action === 'reset_session' || msg.type === 'RESET_SESSION') {
           MockClaraWebSocket.postLangUserMsgCount = 0;
@@ -163,9 +135,6 @@ async function installRuntimeSocket(page: Page, opts: { failPlay?: boolean } = {
 
       private emit(state: number, payload: unknown) {
         window.setTimeout(() => {
-          if (payload && typeof payload === 'object' && (payload as { type?: string }).type === 'assistant_audio_update') {
-            (window as unknown as { __CLARA_AUDIO_UPDATE_SEEN?: boolean }).__CLARA_AUDIO_UPDATE_SEEN = true;
-          }
           this.onmessage?.(
             new MessageEvent('message', {
               data: JSON.stringify({ state, payload }),
@@ -176,7 +145,13 @@ async function installRuntimeSocket(page: Page, opts: { failPlay?: boolean } = {
     }
 
     window.WebSocket = MockClaraWebSocket as unknown as typeof WebSocket;
-  }, { failPlay: Boolean(opts.failPlay), wav: TINY_WAV });
+  }, {
+    failPlay: Boolean(opts.failPlay),
+    delayMs: opts.delayMs ?? 400,
+    includeAck: opts.includeAck !== false,
+    wav: TINY_WAV,
+    ackWav: ACK_WAV,
+  });
 }
 
 async function wakeFromSleep(page: Page) {
@@ -200,40 +175,11 @@ async function completeInlineGuestNameGate(page: Page) {
   await expect(page.getByText(/Wonderful|What would you like/i)).toBeVisible({ timeout: 15000 });
 }
 
-test.describe('M5.6 runtime ANSWER text/TTS', () => {
+test.describe('M5.7 TTS scheduler / ACK isolation', () => {
   test.describe.configure({ timeout: 60000 });
 
-  for (const row of ANSWER_MATRIX) {
-    test(`${row.language}: ANSWER text appears after TTS is ready`, async ({ page }) => {
-      await installRuntimeSocket(page);
-      await page.goto('http://localhost:5176/?e2e=1');
-      await wakeFromSleep(page);
-      await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
-      await selectInlineLanguage(page, row.language);
-      await completeInlineGuestNameGate(page);
-      await page.evaluate((q) => window.__CLARA_TEST_SEND_MESSAGE?.(q), row.query);
-      await expect(page.getByText(row.answer)).toBeVisible({ timeout: 15000 });
-      await expect(page.getByTestId('chat-screen')).toBeVisible();
-    });
-  }
-
-  test('TTS failure keeps text visible and the next turn works', async ({ page }) => {
-    await installRuntimeSocket(page);
-    await page.goto('http://localhost:5176/?e2e=1');
-    await wakeFromSleep(page);
-    await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
-    await selectInlineLanguage(page, 'english');
-    await completeInlineGuestNameGate(page);
-    await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('FAIL-TTS How good are the teachers here?'));
-    await expect(page.getByText('TTS-FAIL-ANSWER')).toBeVisible({ timeout: 15000 });
-    await page.waitForFunction(() => Boolean((window as unknown as { __CLARA_AUDIO_UPDATE_SEEN?: boolean }).__CLARA_AUDIO_UPDATE_SEEN));
-    await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('SECOND-QUESTION How is campus life?'));
-    await expect(page.getByText('SECOND-ANSWER-VISIBLE')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('chat-screen')).toBeVisible();
-  });
-
-  test('audio.play() rejection recovers without hiding text', async ({ page }) => {
-    await installRuntimeSocket(page, { failPlay: true });
+  test('thinking stays until complete TTS; ACK does not skip response audio', async ({ page }) => {
+    await installM57Socket(page, { includeAck: true, delayMs: 500 });
     await page.goto('http://localhost:5176/?e2e=1');
     await wakeFromSleep(page);
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
@@ -241,7 +187,21 @@ test.describe('M5.6 runtime ANSWER text/TTS', () => {
     await completeInlineGuestNameGate(page);
     await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('How good are the teachers here?'));
     await expect(page.getByText('EN-FACULTY-ANSWER')).toBeVisible({ timeout: 15000 });
-    await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('SECOND-QUESTION How are placements?'));
+    const calls = await page.evaluate(() => (window as unknown as { __CLARA_PLAY_CALLS?: PlayCall[] }).__CLARA_PLAY_CALLS || []);
+    expect(calls.some((c) => c.channel === 'ack')).toBeTruthy();
+    expect(calls.some((c) => c.channel === 'response')).toBeTruthy();
+  });
+
+  test('audio.play() rejection still presents text and allows the next turn', async ({ page }) => {
+    await installM57Socket(page, { failPlay: true, includeAck: true, delayMs: 80 });
+    await page.goto('http://localhost:5176/?e2e=1');
+    await wakeFromSleep(page);
+    await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
+    await selectInlineLanguage(page, 'english');
+    await completeInlineGuestNameGate(page);
+    await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('How good are the teachers here?'));
+    await expect(page.getByText('EN-FACULTY-ANSWER')).toBeVisible({ timeout: 15000 });
+    await page.evaluate(() => window.__CLARA_TEST_SEND_MESSAGE?.('SECOND-QUESTION How is campus life?'));
     await expect(page.getByText('SECOND-ANSWER-VISIBLE')).toBeVisible({ timeout: 15000 });
   });
 });

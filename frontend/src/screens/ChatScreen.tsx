@@ -74,6 +74,8 @@ import {
   shouldFocusAssistantAnswer,
   showThinkingOverlay,
 } from '../lib/chat/answerVisibility';
+import { createAckPlayer } from '../lib/tts/ackAudio';
+import { createResponseTtsScheduler } from '../lib/tts/responseTtsScheduler';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
@@ -246,15 +248,10 @@ type PendingAudio = {
   targetLayout: 'FULL_TEXT' | 'SPLIT_CARDS';
 };
 
-/** Backend may stream multiple WAV chunks under one turn; defer single-clip pending until queue drains. */
+/** Response TTS is owned by the scheduler; never play it through the ACK/pending-audio path. */
 function shouldDeferAssistantTtsToStream(p: unknown): boolean {
   if (!p || typeof p !== 'object') return false;
-  const o = p as Record<string, unknown>;
-  if (o.type !== 'assistant_audio_update') return false;
-  if (o.tts_streaming === true) return true;
-  if (Array.isArray(o.tts_audio_queue) && o.tts_audio_queue.length > 0) return true;
-  if (Array.isArray(o.tts_clip_slots) && o.tts_clip_slots.length > 0) return true;
-  return false;
+  return (p as Record<string, unknown>).type === 'assistant_audio_update';
 }
 
 type VisibleFaqSuggestion = {
@@ -638,7 +635,6 @@ export default function ChatScreen({
     return () => window.removeEventListener('resize', update);
   }, []);
   const faqTickerLayout = useFaqTickerLayout(faqSuggestions, language, faqViewportWidth);
-  const isResponsePending = showThinkingOverlay(Boolean(isProcessing));
   const ensureSuggestions = useCallback(
     (nextSuggestions?: VisibleFaqSuggestion[]) => {
       const base = (nextSuggestions && nextSuggestions.length > 0)
@@ -682,6 +678,12 @@ export default function ChatScreen({
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
   const [audioPendingTimedOut, setAudioPendingTimedOut] = useState(false);
+  const isResponsePending = showThinkingOverlay({
+    isProcessing: Boolean(isProcessing),
+    audioPending: Boolean(payload?.audioPending) && !audioPendingTimedOut,
+    audioUnavailable: payload?.audioUnavailable === true,
+    watchdogRecovered: audioPendingTimedOut,
+  });
   const [hasGreeted, setHasGreeted] = useState(false);
   const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [thinkingIndex, setThinkingIndex] = useState(0);
@@ -747,6 +749,9 @@ export default function ChatScreen({
     turnId: string;
   } | null>(null);
   const audioLockRef = useRef(false);
+  const responseTtsSchedulerRef = useRef(createResponseTtsScheduler());
+  const ackPlayerRef = useRef(createAckPlayer());
+  const responseWatchdogTimerRef = useRef<number | null>(null);
   const handleAudioPlaybackRef = useRef<
     | ((
         audioBase64: string,
@@ -757,6 +762,9 @@ export default function ChatScreen({
         audioChainFollowUp?: boolean,
         totalDurationEstimateMs?: number | null,
         clipMeta?: {
+          channel?: 'ack' | 'response';
+          sequence?: number;
+          watchdogMs?: number;
           chunkIndex?: number | null;
           sectionId?: string | null;
           segmentId?: string | null;
@@ -980,7 +988,13 @@ export default function ChatScreen({
         window.clearTimeout(ttsBufferTimerRef.current);
         ttsBufferTimerRef.current = null;
       }
+      if (responseWatchdogTimerRef.current) {
+        window.clearTimeout(responseWatchdogTimerRef.current);
+        responseWatchdogTimerRef.current = null;
+      }
       pendingFinalBackupRef.current = null;
+      ackPlayerRef.current.stop();
+      responseTtsSchedulerRef.current.reset();
       presentationRef.current.audioManager.current?.invalidate();
       presentationRef.current.cancel();
       lastLoadedPresentationTurnRef.current = null;
@@ -991,6 +1005,7 @@ export default function ChatScreen({
         currentAudioRef.current = null;
       }
       audioLockRef.current = false;
+      setIsPlayingBackendAudio(false);
       streamAudioLayoutRef.current = null;
       const leaving = assistantAudioTurnOwnerRef.current;
       if (leaving && leaving !== TURN_FENCE_PENDING) {
@@ -1159,10 +1174,24 @@ export default function ChatScreen({
         setIsAwaitingReadyPrompt(false);
       }
       const hasAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+      const hasQueue =
+        Array.isArray(payload?.tts_audio_queue) && payload.tts_audio_queue.some((x: unknown) => typeof x === 'string' && x.length > 0);
+      const hasSlots =
+        Array.isArray(payload?.tts_clip_slots) &&
+        payload.tts_clip_slots.some(
+          (slot: { audioBase64?: unknown; status?: unknown }) =>
+            slot?.status === 'PLAYABLE' || (typeof slot?.audioBase64 === 'string' && slot.audioBase64.length > 0),
+        );
       const isWaitingForAudio = Boolean(payload?.audioPending);
       const isTerminalTurn = payload?.isProcessing === false;
       const isCardTurn = Boolean(payload?.showCard);
-      if (shouldCommitAnswerMessages(incomingMessages.length > 0)) {
+      if (shouldCommitAnswerMessages({
+        hasMessages: incomingMessages.length > 0,
+        audioPending: isWaitingForAudio,
+        audioUnavailable: payload?.audioUnavailable === true,
+        audioReady: (hasAudio || hasQueue || hasSlots) && !isWaitingForAudio,
+        watchdogRecovered: audioPendingTimedOut,
+      })) {
         deferredMessagesRef.current = null;
         deferredTurnIdRef.current = null;
         setDisplayMessages(incomingMessages);
@@ -1176,6 +1205,7 @@ export default function ChatScreen({
       } else if (shouldFocusAssistantAnswer({
         isCardTurn,
         isProcessing: payload?.isProcessing === true,
+        audioPending: isWaitingForAudio,
       })) {
         const latestAssistant = [...incomingMessages]
           .reverse()
@@ -1183,7 +1213,11 @@ export default function ChatScreen({
         setVisuallyFocusedMessage((latestAssistant as ChatMessage) ?? null);
       }
     }
-  }, [payload, isPayloadStale]);
+  }, [
+    payload,
+    isPayloadStale,
+    audioPendingTimedOut,
+  ]);
 
   useEffect(() => {
     if (!isResponsePending) {
@@ -1587,6 +1621,9 @@ export default function ChatScreen({
       audioChainFollowUp?: boolean,
       totalDurationEstimateMs?: number | null,
       clipMeta?: {
+        channel?: 'ack' | 'response';
+        sequence?: number;
+        watchdogMs?: number;
         chunkIndex?: number | null;
         sectionId?: string | null;
         segmentId?: string | null;
@@ -1597,6 +1634,17 @@ export default function ChatScreen({
     // multiple TTS segments for the same `turn_id` (ack + first sentence + remainder).
     if (playedSegmentKeysRef.current.has(segmentKey)) return;
     if (!audioBase64) return;
+
+    const playbackChannel =
+      clipMeta?.channel === 'ack' ? 'ack' : clipMeta?.channel === 'response' ? 'response' : 'legacy';
+    if (playbackChannel === 'ack') {
+      ackPlayerRef.current.play(audioBase64);
+      return;
+    }
+
+    if (playbackChannel === 'response') {
+      ackPlayerRef.current.stop();
+    }
 
     const tid = typeof _turnId === 'string' ? _turnId : '';
     if (assistantAudioTurnOwnerRef.current === TURN_FENCE_PENDING) {
@@ -1622,7 +1670,15 @@ export default function ChatScreen({
       return;
     }
     if (audioLockRef.current && currentAudioRef.current && !currentAudioRef.current.paused) {
-      if (audioChainFollowUp) {
+      if (playbackChannel === 'response') {
+        try {
+          currentAudioRef.current.pause();
+        } catch {
+          // ignore
+        }
+        currentAudioRef.current = null;
+        audioLockRef.current = false;
+      } else if (audioChainFollowUp) {
         const exists = ttsStreamQueueRef.current.some((c) => c.segmentKey === segmentKey);
         if (!exists) {
           ttsStreamQueueRef.current.splice(ttsPlayheadRef.current + 1, 0, {
@@ -1638,8 +1694,10 @@ export default function ChatScreen({
             unitId: clipMeta?.unitId ?? null,
           });
         }
+        return;
+      } else {
+        return;
       }
-      return;
     }
 
     playedSegmentKeysRef.current.add(segmentKey);
@@ -1657,6 +1715,8 @@ export default function ChatScreen({
     }
 
     const audio = new Audio(`data:audio/wav;base64,${audioBase64}`);
+    audio.dataset.claraChannel = playbackChannel;
+    if (tid) audio.dataset.turnId = tid;
     currentAudioRef.current = audio;
     audioLockRef.current = true;
     setIsPlayingBackendAudio(true);
@@ -1823,26 +1883,70 @@ export default function ChatScreen({
     };
 
     const startedGen = playbackGenRef.current;
-    audio.onended = () => {
-      if (startedGen !== playbackGenRef.current) return;
-      if (currentAudioRef.current !== audio) return;
-      // Engine receives `ended` via PresentationAudioManager (token-checked).
+    const responseSequence =
+      playbackChannel === 'response' && typeof clipMeta?.sequence === 'number'
+        ? clipMeta.sequence
+        : null;
+    if (responseSequence !== null) {
+      responseTtsSchedulerRef.current.markPlaying(responseSequence);
+    }
+    const clearResponseWatchdog = () => {
+      if (responseWatchdogTimerRef.current) {
+        window.clearTimeout(responseWatchdogTimerRef.current);
+        responseWatchdogTimerRef.current = null;
+      }
+    };
+    const finishResponseClip = (source: 'response-ended' | 'response-error' | 'watchdog') => {
+      clearResponseWatchdog();
+      if (responseSequence !== null) {
+        responseTtsSchedulerRef.current.completeClip(responseSequence, source);
+      }
       setIsPlayingBackendAudio(false);
       audioLockRef.current = false;
       setIsCampusSpeaking(false);
       setHasGreeted(true);
-      const cur = ttsStreamQueueRef.current[ttsPlayheadRef.current];
-      if (cur) cur.status = 'COMPLETED';
-      ttsPlayheadRef.current += 1;
-      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
-      playQueuedClipRef.current(true);
-      if (!next) {
-        pendingFinalBackupRef.current = null;
-        faceChannelRef.current?.postIdle(tid);
+      if (responseSequence !== null) {
+        playQueuedClipRef.current(true);
       }
-      if (!next && presentationRef.current.engineState === 'PRESENTATION_COMPLETE') {
-        setNarrationCaption('');
+    };
+    if (responseSequence !== null) {
+      const watchdogMs = clipMeta?.watchdogMs ?? 8000;
+      responseWatchdogTimerRef.current = window.setTimeout(() => {
+        if (startedGen !== playbackGenRef.current) return;
+        if (currentAudioRef.current !== audio) return;
+        console.error('[CLARA_TTS] response playback watchdog', {
+          turnId: tid,
+          sequence: responseSequence,
+          watchdogMs,
+        });
+        try {
+          audio.pause();
+        } catch {
+          // ignore
+        }
+        finishResponseClip('watchdog');
+      }, watchdogMs);
+    }
+
+    audio.onended = () => {
+      if (startedGen !== playbackGenRef.current) return;
+      if (currentAudioRef.current !== audio) return;
+      if (responseSequence !== null) {
+        finishResponseClip('response-ended');
+        const next = responseTtsSchedulerRef.current.nextPlayable();
+        if (!next) {
+          pendingFinalBackupRef.current = null;
+          faceChannelRef.current?.postIdle(tid);
+        }
+        if (!next && presentationRef.current.engineState === 'PRESENTATION_COMPLETE') {
+          setNarrationCaption('');
+        }
+        return;
       }
+      setIsPlayingBackendAudio(false);
+      audioLockRef.current = false;
+      setIsCampusSpeaking(false);
+      setHasGreeted(true);
     };
 
     audio.play().catch(err => {
@@ -1853,6 +1957,8 @@ export default function ChatScreen({
         segmentKey,
         playbackGen: startedGen,
         owner: assistantAudioTurnOwnerRef.current,
+        channel: playbackChannel,
+        sequence: responseSequence,
         error: err instanceof Error ? err.message : String(err),
       });
       const eng = presentationRef.current.engine.current;
@@ -1870,10 +1976,9 @@ export default function ChatScreen({
       setIsCampusSpeaking(false);
       setHasGreeted(true);
       setShowUnmuteHint(true);
-      const cur = ttsStreamQueueRef.current[ttsPlayheadRef.current];
-      if (cur) cur.status = 'FAILED';
-      ttsPlayheadRef.current += 1;
-      playQueuedClipRef.current(true);
+      if (responseSequence !== null) {
+        finishResponseClip('response-error');
+      }
     });
   }, [applyComparisonNarrationSegment]);
 
@@ -1922,31 +2027,47 @@ export default function ChatScreen({
     };
 
     const playQueuedClip = (followUp: boolean) => {
-      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      const scheduler = responseTtsSchedulerRef.current;
+      const next = scheduler.nextPlayable();
       if (!next) {
         pendingFinalBackupRef.current = null;
         return;
       }
-      if (next.status === 'COMPLETED' || next.status === 'CANCELLED') {
-        ttsPlayheadRef.current += 1;
-        playQueuedClip(followUp);
-        return;
-      }
-      if (next.status === 'PENDING') return;
+      if (next.status === 'PLAYING') return;
       if (next.status === 'FAILED' || !next.audioBase64) {
-        completeFailedClip(next);
+        scheduler.completeClip(next.sequence, 'response-error');
+        const tid = next.turnId;
+        const unitId = next.unitId;
+        const plan = narrationPlanRef.current;
+        if (plan && plan.turnId === tid && unitId) {
+          completeFailedClip({
+            audioBase64: '',
+            segmentKey: next.segmentKey,
+            isOverview: next.isOverview,
+            cardsToSync: next.cardsToSync,
+            turnId: tid,
+            chunkIndex: next.sequence,
+            unitId,
+            status: 'FAILED',
+          });
+          return;
+        }
+        playQueuedClip(true);
         return;
       }
       handleAudioPlaybackRef.current?.(
         next.audioBase64,
         next.segmentKey,
         next.isOverview,
-        next.cardsToSync,
+        next.cardsToSync as any[] | null,
         next.turnId,
         followUp,
         next.totalDurationEstimateMs,
         {
-          chunkIndex: next.chunkIndex,
+          channel: 'response',
+          sequence: next.sequence,
+          watchdogMs: next.watchdogMs,
+          chunkIndex: next.sequence,
           sectionId: next.sectionId,
           segmentId: next.segmentId,
           unitId: next.unitId,
@@ -2004,6 +2125,9 @@ export default function ChatScreen({
         resetTurnPresentationState({ resetLayout: true });
         assistantAudioTurnOwnerRef.current = nextOwner;
       }
+      if (responseTtsSchedulerRef.current.turnId !== nextOwner) {
+        responseTtsSchedulerRef.current.beginTurn(nextOwner);
+      }
     } else if (assistantAudioTurnOwnerRef.current === TURN_FENCE_PENDING) {
       const incomingTid = typeof payload.turn_id === 'string' ? payload.turn_id : '';
       const adopted = adoptTurnOwner(
@@ -2013,6 +2137,9 @@ export default function ChatScreen({
       );
       if (adopted && adopted !== TURN_FENCE_PENDING) {
         assistantAudioTurnOwnerRef.current = adopted;
+        if (responseTtsSchedulerRef.current.turnId !== adopted) {
+          responseTtsSchedulerRef.current.beginTurn(adopted);
+        }
       }
     }
 
@@ -2075,6 +2202,12 @@ export default function ChatScreen({
     lastPayloadTurnIdRef.current = String(turnId);
     const type = payload?.type ?? '';
     const utteranceKind = payload?.utterance_kind ?? '';
+    if (type === 'assistant_ack_audio' || utteranceKind === 'ack_earcon') {
+      if (typeof audioBase64 === 'string' && audioBase64.length > 0) {
+        ackPlayerRef.current.play(audioBase64);
+      }
+      return;
+    }
     const segmentIndex = payload?.segment_index ?? 0;
     const isFinalSegment = payload?.is_final_segment ?? true;
     // Small signature so missing metadata cannot cause false collisions.
@@ -3063,6 +3196,110 @@ export default function ChatScreen({
       }
       pendingFinalBackupRef.current = null;
     }
+    const sched = responseTtsSchedulerRef.current;
+    if (tid && sched.turnId !== tid) {
+      sched.beginTurn(tid);
+    }
+    const unitBackedSlotsEarly =
+      isUnitBackedNarrationPlan(payload) && Array.isArray(payload.tts_clip_slots);
+    if (unitBackedSlotsEarly) {
+      const slots = payload.tts_clip_slots as Array<{
+        turnId?: string;
+        unitId?: string | null;
+        segmentIndex?: number;
+        status?: TtsClipStatus;
+        audioBase64?: string;
+      }>;
+      sched.setExpectedCount(slots.length);
+      for (let idx = 0; idx < slots.length; idx += 1) {
+        const slot = slots[idx];
+        if (!slot || slot.status === 'PENDING') continue;
+        const planSeg =
+          narrationPlanRef.current?.turnId === tid
+            ? narrationPlanRef.current.segments[idx]
+            : undefined;
+        sched.ingestClip({
+          turnId: tid,
+          sequence: typeof slot.segmentIndex === 'number' ? slot.segmentIndex : idx,
+          audioBase64: slot.audioBase64,
+          audioUnavailable: slot.status === 'FAILED' || !slot.audioBase64,
+          unitId: slot.unitId || planSeg?.unitId || null,
+          sectionId: planSeg?.sectionId ?? null,
+          segmentId: planSeg?.segmentId ?? null,
+          isOverview: Boolean(streamAudioLayoutRef.current?.isOverview) && idx === 0,
+          cardsToSync: streamAudioLayoutRef.current?.cardsToSync ?? null,
+        });
+      }
+    } else if (Array.isArray(payload.tts_audio_queue) && payload.tts_audio_queue.length > 0) {
+      const q = payload.tts_audio_queue as string[];
+      sched.setExpectedCount(q.length);
+      q.forEach((b64, idx) => {
+        if (typeof b64 !== 'string' || !b64.length) return;
+        const planSeg =
+          narrationPlanRef.current?.turnId === tid
+            ? narrationPlanRef.current.segments[idx]
+            : payload?.narration_plan?.segments?.[idx];
+        sched.ingestClip({
+          turnId: tid,
+          sequence: idx,
+          audioBase64: b64,
+          unitId: (typeof planSeg?.unitId === 'string' && planSeg.unitId.trim()) || null,
+          sectionId: planSeg?.sectionId ?? null,
+          segmentId: planSeg?.segmentId ?? null,
+        });
+      });
+    } else if (
+      payload.type === 'assistant_audio_update' &&
+      payload.tts_streaming !== true &&
+      payload.audioPending !== true &&
+      typeof payload.audioBase64 === 'string' &&
+      payload.audioBase64.length > 0
+    ) {
+      sched.setExpectedCount(Math.max(1, sched.snapshot().clips.length));
+      sched.ingestClip({
+        turnId: tid,
+        sequence: 0,
+        audioBase64: payload.audioBase64,
+      });
+    }
+    const schedSnap = sched.snapshot();
+    if (schedSnap.clips.length > 0) {
+      ttsStreamQueueRef.current = schedSnap.clips.map((c) => ({
+        audioBase64: c.audioBase64,
+        segmentKey: c.segmentKey,
+        isOverview: c.isOverview,
+        cardsToSync: c.cardsToSync,
+        turnId: c.turnId,
+        totalDurationEstimateMs: c.totalDurationEstimateMs,
+        chunkIndex: c.sequence,
+        sectionId: c.sectionId,
+        segmentId: c.segmentId,
+        unitId: c.unitId,
+        status:
+          c.status === 'FAILED'
+            ? 'FAILED'
+            : c.status === 'COMPLETED' || c.status === 'CANCELLED'
+              ? 'COMPLETED'
+              : c.status === 'PENDING'
+                ? 'PENDING'
+                : 'PLAYABLE',
+      }));
+      ttsPlayheadRef.current = schedSnap.playhead;
+    }
+    if (sched.snapshot().clips.length > 0) {
+      const layout =
+        streamAudioLayoutRef.current?.targetLayout ??
+        (isUnitBackedNarrationPlan(payload) || payload.showCard ? 'SPLIT_CARDS' : 'FULL_TEXT');
+      if (layoutMode !== layout) return;
+      if (sched.phase === 'PLAYING') return;
+      if (!sched.isPresentationReady()) return;
+      const delayMs =
+        layout === 'SPLIT_CARDS' ? CARD_AUDIO_START_DELAY_MS : FULL_TEXT_AUDIO_START_DELAY_MS;
+      const timer = window.setTimeout(() => {
+        playQueuedClipRef.current(false);
+      }, delayMs);
+      return () => window.clearTimeout(timer);
+    }
     const chunkIndex =
       typeof payload.tts_chunk_index === 'number' && Number.isInteger(payload.tts_chunk_index)
         ? payload.tts_chunk_index
@@ -3579,6 +3816,8 @@ export default function ChatScreen({
           false,
           next.totalDurationEstimateMs,
           {
+            channel: 'response',
+            sequence: typeof next.chunkIndex === 'number' ? next.chunkIndex : ttsPlayheadRef.current,
             chunkIndex: next.chunkIndex,
             sectionId: next.sectionId,
             segmentId: next.segmentId,
@@ -3914,12 +4153,15 @@ export default function ChatScreen({
   useEffect(() => {
     if (!isE2EFlow) return;
     window.__CLARA_M52_DEBUG = () => {
+      const sched = responseTtsSchedulerRef.current.snapshot();
       const queue = ttsStreamQueueRef.current;
-      const playhead = ttsPlayheadRef.current;
+      const playhead = sched.clips.length > 0 ? sched.playhead : ttsPlayheadRef.current;
       const queuedUnit =
-        typeof queue[playhead]?.unitId === 'string' && queue[playhead]!.unitId!.trim()
-          ? queue[playhead]!.unitId!.trim()
-          : null;
+        typeof sched.clips[playhead]?.unitId === 'string' && sched.clips[playhead]!.unitId!.trim()
+          ? sched.clips[playhead]!.unitId!.trim()
+          : typeof queue[playhead]?.unitId === 'string' && queue[playhead]!.unitId!.trim()
+            ? queue[playhead]!.unitId!.trim()
+            : null;
       const engineUnit = presentation.snapshot.activeScene?.unitId ?? null;
       return {
         cardIndex: currentCardIdx,
@@ -3946,11 +4188,13 @@ export default function ChatScreen({
             ? unitBackedCards[currentCardIdx]!.unitId
             : queuedUnit ?? engineUnit,
         playhead,
-        queueLength: queue.length,
-        queueUnitIds: queue.map((c) =>
+        queueLength: sched.clips.length > 0 ? sched.clips.length : queue.length,
+        queueUnitIds: (sched.clips.length > 0 ? sched.clips : queue).map((c) =>
           typeof c.unitId === 'string' && c.unitId.trim() ? c.unitId.trim() : null,
         ),
-        clipStatuses: queue.map((c) => c.status ?? null),
+        clipStatuses: (sched.clips.length > 0 ? sched.clips : queue).map((c) =>
+          'status' in c ? c.status ?? null : null,
+        ),
       playbackUnitId: queuedUnit ?? engineUnit,
       engineUnitId: engineUnit,
       engineState: presentation.snapshot.engineState,
@@ -4242,6 +4486,7 @@ export default function ChatScreen({
                         exit={{ opacity: 0, y: -18, filter: 'blur(10px)' }}
                         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                         className="clara-thinking-stage"
+                        data-testid="clara-thinking"
                       >
                         <div className="clara-thinking-emoji" aria-hidden>{thinkingEmoji}</div>
                         <div className="clara-thinking-title">{thinkingTitle}</div>
@@ -4477,7 +4722,7 @@ export default function ChatScreen({
                             />
                       ))}
                       {isResponsePending && (
-                        <div className="bubble-clara bubble-thinking">
+                        <div className="bubble-clara bubble-thinking" data-testid="clara-thinking">
                           <span aria-hidden>{thinkingEmoji}</span> {thinkingTagline}
                         </div>
                       )}

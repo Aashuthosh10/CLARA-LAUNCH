@@ -18,19 +18,58 @@ const ANSWERS: Record<(typeof LANGS)[number], string> = {
   Malayalam: 'ഇവിടുത്തെ അധ്യാപകർ പിന്തുണ നൽകുന്നു.',
 };
 
-describe('answer visibility invariant', () => {
-  it.each(LANGS)('%s: audioPending must not block message commit', (lang) => {
+describe('answer visibility — thinking until speech is ready', () => {
+  it.each(LANGS)('%s: audioPending keeps thinking and delays commit', (lang) => {
     expect(ANSWERS[lang].length).toBeGreaterThan(0);
-    expect(shouldCommitAnswerMessages(true)).toBe(true);
-    expect(showThinkingOverlay(false)).toBe(false);
     expect(
-      shouldFocusAssistantAnswer({ isCardTurn: false, isProcessing: false }),
+      shouldCommitAnswerMessages({ hasMessages: true, audioPending: true }),
+    ).toBe(false);
+    expect(
+      showThinkingOverlay({ isProcessing: false, audioPending: true }),
     ).toBe(true);
+    expect(
+      shouldFocusAssistantAnswer({
+        isCardTurn: false,
+        isProcessing: false,
+        audioPending: true,
+      }),
+    ).toBe(false);
   });
 
-  it('shows thinking only while isProcessing, not while TTS pending', () => {
-    expect(showThinkingOverlay(true)).toBe(true);
-    expect(showThinkingOverlay(false)).toBe(false);
+  it.each(LANGS)('%s: ready audio commits and clears thinking', (lang) => {
+    expect(ANSWERS[lang].length).toBeGreaterThan(0);
+    expect(
+      shouldCommitAnswerMessages({
+        hasMessages: true,
+        audioPending: false,
+        audioReady: true,
+      }),
+    ).toBe(true);
+    expect(
+      showThinkingOverlay({ isProcessing: false, audioPending: false }),
+    ).toBe(false);
+  });
+
+  it('TTS failure still commits text and leaves thinking', () => {
+    expect(
+      shouldCommitAnswerMessages({
+        hasMessages: true,
+        audioPending: false,
+        audioUnavailable: true,
+      }),
+    ).toBe(true);
+    expect(
+      showThinkingOverlay({
+        isProcessing: false,
+        audioPending: false,
+        audioUnavailable: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('shows thinking while isProcessing', () => {
+    expect(showThinkingOverlay({ isProcessing: true })).toBe(true);
+    expect(showThinkingOverlay({ isProcessing: false })).toBe(false);
   });
 
   it('keeps cards from stealing answer focus', () => {
@@ -39,7 +78,7 @@ describe('answer visibility invariant', () => {
     ).toBe(false);
   });
 
-  it('recovers a stuck audioPending gate after the watchdog', () => {
+  it('watchdog recovers a stuck audioPending gate', () => {
     expect(
       shouldRecoverAudioPendingWatchdog({ audioPending: true, elapsedMs: 1000 }),
     ).toBe(false);
@@ -50,7 +89,18 @@ describe('answer visibility invariant', () => {
       }),
     ).toBe(true);
     expect(
-      shouldRecoverAudioPendingWatchdog({ audioPending: false, elapsedMs: 99_000 }),
+      shouldCommitAnswerMessages({
+        hasMessages: true,
+        audioPending: true,
+        watchdogRecovered: true,
+      }),
+    ).toBe(true);
+    expect(
+      showThinkingOverlay({
+        isProcessing: false,
+        audioPending: true,
+        watchdogRecovered: true,
+      }),
     ).toBe(false);
   });
 });

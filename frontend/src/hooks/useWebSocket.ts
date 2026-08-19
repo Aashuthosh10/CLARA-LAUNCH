@@ -435,11 +435,11 @@ export function useWebSocket(url: string) {
                 unitBacked && hasClipSlots
                   ? []
                   : mergeTtsAudioQueue(rp.tts_audio_queue, pp.tts_audio_queue),
-              tts_clip_slots: unitBacked
-                ? Array.isArray(pp.tts_clip_slots)
+              tts_clip_slots: Array.isArray(rp.tts_clip_slots) && (rp.tts_clip_slots as unknown[]).length > 0
+                ? rp.tts_clip_slots
+                : Array.isArray(pp.tts_clip_slots)
                   ? pp.tts_clip_slots
-                  : rp.tts_clip_slots
-                : rp.tts_clip_slots,
+                  : rp.tts_clip_slots,
             } as typeof rawPayload;
           }
         }
