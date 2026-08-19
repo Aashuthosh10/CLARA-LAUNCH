@@ -53,7 +53,12 @@ export default function DepartmentCardStage({
   }
 
   return (
-    <div className="premium-stage-container" data-testid="department-card-stage">
+    <div
+      className="premium-stage-container"
+      data-testid="department-card-stage"
+      data-card-index={safeIdx}
+      data-total-slides={slides.length}
+    >
       {/* Structural Borders */}
       <div className="premium-stage-border-outer" />
       <div className="premium-stage-border-inner" />

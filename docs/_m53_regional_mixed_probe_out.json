@@ -1,0 +1,1387 @@
+{
+  "runtime": {
+    "parser_file": "C:\\CLARA-LAUNCH\\CLARA-LAUNCH\\backend\\services\\content\\semantic_request_parser.py",
+    "parser_sha256": "8789750a22376456905b59592d1b852d033a53158b34ede12262cff7a4777f73",
+    "parser_sha256_16": "8789750a22376456"
+  },
+  "golden": {
+    "raw": "datascience mathe aiml du hod yaaru ?",
+    "topic": "hod",
+    "entities": [
+      "cse_ds",
+      "cse_aiml"
+    ],
+    "scope": "multi",
+    "unitIds": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "ambiguity": {
+      "mathe": "not in vocab; likely misspelling of Kannada mattu=and; not treated as Math dept",
+      "du": "token_map strips to empty; likely Kannada particle / of"
+    }
+  },
+  "vocab_hits_exact_query": [
+    {
+      "canonical": "hod",
+      "variant": "hod",
+      "category": "TOPIC",
+      "reason": "english_topic"
+    },
+    {
+      "canonical": "hod",
+      "variant": "yaaru",
+      "category": "QUESTION",
+      "reason": "kannada_who"
+    },
+    {
+      "canonical": "hod",
+      "variant": "yaar",
+      "category": "QUESTION",
+      "reason": "tamil_who"
+    },
+    {
+      "canonical": "cse_ds",
+      "variant": "datascience",
+      "category": "DEPARTMENT",
+      "reason": "compound_identity"
+    },
+    {
+      "canonical": "cse_aiml",
+      "variant": "aiml",
+      "category": "DEPARTMENT",
+      "reason": "compound_identity"
+    }
+  ],
+  "in_process_kn": {
+    "raw": "datascience mathe aiml du hod yaaru ?",
+    "lang": "kn",
+    "normalize_query_to_english": "datascience mathe aiml hod yaaru",
+    "normalize_user_input": "datascience mathe aiml hod who",
+    "normalize_for_department_match": "datascience mathe aiml du hod yaaru",
+    "entities": [
+      "cse_ds",
+      "cse_aiml"
+    ],
+    "atomic_raw": [
+      "hod"
+    ],
+    "atomic_normalized": [
+      "hod"
+    ],
+    "atomic_both": [
+      "hod"
+    ],
+    "is_full_department_scope": false,
+    "semantic_request": {
+      "topic": "hod",
+      "entities": [
+        "cse_ds",
+        "cse_aiml"
+      ],
+      "requested_scope": "single",
+      "confidence": "MEDIUM",
+      "source": "m5.3_semantic_request_parser",
+      "language_code": "kn",
+      "diagnostics": {
+        "normalized": "datascience mathe aiml hod who",
+        "atomic_topics": [
+          "hod"
+        ],
+        "confidence": "MEDIUM"
+      }
+    },
+    "plan_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "plan_policy": "PresentationPolicy.MULTI_UNIT",
+    "content_units": [
+      {
+        "unit_id": "cse_ds.hod",
+        "section_id": "hod_voice",
+        "title": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\",
+        "body0": "\\u0ca1\\u0cbe. \\u0ca8\\u0cbe\\u0c97\\u0cb6\\u0ccd\\u0cb0\\u0cc0 \\u0c8e\\u0ca8\\u0ccd \\u0c85\\u0cb5\\u"
+      },
+      {
+        "unit_id": "cse_aiml.hod",
+        "section_id": "hod_voice",
+        "title": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\",
+        "body0": "\\u0ca1\\u0cbe. \\u0c9f\\u0cbf \\u0c9c\\u0cbf \\u0cae\\u0c82\\u0c9c\\u0cc1\\u0ca8\\u0cbe\\u0ca5\\u0cb0 \\"
+      }
+    ],
+    "features": {
+      "department_name": "CSE (Data Science)",
+      "is_hod_query": true,
+      "is_overview_query": false,
+      "is_comparison_query": false,
+      "comparison_department_names": [
+        "CSE (Data Science)",
+        "CSE (AI & ML)"
+      ],
+      "has_department": true
+    },
+    "ci_intent": "HOD_PROFILE",
+    "cmp_labels": [
+      "CSE (Data Science)",
+      "CSE (AI & ML)"
+    ],
+    "override_surface": "department_overview",
+    "override_show": "department_overview",
+    "narration_hod_intent_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "narration_hod_intent_segs": [
+      {
+        "unit_id": "cse_ds.hod",
+        "section_id": "hod_voice",
+        "card_index": 0,
+        "tts0": "\\u0ca1\\u0cbe. \\u0ca8\\u0cbe\\u0c97\\u0cb6\\u0ccd\\u0cb0\\u0cc0 \\u0c8e\\u0ca8\\u0ccd \\u0c85\\u0cb5\\u",
+        "disp0": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\u0c9f\\u0cbf\\u0c95\\u0ccb\\u0ca8 ",
+        "body0": null
+      },
+      {
+        "unit_id": "cse_aiml.hod",
+        "section_id": "hod_voice",
+        "card_index": 1,
+        "tts0": "\\u0ca1\\u0cbe. \\u0c9f\\u0cbf \\u0c9c\\u0cbf \\u0cae\\u0c82\\u0c9c\\u0cc1\\u0ca8\\u0cbe\\u0ca5\\u0cb0 \\",
+        "disp0": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\u0c9f\\u0cbf\\u0c95\\u0ccb\\u0ca8 ",
+        "body0": null
+      }
+    ],
+    "narration_overview_surface_preset_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ]
+  },
+  "in_process_en": {
+    "raw": "datascience mathe aiml du hod yaaru ?",
+    "lang": "en",
+    "normalize_query_to_english": "datascience mathe aiml hod yaaru",
+    "normalize_user_input": "datascience mathe aiml hod who",
+    "normalize_for_department_match": "datascience mathe aiml du hod yaaru",
+    "entities": [
+      "cse_ds",
+      "cse_aiml"
+    ],
+    "atomic_raw": [
+      "hod"
+    ],
+    "atomic_normalized": [
+      "hod"
+    ],
+    "atomic_both": [
+      "hod"
+    ],
+    "is_full_department_scope": false,
+    "semantic_request": {
+      "topic": "hod",
+      "entities": [
+        "cse_ds",
+        "cse_aiml"
+      ],
+      "requested_scope": "single",
+      "confidence": "MEDIUM",
+      "source": "m5.3_semantic_request_parser",
+      "language_code": "en",
+      "diagnostics": {
+        "normalized": "datascience mathe aiml hod who",
+        "atomic_topics": [
+          "hod"
+        ],
+        "confidence": "MEDIUM"
+      }
+    },
+    "plan_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "plan_policy": "PresentationPolicy.MULTI_UNIT",
+    "content_units": [
+      {
+        "unit_id": "cse_ds.hod",
+        "section_id": "hod_voice",
+        "title": "HOD & Vision",
+        "body0": "Dr. Nagashree N directs our commitment to generate knowledge through state-of-the-art conc"
+      },
+      {
+        "unit_id": "cse_aiml.hod",
+        "section_id": "hod_voice",
+        "title": "HOD & Vision",
+        "body0": "Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum enriched with d"
+      }
+    ],
+    "features": {
+      "department_name": "CSE (Data Science)",
+      "is_hod_query": true,
+      "is_overview_query": false,
+      "is_comparison_query": false,
+      "comparison_department_names": [
+        "CSE (Data Science)",
+        "CSE (AI & ML)"
+      ],
+      "has_department": true
+    },
+    "ci_intent": "HOD_PROFILE",
+    "cmp_labels": [
+      "CSE (Data Science)",
+      "CSE (AI & ML)"
+    ],
+    "override_surface": "department_overview",
+    "override_show": "department_overview",
+    "narration_hod_intent_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "narration_hod_intent_segs": [
+      {
+        "unit_id": "cse_ds.hod",
+        "section_id": "hod_voice",
+        "card_index": 0,
+        "tts0": "Dr. Nagashree N directs our commitment to generate knowledge through state-of-the-art conc",
+        "disp0": "HOD & Vision Dr. Nagashree N directs our commitment to generate knowledge through state-of",
+        "body0": null
+      },
+      {
+        "unit_id": "cse_aiml.hod",
+        "section_id": "hod_voice",
+        "card_index": 1,
+        "tts0": "Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum enriched with d",
+        "disp0": "HOD & Vision Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum en",
+        "body0": null
+      }
+    ],
+    "narration_overview_surface_preset_units": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ]
+  },
+  "matrix": [
+    {
+      "q": "datascience mathe aiml du hod yaaru ?",
+      "norm": "datascience mathe aiml hod who",
+      "ents": [
+        "cse_ds",
+        "cse_aiml"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "datascience mathe aiml hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE mattu AIML HOD yaaru?",
+      "norm": "cse mattu aiml hod who",
+      "ents": [
+        "cse",
+        "cse_aiml"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse mattu aiml hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "ci_dept": "CSE (AI & ML)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML mattu Data Science HOD yaaru?",
+      "norm": "aiml mattu data science hod who",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml mattu data science hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE bagge heli",
+      "norm": "cse about",
+      "ents": [
+        "cse"
+      ],
+      "atom": [],
+      "full_scope": true,
+      "req": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse about",
+          "atomic_topics": [],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "ci_dept": "CSE",
+      "ci_hod": false,
+      "ci_intent": "DEPARTMENT_OVERVIEW"
+    },
+    {
+      "q": "CSE fees yestu?",
+      "norm": "cse fees yestu",
+      "ents": [
+        "cse"
+      ],
+      "atom": [
+        "fees"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse fees yestu",
+          "atomic_topics": [
+            "fees"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse.fees"
+      ],
+      "ci_dept": "CSE",
+      "ci_hod": false,
+      "ci_intent": "DEPARTMENT_FEES"
+    },
+    {
+      "q": "CSE \u0cb6\u0cc1\u0cb2\u0ccd\u0c95 \u0c8e\u0cb7\u0ccd\u0c9f\u0cc1?",
+      "norm": "cse \u0cb6 \u0cb2 \u0c95 \u0c8e\u0cb7 \u0c9f",
+      "ents": [
+        "cse"
+      ],
+      "atom": [
+        "fees"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse \u0cb6 \u0cb2 \u0c95 \u0c8e\u0cb7 \u0c9f",
+          "atomic_topics": [
+            "fees"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse.fees"
+      ],
+      "ci_dept": "CSE",
+      "ci_hod": false,
+      "ci_intent": "DEPARTMENT_FEES"
+    },
+    {
+      "q": "CSE HOD yaaru?",
+      "norm": "cse hod who",
+      "ents": [
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse.hod"
+      ],
+      "ci_dept": "CSE",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE HOD yaaru anta heli",
+      "norm": "cse hod who anta",
+      "ents": [
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": true,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse hod who anta",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse.hod"
+      ],
+      "ci_dept": "CSE",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "datascience mattu aiml du hod yaaru ?",
+      "norm": "datascience mattu aiml hod who",
+      "ents": [
+        "cse_ds",
+        "cse_aiml"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "datascience mattu aiml hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "Who is the HOD of AIML and Data Science?",
+      "norm": "who is the hod of aiml and data science",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "who is the hod of aiml and data science",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "Who is the HOD of CSE Data Science?",
+      "norm": "who is the hod of cse data science",
+      "ents": [
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "who is the hod of cse data science",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "Who are the HODs of AIML, Data Science and CSE?",
+      "norm": "who are the hods of aiml data science and cse",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "who are the hods of aiml data science and cse",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "Who are the HODs of AIML, Data Science, CSE and ECE?",
+      "norm": "who are the hods of aiml data science cse and ece",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse",
+        "ece"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse",
+          "ece"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "who are the hods of aiml data science cse and ece",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod",
+        "ece.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML, Data Science mattu CSE HOD yaaru?",
+      "norm": "aiml data science mattu cse hod who",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml data science mattu cse hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE Data Science ka HOD kaun hai?",
+      "norm": "cse data science ka hod who hai",
+      "ents": [
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse data science ka hod who hai",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML aur Data Science ke HOD kaun hain?",
+      "norm": "aiml aur data science ke hod who hain",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml aur data science ke hod who hain",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML, Data Science aur CSE ke HOD kaun hain?",
+      "norm": "aiml data science aur cse ke hod who hain",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml data science aur cse ke hod who hain",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE Data Science HOD yaar?",
+      "norm": "cse data science hod who",
+      "ents": [
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse data science hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML and Data Science HOD yaar?",
+      "norm": "aiml and data science hod who",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml and data science hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML, Data Science and CSE HOD yaar?",
+      "norm": "aiml data science and cse hod who",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml data science and cse hod who",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE Data Science HOD evaru?",
+      "norm": "cse data science hod evaru",
+      "ents": [
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse data science hod evaru",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML and Data Science HOD evaru?",
+      "norm": "aiml and data science hod evaru",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml and data science hod evaru",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML, Data Science and CSE HOD evaru?",
+      "norm": "aiml data science and cse hod evaru",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml data science and cse hod evaru",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "CSE Data Science HOD aaranu?",
+      "norm": "cse data science hod aaranu",
+      "ents": [
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "cse data science hod aaranu",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML and Data Science HOD aaranu?",
+      "norm": "aiml and data science hod aaranu",
+      "ents": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml and data science hod aaranu",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "AIML, Data Science and CSE HOD aaranu?",
+      "norm": "aiml data science and cse hod aaranu",
+      "ents": [
+        "cse_aiml",
+        "cse_ds",
+        "cse"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "aiml data science and cse hod aaranu",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_aiml.hod",
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ci_dept": "CSE (Data Science)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "\u0ca1\u0cc7\u0c9f\u0cbe \u0cb8\u0cc8\u0ca8\u0ccd\u0cb8\u0ccd \u0cb9\u0cbe\u0c97\u0cc2 AIML HOD \u0caf\u0cbe\u0cb0\u0cc1?",
+      "norm": "data science \u0cb9 \u0c97 aiml hod \u0caf \u0cb0",
+      "ents": [
+        "cse_ds",
+        "cse_aiml"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": "MEDIUM",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "data science \u0cb9 \u0c97 aiml hod \u0caf \u0cb0",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "MEDIUM"
+        }
+      },
+      "units": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ],
+      "ci_dept": "CSE (AI & ML)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    },
+    {
+      "q": "\u0921\u0947\u091f\u093e \u0938\u093e\u0907\u0902\u0938 \u0914\u0930 AIML HOD \u0915\u094c\u0928 \u0939\u0948?",
+      "norm": "\u0921 \u091f \u0938 \u0907 \u0938 \u0914\u0930 aiml hod \u0915 \u0928 \u0939",
+      "ents": [
+        "cse_aiml"
+      ],
+      "atom": [
+        "hod"
+      ],
+      "full_scope": false,
+      "req": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": "HIGH",
+        "source": "m5.3_semantic_request_parser",
+        "language_code": "kn",
+        "diagnostics": {
+          "normalized": "\u0921 \u091f \u0938 \u0907 \u0938 \u0914\u0930 aiml hod \u0915 \u0928 \u0939",
+          "atomic_topics": [
+            "hod"
+          ],
+          "confidence": "HIGH"
+        }
+      },
+      "units": [
+        "cse_aiml.hod"
+      ],
+      "ci_dept": "CSE (AI & ML)",
+      "ci_hod": true,
+      "ci_intent": "HOD_PROFILE"
+    }
+  ],
+  "orch_kn": {
+    "intent": "HOD_PROFILE",
+    "show_card": "department_overview",
+    "card_surface": "department_overview",
+    "should_generate_presentation": true,
+    "authority": "CARD_PRESENTATION",
+    "dept_label": "CSE (Data Science)",
+    "entities": {
+      "department": "CSE (Data Science)"
+    },
+    "narration_unit_ids": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "bundle_unit_ids": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "bundle_show": "department_overview"
+  },
+  "orch_en": {
+    "intent": "HOD_PROFILE",
+    "show_card": "department_overview",
+    "card_surface": "department_overview",
+    "should_generate_presentation": true,
+    "authority": "CARD_PRESENTATION",
+    "dept_label": "CSE (Data Science)",
+    "entities": {
+      "department": "CSE (Data Science)"
+    },
+    "narration_unit_ids": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "bundle_unit_ids": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "bundle_show": "department_overview"
+  },
+  "live_ws": {
+    "Kannada": {
+      "unitIds": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ],
+      "mode": "card_narration",
+      "showCard": "department_overview",
+      "intent": "HOD_PROFILE",
+      "spoken0": "\\u0ca1\\u0cbe. \\u0ca8\\u0cbe\\u0c97\\u0cb6\\u0ccd\\u0cb0\\u0cc0 \\u0c8e\\u0ca8\\u0ccd \\u0c85\\u0cb5\\u0cb0\\u0cc1 \\u0c85\\u0ca4\\u0ccd\\",
+      "tts_streaming": true,
+      "n_segs": 2,
+      "segs": [
+        {
+          "unitId": "cse_ds.hod",
+          "sectionId": "hod_voice",
+          "cardIndex": 0,
+          "tts0": "\\u0ca1\\u0cbe. \\u0ca8\\u0cbe\\u0c97\\u0cb6\\u0ccd\\u0cb0\\u0cc0 \\u0c8e\\u0ca8\\u0ccd \\u0c85\\u0cb5\\u",
+          "disp0": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\u0c9f\\u0cbf\\u0c95\\u0ccb\\u0ca8 "
+        },
+        {
+          "unitId": "cse_aiml.hod",
+          "sectionId": "hod_voice",
+          "cardIndex": 1,
+          "tts0": "\\u0ca1\\u0cbe. \\u0c9f\\u0cbf \\u0c9c\\u0cbf \\u0cae\\u0c82\\u0c9c\\u0cc1\\u0ca8\\u0cbe\\u0ca5\\u0cb0 \\",
+          "disp0": "HOD \\u0cae\\u0ca4\\u0ccd\\u0ca4\\u0cc1 \\u0ca6\\u0cc3\\u0cb7\\u0ccd\\u0c9f\\u0cbf\\u0c95\\u0ccb\\u0ca8 "
+        }
+      ]
+    },
+    "English": {
+      "unitIds": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ],
+      "mode": "card_narration",
+      "showCard": "department_overview",
+      "intent": "HOD_PROFILE",
+      "spoken0": "Dr. Nagashree N directs our commitment to generate knowledge through state-of-the-art concepts and rigorous analytical t",
+      "tts_streaming": true,
+      "n_segs": 2,
+      "segs": [
+        {
+          "unitId": "cse_ds.hod",
+          "sectionId": "hod_voice",
+          "cardIndex": 0,
+          "tts0": "Dr. Nagashree N directs our commitment to generate knowledge through state-of-the-art conc",
+          "disp0": "HOD & Vision Dr. Nagashree N directs our commitment to generate knowledge through state-of"
+        },
+        {
+          "unitId": "cse_aiml.hod",
+          "sectionId": "hod_voice",
+          "cardIndex": 1,
+          "tts0": "Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum enriched with d",
+          "disp0": "HOD & Vision Guided by Dr. T G Manjunatha, we emphasize a NEP-2020 compliant curriculum en"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,580 @@
+{
+  "fingerprint": {
+    "parser_source": "m5.3_semantic_request_parser",
+    "loose_in_resolver": true,
+    "pid_note": "in-process import of current disk; live WS below confirms serving process"
+  },
+  "in_process": {
+    "EN_DS_HOD": {
+      "input": "Who is the HOD of CSE Data Science?",
+      "language": "en",
+      "normalized": "who is the hod of cse data science",
+      "exclusive_match": [
+        "cse_ds"
+      ],
+      "re_resolved": [
+        {
+          "in": "cse_ds",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        }
+      ],
+      "semantic_request": {
+        "source": "m5.3_semantic_request_parser",
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "scope": "single",
+        "confidence": "HIGH",
+        "language_code": "en"
+      },
+      "presentation_plan_unitIds": [
+        "cse.hod"
+      ],
+      "content_units": [
+        {
+          "unit_id": "cse.hod",
+          "title": "HOD & Vision",
+          "title_script": "latin",
+          "body": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "body_script": "latin",
+          "language": "en",
+          "language_code": "en"
+        }
+      ],
+      "narration_segments": [
+        {
+          "unitId": "cse.hod",
+          "displayText": "HOD & Vision Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "display_script": "latin",
+          "ttsText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "tts_script": "latin",
+          "cardIndex": 0
+        }
+      ]
+    },
+    "EN_MULTI_HOD": {
+      "input": "Who is the HOD of AIML and Data Science?",
+      "language": "en",
+      "normalized": "who is the hod of aiml and data science",
+      "exclusive_match": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "re_resolved": [
+        {
+          "in": "cse_aiml",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        },
+        {
+          "in": "cse_ds",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        }
+      ],
+      "semantic_request": {
+        "source": "m5.3_semantic_request_parser",
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "scope": "single",
+        "confidence": "HIGH",
+        "language_code": "en"
+      },
+      "presentation_plan_unitIds": [
+        "cse.hod"
+      ],
+      "content_units": [
+        {
+          "unit_id": "cse.hod",
+          "title": "HOD & Vision",
+          "title_script": "latin",
+          "body": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "body_script": "latin",
+          "language": "en",
+          "language_code": "en"
+        }
+      ],
+      "narration_segments": [
+        {
+          "unitId": "cse.hod",
+          "displayText": "HOD & Vision Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "display_script": "latin",
+          "ttsText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "tts_script": "latin",
+          "cardIndex": 0
+        }
+      ]
+    },
+    "KN_MULTI_HOD": {
+      "input": "AIML mattu Data Science HOD yaaru?",
+      "language": "kn",
+      "normalized": "aiml mattu data science hod who",
+      "exclusive_match": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "re_resolved": [
+        {
+          "in": "cse_aiml",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        },
+        {
+          "in": "cse_ds",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        }
+      ],
+      "semantic_request": {
+        "source": "m5.3_semantic_request_parser",
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "scope": "single",
+        "confidence": "HIGH",
+        "language_code": "kn"
+      },
+      "presentation_plan_unitIds": [
+        "cse.hod"
+      ],
+      "content_units": [
+        {
+          "unit_id": "cse.hod",
+          "title": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ",
+          "title_script": "kannada",
+          "body": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "body_script": "kannada",
+          "language": "kn",
+          "language_code": "kn"
+        }
+      ],
+      "narration_segments": [
+        {
+          "unitId": "cse.hod",
+          "displayText": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "display_script": "kannada",
+          "ttsText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "tts_script": "kannada",
+          "cardIndex": 0
+        }
+      ]
+    },
+    "KN_DS_HOD": {
+      "input": "CSE Data Science HOD yaaru?",
+      "language": "kn",
+      "normalized": "cse data science hod who",
+      "exclusive_match": [
+        "cse_ds"
+      ],
+      "re_resolved": [
+        {
+          "in": "cse_ds",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.8
+        }
+      ],
+      "semantic_request": {
+        "source": "m5.3_semantic_request_parser",
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "scope": "single",
+        "confidence": "HIGH",
+        "language_code": "kn"
+      },
+      "presentation_plan_unitIds": [
+        "cse.hod"
+      ],
+      "content_units": [
+        {
+          "unit_id": "cse.hod",
+          "title": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ",
+          "title_script": "kannada",
+          "body": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "body_script": "kannada",
+          "language": "kn",
+          "language_code": "kn"
+        }
+      ],
+      "narration_segments": [
+        {
+          "unitId": "cse.hod",
+          "displayText": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "display_script": "kannada",
+          "ttsText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "tts_script": "kannada",
+          "cardIndex": 0
+        }
+      ]
+    },
+    "KN_FEES": {
+      "input": "CSE ಶುಲ್ಕ ಎಷ್ಟು?",
+      "language": "kn",
+      "normalized": "cse ಶ ಲ ಕ ಎಷ ಟ",
+      "exclusive_match": [
+        "cse"
+      ],
+      "re_resolved": [
+        {
+          "in": "cse",
+          "out": "cse",
+          "source": "voice",
+          "conf": 0.95
+        }
+      ],
+      "semantic_request": {
+        "source": "m5.3_semantic_request_parser",
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "scope": "single",
+        "confidence": "HIGH",
+        "language_code": "kn"
+      },
+      "presentation_plan_unitIds": [
+        "cse.fees"
+      ],
+      "content_units": [
+        {
+          "unit_id": "cse.fees",
+          "title": "ಶುಲ್ಕದ ವಿವರಗಳು",
+          "title_script": "kannada",
+          "body": "KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+          "body_script": "kannada",
+          "language": "kn",
+          "language_code": "kn"
+        }
+      ],
+      "narration_segments": [
+        {
+          "unitId": "cse.fees",
+          "displayText": "ಶುಲ್ಕದ ವಿವರಗಳು KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+          "display_script": "kannada",
+          "ttsText": "KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+          "tts_script": "kannada",
+          "cardIndex": 0
+        }
+      ]
+    }
+  },
+  "live_ws": {
+    "english_ws": {
+      "language": "English",
+      "results": [
+        {
+          "query": "Who is the HOD of CSE Data Science?",
+          "ws_unitIds": [
+            "cse.hod"
+          ],
+          "tts_code": null,
+          "language_name": null,
+          "localization": null,
+          "segments": [
+            {
+              "unitId": "cse.hod",
+              "displayText": "HOD & Vision Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+              "display_script": "latin",
+              "ttsText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+              "tts_script": "latin",
+              "cardIndex": 0,
+              "sectionId": "hod_voice"
+            }
+          ],
+          "showCard": "department_overview",
+          "intent": "HOD_PROFILE",
+          "spokenText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "spoken_script": "latin",
+          "assistantText": "Here is the information you requested.",
+          "audio_seen": true,
+          "tts_chunk_count": 3,
+          "payload_keys": [
+            "assistantText",
+            "audioBase64",
+            "audioPending",
+            "audioUnavailable",
+            "debug",
+            "departmentId",
+            "direct_reply",
+            "intent",
+            "isProcessing",
+            "isSpeaking",
+            "is_final_segment",
+            "llm_cache_hit",
+            "llm_used",
+            "messages",
+            "narration_plan",
+            "rag_used",
+            "segment_index",
+            "session_gen",
+            "showCard",
+            "spokenText",
+            "text",
+            "tts_cache_hit",
+            "tts_chunk_index",
+            "tts_streaming",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "turn_id",
+            "type",
+            "utterance_kind",
+            "wire_seq"
+          ]
+        },
+        {
+          "query": "Who is the HOD of AIML and Data Science?",
+          "ws_unitIds": [
+            "cse.hod"
+          ],
+          "tts_code": null,
+          "language_name": null,
+          "localization": null,
+          "segments": [
+            {
+              "unitId": "cse.hod",
+              "displayText": "HOD & Vision Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+              "display_script": "latin",
+              "ttsText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+              "tts_script": "latin",
+              "cardIndex": 0,
+              "sectionId": "hod_voice"
+            }
+          ],
+          "showCard": "department_overview",
+          "intent": "HOD_PROFILE",
+          "spokenText": "Led by Dr. Shashikumar D R, our vision focuses on industry-driven learning tailored for global demands. We prioritize hands-on problem solving and ethical coding practices.",
+          "spoken_script": "latin",
+          "assistantText": "Here is the information you requested.",
+          "audio_seen": true,
+          "tts_chunk_count": 3,
+          "payload_keys": [
+            "assistantText",
+            "audioBase64",
+            "audioPending",
+            "audioUnavailable",
+            "debug",
+            "departmentId",
+            "direct_reply",
+            "intent",
+            "isProcessing",
+            "isSpeaking",
+            "is_final_segment",
+            "llm_cache_hit",
+            "llm_used",
+            "messages",
+            "narration_plan",
+            "rag_used",
+            "segment_index",
+            "session_gen",
+            "showCard",
+            "spokenText",
+            "text",
+            "tts_cache_hit",
+            "tts_chunk_index",
+            "tts_streaming",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "turn_id",
+            "type",
+            "utterance_kind",
+            "wire_seq"
+          ]
+        }
+      ]
+    },
+    "kannada_ws": {
+      "language": "Kannada",
+      "results": [
+        {
+          "query": "AIML mattu Data Science HOD yaaru?",
+          "ws_unitIds": [
+            "cse.hod"
+          ],
+          "tts_code": null,
+          "language_name": null,
+          "localization": null,
+          "segments": [
+            {
+              "unitId": "cse.hod",
+              "displayText": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+              "display_script": "kannada",
+              "ttsText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+              "tts_script": "kannada",
+              "cardIndex": 0,
+              "sectionId": "hod_voice"
+            }
+          ],
+          "showCard": "department_overview",
+          "intent": "HOD_PROFILE",
+          "spokenText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "spoken_script": "kannada",
+          "assistantText": "ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ.",
+          "audio_seen": true,
+          "tts_chunk_count": 2,
+          "payload_keys": [
+            "assistantText",
+            "audioBase64",
+            "audioPending",
+            "audioUnavailable",
+            "debug",
+            "departmentId",
+            "direct_reply",
+            "intent",
+            "isProcessing",
+            "isSpeaking",
+            "is_final_segment",
+            "llm_cache_hit",
+            "llm_used",
+            "messages",
+            "narration_plan",
+            "rag_used",
+            "segment_index",
+            "session_gen",
+            "showCard",
+            "spokenText",
+            "text",
+            "tts_cache_hit",
+            "tts_chunk_index",
+            "tts_streaming",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "turn_id",
+            "type",
+            "utterance_kind",
+            "wire_seq"
+          ]
+        },
+        {
+          "query": "CSE Data Science HOD yaaru?",
+          "ws_unitIds": [
+            "cse.hod"
+          ],
+          "tts_code": null,
+          "language_name": null,
+          "localization": null,
+          "segments": [
+            {
+              "unitId": "cse.hod",
+              "displayText": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+              "display_script": "kannada",
+              "ttsText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+              "tts_script": "kannada",
+              "cardIndex": 0,
+              "sectionId": "hod_voice"
+            }
+          ],
+          "showCard": "department_overview",
+          "intent": "HOD_PROFILE",
+          "spokenText": "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ನೇತೃತ್ವದಲ್ಲಿ, ನಮ್ಮ ದೃಷ್ಟಿ ಜಾಗತಿಕ ಬೇಡಿಕೆಗಳಿಗೆ ಅನುಗುಣವಾಗಿ ಉದ್ಯಮ-ಚಾಲಿತ ಕಲಿಕೆಯ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ. ಸಮಸ್ಯೆ ಪರಿಹಾರ ಮತ್ತು ನೈತಿಕ ಕೋಡಿಂಗ್ ಅಭ್ಯಾಸಗಳಿಗೆ ನಾವು ಆದ್ಯತೆ ನೀಡುತ್ತೇವೆ.",
+          "spoken_script": "kannada",
+          "assistantText": "ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ.",
+          "audio_seen": true,
+          "tts_chunk_count": 2,
+          "payload_keys": [
+            "assistantText",
+            "audioBase64",
+            "audioPending",
+            "audioUnavailable",
+            "debug",
+            "departmentId",
+            "direct_reply",
+            "intent",
+            "isProcessing",
+            "isSpeaking",
+            "is_final_segment",
+            "llm_cache_hit",
+            "llm_used",
+            "messages",
+            "narration_plan",
+            "rag_used",
+            "segment_index",
+            "session_gen",
+            "showCard",
+            "spokenText",
+            "text",
+            "tts_cache_hit",
+            "tts_chunk_index",
+            "tts_streaming",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "turn_id",
+            "type",
+            "utterance_kind",
+            "wire_seq"
+          ]
+        },
+        {
+          "query": "CSE ಶುಲ್ಕ ಎಷ್ಟು?",
+          "ws_unitIds": [
+            "cse.fees"
+          ],
+          "tts_code": null,
+          "language_name": null,
+          "localization": null,
+          "segments": [
+            {
+              "unitId": "cse.fees",
+              "displayText": "ಶುಲ್ಕದ ವಿವರಗಳು KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+              "display_script": "kannada",
+              "ttsText": "KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+              "tts_script": "kannada",
+              "cardIndex": 0,
+              "sectionId": "fees"
+            }
+          ],
+          "showCard": "department_overview",
+          "intent": "DEPARTMENT_FEES",
+          "spokenText": "KCET: KEA ಮಾನದಂಡಗಳ ಪ್ರಕಾರ | ನಿರ್ವಹಣೆ: ₹3,50,000/ವರ್ಷ",
+          "spoken_script": "kannada",
+          "assistantText": "CSE ವಿಭಾಗದ ಶುಲ್ಕ ವಿವರಗಳನ್ನು ತೆರುತ್ತಿದ್ದೇನೆ.",
+          "audio_seen": true,
+          "tts_chunk_count": 3,
+          "payload_keys": [
+            "assistantText",
+            "audioBase64",
+            "audioPending",
+            "audioUnavailable",
+            "debug",
+            "departmentId",
+            "direct_reply",
+            "intent",
+            "isProcessing",
+            "isSpeaking",
+            "is_final_segment",
+            "llm_cache_hit",
+            "llm_used",
+            "messages",
+            "narration_plan",
+            "rag_used",
+            "segment_index",
+            "session_gen",
+            "showCard",
+            "spokenText",
+            "text",
+            "tts_cache_hit",
+            "tts_chunk_index",
+            "tts_streaming",
+            "tts_total_chars",
+            "tts_total_duration_estimate_ms",
+            "turn_id",
+            "type",
+            "utterance_kind",
+            "wire_seq"
+          ]
+        }
+      ]
+    }
+  }
+}

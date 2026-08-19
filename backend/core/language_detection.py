@@ -102,6 +102,11 @@ def _extract_from_stt_meta(stt_meta: dict[str, Any] | None) -> DetectionResult |
     return DetectionResult(lang_key=lang_key, confidence=max(0.0, min(confidence, 1.0)), method="stt_metadata")
 
 
+def detect_script_language(text: str) -> DetectionResult | None:
+    """Public alias: native-script language, or latin_fallback English, or None."""
+    return _detect_by_script(text)
+
+
 def _detect_by_script(text: str) -> DetectionResult | None:
     counts = {key: 0 for key in SCRIPT_RANGES}
     latin_count = 0

@@ -405,7 +405,8 @@ def multilingual_rag_reply_directive(language_name: str) -> str:
     """When retrieval used English chunks but the session speaks another language."""
     return (
         f"Answer this query naturally in conversational {language_name}. "
-        "The college reference below is in English; use it only for verified facts and respond entirely "
+        "The college reference below may be English, or a mix of English retrieval and "
+        f"{language_name} locale facts. Use it only for verified facts and respond entirely "
         f"in {language_name}. Do not mix languages except for standard abbreviations like CSE or KCET."
     )
 
@@ -459,7 +460,6 @@ RAG_PIPELINE_MAX_TOKENS = 1000
 CONTROLLED_FALLBACK_EN = "I'm sorry, I don't have that information right now."
 
 _STRUCTURED_PROMPT_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=128, ttl_seconds=600.0)
-_TRANSLATION_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=256, ttl_seconds=900.0)
 
 
 COURSE_MENU_OPTIONS = [
@@ -494,6 +494,13 @@ BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE: dict[str, str] = {
     "Malayalam": "കോളേജ് ബസ് റൂട്ടുകൾ കാണിക്കുന്നു. നിർത്തലിടങ്ങളും സമയവും കാണാൻ ഒരു റൂട്ട് തിരഞ്ഞെടുക്കൂ.",
 }
 
+# Minimum similarity for a fuzzy keyword hit to claim an intent.
+# At the old 0.70, unrelated words stole card surfaces:
+#   "france"      vs "branches"  = 0.714 → COURSE_MENU
+#   "do students" vs "documents" = 0.737 → DOCUMENTS
+# 0.88 still absorbs real ASR/typo variants ("documnts", "coures", "branchs").
+_INTENT_FUZZY_MIN = 0.88
+
 SUPPORTED_LANGUAGES = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
 UNAVAILABLE_REPLY_BY_LANGUAGE: dict[str, str] = {
     "English": "I currently don't have that exact detail. Please contact the admission office for precise information.",
@@ -503,13 +510,15 @@ UNAVAILABLE_REPLY_BY_LANGUAGE: dict[str, str] = {
     "Telugu": "ఆ ఖచ్చితమైన వివరాలు ప్రస్తుతం నా వద్ద లేవు. సరైన సమాచారం కోసం దయచేసి అడ్మిషన్ కార్యాలయాన్ని సంప్రదించండి.",
     "Malayalam": "ആ കൃത്യമായ വിശദാംശം ഇപ്പോൾ എനിക്ക് ലഭ്യമല്ല. ദയവായി കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസിനെ സമീപിക്കുക.",
 }
+# FALLBACK copy. Must stay distinct from UNAVAILABLE: "I cannot help with that" is a
+# different statement from "I know this topic but not that exact figure".
 OFF_TOPIC_REPLY_BY_LANGUAGE: dict[str, str] = {
-    "English": "I currently don't have that exact detail. Please contact the admission office for precise information.",
-    "Kannada": "ಈ ಕ್ಷಣದಲ್ಲಿ ಆ ನಿಖರ ವಿವರ ನನ್ನ ಬಳಿ ಇಲ್ಲ. ದಯವಿಟ್ಟು ಖಚಿತ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
-    "Hindi": "इस समय मेरे पास वह सटीक जानकारी नहीं है। कृपया सटीक विवरण के लिए एडमिशन ऑफिस से संपर्क करें।",
-    "Tamil": "அந்த துல்லியமான தகவல் இப்போது என்னிடம் இல்லை. சரியான விவரங்களுக்கு அட்மிஷன் அலுவலகத்தை தொடர்புகொள்ளவும்.",
-    "Telugu": "ఆ ఖచ్చితమైన వివరాలు ప్రస్తుతం నా వద్ద లేవు. సరైన సమాచారం కోసం దయచేసి అడ్మిషన్ కార్యాలయాన్ని సంప్రదించండి.",
-    "Malayalam": "ആ കൃത്യമായ വിശദാംശം ഇപ്പോൾ എനിക്ക് ലഭ്യമല്ല. ദയവായി കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസിനെ സമീപിക്കുക.",
+    "English": "That's outside what I can help with. I can answer questions about SVIT — admissions, departments, fees, placements, faculty and campus facilities.",
+    "Kannada": "ಅದು ನನ್ನ ಸಹಾಯದ ವ್ಯಾಪ್ತಿಯ ಹೊರಗಿದೆ. ನಾನು SVIT ಬಗ್ಗೆ — ಪ್ರವೇಶ, ವಿಭಾಗಗಳು, ಶುಲ್ಕ, ಪ್ಲೇಸ್‌ಮೆಂಟ್, ಅಧ್ಯಾಪಕರು ಮತ್ತು ಕ್ಯಾಂಪಸ್ ಸೌಲಭ್ಯಗಳ ಬಗ್ಗೆ ಉತ್ತರಿಸಬಲ್ಲೆ.",
+    "Hindi": "वह मेरी सहायता के दायरे से बाहर है। मैं SVIT के बारे में — प्रवेश, विभाग, फीस, प्लेसमेंट, शिक्षक और कैंपस सुविधाओं के बारे में उत्तर दे सकती हूँ।",
+    "Tamil": "அது நான் உதவக்கூடிய வரம்பிற்கு வெளியே உள்ளது. SVIT பற்றி — சேர்க்கை, துறைகள், கட்டணம், பிளேஸ்மென்ட், ஆசிரியர்கள் மற்றும் வளாக வசதிகள் பற்றி பதிலளிக்க முடியும்.",
+    "Telugu": "అది నేను సహాయం చేయగల పరిధికి వెలుపల ఉంది. SVIT గురించి — ప్రవేశాలు, విభాగాలు, ఫీజులు, ప్లేస్‌మెంట్, అధ్యాపకులు మరియు క్యాంపస్ సౌకర్యాల గురించి నేను సమాధానం ఇవ్వగలను.",
+    "Malayalam": "അത് എനിക്ക് സഹായിക്കാൻ കഴിയുന്ന പരിധിക്ക് പുറത്താണ്. SVIT-നെക്കുറിച്ച് — അഡ്മിഷൻ, ഡിപ്പാർട്ട്മെന്റുകൾ, ഫീസ്, പ്ലേസ്മെന്റ്, അധ്യാപകർ, ക്യാമ്പസ് സൗകര്യങ്ങൾ എന്നിവയെക്കുറിച്ച് എനിക്ക് ഉത്തരം നൽകാം.",
 }
 
 
@@ -925,7 +934,8 @@ def _comparison_intent_substrings_hits(normalized_joined: str) -> bool:
         "easier ",
         "harder ",
         "future scope",
-        " placements ",
+        # " placements " was here and turned every placements question into a
+        # department comparison. Comparison needs an explicit contrast cue.
         "placement wise",
         "salary",
         " coding vs ",
@@ -1335,6 +1345,34 @@ def get_off_topic_reply(language: str | None) -> str:
     return OFF_TOPIC_REPLY_BY_LANGUAGE.get(language, OFF_TOPIC_REPLY_BY_LANGUAGE["English"])
 
 
+def build_receptionist_answer_system_prompt(
+    language: str,
+    unavailable_reply: str,
+    off_topic_reply: str,
+) -> str:
+    """Groq system prompt for ResponseMode.ANSWER institutional turns."""
+    return (
+        f"You are CLARA, a warm and professional campus receptionist for "
+        f"Sai Vidya Institute of Technology (SVIT). "
+        "You understand English, Kannada, Hindi, Tamil, Telugu, and Malayalam equally — "
+        "native script, romanized, and English code-switch. "
+        f"Reply in {language}. If the visitor mixed English with {language}, a natural "
+        f"code-switched {language} reply is allowed for campus English words (CSE, lab, HOD). "
+        "Do not answer in English merely because some reference text is English. "
+        "Do not write a longer regional-language answer than you would in English. "
+        "Maximum 2 to 4 short sentences in every language. Plain text only — no markdown or bullet lists. "
+        "The visitor asked an institutional question about SVIT — faculty quality, campus life, "
+        "facilities, culture, placements, internships, hackathons, or what makes the college special. "
+        "Answer naturally as a helpful receptionist. Use the college reference below; you may "
+        "synthesize a helpful overview from related facts (faculty profiles, department missions, "
+        "infrastructure, achievements) even when the exact wording is not quoted. "
+        "Do not invent specific numbers, dates, rankings, or personal names absent from the reference. "
+        f"Use the unavailable sentence ONLY when the user needs a precise figure or fact that is "
+        f"completely absent from the reference: {unavailable_reply}. "
+        f"If the question is unrelated to SVIT or college life, say exactly: {off_topic_reply}"
+    )
+
+
 def get_profile_direct_reply(intent: str, language: str | None = None) -> str | None:
     lang = language if language in SUPPORTED_LANGUAGES else "English"
     templates = PROFILE_REPLY_TEMPLATES.get(lang, PROFILE_REPLY_TEMPLATES["English"])
@@ -1502,7 +1540,9 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
     ]
     hod_keywords = [
         "hod",
+        "hods",
         "head",
+        "heads",
         "yaaru",
         "kaun",
         "yaar",
@@ -1634,7 +1674,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
                 if u == k:
                     return True
                 # Token-level fuzzy detection for multilingual mixed/broken input.
-                if _sim(u, k) >= 0.7:
+                if _sim(u, k) >= _INTENT_FUZZY_MIN:
                     return True
         return False
 
@@ -1647,7 +1687,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
                     continue
                 if unit == k:
                     return True
-                if _sim(unit, k) >= 0.7:
+                if _sim(unit, k) >= _INTENT_FUZZY_MIN:
                     return True
         return False
 
@@ -1667,13 +1707,10 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
     is_rec_hit = _comparison_recommendation_cue(spaced_nx, lowered)
 
     fee_like = is_fee_query or _is_fee_query(normalized)
-    # Multi-label scraps + plain fee/course listings are not comparisons without explicit contrast cues.
-    explicit_comparison_cue = is_comp_hit or is_rec_hit
-    lex_multi = len(comp_labels) >= 2
-    lexical_or_cue = lex_multi or explicit_comparison_cue
-    is_comparison_query = lexical_or_cue and not (
-        (fee_like or is_course_query) and not explicit_comparison_cue
-    )
+    # M5.4: naming two departments is not a comparison. "Tell me about CSE and AIML"
+    # could equally be two decks or two overviews, so it must clarify rather than be
+    # guessed into the comparison cinema. A contrast or recommendation cue is required.
+    is_comparison_query = is_comp_hit or is_rec_hit
 
     is_bus_routes_query = text_has_bus_routes_cue(raw)
 
@@ -1877,12 +1914,31 @@ def _inject_regional_department_tokens(text: str) -> str:
         (r"ஏ\s*ஐ\s*எம்\s*எல்", " aiml "),
         (r"டேட்டா\s*சயின்ஸ்", " data science "),
         (r"சைபர்\s*செக்யூரிட்டி", " cyber security "),
+        (r"தகவல்\s*அறிவியல்", " information science "),
+        (r"எலக்ட்ரானிக்ஸ்", " electronics "),
         # Telugu
         (r"ఎ\s*ఐ\s*ఎం\s*ఎల్", " aiml "),
         (r"డేటా\s*సైన్స్", " data science "),
+        (r"సైబర్\s*సెక్యూరిటీ", " cyber security "),
+        (r"ఎలక్ట్రానిక్స్", " electronics "),
         # Malayalam
         (r"എ\s*ഐ\s*എം\s*എൽ", " aiml "),
         (r"ഡാറ്റാ\s*സയൻസ്", " data science "),
+        (r"സൈബർ\s*സെക്യൂരിറ്റി", " cyber security "),
+        (r"ഇലക്ട്രോണിക്സ്", " electronics "),
+        # Hindi / Devanagari
+        (r"ए\s*आई\s*एम\s*एल", " aiml "),
+        (r"एआईएमएल", " aiml "),
+        (r"डेटा\s*साइंस", " data science "),
+        (r"डाटा\s*साइंस", " data science "),
+        (r"साइबर\s*सुरक्षा", " cyber security "),
+        (r"साइबर\s*सिक्योरिटी", " cyber security "),
+        (r"बिजनेस\s*सिस्टम्स", " business systems "),
+        (r"बिज़नेस\s*सिस्टम्स", " business systems "),
+        (r"सूचना\s*विज्ञान", " information science "),
+        (r"इलेक्ट्रॉनिक्स", " electronics "),
+        (r"सिविल", " civil "),
+        (r"मैकेनिकल", " mechanical "),
     )
     for pat, repl in regional:
         out = re.sub(pat, repl, out, flags=re.IGNORECASE)
@@ -1963,7 +2019,12 @@ def normalize_query_to_english(text: str) -> str:
     for w in filler_words:
         out = re.sub(rf"\b{re.escape(w)}\b", "", out, flags=re.IGNORECASE)
 
-    out = re.sub(r"[^\w\s&()]+", " ", out)
+    # Grapheme-safe: `\w` excludes Indic combining marks (Mn/Mc), so a plain
+    # [^\w\s] strip shreds "ಶುಲ್ಕ" into "ಶ ಲ ಕ" and destroys the fees cue.
+    # Imported lazily: backend.services.content imports this module at package init.
+    from backend.services.content.unicode_text import strip_punctuation_keep_graphemes
+
+    out = strip_punctuation_keep_graphemes(out)
     return _normalize_text(out)
 
 
@@ -2107,38 +2168,18 @@ def resolve_intent_from_features(features: QueryFeatures) -> str:
 
 def card_trigger_hints(intent: str, entities: dict[str, Any]) -> dict[str, Any]:
     """
-    Backend showCard / departmentId (mirrors main.py): prefer ``entities[\"department\"]`` for HOD and department cards.
+    Compatibility wrapper — SurfaceSelector is the sole production owner of surface selection.
+    Prefer select_surface() in new code.
     """
-    dept = entities.get("department")
-    if intent == INTENT_HOD_PROFILE:
-        return {"showCard": "hod", "departmentId": dept}
-    if intent == INTENT_DEPARTMENT_FEES:
-        return {"showCard": "department_fees", "departmentId": dept}
-    if intent == INTENT_DEPARTMENT_OVERVIEW:
-        return {"showCard": "department_overview", "departmentId": dept}
-    if intent == INTENT_COLLEGE_OVERVIEW:
-        return {"showCard": "college", "departmentId": None}
-    if intent == INTENT_ADMISSIONS:
-        return {"showCard": "admissions", "departmentId": None}
-    if intent == INTENT_PLACEMENTS:
-        return {"showCard": "placements", "departmentId": None}
-    if intent == INTENT_COURSE_MENU:
-        return {"showCard": "course_menu", "departmentId": None}
-    if intent == INTENT_DOCUMENTS:
-        return {"showCard": "documents", "departmentId": None}
-    if intent == INTENT_BUS_ROUTES:
-        return {"showCard": "bus_routes", "departmentId": None}
-    if intent == INTENT_PRINCIPAL_PROFILE:
-        return {"showCard": "principal_profile", "departmentId": None}
-    if intent == INTENT_VICE_PRINCIPAL_PROFILE:
-        return {"showCard": "vice_principal_profile", "departmentId": None}
-    if intent == INTENT_TRUSTEES_PROFILE:
-        return {"showCard": "trustees", "departmentId": None}
-    if intent == INTENT_HOD_TRUSTEES_PROFILE:
-        return {"showCard": ["hod", "trustees"], "departmentId": dept}
-    if intent == INTENT_DEPARTMENT_COMPARISON:
-        return {"showCard": "department_comparison", "departmentId": None}
-    return {"showCard": None, "departmentId": dept}
+    from backend.services.content.surface_selector import select_surface, surface_selection_to_hints
+
+    selection = select_surface(
+        entities=entities,
+        intent=intent,
+        faq_matched=False,
+        user_text="",
+    )
+    return surface_selection_to_hints(selection)
 
 
 def detect_intent_strict(normalized: str) -> str:
@@ -2366,7 +2407,7 @@ def is_documents_query(text: str) -> bool:
                 continue
             if w_norm in haystack:
                 return True
-            if SequenceMatcher(None, w_norm, haystack).ratio() >= 0.7:
+            if SequenceMatcher(None, w_norm, haystack).ratio() >= _INTENT_FUZZY_MIN:
                 return True
         return False
 
@@ -2786,10 +2827,15 @@ def translate_preserving_structure(
     Phase 2: Translate English overview into target_language, preserving structure.
     On failure logs warning and returns english_text (graceful fallback).
     """
+    from backend.services.runtime.translation_cache import get_cached_translation, put_cached_translation
+
     if not english_text or not target_language or target_language.lower() == "english":
         return english_text or ""
     if not groq_client or not model:
         return english_text
+    hit = get_cached_translation(target_language, english_text)
+    if hit:
+        return hit
     try:
         system_content = (
             f"Translate the following text into {target_language}. "
@@ -2807,7 +2853,10 @@ def translate_preserving_structure(
             max_tokens=GROQ_MAX_TOKENS,
         )
         out = (completion.choices[0].message.content or "").strip()
-        return out if out else english_text
+        if out:
+            put_cached_translation(target_language, english_text, out)
+            return out
+        return english_text
     except Exception as e:
         logger.warning("Translation fallback to English: %s", e)
         return english_text
@@ -3013,12 +3062,13 @@ async def translate_reply_to_session_language_async(
     model: str,
 ) -> str:
     """Translate an English-only model reply into the session language; preserves structure."""
+    from backend.services.runtime.translation_cache import get_cached_translation, put_cached_translation
+
     if not reply_en or not client or not model:
         return reply_en or ""
     if (lang_name or "").strip() == "English":
         return reply_en
-    ck = f"{lang_name}|{hashlib.sha256(reply_en.encode('utf-8')).hexdigest()}"
-    hit = _TRANSLATION_CACHE.get(ck)
+    hit = get_cached_translation(lang_name, reply_en)
     if hit:
         return hit
     try:
@@ -3041,7 +3091,7 @@ async def translate_reply_to_session_language_async(
         )
         out = (completion.choices[0].message.content or "").strip()
         if out:
-            _TRANSLATION_CACHE.set(ck, out)
+            put_cached_translation(lang_name, reply_en, out)
             return out
     except Exception as e:
         logger.warning("translate_reply_to_session_language_async: %s", e)

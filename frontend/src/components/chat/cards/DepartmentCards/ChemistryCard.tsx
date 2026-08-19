@@ -24,6 +24,8 @@ export default function ChemistryCard({
   departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
+  const visualSlotIndex =
+    typeof currentSlide?.slotIndex === 'number' ? currentSlide.slotIndex : currentIdx;
 
   const DEPT_INFO = {
     English: {
@@ -67,11 +69,12 @@ export default function ChemistryCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      icon={CHEMISTRY_ICONS[currentIdx % CHEMISTRY_ICONS.length]}
-      isHOD={currentIdx === 1}
+      icon={CHEMISTRY_ICONS[visualSlotIndex % CHEMISTRY_ICONS.length]}
+      isHOD={visualSlotIndex === 1}
       hodName={info.hod}
       departmentId={departmentId}
       currentSlide={currentIdx}
+      visualSlotIndex={visualSlotIndex}
       totalSlides={slides.length}
       onNext={onNext}
       onPrev={onPrev}

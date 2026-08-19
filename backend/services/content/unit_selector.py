@@ -1,0 +1,123 @@
+"""UnitSelector — deterministic selection of ContentUnit IDs from SemanticRequest (M5.1)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import uuid
+from typing import Sequence
+
+from backend.services.content.content_unit_registry import list_department_unit_descriptors
+from backend.services.content.content_unit_resolver import resolve_unit
+from backend.services.content.content_unit import ContentUnit
+from backend.services.content.multilingual_terms import (
+    TOPIC_ACHIEVEMENTS,
+    TOPIC_FEES,
+    TOPIC_HOD,
+    TOPIC_OVERVIEW,
+    TOPIC_PLACEMENTS,
+)
+from backend.services.content.semantic_request import SemanticRequest
+from backend.services.presentation.presentation_plan import PresentationPlan
+from backend.services.presentation.presentation_policy import PresentationPolicy
+
+
+_PLANNER_VERSION = "m5.1-deterministic-unit-selector"
+
+
+def _compute_plan_hash(*, units: Sequence[str], surface: str) -> str:
+    payload = {"units": list(units), "surface": surface, "planner_version": _PLANNER_VERSION}
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def _unit_id_for_topic(*, dept_key: str, topic: str) -> str | None:
+    suffix_map = {
+        TOPIC_OVERVIEW: "overview",
+        TOPIC_HOD: "hod",
+        TOPIC_FEES: "fees",
+        TOPIC_ACHIEVEMENTS: "achievements",
+        TOPIC_PLACEMENTS: "placements",
+    }
+    suffix = suffix_map.get(topic)
+    if not suffix:
+        return None
+    return f"{dept_key}.{suffix}"
+
+
+def select_content_units(
+    semantic_request: SemanticRequest,
+    *,
+    surface: str = "department_overview",
+) -> PresentationPlan | None:
+    """
+    Deterministically select content unit IDs required by semantic_request.
+
+    - Never mutates CI intent values.
+    - No RAG/LLM.
+    """
+    if not semantic_request or not semantic_request.entities:
+        return None
+    if semantic_request.confidence not in {"HIGH", "MEDIUM"}:
+        return None
+
+    items = semantic_request.unit_items
+    if not items:
+        return None
+
+    unit_ids: list[str] = []
+
+    if semantic_request.requested_scope == "full_department":
+        # Full-department deck stays atomic: one entity, overview only, never mixed.
+        if len(items) != 1:
+            return None
+        dept_key, topic = items[0]
+        if topic != TOPIC_OVERVIEW:
+            return None
+        descriptors = list_department_unit_descriptors(dept_key)
+        unit_ids = [d.unit_id for d in descriptors]
+    else:
+        # N compatible (entity, topic) pairs → N independently addressable units,
+        # in user order. No first-only, no family lock, no arbitrary cap.
+        seen: set[str] = set()
+        for dept_key, topic in items:
+            uid = _unit_id_for_topic(dept_key=dept_key, topic=topic)
+            if not uid:
+                return None
+            if uid in seen:
+                continue
+            seen.add(uid)
+            unit_ids.append(uid)
+
+    if not unit_ids:
+        return None
+
+    order = tuple(range(len(unit_ids)))
+    planner_policy = PresentationPolicy.SINGLE_UNIT if len(unit_ids) == 1 else PresentationPolicy.MULTI_UNIT
+    plan_hash = _compute_plan_hash(units=unit_ids, surface=surface)
+    return PresentationPlan(
+        presentation_id=str(uuid.uuid4()),
+        turn_id="m5.1-unit-selection",
+        surface=surface,
+        units=tuple(unit_ids),
+        order=order,
+        language=semantic_request.language_code,
+        language_code=semantic_request.language_code,
+        presentation_policy=planner_policy,
+        planner_version=_PLANNER_VERSION,
+        plan_hash=plan_hash,
+    )
+
+
+def resolve_units_for_plan(plan: PresentationPlan) -> tuple[ContentUnit, ...]:
+    resolved: list[ContentUnit] = []
+    for unit_id in plan.units:
+        u = resolve_unit(
+            unit_id=unit_id,
+            language=plan.language,
+            language_code=plan.language_code,
+        )
+        if u is not None:
+            resolved.append(u)
+    return tuple(resolved)
+

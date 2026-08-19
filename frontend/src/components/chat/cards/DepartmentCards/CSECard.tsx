@@ -24,6 +24,7 @@ export default function CSECard({
   departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
+  const visualSlotIndex = typeof currentSlide?.slotIndex === 'number' ? currentSlide.slotIndex : currentIdx;
 
   const DEPT_INFO = {
     English: {
@@ -67,11 +68,12 @@ export default function CSECard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      icon={CSE_ICONS[currentIdx % CSE_ICONS.length]}
-      isHOD={currentIdx === 1} // Mapping HOD Message to index 1 as per design repo
+      icon={CSE_ICONS[visualSlotIndex % CSE_ICONS.length]}
+      isHOD={visualSlotIndex === 1} // HOD message belongs to the HOD/vision visual slot.
       hodName={info.hod}
       departmentId={departmentId}
       currentSlide={currentIdx}
+      visualSlotIndex={visualSlotIndex}
       totalSlides={slides.length}
       onNext={onNext}
       onPrev={onPrev}

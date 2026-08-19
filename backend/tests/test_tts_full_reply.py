@@ -68,6 +68,8 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         ), patch.object(
             main, "_load_svit_json_context", new=lambda _k: ""
         ), patch.object(
+            main, "_load_answer_locale_evidence", new=lambda _k: ""
+        ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, first_sentence))
         ), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
@@ -125,6 +127,8 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
         ), patch.object(
             main, "_load_svit_json_context", new=lambda _k: ""
         ), patch.object(
+            main, "_load_answer_locale_evidence", new=lambda _k: ""
+        ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=(full_reply, full_reply))
         ), patch.object(
             main, "tts_to_base64_cached", new=AsyncMock(side_effect=_fake_tts)
@@ -176,6 +180,8 @@ class TestTtsFullReply(unittest.IsolatedAsyncioTestCase):
             main, "get_relevant_context", new=_empty_rag_context
         ), patch.object(
             main, "_load_svit_json_context", new=lambda _k: ""
+        ), patch.object(
+            main, "_load_answer_locale_evidence", new=lambda _k: ""
         ), patch.object(
             main, "_stream_groq_reply", new=AsyncMock(return_value=("", ""))
         ), patch.object(

@@ -60,7 +60,19 @@ class GoldenQueryMatrixTests(unittest.TestCase):
     def test_off_topic_reply_is_deterministic_scope_guard(self) -> None:
         reply = get_off_topic_reply("English")
         self.assertTrue(reply.strip())
-        self.assertIn("admission office", reply.lower())
+        self.assertIn("svit", reply.lower())
+
+    def test_off_topic_reply_is_distinct_from_unavailable_reply(self) -> None:
+        # M5.4: "I can't help with that" must never be spoken for an institutional
+        # question that simply has no fact behind it.
+        from backend.services.answer_generation import get_unavailable_reply
+
+        for language in ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam"):
+            with self.subTest(language=language):
+                self.assertNotEqual(
+                    get_off_topic_reply(language),
+                    get_unavailable_reply(language),
+                )
 
 
 if __name__ == "__main__":

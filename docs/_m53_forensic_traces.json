@@ -1,0 +1,3294 @@
+{
+  "probe": "TEMPORARY Stage A forensic probe — not production",
+  "total": 75,
+  "passed": 62,
+  "failed": 13,
+  "rows": [
+    {
+      "id": "parity_hod_ds_en",
+      "category": "parity_hod_ds",
+      "input": "Who is the HOD of CSE Data Science?",
+      "language": "en",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "who is the hod of cse data science",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_hod_ds_kn",
+      "category": "parity_hod_ds",
+      "input": "CSE Data Science HOD yaaru?",
+      "language": "kn",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse data science hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_hod_ds_hi",
+      "category": "parity_hod_ds",
+      "input": "CSE Data Science ka HOD kaun hai?",
+      "language": "hi",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse data science ka hod who hai",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_hod_ds_ta",
+      "category": "parity_hod_ds",
+      "input": "CSE Data Science HOD yaar?",
+      "language": "ta",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse data science hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_hod_ds_te",
+      "category": "parity_hod_ds",
+      "input": "CSE Data Science HOD evaru?",
+      "language": "te",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse data science hod evaru",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_hod_ds_ml",
+      "category": "parity_hod_ds",
+      "input": "CSE Data Science HOD aaranu?",
+      "language": "ml",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse data science hod aaranu",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "parity_fees_aiml_en",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees",
+      "language": "en",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse aiml fees",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_fees_aiml_kn",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees yestu?",
+      "language": "kn",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse aiml fees yestu",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_fees_aiml_hi",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees kitna hai?",
+      "language": "hi",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse aiml fees how much hai",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_fees_aiml_ta",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees evlo?",
+      "language": "ta",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse aiml fees evlo",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_fees_aiml_te",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees entha?",
+      "language": "te",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse aiml fees entha",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_fees_aiml_ml",
+      "category": "parity_fees_aiml",
+      "input": "CSE AIML fees ethra?",
+      "language": "ml",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse aiml fees ethra",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_en",
+      "category": "parity_overview_cse",
+      "input": "Tell me about CSE",
+      "language": "en",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "tell me about cse",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_kn",
+      "category": "parity_overview_cse",
+      "input": "CSE bagge heli",
+      "language": "kn",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse about",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_hi",
+      "category": "parity_overview_cse",
+      "input": "CSE ke baare mein batao",
+      "language": "hi",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse ke baare mein",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_ta",
+      "category": "parity_overview_cse",
+      "input": "CSE pattri tilisi",
+      "language": "ta",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse pattri tilisi",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_te",
+      "category": "parity_overview_cse",
+      "input": "CSE gurunchi kurichu cheppu",
+      "language": "te",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse gurunchi kurichu",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_ov_cse_ml",
+      "category": "parity_overview_cse",
+      "input": "CSE parayoo",
+      "language": "ml",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse parayoo",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_en",
+      "category": "parity_multi_hod",
+      "input": "Who is the HOD of AIML and Data Science?",
+      "language": "en",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "who is the hod of aiml and data science",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_kn",
+      "category": "parity_multi_hod_cse_aiml",
+      "input": "CSE mattu AIML HOD yaaru?",
+      "language": "kn",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse",
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse mattu aiml hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse",
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_aimlds_kn",
+      "category": "parity_multi_hod",
+      "input": "AIML mattu Data Science HOD yaaru?",
+      "language": "kn",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "aiml mattu data science hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_hi",
+      "category": "parity_multi_hod",
+      "input": "AIML aur Data Science ke HOD kaun hain?",
+      "language": "hi",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "aiml aur data science ke hod who hain",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_ta",
+      "category": "parity_multi_hod",
+      "input": "AIML and Data Science HOD yaar?",
+      "language": "ta",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "aiml and data science hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_te",
+      "category": "parity_multi_hod",
+      "input": "AIML and Data Science HOD evaru?",
+      "language": "te",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "aiml and data science hod evaru",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "parity_mh_ml",
+      "category": "parity_multi_hod",
+      "input": "AIML and Data Science HOD aaranu?",
+      "language": "ml",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "aiml and data science hod aaranu",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_lit_fees",
+      "category": "literal",
+      "input": "CSE fees",
+      "language": "en",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse fees",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_nat_hod",
+      "category": "natural",
+      "input": "Who is the HOD of CSE?",
+      "language": "en",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "who is the hod of cse",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_col_fees",
+      "category": "code_switch",
+      "input": "CSE fees yestu?",
+      "language": "en",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse fees yestu",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_short_hod",
+      "category": "short",
+      "input": "CSE HOD",
+      "language": "en",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse hod",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_long_ov",
+      "category": "long",
+      "input": "Please tell me about the Computer Science and Engineering department in detail",
+      "language": "en",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "tell me about the computer science and engineering department in detail",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_wo_hod",
+      "category": "word_order",
+      "input": "HOD of CSE Data Science who",
+      "language": "en",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "hod of cse data science who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds",
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "en_place",
+      "category": "literal",
+      "input": "CSE placements",
+      "language": "en",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_ach",
+      "category": "literal",
+      "input": "CSE achievements",
+      "language": "en",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_ov_single",
+      "category": "literal",
+      "input": "CSE overview",
+      "language": "en",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.overview"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "cse overview",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.overview"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.overview"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_ds_ov",
+      "category": "natural",
+      "input": "Tell me about CSE Data Science",
+      "language": "en",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse_ds.overview",
+        "cse_ds.hod",
+        "cse_ds.achievements",
+        "cse_ds.placements",
+        "cse_ds.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "tell me about cse data science",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse_ds"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse_ds.overview",
+        "cse_ds.hod",
+        "cse_ds.achievements",
+        "cse_ds.placements",
+        "cse_ds.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse_ds.overview",
+        "cse_ds.hod",
+        "cse_ds.achievements",
+        "cse_ds.placements",
+        "cse_ds.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "en_ece_fees",
+      "category": "literal",
+      "input": "ECE fees",
+      "language": "en",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "ece"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "ece.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "ece fees",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "ece"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "ece"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "ece.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "ece.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_lit_fees",
+      "category": "literal",
+      "input": "CSE ಶುಲ್ಕ",
+      "language": "kn",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse ಶ ಲ ಕ",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.overview"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.overview"
+      ],
+      "pass": false,
+      "first_failed_stage": "topic_detection"
+    },
+    {
+      "id": "kn_rom_fees",
+      "category": "romanized",
+      "input": "CSE fees yestu?",
+      "language": "kn",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse fees yestu",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_col_hod",
+      "category": "colloquial",
+      "input": "CSE HOD yaaru?",
+      "language": "kn",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_cs_ov",
+      "category": "code_switch",
+      "input": "CSE bagge heli",
+      "language": "kn",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse about",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_place",
+      "category": "short",
+      "input": "CSE placements",
+      "language": "kn",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_ach",
+      "category": "short",
+      "input": "CSE achievements",
+      "language": "kn",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_ds_hod",
+      "category": "natural",
+      "input": "Data Science HOD yaaru?",
+      "language": "kn",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "data science hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse_ds"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse_ds.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_aiml_fees",
+      "category": "romanized",
+      "input": "AIML fees eshtu",
+      "language": "kn",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_language": "kn",
+      "actual_normalized_text": "aiml fees how much",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse_aiml.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_rom_fees",
+      "category": "romanized",
+      "input": "CSE fees kitna",
+      "language": "hi",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse fees how much",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_nat_hod",
+      "category": "natural",
+      "input": "CSE ka HOD kaun hai",
+      "language": "hi",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse ka hod who hai",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_cs_ov",
+      "category": "code_switch",
+      "input": "CSE ke baare mein batao",
+      "language": "hi",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse ke baare mein",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_place",
+      "category": "short",
+      "input": "CSE placements",
+      "language": "hi",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_ach",
+      "category": "code_switch",
+      "input": "CSE ki achievements",
+      "language": "hi",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse ki achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "hi_script_fees",
+      "category": "literal",
+      "input": "CSE फीस",
+      "language": "hi",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "hi",
+      "actual_normalized_text": "cse फ स",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_unit_ids": [
+        "cse.overview"
+      ],
+      "actual_content_language": "hi",
+      "actual_tts_code": "hi-IN",
+      "actual_presentation": [
+        "cse.overview"
+      ],
+      "pass": false,
+      "first_failed_stage": "topic_detection"
+    },
+    {
+      "id": "ta_rom_fees",
+      "category": "romanized",
+      "input": "CSE fees evlo",
+      "language": "ta",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse fees evlo",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ta_hod",
+      "category": "colloquial",
+      "input": "CSE HOD yaar",
+      "language": "ta",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ta_ov",
+      "category": "natural",
+      "input": "CSE pattri tilisi",
+      "language": "ta",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse pattri tilisi",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ta_place",
+      "category": "short",
+      "input": "CSE placements",
+      "language": "ta",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ta_ach",
+      "category": "short",
+      "input": "CSE achievements",
+      "language": "ta",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "ta",
+      "actual_normalized_text": "cse achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "ta",
+      "actual_tts_code": "ta-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "te_rom_fees",
+      "category": "romanized",
+      "input": "CSE fees entha",
+      "language": "te",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse fees entha",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "te_hod",
+      "category": "colloquial",
+      "input": "CSE HOD evaru",
+      "language": "te",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse hod evaru",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "te_ov",
+      "category": "natural",
+      "input": "CSE gurunchi cheppu",
+      "language": "te",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse gurunchi",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "te_place",
+      "category": "short",
+      "input": "CSE placements",
+      "language": "te",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "te_ach",
+      "category": "short",
+      "input": "CSE achievements",
+      "language": "te",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "te",
+      "actual_normalized_text": "cse achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "te",
+      "actual_tts_code": "te-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ml_rom_fees",
+      "category": "romanized",
+      "input": "CSE fees ethra",
+      "language": "ml",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse fees ethra",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ml_hod",
+      "category": "colloquial",
+      "input": "CSE HOD aaranu",
+      "language": "ml",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse hod aaranu",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ml_ov",
+      "category": "natural",
+      "input": "CSE parayoo",
+      "language": "ml",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse parayoo",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ml_place",
+      "category": "short",
+      "input": "CSE placements",
+      "language": "ml",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse placements",
+      "actual_topic": "placements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.placements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "ml_ach",
+      "category": "short",
+      "input": "CSE achievements",
+      "language": "ml",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_language": "ml",
+      "actual_normalized_text": "cse achievements",
+      "actual_topic": "achievements",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_content_language": "ml",
+      "actual_tts_code": "ml-IN",
+      "actual_presentation": [
+        "cse.achievements"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_fees_and_hod",
+      "category": "ambiguous",
+      "input": "CSE fees and HOD",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "cse fees and hod",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "neg_place_and_fees",
+      "category": "ambiguous",
+      "input": "CSE placements and fees",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "cse placements and fees",
+      "actual_topic": "fees",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.fees"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "neg_hod_and_aiml_fees",
+      "category": "ambiguous",
+      "input": "CSE HOD and AIML fees",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "cse hod and aiml fees",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse",
+        "cse_aiml"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    },
+    {
+      "id": "neg_something",
+      "category": "ambiguous",
+      "input": "tell me something about CSE",
+      "language": "en",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_language": "en",
+      "actual_normalized_text": "tell me something about cse",
+      "actual_topic": "overview",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "full_department",
+      "actual_confidence_float": 0.85,
+      "actual_confidence_band": "HIGH",
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "en"
+      },
+      "actual_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_content_language": "en",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_which_dept",
+      "category": "unsupported",
+      "input": "which department?",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "which department",
+      "actual_topic": null,
+      "actual_entities": [],
+      "actual_scope": null,
+      "actual_confidence_float": null,
+      "actual_confidence_band": "NONE",
+      "actual_semantic_request": null,
+      "actual_unit_ids": [],
+      "actual_content_language": "unknown",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_fees_only",
+      "category": "unsupported",
+      "input": "fees",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "fees",
+      "actual_topic": null,
+      "actual_entities": [],
+      "actual_scope": null,
+      "actual_confidence_float": null,
+      "actual_confidence_band": "NONE",
+      "actual_semantic_request": null,
+      "actual_unit_ids": [],
+      "actual_content_language": "unknown",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_who",
+      "category": "unsupported",
+      "input": "who?",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "who",
+      "actual_topic": null,
+      "actual_entities": [],
+      "actual_scope": null,
+      "actual_confidence_float": null,
+      "actual_confidence_band": "NONE",
+      "actual_semantic_request": null,
+      "actual_unit_ids": [],
+      "actual_content_language": "unknown",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_unknown_dept",
+      "category": "unsupported",
+      "input": "Quantum Basket Weaving HOD",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "quantum basket weaving hod",
+      "actual_topic": null,
+      "actual_entities": [],
+      "actual_scope": null,
+      "actual_confidence_float": null,
+      "actual_confidence_band": "NONE",
+      "actual_semantic_request": null,
+      "actual_unit_ids": [],
+      "actual_content_language": "unknown",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "neg_nearmatch",
+      "category": "unsupported",
+      "input": "CSS fees",
+      "language": "en",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "en",
+      "actual_normalized_text": "css fees",
+      "actual_topic": null,
+      "actual_entities": [],
+      "actual_scope": null,
+      "actual_confidence_float": null,
+      "actual_confidence_band": "NONE",
+      "actual_semantic_request": null,
+      "actual_unit_ids": [],
+      "actual_content_language": "unknown",
+      "actual_tts_code": "en-IN",
+      "actual_presentation": [],
+      "pass": true,
+      "first_failed_stage": null
+    },
+    {
+      "id": "kn_amb_fees_hod",
+      "category": "ambiguous",
+      "input": "CSE fees mattu HOD yaaru",
+      "language": "kn",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_language": "kn",
+      "actual_normalized_text": "cse fees mattu hod who",
+      "actual_topic": "hod",
+      "actual_entities": [
+        "cse"
+      ],
+      "actual_scope": "single",
+      "actual_confidence_float": 0.75,
+      "actual_confidence_band": "MEDIUM",
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_content_language": "kn",
+      "actual_tts_code": "kn-IN",
+      "actual_presentation": [
+        "cse.hod"
+      ],
+      "pass": false,
+      "first_failed_stage": "entity_resolution"
+    }
+  ]
+}

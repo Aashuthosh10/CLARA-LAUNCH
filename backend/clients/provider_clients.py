@@ -87,6 +87,20 @@ async def get_groq_client() -> Any | None:
     return _groq_client
 
 
+def groq_completion_kwargs(model: str, max_tokens: int, *, temperature: float) -> dict[str, Any]:
+    """
+    Groq GPT-OSS models spend part of the budget on internal reasoning tokens.
+    Use max_completion_tokens so visible answer text is not truncated to empty.
+    """
+    if "gpt-oss" in (model or "").lower():
+        return {
+            "max_completion_tokens": max(int(max_tokens) + 256, 512),
+            "reasoning_effort": "low",
+            "temperature": temperature,
+        }
+    return {"max_tokens": max_tokens, "temperature": temperature}
+
+
 def _parse_sarvam_audio(response_json: dict[str, Any]) -> str | None:
     if "audio" in response_json and isinstance(response_json["audio"], str):
         return response_json["audio"]
@@ -273,6 +287,8 @@ async def sarvam_stt_from_wav(wav_bytes: bytes) -> tuple[str | None, dict[str, A
 
 async def warmup_clients() -> None:
     # Non-blocking best-effort warmups, bounded by short timeouts.
+    from backend.config.settings import RAG_MODEL
+
     try:
         await get_http_client()
     except Exception:
@@ -285,7 +301,7 @@ async def warmup_clients() -> None:
                 return
             await asyncio.wait_for(
                 groq_client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model=RAG_MODEL,
                     messages=[{"role": "user", "content": "hi"}],
                     max_tokens=1,
                     temperature=0,

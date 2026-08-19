@@ -24,6 +24,8 @@ export default function MechanicalCard({
   departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
+  const visualSlotIndex =
+    typeof currentSlide?.slotIndex === 'number' ? currentSlide.slotIndex : currentIdx;
 
   const DEPT_INFO = {
     English: {
@@ -67,11 +69,12 @@ export default function MechanicalCard({
       title={currentSlide.title || "Loading..."}
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
-      icon={MECH_ICONS[currentIdx % MECH_ICONS.length]}
-      isHOD={currentIdx === 1}
+      icon={MECH_ICONS[visualSlotIndex % MECH_ICONS.length]}
+      isHOD={visualSlotIndex === 1}
       hodName={info.hod}
       departmentId={departmentId}
       currentSlide={currentIdx}
+      visualSlotIndex={visualSlotIndex}
       totalSlides={slides.length}
       onNext={onNext}
       onPrev={onPrev}

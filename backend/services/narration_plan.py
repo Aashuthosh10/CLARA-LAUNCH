@@ -528,7 +528,14 @@ def _build_all_departments_segments(deps: dict[str, Any], lk_eff: str) -> list[N
         name = _clean(d.get("name")) or kk.upper()
         intro = _clean(d.get("intro")) or L["notAvail"]
         txt = _clip_caption(f"{name}\n{intro}".strip(), 280)
-        segs.append(NarrationSegment(display_text=txt, card_index=idx, card_id="dept_summary"))
+        segs.append(
+            NarrationSegment(
+                display_text=txt,
+                card_index=idx,
+                card_id="dept_summary",
+                section_id=f"dept_{kk}",
+            )
+        )
     return segs
 
 
@@ -560,15 +567,24 @@ class NarrationSegment:
     card_index: int | None = None
     card_id: str | None = None
     is_final_segment: bool = False
+    # Stable meaning key for scene sync (not overwritten by finalize segment_id).
+    section_id: str | None = None
+    # Stable content identity for unit-backed composition/activation (additive for M5.2).
+    unit_id: str | None = None
 
     def finalize(self, turn_id: str, index: int, total: int) -> None:
         self.segment_id = f"{turn_id}:seg:{index}"
         self.is_final_segment = index == total - 1
-        normalized = normalize_tts_pronunciation(self.display_text)
-        self.tts_text = normalized
+        # Preserve explicitly supplied tts_text (M5.2 unit-backed body-only).
+        # Legacy builders that leave tts_text empty still derive from display_text.
+        explicit = (self.tts_text or "").strip()
+        if explicit:
+            self.tts_text = normalize_tts_pronunciation(explicit)
+        else:
+            self.tts_text = normalize_tts_pronunciation(self.display_text)
 
     def public_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "segmentId": self.segment_id,
             "displayText": self.display_text,
             "ttsText": self.tts_text,
@@ -576,6 +592,11 @@ class NarrationSegment:
             "cardId": self.card_id,
             "isFinalSegment": self.is_final_segment,
         }
+        if self.section_id:
+            out["sectionId"] = self.section_id
+        if self.unit_id:
+            out["unitId"] = self.unit_id
+        return out
 
 
 def finalize_segment_list(turn_id: str, segments: list[NarrationSegment]) -> None:
@@ -583,6 +604,10 @@ def finalize_segment_list(turn_id: str, segments: list[NarrationSegment]) -> Non
     for i, seg in enumerate(segments):
         if seg.card_index is None:
             seg.card_index = i
+        if not (seg.section_id or "").strip():
+            # Best-effort meaning key for legacy builders (card_id or seg_i).
+            cid = (seg.card_id or "").strip()
+            seg.section_id = cid if cid else f"seg_{i}"
         seg.finalize(turn_id, i, n)
 
 
@@ -694,6 +719,9 @@ def dept_labels(lang_key_effective: str) -> dict[str, str]:
     }
 
 
+_DEPT_SLIDE_SECTION_IDS = ("intro", "hod_voice", "achievements", "placement", "fees")
+
+
 def build_department_slide_segments(
     dept: dict[str, Any] | None, json_key: str, locale_id: str
 ) -> list[NarrationSegment]:
@@ -701,7 +729,14 @@ def build_department_slide_segments(
     labels = dept_labels(lk)
     if not dept:
         txt = f'{labels["department"]}\n{labels["unlisted"]}'
-        return [NarrationSegment(display_text=txt, card_index=0, card_id="dept")]
+        return [
+            NarrationSegment(
+                display_text=txt,
+                card_index=0,
+                card_id="dept",
+                section_id="unlisted",
+            )
+        ]
     name = _clean(dept.get("name")) or json_key.upper()
     intro = _clean(dept.get("intro")) or labels["notAvail"]
     hod_voice = _clean(dept.get("hod_voice")) or labels["notAvail"]
@@ -719,7 +754,12 @@ def build_department_slide_segments(
     for i, (t, body) in enumerate(slides_txt):
         raw_line = f"{t}\n{_clip_caption(body, 280)}".strip()
         segments.append(
-            NarrationSegment(display_text=_clip_caption(raw_line, 320), card_index=i, card_id="dept_slide")
+            NarrationSegment(
+                display_text=_clip_caption(raw_line, 320),
+                card_index=i,
+                card_id="dept_slide",
+                section_id=_DEPT_SLIDE_SECTION_IDS[i],
+            )
         )
     return segments
 

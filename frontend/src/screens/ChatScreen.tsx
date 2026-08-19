@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from 'motion/react';
 import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
@@ -35,15 +35,48 @@ import {
 } from '../features/chat/faq';
 import { getScriptTypography } from '../features/chat/typography';
 import { resolvePagedPlayback, useAudioPlaybackClock } from '../features/chat/reveal';
+import { usePresentationController } from '../features/chat/presentation';
+import {
+  departmentIdFromUnitId,
+  factoryDepartmentLabelFromJsonKey,
+  presentationCardsFromNarrationSegments,
+  type PresentationCardModel,
+} from '../features/chat/presentation/PresentationCardModel';
+import {
+  findClipIndexForTarget,
+  segmentKeysFromPlayhead,
+  unitIdForCardIndex,
+} from '../features/chat/presentation/playbackSeek';
+import {
+  assertLivePresentationOwnership,
+  canChangeLanguageNow,
+  choosePresentationFallback,
+  freezeLocalization,
+  patchConversationRuntime,
+  pushRuntimeEvent,
+  releaseLocalizationFreeze,
+  validatePresentationContract,
+} from '../runtime';
+import {
+  isUnitBackedNarrationPlan,
+  type TtsClipStatus,
+} from '../lib/ws/ttsClipSlots';
+import {
+  TURN_FENCE_PENDING,
+  shouldApplyUnitBackedPlan,
+  shouldIgnorePayloadTurn,
+} from '../lib/ws/turnFence';
 import { LANGUAGE_OPTIONS } from './LanguageSelect';
 import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAllDepartmentSummaryCardsFromLocale,
   buildAllHodCardsFromLocale,
+  buildDepartmentSlideForUnit,
   buildDepartmentSlidesFromRecord,
   buildPlacementCardsFromLocale,
   getDepartmentRecord,
   menuLabelToJsonKey,
+  type DepartmentStageSlide,
 } from '../lib/collegeLocaleUtils';
 import { useCollegeData } from '../hooks/useCollegeData';
 import {
@@ -80,9 +113,6 @@ import {
   selectFaqSuggestions,
   type FaqSuggestionCategory,
 } from '../data/faqSuggestions';
-import { inferForcedBusRoutesFromUserText } from '../lib/busRoutesIntent';
-import { inferForcedDepartmentComparisonFromUserText } from '../lib/departmentComparisonIntent';
-import { inferExecutiveProfileFromUserText } from '../lib/executiveLeadershipIntent';
 import type { ExecutiveLeadershipKind } from '../lib/executiveLeadershipIntent';
 import type { ClaraChatSurface } from '../types/chatSurface';
 import type { FaceChannel } from '../hooks/useFaceChannel';
@@ -91,6 +121,30 @@ import { inferEmotionFromPayload } from '../lib/faceEmotion';
 declare global {
   interface Window {
     __CLARA_TEST_SEND_MESSAGE?: (text: string) => void;
+    __CLARA_M52_END_CLIP?: () => void;
+    __CLARA_M52_DEBUG?: () => {
+      cardIndex: number;
+      slideCount: number;
+      hodCount: number;
+      hodDepartments: string[];
+      feesDepartmentId: string | null;
+      isFeesStage: boolean;
+      isHodStage: boolean;
+      isDepartmentOverviewStage: boolean;
+      isInfoSlideStage: boolean;
+      unitIds: string[] | null;
+      unitCardContents?: Array<{ unitId: string; title: string; content: string }>;
+      visibleUnitId?: string | null;
+      playhead: number;
+      queueLength: number;
+      queueUnitIds: Array<string | null>;
+      playbackUnitId: string | null;
+      engineUnitId: string | null;
+      engineState: string;
+      playbackGen: number;
+      hasCurrentAudio: boolean;
+      clipStatuses?: Array<string | null>;
+    };
   }
 }
 
@@ -191,6 +245,7 @@ function shouldDeferAssistantTtsToStream(p: unknown): boolean {
   if (o.type !== 'assistant_audio_update') return false;
   if (o.tts_streaming === true) return true;
   if (Array.isArray(o.tts_audio_queue) && o.tts_audio_queue.length > 0) return true;
+  if (Array.isArray(o.tts_clip_slots) && o.tts_clip_slots.length > 0) return true;
   return false;
 }
 
@@ -209,6 +264,8 @@ type NarrationPlan = {
     cardIndex: number | null;
     cardId: string | null;
     isFinalSegment: boolean;
+    sectionId?: string | null;
+    unitId?: string | null;
   }[];
 };
 
@@ -516,12 +573,11 @@ export default function ChatScreen({
   const [comparisonRecommendFocus, setComparisonRecommendFocus] = useState<string | null>(null);
   const [comparisonNarrationSection, setComparisonNarrationSection] = useState(0);
   const comparisonLayoutSnapRef = useRef<ChatLayoutMode | null>(null);
-  const comparisonTtsSyncActiveRef = useRef(false);
-  const comparisonSyncModeRef = useRef<'time' | 'clip'>('time');
-  const comparisonTotalEstimateSecRef = useRef<number | null>(null);
-  const comparisonAccumulatedSecRef = useRef(0);
-  const comparisonClipPlayIndexRef = useRef(0);
   const comparisonSlideSinkRef = useRef<(idx: number) => void>(() => {});
+
+  const presentation = usePresentationController();
+  const presentationRef = useRef(presentation);
+  presentationRef.current = presentation;
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
   const isE2EFlow = useMemo(() => {
@@ -531,6 +587,13 @@ export default function ChatScreen({
 
   // Response Priority Lock (CARD > UI > TEXT)
   const currentUiLockRef = useRef<'CARD' | 'TEXT' | 'IDLE'>('IDLE');
+  /** Turn that owns the CARD lock; prevents a prior CARD turn from blocking a new ANSWER turn. */
+  const cardLockTurnIdRef = useRef<string | null>(null);
+  const engageCardUiLock = useCallback((ownerTurnId: string) => {
+    engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+    const tid = ownerTurnId.trim();
+    cardLockTurnIdRef.current = tid || null;
+  }, []);
   const lastSuggestionIdsRef = useRef<string[]>([]);
   const lastSuggestionTurnIdRef = useRef<string | null>(null);
   const [faqSuggestions, setFaqSuggestions] = useState<VisibleFaqSuggestion[]>(() =>
@@ -589,6 +652,20 @@ export default function ChatScreen({
   }, [ensureSuggestions]);
 
   const [activeTargetDepartment, setActiveTargetDepartment] = useState<string | null>(null);
+  const [activeHodDepartments, setActiveHodDepartments] = useState<string[]>([]);
+  const [departmentOverviewDeckUnitIds, setDepartmentOverviewDeckUnitIds] = useState<
+    string[] | null
+  >(null);
+  /** M5.2 unit-backed composition models (null = legacy / non-unit path). */
+  const [unitBackedCards, setUnitBackedCards] = useState<PresentationCardModel[] | null>(null);
+  /** Turn id owning sticky fees under department_overview showCard. */
+  const feesStickyTurnIdRef = useRef<string | null>(null);
+  /**
+   * Department label of the last explicit course-menu click. A unit-less
+   * department_overview turn may only render a full deck for this click; voice
+   * turns without unitIds render no card (M5.4 fail-closed).
+   */
+  const uiClickDeckDepartmentRef = useRef<string | null>(null);
 
 
   const collegeData = useCollegeData();
@@ -624,7 +701,6 @@ export default function ChatScreen({
   // Audio Playback Ref
   const playedSegmentKeysRef = useRef<Set<string>>(new Set());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const cardProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamAudioLayoutRef = useRef<{
     isOverview: boolean;
     cardsToSync: any[] | null;
@@ -639,8 +715,18 @@ export default function ChatScreen({
       cardsToSync: any[] | null;
       turnId: string;
       totalDurationEstimateMs?: number | null;
+      /** Chunk index at enqueue time (fallback only). */
+      chunkIndex?: number | null;
+      sectionId?: string | null;
+      segmentId?: string | null;
+      unitId?: string | null;
+      status?: TtsClipStatus;
     }[]
   >([]);
+  /** Index into ttsStreamQueueRef of the clip that is playing or next to play. Never a second queue. */
+  const ttsPlayheadRef = useRef(0);
+  /** Bumped on cancel/seek so a stale audio.onended cannot advance the new target. */
+  const playbackGenRef = useRef(0);
   const appliedBackendTtsQueueLenRef = useRef(0);
   const lastBackendTtsStreamTurnRef = useRef<string>('');
   const receivedTtsChunkIndicesRef = useRef<Set<number>>(new Set());
@@ -661,19 +747,174 @@ export default function ChatScreen({
         _turnId?: string | null,
         audioChainFollowUp?: boolean,
         totalDurationEstimateMs?: number | null,
+        clipMeta?: {
+          chunkIndex?: number | null;
+          sectionId?: string | null;
+          segmentId?: string | null;
+          unitId?: string | null;
+        },
       ) => void)
     | null
   >(null);
+  const playQueuedClipRef = useRef<(followUp: boolean) => void>(() => {});
   /** Server `turn_id` for the in-flight assistant reply (set from isProcessing payload). */
   const assistantAudioTurnOwnerRef = useRef<string | null>(null);
 
+  const lastLoadedPresentationTurnRef = useRef<string | null>(null);
+
   useEffect(() => {
     latestPayloadRef.current = payload ?? null;
+    const gen =
+      typeof payload?.session_gen === 'number' && Number.isFinite(payload.session_gen)
+        ? payload.session_gen
+        : undefined;
+    if (typeof gen === 'number') {
+      patchConversationRuntime({
+        generation: gen,
+        turnId: typeof payload?.turn_id === 'string' ? payload.turn_id : undefined,
+        currentLanguage: language,
+        currentIntent: typeof payload?.intent === 'string' ? payload.intent : undefined,
+      });
+    }
+
     const plan = payload?.narration_plan;
     if (plan && typeof plan === 'object' && plan.mode === 'card_narration' && Array.isArray(plan.segments)) {
+      const payloadTid =
+        typeof payload?.turn_id === 'string' && payload.turn_id.trim()
+          ? payload.turn_id.trim()
+          : typeof plan.turnId === 'string'
+            ? plan.turnId
+            : '';
+      if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, payloadTid)) {
+        return;
+      }
       narrationPlanRef.current = plan as NarrationPlan;
+      const turnId = typeof plan.turnId === 'string' ? plan.turnId : '';
+      if (!turnId || lastLoadedPresentationTurnRef.current === turnId) {
+        return;
+      }
+
+      const cardsLen =
+        Array.isArray(activeCards) && activeCards.length > 0 ? activeCards.length : null;
+      const contract = validatePresentationContract({
+        plan: {
+          turnId,
+          mode: 'card_narration',
+          segments: plan.segments,
+        },
+        cardsToSyncLength: cardsLen,
+      });
+
+      if (!contract.ok) {
+        lastLoadedPresentationTurnRef.current = turnId;
+        const fallback = choosePresentationFallback({
+          hasSingleCardSurface:
+            cardsLen === 1 ||
+            isFeesStage ||
+            isHodStage ||
+            isDocumentsStage ||
+            Boolean(executiveLeadershipKind),
+          canUseFullText: true,
+        });
+        pushRuntimeEvent(
+          fallback === 'single_card'
+            ? 'PRESENTATION_FALLBACK_SINGLE'
+            : fallback === 'full_text'
+              ? 'PRESENTATION_FALLBACK_FULL_TEXT'
+              : 'PRESENTATION_FALLBACK_CONCISE',
+          { turnId, reason: contract.failures[0]?.reason },
+        );
+        const ctrl = presentationRef.current;
+        ctrl.cancel();
+        releaseLocalizationFreeze();
+        if (fallback === 'single_card') {
+          freezeLocalization(language);
+          ctrl.loadPresentation({
+            kind: 'single',
+            cardId: 'stage',
+            turnId,
+            caption: '',
+            spokenSummary: '',
+          });
+          ctrl.play();
+        } else if (fallback === 'full_text') {
+          setLayoutMode('FULL_TEXT');
+        }
+        return;
+      }
+
+      lastLoadedPresentationTurnRef.current = turnId;
+      const est = finitePositiveMs(payload?.tts_total_duration_estimate_ms);
+      const ctrl = presentationRef.current;
+      freezeLocalization(language);
+      ctrl.setSceneAdvanceMode('per_clip');
+      const presentationId = ctrl.loadPresentation({
+        kind: 'plan',
+        plan: {
+          turnId,
+          mode: 'card_narration',
+          segments: plan.segments,
+        },
+        estimatedTotalDurationMs: est,
+      });
+      patchConversationRuntime({
+        turnId,
+        activePresentationId: presentationId,
+        runtimeState: 'presenting',
+        ...(typeof gen === 'number' ? { generation: gen } : {}),
+      });
+      ctrl.play();
     }
-  }, [payload]);
+  }, [
+    payload,
+    language,
+    activeCards,
+    isFeesStage,
+    isHodStage,
+    isDocumentsStage,
+    executiveLeadershipKind,
+    setLayoutMode,
+  ]);
+
+  // PresentationEngine is the sole source of card index / caption / comparison section.
+  useEffect(() => {
+    const snap = presentation.snapshot;
+    if (
+      snap.engineState === 'IDLE' ||
+      snap.engineState === 'CANCELLED' ||
+      snap.engineState === 'LOADING_PLAN'
+    ) {
+      return;
+    }
+    if (
+      snap.presentationId &&
+      !assertLivePresentationOwnership({
+        snapshotPresentationId: snap.presentationId,
+        loadedTurnId: lastLoadedPresentationTurnRef.current,
+      })
+    ) {
+      return;
+    }
+    setCurrentCardIdx(snap.cardIndex);
+    patchConversationRuntime({
+      activePresentationId: snap.presentationId,
+      activeScene: snap.sceneIndex,
+    });
+    if (snap.engineState === 'PRESENTATION_COMPLETE') {
+      setNarrationCaption('');
+      releaseLocalizationFreeze();
+    } else {
+      setNarrationCaption(snap.displayCaption);
+    }
+    setComparisonNarrationSection(snap.comparisonSection);
+  }, [
+    presentation.snapshot.engineState,
+    presentation.snapshot.cardIndex,
+    presentation.snapshot.displayCaption,
+    presentation.snapshot.comparisonSection,
+    presentation.snapshot.sceneIndex,
+    presentation.snapshot.presentationId,
+  ]);
 
   useEffect(() => {
     faceChannelRef.current = faceChannel;
@@ -688,6 +929,72 @@ export default function ChatScreen({
     faceChannelRef.current?.postThinking?.(tid);
   }, [payload, isPayloadStale]);
 
+  const clearCardStages = useCallback(() => {
+    setActiveCards(null);
+    setCurrentCardIdx(0);
+    setSuppressedTurnId(null);
+    setCourseMenuOptions([]);
+    setActiveDepartmentId(null);
+    setIsDepartmentOverviewStage(false);
+    setIsInfoSlideStage(false);
+    setInfoSlides([]);
+    setInfoSlideChip('');
+    setIsHodStage(false);
+    setActiveHodDepartments([]);
+    setDepartmentOverviewDeckUnitIds(null);
+    setUnitBackedCards(null);
+    feesStickyTurnIdRef.current = null;
+    setExecutiveLeadershipKind(null);
+    setIsFeesStage(false);
+    setActiveFeesDepartmentId(null);
+    setIsDocumentsStage(false);
+    cardLockTurnIdRef.current = null;
+  }, []);
+
+  /** Single turn-boundary reset for TTS + card presentation state. */
+  const resetTurnPresentationState = useCallback(
+    (opts: { resetLayout?: boolean } = {}) => {
+      const resetLayout = opts.resetLayout !== false;
+      appliedBackendTtsQueueLenRef.current = 0;
+      ttsStreamQueueRef.current = [];
+      ttsPlayheadRef.current = 0;
+      playbackGenRef.current += 1;
+      lastBackendTtsStreamTurnRef.current = '';
+      receivedTtsChunkIndicesRef.current.clear();
+      firstTtsChunkSeenAtRef.current = null;
+      if (ttsBufferTimerRef.current) {
+        window.clearTimeout(ttsBufferTimerRef.current);
+        ttsBufferTimerRef.current = null;
+      }
+      pendingFinalBackupRef.current = null;
+      presentationRef.current.audioManager.current?.invalidate();
+      presentationRef.current.cancel();
+      lastLoadedPresentationTurnRef.current = null;
+      narrationPlanRef.current = null;
+      setNarrationCaption('');
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      audioLockRef.current = false;
+      streamAudioLayoutRef.current = null;
+      assistantAudioTurnOwnerRef.current = TURN_FENCE_PENDING;
+      playedSegmentKeysRef.current.clear();
+      if (resetLayout) {
+        comparisonLayoutSnapRef.current = null;
+        busRoutesDismissedTurnIdRef.current = null;
+        setBusRoutesHighlightQuery(null);
+        setLayoutMode('FULL_TEXT');
+        setActiveTargetDepartment(null);
+        setIsCampusNavigationStage(false);
+        clearCardStages();
+        setIsTrusteesStage(false);
+        currentUiLockRef.current = 'IDLE';
+      }
+    },
+    [clearCardStages, setLayoutMode],
+  );
+
   // Wraps original sendMessage to sniff for intents dynamically on dispatch.
   // Deterministic FAQ answers are resolved by the backend before Groq/RAG.
   const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
@@ -698,47 +1005,17 @@ export default function ChatScreen({
         return;
       }
       clearSuggestionLayer();
-      appliedBackendTtsQueueLenRef.current = 0;
-      ttsStreamQueueRef.current = [];
-      lastBackendTtsStreamTurnRef.current = '';
-      receivedTtsChunkIndicesRef.current.clear();
-      firstTtsChunkSeenAtRef.current = null;
-      if (ttsBufferTimerRef.current) {
-        window.clearTimeout(ttsBufferTimerRef.current);
-        ttsBufferTimerRef.current = null;
-      }
-      pendingFinalBackupRef.current = null;
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-      audioLockRef.current = false;
-      streamAudioLayoutRef.current = null;
-      assistantAudioTurnOwnerRef.current = null;
-      playedSegmentKeysRef.current.clear();
-      // Rule 5: navigation clicks (UI source) should not wipe the layout mode.
       if (source === 'VOICE') {
         setSurface('chat');
-        comparisonLayoutSnapRef.current = null;
-        busRoutesDismissedTurnIdRef.current = null;
-        setBusRoutesHighlightQuery(null);
-        setLayoutMode('FULL_TEXT');
+      }
+      // Rule 5: explicit UI menu navigation (localIntent) keeps layout; all other turns reset.
+      const preserveLayoutForUiNav = source === 'UI' && Boolean(msg?.localIntent);
+      resetTurnPresentationState({ resetLayout: !preserveLayoutForUiNav });
+      if (source === 'VOICE') {
         setActiveCards(null);
         setCurrentCardIdx(0);
         setSuppressedTurnId(null);
-        setIsCampusNavigationStage(false);
-        setIsDepartmentOverviewStage(false);
-        setActiveDepartmentId(null);
-        setIsInfoSlideStage(false);
-        setInfoSlides([]);
-        setInfoSlideChip('');
-        setIsHodStage(false);
-        setExecutiveLeadershipKind(null);
-        setIsFeesStage(false);
-        setActiveFeesDepartmentId(null);
-        setIsDocumentsStage(false);
         setCourseMenuOptions([]);
-        currentUiLockRef.current = 'IDLE';
       }
 
       // Backend is authoritative for intent routing on voice turns.
@@ -759,7 +1036,7 @@ export default function ChatScreen({
       }
     }
     sendMessage(msg);
-  }, [clearSuggestionLayer, sendMessage, setLayoutMode, onChatUserActivity, isCampusNavigationStage]);
+  }, [clearSuggestionLayer, resetTurnPresentationState, sendMessage, onChatUserActivity, isCampusNavigationStage]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -947,7 +1224,16 @@ export default function ChatScreen({
   const handleInlineLanguagePick = useCallback(
     (lang: Language) => {
       onChatUserActivity?.();
+      if (!canChangeLanguageNow()) {
+        pushRuntimeEvent('LOCALE_CHANGE_BLOCKED', { language: lang, reason: 'frozen' });
+        return;
+      }
+      presentationRef.current.cancel();
+      lastLoadedPresentationTurnRef.current = null;
+      setNarrationCaption('');
+      releaseLocalizationFreeze();
       setLanguage(lang);
+      patchConversationRuntime({ currentLanguage: lang });
       setIsAwaitingReadyPrompt(true);
       clearSuggestionLayer();
       setVisuallyFocusedMessage(null);
@@ -996,7 +1282,7 @@ export default function ChatScreen({
   }, [language, collegeData]);
 
   const handleCloseDepartmentComparison = useCallback(() => {
-    comparisonTtsSyncActiveRef.current = false;
+    presentationRef.current.cancel();
     setComparisonNarrationSection(0);
     setSurface('chat');
     const snap = comparisonLayoutSnapRef.current;
@@ -1028,51 +1314,40 @@ export default function ChatScreen({
   }, []);
 
   const applyComparisonNarrationSegment = useCallback(
-    (seg: NarrationPlan['segments'][number]) => {
+    (seg: NarrationPlan['segments'][number], segmentIndex: number) => {
       if (!seg || typeof seg !== 'object') return;
-      if (seg.cardId?.startsWith('comparison_')) {
-        comparisonTtsSyncActiveRef.current = false;
-        // Prefer explicit card index if available; fallback to known card id phases.
-        if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
-          comparisonSlideSinkRef.current(seg.cardIndex);
-        } else if (seg.cardId === 'comparison_learning') {
-          comparisonSlideSinkRef.current(0);
-        } else if (seg.cardId === 'comparison_jobs') {
-          comparisonSlideSinkRef.current(1);
-        }
+      const pid = presentationRef.current.snapshot.presentationId;
+      if (
+        pid &&
+        !assertLivePresentationOwnership({
+          snapshotPresentationId: pid,
+          loadedTurnId: lastLoadedPresentationTurnRef.current,
+        })
+      ) {
+        return;
       }
-      if (typeof seg.cardIndex === 'number' && Number.isFinite(seg.cardIndex)) {
-        setCurrentCardIdx(Math.max(0, seg.cardIndex));
+      const unitId =
+        typeof seg.unitId === 'string' && seg.unitId.trim() ? seg.unitId.trim() : null;
+      if (unitId) {
+        presentationRef.current.activateByUnitId(unitId);
+        return;
       }
-      if (typeof seg.displayText === 'string' && seg.displayText.trim()) {
-        setNarrationCaption(seg.displayText.trim());
-      }
+      const sectionId =
+        typeof seg.sectionId === 'string' && seg.sectionId.trim()
+          ? seg.sectionId.trim()
+          : typeof seg.cardId === 'string' && seg.cardId.trim()
+            ? seg.cardId.trim()
+            : `seg_${segmentIndex}`;
+      presentationRef.current.activateBySectionId(sectionId);
     },
     [],
   );
 
   useEffect(() => {
     if (!departmentComparisonOpen) {
-      comparisonTtsSyncActiveRef.current = false;
       setComparisonNarrationSection(0);
     }
   }, [departmentComparisonOpen]);
-  const clearCardStages = useCallback(() => {
-    setActiveCards(null);
-    setCurrentCardIdx(0);
-    setSuppressedTurnId(null);
-    setCourseMenuOptions([]);
-    setActiveDepartmentId(null);
-    setIsDepartmentOverviewStage(false);
-    setIsInfoSlideStage(false);
-    setInfoSlides([]);
-    setInfoSlideChip('');
-    setIsHodStage(false);
-    setExecutiveLeadershipKind(null);
-    setIsFeesStage(false);
-    setActiveFeesDepartmentId(null);
-    setIsDocumentsStage(false);
-  }, []);
 
   const stopCampusSpeech = useCallback(() => {
     if (currentAudioRef.current) {
@@ -1098,14 +1373,15 @@ export default function ChatScreen({
     setPendingAudio(null);
     appliedBackendTtsQueueLenRef.current = 0;
     ttsStreamQueueRef.current = [];
+    ttsPlayheadRef.current = 0;
+    playbackGenRef.current += 1;
     lastBackendTtsStreamTurnRef.current = '';
     streamAudioLayoutRef.current = null;
     assistantAudioTurnOwnerRef.current = null;
     playedSegmentKeysRef.current.clear();
-    if (cardProgressTimerRef.current) {
-      clearInterval(cardProgressTimerRef.current);
-      cardProgressTimerRef.current = null;
-    }
+    presentationRef.current.cancel();
+    lastLoadedPresentationTurnRef.current = null;
+    setNarrationCaption('');
     stopListening();
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
@@ -1201,11 +1477,23 @@ export default function ChatScreen({
       const key = `${trusteeIndex}:${cleanSummary}`;
       if (lastTrusteeNarrationKeyRef.current === key) return;
       lastTrusteeNarrationKeyRef.current = key;
+      const turnId = `trustee-card-${trusteeIndex}-${language}-${Date.now()}`;
+      const ctrl = presentationRef.current;
+      ctrl.setSceneAdvanceMode('per_clip');
+      ctrl.loadPresentation({
+        kind: 'single',
+        turnId,
+        cardId: 'trustee',
+        caption: cleanSummary,
+        spokenSummary: cleanSummary,
+      });
+      ctrl.play();
+      lastLoadedPresentationTurnRef.current = turnId;
       sendMessage({
         action: 'campus_navigation_tts',
         language,
         text: cleanSummary,
-        turn_id: `trustee-card-${trusteeIndex}-${language}-${Date.now()}`,
+        turn_id: turnId,
       });
     },
     [isTrusteesStage, language, sendMessage],
@@ -1220,7 +1508,7 @@ export default function ChatScreen({
       currentAudioRef.current = null;
       setIsPlayingBackendAudio(false);
     }
-    currentUiLockRef.current = 'CARD';
+    engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
     const latestVisibleClara = [...displayMessages]
       .reverse()
       .find((m) => isTextMessage(m) && m.role === 'clara' && !(m as any).isHidden && !(m as any).isCardData) as ChatMessage | undefined;
@@ -1279,12 +1567,22 @@ export default function ChatScreen({
       _turnId?: string,
       audioChainFollowUp?: boolean,
       totalDurationEstimateMs?: number | null,
+      clipMeta?: {
+        chunkIndex?: number | null;
+        sectionId?: string | null;
+        segmentId?: string | null;
+        unitId?: string | null;
+      },
     ) => {
     // Dedupe by a per-segment key (not just per-turn), because the backend can stream
     // multiple TTS segments for the same `turn_id` (ack + first sentence + remainder).
     if (playedSegmentKeysRef.current.has(segmentKey)) return;
+    if (!audioBase64) return;
 
     const tid = typeof _turnId === 'string' ? _turnId : '';
+    if (assistantAudioTurnOwnerRef.current === TURN_FENCE_PENDING) {
+      return;
+    }
     const skipTurnOwnerGuard =
       !tid ||
       tid.startsWith('campus-') ||
@@ -1301,14 +1599,21 @@ export default function ChatScreen({
     }
     if (audioLockRef.current && currentAudioRef.current && !currentAudioRef.current.paused) {
       if (audioChainFollowUp) {
-        ttsStreamQueueRef.current.unshift({
-          audioBase64,
-          segmentKey,
-          isOverview,
-          cardsToSync,
-          turnId: tid,
-          totalDurationEstimateMs,
-        });
+        const exists = ttsStreamQueueRef.current.some((c) => c.segmentKey === segmentKey);
+        if (!exists) {
+          ttsStreamQueueRef.current.splice(ttsPlayheadRef.current + 1, 0, {
+            audioBase64,
+            segmentKey,
+            isOverview,
+            cardsToSync,
+            turnId: tid,
+            totalDurationEstimateMs,
+            chunkIndex: clipMeta?.chunkIndex ?? null,
+            sectionId: clipMeta?.sectionId ?? null,
+            segmentId: clipMeta?.segmentId ?? null,
+            unitId: clipMeta?.unitId ?? null,
+          });
+        }
       }
       return;
     }
@@ -1316,15 +1621,13 @@ export default function ChatScreen({
     playedSegmentKeysRef.current.add(segmentKey);
 
     if (!audioChainFollowUp) {
-      if (cardProgressTimerRef.current) {
-        clearInterval(cardProgressTimerRef.current);
-        cardProgressTimerRef.current = null;
-      }
+      presentationRef.current.audioManager.current?.invalidate();
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
       }
     } else if (currentAudioRef.current) {
+      presentationRef.current.audioManager.current?.invalidate();
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
@@ -1334,29 +1637,138 @@ export default function ChatScreen({
     audioLockRef.current = true;
     setIsPlayingBackendAudio(true);
 
-    // Narration-plan sync: each streamed TTS chunk is one visual beat.
-    // The backend sets `tts_chunk_index` to match narration plan segment index.
-    if (payload?.tts_streaming === true && typeof payload?.tts_chunk_index === 'number') {
-      const plan = narrationPlanRef.current;
-      const seg = plan?.segments?.[payload.tts_chunk_index];
-      if (plan && seg && plan.turnId === tid) {
-        applyComparisonNarrationSegment(seg);
+    // Narration-plan sync: prefer unitId on the clip (never live payload index as content identity).
+    const plan = narrationPlanRef.current;
+    if (plan && plan.turnId === tid) {
+      presentationRef.current.setSceneAdvanceMode('per_clip');
+      const chunkIdx =
+        typeof clipMeta?.chunkIndex === 'number' && Number.isFinite(clipMeta.chunkIndex)
+          ? Math.max(0, Math.floor(clipMeta.chunkIndex))
+          : null;
+      let unitId =
+        typeof clipMeta?.unitId === 'string' && clipMeta.unitId.trim()
+          ? clipMeta.unitId.trim()
+          : null;
+      let sectionId =
+        typeof clipMeta?.sectionId === 'string' && clipMeta.sectionId.trim()
+          ? clipMeta.sectionId.trim()
+          : null;
+      let seg =
+        typeof chunkIdx === 'number' && plan.segments[chunkIdx]
+          ? plan.segments[chunkIdx]
+          : null;
+      if (!unitId && seg && typeof seg.unitId === 'string' && seg.unitId.trim()) {
+        unitId = seg.unitId.trim();
       }
+      if (!sectionId && seg) {
+        sectionId =
+          typeof seg.sectionId === 'string' && seg.sectionId.trim()
+            ? seg.sectionId.trim()
+            : null;
+      }
+      if (!seg && unitId) {
+        const foundIdx = plan.segments.findIndex(
+          (s) => typeof s.unitId === 'string' && s.unitId.trim() === unitId,
+        );
+        if (foundIdx >= 0) {
+          seg = plan.segments[foundIdx]!;
+        }
+      }
+      if (!seg && sectionId) {
+        const foundIdx = plan.segments.findIndex(
+          (s) => typeof s.sectionId === 'string' && s.sectionId.trim() === sectionId,
+        );
+        if (foundIdx >= 0) {
+          seg = plan.segments[foundIdx]!;
+        }
+      }
+      if (seg && typeof chunkIdx === 'number') {
+        applyComparisonNarrationSegment(seg, chunkIdx);
+      } else if (unitId) {
+        const pid = presentationRef.current.snapshot.presentationId;
+        if (
+          !pid ||
+          assertLivePresentationOwnership({
+            snapshotPresentationId: pid,
+            loadedTurnId: lastLoadedPresentationTurnRef.current,
+          })
+        ) {
+          presentationRef.current.activateByUnitId(unitId);
+        }
+      } else if (sectionId) {
+        const pid = presentationRef.current.snapshot.presentationId;
+        if (
+          !pid ||
+          assertLivePresentationOwnership({
+            snapshotPresentationId: pid,
+            loadedTurnId: lastLoadedPresentationTurnRef.current,
+          })
+        ) {
+          presentationRef.current.activateBySectionId(sectionId);
+        }
+      } else if (typeof chunkIdx === 'number' && plan.segments[chunkIdx]) {
+        applyComparisonNarrationSegment(plan.segments[chunkIdx]!, chunkIdx);
+      }
+    } else if (isOverview && cardsToSync && cardsToSync.length > 0) {
+      // Fallback multi-card single/shared clip path.
+      const ctrl = presentationRef.current;
+      if (
+        ctrl.engineState === 'IDLE' ||
+        ctrl.engineState === 'CANCELLED' ||
+        ctrl.engineState === 'PRESENTATION_COMPLETE' ||
+        !ctrl.isPresenting
+      ) {
+        const streaming =
+          latestPayloadRef.current?.tts_streaming === true;
+        ctrl.setSceneAdvanceMode(
+          audioChainFollowUp || streaming ? 'per_clip' : 'shared_clip',
+        );
+        ctrl.loadPresentation({
+          kind: 'cards',
+          cards: cardsToSync,
+          turnId: tid || `turn-${Date.now()}`,
+          estimatedTotalDurationMs: finitePositiveMs(totalDurationEstimateMs),
+        });
+        ctrl.play();
+        lastLoadedPresentationTurnRef.current = tid || lastLoadedPresentationTurnRef.current;
+      }
+    } else if (
+      currentUiLockRef.current === 'CARD' &&
+      (presentationRef.current.engineState === 'IDLE' ||
+        presentationRef.current.engineState === 'CANCELLED' ||
+        presentationRef.current.engineState === 'PRESENTATION_COMPLETE')
+    ) {
+      // Single-scene surfaces (fees, HOD, principal, VP, documents, bus) without a plan.
+      const ctrl = presentationRef.current;
+      ctrl.setSceneAdvanceMode('per_clip');
+      const singleTurn = tid || `card-${Date.now()}`;
+      ctrl.loadPresentation({
+        kind: 'single',
+        turnId: singleTurn,
+        cardId: 'stage',
+        caption: '',
+        spokenSummary: '',
+      });
+      ctrl.play();
+      lastLoadedPresentationTurnRef.current = singleTurn;
     }
+
+    // Bind tokenized listeners — engine owns scene completion; ChatScreen still chains the queue.
+    presentationRef.current.bindPlaybackAudio(audio);
 
     const liveFaceChannel = faceChannelRef.current;
     if (!audioChainFollowUp && liveFaceChannel?.enabled && tid) {
-      const latestPayload = latestPayloadRef.current;
-      let text = payloadAssistantSpeechText(latestPayload);
+      const facePayload = latestPayloadRef.current;
+      let text = payloadAssistantSpeechText(facePayload);
       const explicitTotalMs =
         finitePositiveMs(totalDurationEstimateMs) ??
-        finitePositiveMs(latestPayload?.tts_total_duration_estimate_ms);
+        finitePositiveMs(facePayload?.tts_total_duration_estimate_ms);
       let sentences = processResponseSentences(text);
       let durationsMs = allocateSentenceDurations(sentences, explicitTotalMs);
       if (!sentences.length) {
         const fallbackMs =
           finitePositiveMs(explicitTotalMs) ??
-          finitePositiveMs(latestPayload?.tts_total_duration_estimate_ms);
+          finitePositiveMs(facePayload?.tts_total_duration_estimate_ms);
         if (fallbackMs !== null && fallbackMs > 0) {
           sentences = ['Audio'];
           durationsMs = [fallbackMs];
@@ -1367,73 +1779,11 @@ export default function ChatScreen({
           turnId: tid,
           sentences,
           durationsMs,
-          emotion: inferEmotionFromPayload(latestPayload),
+          emotion: inferEmotionFromPayload(facePayload),
           emotionHint: 'calm',
         });
       }
     }
-
-    let comparisonTimeHandler: (() => void) | null = null;
-    const detachComparisonAudio = () => {
-      if (comparisonTimeHandler) {
-        audio.removeEventListener('timeupdate', comparisonTimeHandler);
-        comparisonTimeHandler = null;
-      }
-    };
-
-    if (comparisonTtsSyncActiveRef.current) {
-      if (!audioChainFollowUp) {
-        comparisonAccumulatedSecRef.current = 0;
-      }
-      if (comparisonSyncModeRef.current === 'clip') {
-        if (!audioChainFollowUp) {
-          comparisonClipPlayIndexRef.current = 0;
-          comparisonSlideSinkRef.current(0);
-        }
-      } else {
-        comparisonTimeHandler = () => {
-          const total =
-            comparisonTotalEstimateSecRef.current && comparisonTotalEstimateSecRef.current > 0
-              ? comparisonTotalEstimateSecRef.current
-              : audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
-                ? audio.duration
-                : 0;
-          if (!total) return;
-          const elapsed = comparisonAccumulatedSecRef.current + audio.currentTime;
-          const idx = Math.min(
-            COMPARISON_NARRATION_SECTIONS - 1,
-            Math.floor((elapsed / total) * COMPARISON_NARRATION_SECTIONS),
-          );
-          comparisonSlideSinkRef.current(idx);
-        };
-        audio.addEventListener('timeupdate', comparisonTimeHandler);
-      }
-    }
-
-    const startSync = (duration: number) => {
-        if (!isOverview || !cardsToSync) return;
-        // Narration-plan mode: card index is driven by tts_chunk_index/segments, not time slicing.
-        const plan = narrationPlanRef.current;
-        if (plan && plan.turnId === tid) return;
-        const totalDurationMs = duration * 1000;
-        const intervalTime = totalDurationMs / cardsToSync.length;
-        let idx = 0;
-        setCurrentCardIdx(0);
-        if (cardProgressTimerRef.current) {
-            clearInterval(cardProgressTimerRef.current);
-            cardProgressTimerRef.current = null;
-        }
-        const interval = setInterval(() => {
-            idx++;
-            if (idx < cardsToSync.length) {
-                setCurrentCardIdx(idx);
-            } else {
-                clearInterval(interval);
-                cardProgressTimerRef.current = null;
-            }
-        }, intervalTime);
-        cardProgressTimerRef.current = interval;
-    };
 
     const preferredSyncDurationSeconds = () =>
       !audioChainFollowUp &&
@@ -1444,107 +1794,142 @@ export default function ChatScreen({
         : audio.duration;
 
     audio.onloadedmetadata = () => {
-        const syncDurationSeconds = preferredSyncDurationSeconds();
-        setCurrentAudioDuration(syncDurationSeconds);
-        if (!audioChainFollowUp) {
-          startSync(syncDurationSeconds);
-        }
+      const syncDurationSeconds = preferredSyncDurationSeconds();
+      setCurrentAudioDuration(syncDurationSeconds);
     };
-    setTimeout(() => {
-        if (!audioChainFollowUp && isOverview && audio.duration) {
-            const syncDurationSeconds = preferredSyncDurationSeconds();
-            setCurrentAudioDuration(syncDurationSeconds);
-            startSync(syncDurationSeconds);
-        }
-    }, 1000);
 
+    const startedGen = playbackGenRef.current;
     audio.onended = () => {
-        detachComparisonAudio();
-        const moreQueued = ttsStreamQueueRef.current.length > 0;
-        if (comparisonTtsSyncActiveRef.current) {
-          if (comparisonSyncModeRef.current === 'time') {
-            comparisonAccumulatedSecRef.current += audio.duration || 0;
-            if (!moreQueued) {
-              comparisonSlideSinkRef.current(COMPARISON_NARRATION_SECTIONS - 1);
-            }
-          } else if (comparisonSyncModeRef.current === 'clip') {
-            const next = Math.min(
-              COMPARISON_NARRATION_SECTIONS - 1,
-              comparisonClipPlayIndexRef.current + 1,
-            );
-            comparisonClipPlayIndexRef.current = next;
-            comparisonSlideSinkRef.current(next);
-          }
-        } else if (!moreQueued) {
-          // Narration-plan mode: ensure we settle on final section after last chunk.
-          const plan = narrationPlanRef.current;
-          if (plan && plan.turnId === tid) {
-            comparisonSlideSinkRef.current(COMPARISON_NARRATION_SECTIONS - 1);
-          }
-        }
-        if (cardProgressTimerRef.current && (!audioChainFollowUp || !moreQueued)) {
-            clearInterval(cardProgressTimerRef.current);
-            cardProgressTimerRef.current = null;
-        }
-        setIsPlayingBackendAudio(false);
-        audioLockRef.current = false;
-        setIsCampusSpeaking(false);
-        setHasGreeted(true); // Session is active after any Clara audio completes
-        if (isOverview && cardsToSync && cardsToSync.length > 0 && !moreQueued) {
-            setCurrentCardIdx(cardsToSync.length - 1);
-        }
-        if (moreQueued) {
-          const next = ttsStreamQueueRef.current.shift()!;
-          handleAudioPlaybackRef.current?.(
-            next.audioBase64,
-            next.segmentKey,
-            next.isOverview,
-            next.cardsToSync,
-            next.turnId,
-            true,
-          );
-        } else if (pendingFinalBackupRef.current) {
-          pendingFinalBackupRef.current = null;
-        }
-        if (!moreQueued) faceChannelRef.current?.postIdle(tid);
-        if (!moreQueued) setNarrationCaption('');
+      if (startedGen !== playbackGenRef.current) return;
+      if (currentAudioRef.current !== audio) return;
+      // Engine receives `ended` via PresentationAudioManager (token-checked).
+      setIsPlayingBackendAudio(false);
+      audioLockRef.current = false;
+      setIsCampusSpeaking(false);
+      setHasGreeted(true);
+      const cur = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      if (cur) cur.status = 'COMPLETED';
+      ttsPlayheadRef.current += 1;
+      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      playQueuedClipRef.current(true);
+      if (!next) {
+        pendingFinalBackupRef.current = null;
+        faceChannelRef.current?.postIdle(tid);
+      }
+      if (!next && presentationRef.current.engineState === 'PRESENTATION_COMPLETE') {
+        setNarrationCaption('');
+      }
     };
 
     audio.play().catch(err => {
-        detachComparisonAudio();
-        audioLockRef.current = false;
-        // Helps debug when the browser blocks autoplay or decoding fails.
-        if (import.meta.env.DEV) {
-          console.error('[CLARA_TTS] audio.play() failed', {
-            segmentKey,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-        if (cardProgressTimerRef.current) {
-            clearInterval(cardProgressTimerRef.current);
-            cardProgressTimerRef.current = null;
-        }
-        setIsPlayingBackendAudio(false);
-        setIsCampusSpeaking(false);
-        setHasGreeted(true); // Fallback so they can progress
-        setShowUnmuteHint(true);
-        if (ttsStreamQueueRef.current.length > 0) {
-          const next = ttsStreamQueueRef.current.shift()!;
-          handleAudioPlaybackRef.current?.(
-            next.audioBase64,
-            next.segmentKey,
-            next.isOverview,
-            next.cardsToSync,
-            next.turnId,
-            true,
-          );
-        }
+      if (startedGen !== playbackGenRef.current) return;
+      audioLockRef.current = false;
+      if (import.meta.env.DEV) {
+        console.error('[CLARA_TTS] audio.play() failed', {
+          segmentKey,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      const eng = presentationRef.current.engine.current;
+      const tok = presentationRef.current.audioManager.current?.token;
+      const snap = eng?.snapshot();
+      if (eng && tok && snap?.presentationId && snap.activeScene) {
+        eng.onAudioEvent({
+          type: 'blocked',
+          presentationId: snap.presentationId,
+          audioToken: tok,
+          sceneId: snap.activeScene.sceneId,
+        });
+      }
+      setIsPlayingBackendAudio(false);
+      setIsCampusSpeaking(false);
+      setHasGreeted(true);
+      setShowUnmuteHint(true);
+      const cur = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      if (cur) cur.status = 'FAILED';
+      ttsPlayheadRef.current += 1;
+      playQueuedClipRef.current(true);
     });
-  }, []);
+  }, [applyComparisonNarrationSegment]);
 
   useEffect(() => {
     handleAudioPlaybackRef.current = handleAudioPlayback;
   }, [handleAudioPlayback]);
+
+  useEffect(() => {
+    const completeFailedClip = (clip: (typeof ttsStreamQueueRef.current)[number]) => {
+      const tid = clip.turnId;
+      const unitId =
+        typeof clip.unitId === 'string' && clip.unitId.trim() ? clip.unitId.trim() : null;
+      const plan = narrationPlanRef.current;
+      if (plan && plan.turnId === tid && unitId) {
+        const ctrl = presentationRef.current;
+        ctrl.setSceneAdvanceMode('per_clip');
+        const pid = ctrl.snapshot.presentationId;
+        if (
+          !pid ||
+          assertLivePresentationOwnership({
+            snapshotPresentationId: pid,
+            loadedTurnId: lastLoadedPresentationTurnRef.current,
+          })
+        ) {
+          ctrl.activateByUnitId(unitId);
+        }
+        const engine = ctrl.engine.current;
+        const snap = engine?.snapshot();
+        const scene = snap?.activeScene;
+        const presentationId = snap?.presentationId;
+        if (engine && scene && presentationId) {
+          const token = engine.beginAudioBind(presentationId, scene.sceneId);
+          if (token) {
+            engine.onAudioEvent({
+              type: 'ended',
+              presentationId,
+              audioToken: token,
+              sceneId: scene.sceneId,
+            });
+          }
+        }
+      }
+      clip.status = 'COMPLETED';
+      ttsPlayheadRef.current += 1;
+      playQueuedClipRef.current(true);
+    };
+
+    const playQueuedClip = (followUp: boolean) => {
+      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      if (!next) {
+        pendingFinalBackupRef.current = null;
+        return;
+      }
+      if (next.status === 'COMPLETED' || next.status === 'CANCELLED') {
+        ttsPlayheadRef.current += 1;
+        playQueuedClip(followUp);
+        return;
+      }
+      if (next.status === 'PENDING') return;
+      if (next.status === 'FAILED' || !next.audioBase64) {
+        completeFailedClip(next);
+        return;
+      }
+      handleAudioPlaybackRef.current?.(
+        next.audioBase64,
+        next.segmentKey,
+        next.isOverview,
+        next.cardsToSync,
+        next.turnId,
+        followUp,
+        next.totalDurationEstimateMs,
+        {
+          chunkIndex: next.chunkIndex,
+          sectionId: next.sectionId,
+          segmentId: next.segmentId,
+          unitId: next.unitId,
+        },
+      );
+    };
+    playQueuedClipRef.current = playQueuedClip;
+  });
 
   useEffect(() => {
     if (!showLanguageOverlay || !inlineLanguageGate || languageGateSatisfied) return;
@@ -1590,23 +1975,15 @@ export default function ChatScreen({
     if (payload.isProcessing === true && typeof payload.turn_id === 'string' && payload.turn_id.length > 0) {
       const nextOwner = String(payload.turn_id);
       if (assistantAudioTurnOwnerRef.current !== nextOwner) {
-        playedSegmentKeysRef.current.clear();
+        // Backend-mic path never runs interceptAndSendMessage; mirror turn reset here.
+        resetTurnPresentationState({ resetLayout: true });
         assistantAudioTurnOwnerRef.current = nextOwner;
-        appliedBackendTtsQueueLenRef.current = 0;
-        ttsStreamQueueRef.current = [];
-        receivedTtsChunkIndicesRef.current.clear();
-        firstTtsChunkSeenAtRef.current = null;
-        if (ttsBufferTimerRef.current) {
-          window.clearTimeout(ttsBufferTimerRef.current);
-          ttsBufferTimerRef.current = null;
-        }
-        pendingFinalBackupRef.current = null;
-        if (currentAudioRef.current) {
-          currentAudioRef.current.pause();
-          currentAudioRef.current = null;
-        }
-        audioLockRef.current = false;
       }
+    }
+
+    const payloadTurnId = typeof payload.turn_id === 'string' ? payload.turn_id : '';
+    if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, payloadTurnId)) {
+      return;
     }
 
     // Helper to detect if the backend is sending us a fallback message ("Go to admissions block")
@@ -1619,7 +1996,8 @@ export default function ChatScreen({
              t.includes('सबसे सटीक जानकारी');
     };
     
-    // Fall back to client-side interpreted intent if the backend missed it due to NLP multi-lingual blindspots
+    // M5.4: the backend response decision is the only card authority. The frontend
+    // consumes showCard and narration_plan unitIds; it never infers a card from text.
     const nativeTrigger = payload?.showCard;
     const payloadMessageList = Array.isArray(payload?.messages) ? payload.messages : [];
     const isResponseReady =
@@ -1634,41 +2012,11 @@ export default function ChatScreen({
     const lastUserTextForInference = lastUserForInference
       ? getPayloadMessageText(lastUserForInference).trim()
       : '';
-    const forcedDeptComparison = inferForcedDepartmentComparisonFromUserText(lastUserTextForInference);
-    const forcedBus = inferForcedBusRoutesFromUserText(lastUserTextForInference);
-
-    let cardTrigger = normalizeCardTrigger(nativeTrigger);
-    if (isResponseReady && !cardTrigger) {
-      const inferred = inferExecutiveProfileFromUserText(lastUserTextForInference);
-      if (inferred === 'principal') cardTrigger = 'principal_profile';
-      else if (inferred === 'vice_principal') cardTrigger = 'vice_principal_profile';
-    }
-    if (
-      isResponseReady &&
-      forcedDeptComparison.force &&
-      forcedDeptComparison.departmentIds.length >= 2
-    ) {
-      cardTrigger = 'department_comparison';
-    }
-    if (
-      isResponseReady &&
-      cardTrigger !== 'department_comparison' &&
-      forcedBus.force &&
-      !(forcedDeptComparison.force && forcedDeptComparison.departmentIds.length >= 2)
-    ) {
-      cardTrigger = 'bus_routes';
-    }
+    const cardTrigger = normalizeCardTrigger(nativeTrigger);
 
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
-    const rawTargetDept = payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload;
-    const localDeptLabel = null;
-    // Click-driven department flows must always trust the locally clicked department.
-    const shouldPreferLocalDepartment =
-      Boolean(localDeptLabel) &&
-      (cardTrigger === 'department_overview' || cardTrigger === 'department_fees' || cardTrigger === 'hod');
-    const targetDepartment = shouldPreferLocalDepartment
-      ? localDeptLabel
-      : (rawTargetDept || localDeptLabel || null);
+    const targetDepartment =
+      payload?.targetDepartment ?? payload?.target_department ?? departmentIdFromPayload ?? null;
 
     
     // STICKY STATE: Only update if we have a fresh target, otherwise preserve existing for this turn
@@ -1755,8 +2103,17 @@ export default function ChatScreen({
       setIsPlayingBackendAudio(false);
     }
 
-    // Defer all split-card transitions until the turn has finalized messages.
-    if (cardTrigger && cardTrigger !== 'documents' && !isResponseReady) {
+    const planTurnId =
+      typeof payload?.narration_plan?.turnId === 'string' ? payload.narration_plan.turnId : String(turnId);
+    const unitBackedPlanReady = shouldApplyUnitBackedPlan({
+      activeTurnId: assistantAudioTurnOwnerRef.current,
+      planTurnId,
+      audioPending: payload?.audioPending === true,
+    }) && isUnitBackedNarrationPlan(payload);
+
+    // Defer split-card transitions until the turn has finalized messages,
+    // except unit-backed HOD/overview identity which must apply even while audioPending.
+    if (cardTrigger && cardTrigger !== 'documents' && !isResponseReady && !unitBackedPlanReady) {
       if (audioBase64) {
         offerAssistantAudio({
           audioBase64,
@@ -1771,7 +2128,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'department_comparison' && isResponseReady) {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       if (comparisonLayoutSnapRef.current === null) {
         comparisonLayoutSnapRef.current = layoutMode;
       }
@@ -1779,9 +2136,8 @@ export default function ChatScreen({
       const cmpIds = Array.isArray(rawList)
         ? (rawList as unknown[]).filter((x): x is string => typeof x === 'string')
         : [];
-      const mergedCmp =
-        cmpIds.length >= 2 ? cmpIds : forcedDeptComparison.departmentIds;
-      setComparisonDeptIds(mergedCmp);
+      // Backend is the only source of comparison identity. No local re-inference.
+      setComparisonDeptIds(cmpIds);
       setComparisonHighlightId(
         typeof payload?.comparisonHighlightId === 'string' ? payload.comparisonHighlightId : null,
       );
@@ -1790,33 +2146,7 @@ export default function ChatScreen({
           ? payload.comparisonRecommendFocus
           : null,
       );
-      // If backend provided a narration plan for comparison, do NOT run time/clip-based drift sync.
-      // Section + point are driven by narration_plan segment index (tts_chunk_index) instead.
-      const plan = payload?.narration_plan;
-      const hasComparisonNarrationPlan =
-        plan &&
-        typeof plan === 'object' &&
-        plan.mode === 'card_narration' &&
-        typeof plan.turnId === 'string' &&
-        Array.isArray(plan.segments) &&
-        plan.segments.some(
-          (s: any) =>
-            s &&
-            typeof s === 'object' &&
-            (s.cardId === 'comparison_learning' || s.cardId === 'comparison_jobs'),
-        );
-      comparisonTtsSyncActiveRef.current = !hasComparisonNarrationPlan;
-      comparisonAccumulatedSecRef.current = 0;
-      comparisonClipPlayIndexRef.current = 0;
-      const estMs = payload?.tts_total_duration_estimate_ms;
-      if (typeof estMs === 'number' && Number.isFinite(estMs) && estMs > 0) {
-        comparisonTotalEstimateSecRef.current = estMs / 1000;
-        comparisonSyncModeRef.current = 'time';
-      } else {
-        comparisonTotalEstimateSecRef.current = null;
-        const q = payload?.tts_audio_queue;
-        comparisonSyncModeRef.current = Array.isArray(q) && q.length > 1 ? 'clip' : 'time';
-      }
+      // Section + point are driven by PresentationEngine from narration_plan segments.
       setComparisonNarrationSection(0);
       setSurface('department_comparison');
       setBusRoutesHighlightQuery(null);
@@ -1837,7 +2167,7 @@ export default function ChatScreen({
     if (cardTrigger === 'bus_routes' && isResponseReady) {
       const turnIdStr = String(turnId);
       if (busRoutesDismissedTurnIdRef.current !== turnIdStr) {
-        currentUiLockRef.current = 'CARD';
+        engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
         comparisonLayoutSnapRef.current = null;
         setBusRoutesHighlightQuery(lastUserTextForInference);
         setBusRoutesMountKey((k) => k + 1);
@@ -1873,10 +2203,15 @@ export default function ChatScreen({
       return;
     }
 
-    // Keep Fees card sticky for the active response stream.
-    // Some backend chunks can arrive without `showCard: "fees"` (or with a generic fallback trigger),
-    // which previously caused a temporary switch back to FULL_TEXT while TTS was still speaking.
-    if (isFeesStage && currentUiLockRef.current === 'CARD' && cardTrigger !== 'department_fees') {
+    // Keep Fees card sticky for the active response stream (same turn only).
+    // M5.2 fees often arrive as showCard=department_overview; sticky must not block a new turn.
+    if (
+      isFeesStage &&
+      currentUiLockRef.current === 'CARD' &&
+      cardTrigger !== 'department_fees' &&
+      feesStickyTurnIdRef.current &&
+      feesStickyTurnIdRef.current === String(turnId)
+    ) {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
         offerAssistantAudio({
@@ -1921,12 +2256,10 @@ export default function ChatScreen({
       if (!isTrusteeNarrationTurn) return;
     }
 
-    // Trustees Premium Slideshow Integration
-    const userMessage = payloadMessageList.slice().reverse().find((m: any) => m.role === 'user')?.text?.toLowerCase() || '';
-    const isTrusteeKeyword = /trustee|trust member|board of trustee|ಧರ್ಮದರ್ಶಿ|ಟ್ರಸ್ಟಿ|प्रबंधक|ട്രസ്റ്റി|ధర్మకర్త|అறங்கావлер/i.test(userMessage);
-
-    if (cardTrigger === 'trustees' || type === 'TRUSTEES_UI' || isTrusteeKeyword) {
-      currentUiLockRef.current = 'CARD';
+    // Trustees Premium Slideshow Integration.
+    // Trigger comes from the backend surface or an explicit UI event only.
+    if (cardTrigger === 'trustees' || type === 'TRUSTEES_UI') {
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -1951,7 +2284,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'course_menu') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setLayoutMode('SPLIT_CARDS');
       setActiveCards(null);
       setCurrentCardIdx(0);
@@ -2009,7 +2342,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'placements') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setIsHodStage(false);
       setExecutiveLeadershipKind(null);
       setIsDepartmentOverviewStage(false);
@@ -2054,9 +2387,20 @@ export default function ChatScreen({
         setActiveDepartmentId(null);
         setCourseMenuOptions([]);
 
-        currentUiLockRef.current = 'CARD';
+        engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
         setExecutiveLeadershipKind(null);
         setIsHodStage(true);
+        // Unit-backed HOD may contain multiple departments (e.g. CSE + AIML).
+        const planUnits: string[] =
+          Array.isArray(payload?.narration_plan?.segments)
+            ? payload!.narration_plan!.segments
+                .map((s: any) => (typeof s?.unitId === 'string' ? s.unitId : null))
+                .filter((x: any) => typeof x === 'string' && x.trim())
+            : [];
+        const hodUnits = planUnits.filter((u) => u.endsWith('.hod'));
+        const hodDepts = hodUnits.map((u) => departmentIdFromUnitId(u)).filter(Boolean);
+        setActiveHodDepartments(hodDepts.length ? hodDepts : [targetDept]);
+        setActiveTargetDepartment(hodDepts.length ? hodDepts[0]! : targetDept);
         setLayoutMode('SPLIT_CARDS');
       } else if (currentUiLockRef.current !== 'CARD') {
         // No department resolved — only go to text if we haven't already locked a card
@@ -2066,7 +2410,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'principal_profile') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
@@ -2094,7 +2438,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'vice_principal_profile') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
@@ -2161,17 +2505,23 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'department_overview') {
-      currentUiLockRef.current = 'CARD';
+      // UnitSelector is the sole composition authority. The unitIds on narration_plan
+      // decide how many cards exist, in which order, and for which department.
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setIsInfoSlideStage(false);
       setInfoSlides([]);
       setInfoSlideChip('');
-      setIsHodStage(false); // Protect against HOD stage bleed-over
+      setIsHodStage(false);
       setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
-      
-      const targetRaw = targetDepartment;
+      setDepartmentOverviewDeckUnitIds(null);
+      setActiveHodDepartments([]);
+      setUnitBackedCards(null);
+      feesStickyTurnIdRef.current = null;
+
+      const targetRaw = String(targetDepartment || '');
       const targetAll = targetRaw.toLowerCase() === 'all';
 
       const lastAssistantInPayload = [...payloadMessageList]
@@ -2180,6 +2530,114 @@ export default function ChatScreen({
       const assistantMessageId = lastAssistantInPayload?.id ?? null;
       setCourseMenuOptions([]);
 
+      const models = presentationCardsFromNarrationSegments(
+        Array.isArray(payload?.narration_plan?.segments)
+          ? payload!.narration_plan!.segments
+          : [],
+      );
+
+      if (models.length > 0) {
+        setUnitBackedCards(models);
+        const allHod = models.every((m) => m.cardType === 'hod');
+        const allFees = models.length === 1 && models[0]!.cardType === 'department_fees';
+        const allPlacements = models.length === 1 && models[0]!.cardType === 'placements';
+
+        if (allFees) {
+          const deptKey = models[0]!.departmentId;
+          setIsFeesStage(true);
+          setActiveFeesDepartmentId(deptKey);
+          feesStickyTurnIdRef.current = String(turnId);
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        if (allHod) {
+          const depts = models.map((m) => m.departmentId);
+          setIsHodStage(true);
+          setActiveHodDepartments(depts);
+          setActiveTargetDepartment(depts[0] ?? null);
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        if (allPlacements) {
+          setIsInfoSlideStage(true);
+          const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
+          setInfoSlideChip(chips.placements);
+          const slides = buildPlacementCardsFromLocale(collegeData, language);
+          setInfoSlides(slides);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: true,
+            cardsToSync: slides.map((s) => ({ title: s.title, content: s.content, type: 'dept' })),
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        // Overview / achievements / mixed multi-unit: exactly models.length slides.
+        // Each unit resolves against its OWN department, so cse_ds.overview +
+        // cse_aiml.hod + cse.fees each render their real content.
+        const slides = models.map((m) => {
+          const slot = typeof m.slotIndex === 'number' ? m.slotIndex : 0;
+          const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, language);
+          return {
+            title: fromLocale?.title || m.title,
+            content: fromLocale?.content || m.content,
+            slotIndex: slot,
+          };
+        });
+        const isSingleDepartmentDeck = new Set(models.map((m) => m.departmentId)).size === 1;
+        setDepartmentOverviewDeckUnitIds(models.map((m) => m.unitId));
+        setIsDepartmentOverviewStage(true);
+        setActiveDepartmentId(
+          isSingleDepartmentDeck ? factoryDepartmentLabelFromJsonKey(models[0]!.departmentId) : null,
+        );
+        setLayoutMode('SPLIT_CARDS');
+        setActiveCards(null);
+        setSuppressedTurnId(assistantMessageId ?? turnId);
+        offerAssistantAudio({
+          audioBase64,
+          segmentKey,
+          turnId: turnId,
+          isOverview: true,
+          cardsToSync: slides.map((s) => ({ title: s.title, content: s.content, type: 'dept' })),
+          targetLayout: 'SPLIT_CARDS',
+        });
+        return;
+      }
+
+      // No unitIds on the narration plan. Only an explicit all-departments deck or a
+      // menu click may still render; a CARD turn without units renders no card.
       if (targetAll) {
         setIsDepartmentOverviewStage(false);
         setActiveDepartmentId(null);
@@ -2200,17 +2658,18 @@ export default function ChatScreen({
         return;
       }
 
-      const resolvedDept = normalizeDepartmentMenuKey(departmentIdFromPayload ?? (targetDepartment || ''));
-
-      if (!resolvedDept) {
-          // If no department is resolved, and it's not 'all', do not switch layouts.
-          // This prevents accidental CSE defaulting for "the department" queries.
-          return;
+      // Fail closed: without unitIds, only an explicit menu click may open a deck.
+      const clickedDept = uiClickDeckDepartmentRef.current;
+      uiClickDeckDepartmentRef.current = null;
+      if (!clickedDept) {
+        return;
       }
-
+      const resolvedDept = normalizeDepartmentMenuKey(clickedDept);
+      if (!resolvedDept) {
+        return;
+      }
       const jsonKey = menuLabelToJsonKey(resolvedDept);
       if (!jsonKey) {
-        // Never force a default department when backend/local resolution is ambiguous.
         return;
       }
       const deptRecord = getDepartmentRecord(collegeData, jsonKey);
@@ -2240,7 +2699,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'department_fees') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -2262,6 +2721,7 @@ export default function ChatScreen({
         null;
       setIsFeesStage(true);
       setActiveFeesDepartmentId(feeDeptKey);
+      feesStickyTurnIdRef.current = String(turnId);
       setLayoutMode('SPLIT_CARDS');
 
       if (audioBase64) {
@@ -2278,7 +2738,7 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'documents') {
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setCourseMenuOptions([]);
       setIsDepartmentOverviewStage(false);
       setActiveDepartmentId(null);
@@ -2309,7 +2769,7 @@ export default function ChatScreen({
     const cardsForTrigger = resolveCardsFromTrigger(cardTrigger);
 
     if (cardsForTrigger) {
-        currentUiLockRef.current = 'CARD';
+        engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
         setCourseMenuOptions([]);
         setActiveDepartmentId(null);
         setIsDepartmentOverviewStage(false);
@@ -2348,8 +2808,17 @@ export default function ChatScreen({
     const combinedContent = payloadMessageList.map((m: any) => m.content).join(' ');
     const isFallback = isFallbackMessage(combinedContent);
 
-    if (currentUiLockRef.current === 'CARD' || (isFallback && activeTargetDepartment)) {
-        if (isFallback && activeTargetDepartment) {
+    const sameTurnCardLock =
+      currentUiLockRef.current === 'CARD' &&
+      cardLockTurnIdRef.current != null &&
+      cardLockTurnIdRef.current === turnId;
+    const sameTurnFeesSticky =
+      isFallback &&
+      activeTargetDepartment &&
+      feesStickyTurnIdRef.current === turnId;
+
+    if (sameTurnCardLock || sameTurnFeesSticky) {
+        if (sameTurnFeesSticky) {
             // Backend failed, but we have a department. Stay in SPLIT_CARDS.
             setLayoutMode('SPLIT_CARDS'); 
         }
@@ -2395,6 +2864,8 @@ export default function ChatScreen({
     isDepartmentOverviewStage,
     isBusRoutesSurface,
     layoutMode,
+    resetTurnPresentationState,
+    activeTargetDepartment,
   ]);
 
   useEffect(() => {
@@ -2516,17 +2987,24 @@ export default function ChatScreen({
   useEffect(() => {
     if (!payload || isPayloadStale?.(payload)) return;
     const tid = String(payload.turn_id ?? '');
-    if (
-      assistantAudioTurnOwnerRef.current &&
-      tid &&
-      tid !== assistantAudioTurnOwnerRef.current
-    ) {
+    if (shouldIgnorePayloadTurn(assistantAudioTurnOwnerRef.current, tid)) {
       return;
     }
+    let streamTurnReset = false;
     if (tid !== lastBackendTtsStreamTurnRef.current) {
       lastBackendTtsStreamTurnRef.current = tid;
       appliedBackendTtsQueueLenRef.current = 0;
       ttsStreamQueueRef.current = [];
+      ttsPlayheadRef.current = 0;
+      playbackGenRef.current += 1;
+      presentationRef.current.audioManager.current?.invalidate();
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      audioLockRef.current = false;
+      setIsPlayingBackendAudio(false);
+      streamTurnReset = true;
       receivedTtsChunkIndicesRef.current.clear();
       firstTtsChunkSeenAtRef.current = null;
       if (ttsBufferTimerRef.current) {
@@ -2547,7 +3025,9 @@ export default function ChatScreen({
       if (indices.length === 0) return false;
       return indices.every((value, idx) => value === idx);
     };
+    const unitBackedSlots = isUnitBackedNarrationPlan(payload) && Array.isArray(payload.tts_clip_slots);
     const finalBackupAudio =
+      !unitBackedSlots &&
       payload.tts_streaming === false &&
       typeof payload.audioBase64 === 'string' &&
       payload.audioBase64.length > 0
@@ -2560,8 +3040,20 @@ export default function ChatScreen({
         segmentKey: `${tid}|tts_final_backup|${finalSig}`,
         turnId: tid,
       };
-      if (!hasContiguousChunks()) {
+      const queued = payload.tts_audio_queue;
+      const unitBackedClipQueue =
+        narrationPlanRef.current?.turnId === tid &&
+        Array.isArray(narrationPlanRef.current.segments) &&
+        narrationPlanRef.current.segments.some(
+          (s) => typeof s.unitId === 'string' && s.unitId.trim(),
+        ) &&
+        Array.isArray(queued) &&
+        queued.length > 0;
+      // Unit-backed per_clip: keep the existing clip list. Do not replace it with a
+      // single concatenated backup — that desyncs visual unitId from TTS identity.
+      if (!hasContiguousChunks() && !unitBackedClipQueue) {
         ttsStreamQueueRef.current = [];
+        ttsPlayheadRef.current = 0;
         appliedBackendTtsQueueLenRef.current = Array.isArray(payload.tts_audio_queue)
           ? payload.tts_audio_queue.length
           : appliedBackendTtsQueueLenRef.current;
@@ -2581,6 +3073,113 @@ export default function ChatScreen({
         pendingFinalBackupRef.current = null;
         return;
       }
+    }
+    if (unitBackedSlots) {
+      const slots = payload.tts_clip_slots as Array<{
+        turnId?: string;
+        unitId?: string | null;
+        segmentIndex?: number;
+        status?: TtsClipStatus;
+        audioBase64?: string;
+      }>;
+      const layout = streamAudioLayoutRef.current?.targetLayout ?? 'SPLIT_CARDS';
+      if (layoutMode !== layout) return;
+      let added = false;
+      for (let idx = 0; idx < slots.length; idx += 1) {
+        const slot = slots[idx];
+        if (!slot || slot.status === 'PENDING') continue;
+        const existing = ttsStreamQueueRef.current[idx];
+        if (
+          existing &&
+          (existing.status === 'PLAYABLE' ||
+            existing.status === 'FAILED' ||
+            existing.status === 'COMPLETED' ||
+            existing.status === 'CANCELLED')
+        ) {
+          continue;
+        }
+        const st = streamAudioLayoutRef.current;
+        const isOv = Boolean(st?.isOverview) && idx === 0;
+        const planSeg =
+          narrationPlanRef.current?.turnId === tid
+            ? narrationPlanRef.current.segments[idx]
+            : undefined;
+        const sectionId =
+          typeof planSeg?.sectionId === 'string' && planSeg.sectionId.trim()
+            ? planSeg.sectionId.trim()
+            : typeof planSeg?.cardId === 'string' && planSeg.cardId.trim()
+              ? planSeg.cardId.trim()
+              : planSeg
+                ? `seg_${idx}`
+                : null;
+        const segmentId =
+          typeof planSeg?.segmentId === 'string' && planSeg.segmentId.trim()
+            ? planSeg.segmentId.trim()
+            : null;
+        const unitId =
+          (typeof slot.unitId === 'string' && slot.unitId.trim()
+            ? slot.unitId.trim()
+            : null) ||
+          (typeof planSeg?.unitId === 'string' && planSeg.unitId.trim()
+            ? planSeg.unitId.trim()
+            : null);
+        const b64 = typeof slot.audioBase64 === 'string' ? slot.audioBase64 : '';
+        const segKey = `${tid}|tts_stream|${idx}|${slot.status}|${b64.length}:${b64.slice(0, 24)}`;
+        while (ttsStreamQueueRef.current.length < idx) {
+          const hole = ttsStreamQueueRef.current.length;
+          ttsStreamQueueRef.current.push({
+            audioBase64: '',
+            segmentKey: `${tid}|tts_slot|${hole}`,
+            isOverview: false,
+            cardsToSync: null,
+            turnId: tid,
+            chunkIndex: hole,
+            status: 'PENDING',
+            unitId: null,
+          });
+        }
+        const clip = {
+          audioBase64: b64,
+          segmentKey: segKey,
+          isOverview: isOv,
+          cardsToSync: isOv ? st?.cardsToSync ?? null : null,
+          turnId: tid,
+          chunkIndex: idx,
+          sectionId,
+          segmentId,
+          unitId,
+          status: slot.status === 'FAILED' ? 'FAILED' : 'PLAYABLE',
+        } as (typeof ttsStreamQueueRef.current)[number];
+        if (idx === ttsStreamQueueRef.current.length) {
+          ttsStreamQueueRef.current.push(clip);
+        } else {
+          ttsStreamQueueRef.current[idx] = clip;
+        }
+        appliedBackendTtsQueueLenRef.current = Math.max(appliedBackendTtsQueueLenRef.current, idx + 1);
+        added = true;
+      }
+      const head = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      const needsStart =
+        !isPlayingBackendAudio &&
+        !currentAudioRef.current &&
+        Boolean(head) &&
+        head.status !== 'PENDING' &&
+        head.status !== 'COMPLETED' &&
+        head.status !== 'CANCELLED';
+      if (!added && !needsStart) return;
+      if (isPlayingBackendAudio && !streamTurnReset) return;
+      if (firstTtsChunkSeenAtRef.current === null) {
+        firstTtsChunkSeenAtRef.current = Date.now();
+      }
+      const bufferedEnough =
+        ttsStreamQueueRef.current.filter((c) => c.status && c.status !== 'PENDING').length >= 1;
+      if (!bufferedEnough) return;
+      const delayMs =
+        layout === 'SPLIT_CARDS' ? CARD_AUDIO_START_DELAY_MS : FULL_TEXT_AUDIO_START_DELAY_MS;
+      const timer = window.setTimeout(() => {
+        playQueuedClipRef.current(false);
+      }, delayMs);
+      return () => clearTimeout(timer);
     }
     const q = payload.tts_audio_queue;
     if (!Array.isArray(q) || q.length === 0) return;
@@ -2603,6 +3202,25 @@ export default function ChatScreen({
           ? payload.tts_total_duration_estimate_ms
           : null;
       const segKey = `${tid}|tts_stream|${idx}|${b64.length}:${b64.slice(0, 24)}`;
+      const planSeg = narrationPlanRef.current?.turnId === tid
+        ? narrationPlanRef.current.segments[idx]
+        : undefined;
+      const sectionId =
+        typeof planSeg?.sectionId === 'string' && planSeg.sectionId.trim()
+          ? planSeg.sectionId.trim()
+          : typeof planSeg?.cardId === 'string' && planSeg.cardId.trim()
+            ? planSeg.cardId.trim()
+            : planSeg
+              ? `seg_${idx}`
+              : null;
+      const segmentId =
+        typeof planSeg?.segmentId === 'string' && planSeg.segmentId.trim()
+          ? planSeg.segmentId.trim()
+          : null;
+      const unitId =
+        typeof planSeg?.unitId === 'string' && planSeg.unitId.trim()
+          ? planSeg.unitId.trim()
+          : null;
       ttsStreamQueueRef.current.push({
         audioBase64: b64,
         segmentKey: segKey,
@@ -2610,10 +3228,15 @@ export default function ChatScreen({
         cardsToSync: isOv ? st?.cardsToSync ?? null : null,
         turnId: tid,
         totalDurationEstimateMs,
+        chunkIndex: idx,
+        sectionId,
+        segmentId,
+        unitId,
+        status: 'PLAYABLE',
       });
     }
     if (!added) return;
-    if (isPlayingBackendAudio) return;
+    if (isPlayingBackendAudio && !streamTurnReset) return;
     if (firstTtsChunkSeenAtRef.current === null) {
       firstTtsChunkSeenAtRef.current = Date.now();
     }
@@ -2625,7 +3248,7 @@ export default function ChatScreen({
       if (ttsBufferTimerRef.current) return;
       ttsBufferTimerRef.current = window.setTimeout(() => {
         ttsBufferTimerRef.current = null;
-        const next = ttsStreamQueueRef.current.shift();
+        const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
         if (!next || isPlayingBackendAudio) return;
         handleAudioPlaybackRef.current?.(
           next.audioBase64,
@@ -2635,6 +3258,12 @@ export default function ChatScreen({
           next.turnId,
           false,
           next.totalDurationEstimateMs,
+          {
+            chunkIndex: next.chunkIndex,
+            sectionId: next.sectionId,
+            segmentId: next.segmentId,
+            unitId: next.unitId,
+          },
         );
       }, 300);
       return;
@@ -2642,7 +3271,7 @@ export default function ChatScreen({
     const delayMs =
       layout === 'SPLIT_CARDS' ? CARD_AUDIO_START_DELAY_MS : FULL_TEXT_AUDIO_START_DELAY_MS;
     const timer = window.setTimeout(() => {
-      const next = ttsStreamQueueRef.current.shift();
+      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
       if (!next) return;
       handleAudioPlaybackRef.current?.(
         next.audioBase64,
@@ -2652,6 +3281,12 @@ export default function ChatScreen({
         next.turnId,
         false,
         next.totalDurationEstimateMs,
+        {
+          chunkIndex: next.chunkIndex,
+          sectionId: next.sectionId,
+          segmentId: next.segmentId,
+          unitId: next.unitId,
+        },
       );
     }, delayMs);
     return () => clearTimeout(timer);
@@ -2769,15 +3404,18 @@ export default function ChatScreen({
     faceChannel?.postInterrupt(interruptedTurnId);
     assistantAudioTurnOwnerRef.current = null;
     playedSegmentKeysRef.current.clear();
+    playbackGenRef.current += 1;
+    ttsStreamQueueRef.current = [];
+    ttsPlayheadRef.current = 0;
+    presentationRef.current.audioManager.current?.invalidate();
 
     clearSuggestionLayer();
     setIsFaqCarouselPaused(true);
     stopTextReveal(true);
     setPendingAudio(null);
-    if (cardProgressTimerRef.current) {
-      clearInterval(cardProgressTimerRef.current);
-      cardProgressTimerRef.current = null;
-    }
+    presentationRef.current.cancel();
+    lastLoadedPresentationTurnRef.current = null;
+    setNarrationCaption('');
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -2815,11 +3453,63 @@ export default function ChatScreen({
   };
 
   const handleCardSelect = useCallback((idx: number) => {
-    if (cardProgressTimerRef.current) {
-      clearInterval(cardProgressTimerRef.current);
-      cardProgressTimerRef.current = null;
+    const ctrl = presentationRef.current;
+    const plan = narrationPlanRef.current;
+    const targetIdx = Math.max(0, Math.floor(idx));
+    const targetUnitId = unitIdForCardIndex(plan?.segments, targetIdx);
+
+    if (ctrl.isPresenting || ctrl.engineState === 'READY' || ctrl.engineState === 'SCENE_COMPLETE') {
+      // MANUAL SEEK: visual unitId == playback unitId. Do not wipe the clip list.
+      playbackGenRef.current += 1;
+      presentationRef.current.audioManager.current?.invalidate();
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      audioLockRef.current = false;
+      setIsPlayingBackendAudio(false);
+
+      const clipIdx = findClipIndexForTarget(ttsStreamQueueRef.current, {
+        unitId: targetUnitId,
+        cardIndex: targetIdx,
+      });
+      if (clipIdx >= 0) {
+        ttsPlayheadRef.current = clipIdx;
+      } else {
+        ttsPlayheadRef.current = targetIdx;
+      }
+
+      for (const key of segmentKeysFromPlayhead(ttsStreamQueueRef.current, ttsPlayheadRef.current)) {
+        playedSegmentKeysRef.current.delete(key);
+      }
+
+      ctrl.jumpToCardIndex(targetIdx);
+      if (targetUnitId) {
+        ctrl.activateByUnitId(targetUnitId);
+      }
+
+      const next = ttsStreamQueueRef.current[ttsPlayheadRef.current];
+      if (next) {
+        handleAudioPlaybackRef.current?.(
+          next.audioBase64,
+          next.segmentKey,
+          next.isOverview,
+          next.cardsToSync,
+          next.turnId,
+          false,
+          next.totalDurationEstimateMs,
+          {
+            chunkIndex: next.chunkIndex,
+            sectionId: next.sectionId,
+            segmentId: next.segmentId,
+            unitId: next.unitId ?? targetUnitId,
+          },
+        );
+      }
+      return;
     }
-    setCurrentCardIdx(idx);
+
+    setCurrentCardIdx(targetIdx);
   }, []);
 
   const handleCourseMenuSelect = useCallback(
@@ -2829,7 +3519,8 @@ export default function ChatScreen({
       
       // DIRECT ACTION MAPPING (UI_CLICK = Deterministic Command)
       // Completely bypass language pipeline by setting state IMMEDIATELY
-      currentUiLockRef.current = 'CARD';
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+      uiClickDeckDepartmentRef.current = departmentName;
       setActiveDepartmentId(departmentName);
       setIsDepartmentOverviewStage(true);
       setLayoutMode('SPLIT_CARDS');
@@ -3105,12 +3796,98 @@ export default function ChatScreen({
   ]);
 
   const departmentSlides = useMemo(() => {
-    if (!isDepartmentOverviewStage || !activeDepartmentId) return [];
+    if (!isDepartmentOverviewStage) return [];
+
+    // Unit-backed selection wins: exact length, per-unit department identity.
+    if (Array.isArray(unitBackedCards) && unitBackedCards.length > 0) {
+      return unitBackedCards.map((m) => {
+        const slot = typeof m.slotIndex === 'number' ? m.slotIndex : 0;
+        const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, language);
+        return {
+          title: fromLocale?.title || m.title,
+          content: fromLocale?.content || m.content,
+          slotIndex: slot,
+        };
+      });
+    }
+
+    if (Array.isArray(departmentOverviewDeckUnitIds) && departmentOverviewDeckUnitIds.length > 0) {
+      return departmentOverviewDeckUnitIds
+        .map((unitId) => buildDepartmentSlideForUnit(collegeData, unitId, language))
+        .filter((x): x is DepartmentStageSlide => Boolean(x));
+    }
+
+    // Menu-click deck: one department, full five slides.
+    if (!activeDepartmentId) return [];
     const jk = menuLabelToJsonKey(activeDepartmentId);
     if (!jk) return [];
-    const rec = getDepartmentRecord(collegeData, jk);
-    return buildDepartmentSlidesFromRecord(rec, jk, language);
-  }, [isDepartmentOverviewStage, activeDepartmentId, collegeData, language]);
+    return buildDepartmentSlidesFromRecord(getDepartmentRecord(collegeData, jk), jk, language);
+  }, [
+    isDepartmentOverviewStage,
+    activeDepartmentId,
+    departmentOverviewDeckUnitIds,
+    unitBackedCards,
+    collegeData,
+    language,
+  ]);
+
+  useEffect(() => {
+    if (!isE2EFlow) return;
+    window.__CLARA_M52_DEBUG = () => {
+      const queue = ttsStreamQueueRef.current;
+      const playhead = ttsPlayheadRef.current;
+      const queuedUnit =
+        typeof queue[playhead]?.unitId === 'string' && queue[playhead]!.unitId!.trim()
+          ? queue[playhead]!.unitId!.trim()
+          : null;
+      const engineUnit = presentation.snapshot.activeScene?.unitId ?? null;
+      return {
+        cardIndex: currentCardIdx,
+        slideCount: departmentSlides.length,
+        hodCount: activeHodDepartments.length,
+        hodDepartments: [...activeHodDepartments],
+        feesDepartmentId: activeFeesDepartmentId,
+        isFeesStage,
+        isHodStage,
+        isDepartmentOverviewStage,
+        isInfoSlideStage,
+        unitIds: Array.isArray(unitBackedCards)
+          ? unitBackedCards.map((m) => m.unitId)
+          : departmentOverviewDeckUnitIds,
+        unitCardContents: Array.isArray(unitBackedCards)
+          ? unitBackedCards.map((m) => ({
+              unitId: m.unitId,
+              title: m.title,
+              content: m.content,
+            }))
+          : [],
+        visibleUnitId:
+          Array.isArray(unitBackedCards) && unitBackedCards[currentCardIdx]
+            ? unitBackedCards[currentCardIdx]!.unitId
+            : queuedUnit ?? engineUnit,
+        playhead,
+        queueLength: queue.length,
+        queueUnitIds: queue.map((c) =>
+          typeof c.unitId === 'string' && c.unitId.trim() ? c.unitId.trim() : null,
+        ),
+        clipStatuses: queue.map((c) => c.status ?? null),
+      playbackUnitId: queuedUnit ?? engineUnit,
+      engineUnitId: engineUnit,
+      engineState: presentation.snapshot.engineState,
+      playbackGen: playbackGenRef.current,
+      hasCurrentAudio: Boolean(currentAudioRef.current),
+    };
+    };
+    window.__CLARA_M52_END_CLIP = () => {
+      const audio = currentAudioRef.current;
+      if (!audio) return;
+      audio.dispatchEvent(new Event('ended'));
+    };
+    return () => {
+      delete window.__CLARA_M52_DEBUG;
+      delete window.__CLARA_M52_END_CLIP;
+    };
+  });
 
   const renderFaqCarousel = (placement: 'full' | 'panel') => {
     if (placement === 'full' && (departmentComparisonOpen || isBusRoutesSurface)) return null;
@@ -3478,8 +4255,14 @@ export default function ChatScreen({
                 ) : isHodStage ? (
                   <LeadershipOverview
                     cards={[]}
-                    currentCardIdx={0}
+                    currentCardIdx={currentCardIdx}
                     targetDepartment={activeTargetDepartment}
+                    targetDepartments={activeHodDepartments}
+                    unitCards={
+                      Array.isArray(unitBackedCards)
+                        ? unitBackedCards.filter((m) => m.cardType === 'hod')
+                        : null
+                    }
                   />
                 ) : isFeesStage ? (
                   <DepartmentFeesCard departmentId={activeFeesDepartmentId} />

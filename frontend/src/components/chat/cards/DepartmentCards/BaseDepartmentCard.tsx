@@ -16,6 +16,8 @@ interface BaseDepartmentCardProps {
   isHOD?: boolean;
   hodName?: string;
   currentSlide: number;
+  /** Visual/template slot index (0..4) used to choose the correct department image. */
+  visualSlotIndex?: number | null;
   totalSlides: number;
   onNext: () => void;
   onPrev: () => void;
@@ -34,6 +36,7 @@ export default function BaseDepartmentCard({
   isHOD,
   hodName,
   currentSlide,
+  visualSlotIndex,
   totalSlides,
   onNext,
   onPrev,
@@ -42,8 +45,10 @@ export default function BaseDepartmentCard({
 }: BaseDepartmentCardProps) {
   const { images } = useDepartmentImages(departmentId);
   // CARD index mapping:
-  // slide 0 -> slot1, slide 1 -> slot2, ... slide 4 -> slot5.
-  const slotIndex = currentSlide >= 0 && currentSlide <= 4 ? currentSlide : null;
+  // deck slide index is NOT always the same as the visual/template slot index.
+  const visual = typeof visualSlotIndex === 'number' ? visualSlotIndex : currentSlide;
+  // visual slot 0..4 -> slot1..slot5
+  const slotIndex = visual >= 0 && visual <= 4 ? visual : null;
   const slotSrc = slotIndex === null ? '' : images[slotIndex] ?? '';
   const variants = {
     enter: (direction: number) => ({
@@ -61,7 +66,12 @@ export default function BaseDepartmentCard({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden bg-[linear-gradient(160deg,rgba(243,236,255,0.62)_0%,rgba(235,229,255,0.52)_48%,rgba(226,222,255,0.46)_100%)]">
+    <div
+      className="relative w-full h-full flex flex-col overflow-hidden bg-[linear-gradient(160deg,rgba(243,236,255,0.62)_0%,rgba(235,229,255,0.52)_48%,rgba(226,222,255,0.46)_100%)]"
+      data-testid="department-card"
+      data-card-index={currentSlide}
+      data-total-slides={totalSlides}
+    >
       {/* Header - Department Info (Sticky/Permanent) */}
       <header className="pt-8 pb-4 text-center z-20 relative">
         {onClose && (
@@ -160,6 +170,7 @@ export default function BaseDepartmentCard({
         {/* Buttons (Desktop position) */}
         <div className="flex gap-4">
           <button
+            data-testid="card-prev"
             onClick={onPrev}
             disabled={currentSlide === 0}
             className="rounded-full border border-violet-200/60 bg-white/75 p-3 text-violet-800 shadow-[0_10px_24px_rgba(76,29,149,0.14)] transition-transform hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-30"
@@ -167,6 +178,7 @@ export default function BaseDepartmentCard({
             <ChevronLeft size={20} />
           </button>
           <button
+            data-testid="card-next"
             onClick={onNext}
             disabled={currentSlide === totalSlides - 1}
             className="rounded-full bg-violet-700 p-3 text-white shadow-[0_12px_28px_rgba(76,29,149,0.28)] transition-transform hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-30"

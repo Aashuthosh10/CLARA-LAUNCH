@@ -60,6 +60,23 @@ def get_rag_document_count() -> int:
     return get_document_count()
 
 
+def build_retrieval_query(original: str, english: str | None = None) -> str:
+    """Embed the visitor's words plus an English gloss when they differ.
+
+    The vector store is English-canonical (Hindi rows may augment). Dropping the
+    original regional query hides that limitation. Keeping both lets the
+    multilingual embedder try the native phrasing without pretending kn/ta/te/ml
+    chunks exist.
+    """
+    original_text = (original or "").strip()
+    english_text = (english or "").strip()
+    if not original_text:
+        return english_text
+    if not english_text or english_text.casefold() == original_text.casefold():
+        return original_text
+    return f"{original_text}\n{english_text}"
+
+
 def get_relevant_context(
     query: str,
     top_k: int = RAG_TOP_K,
@@ -70,8 +87,14 @@ def get_relevant_context(
 ) -> str:
     """
     Retrieve top-k most relevant chunks from PostgreSQL for the query.
-    Chunks are filtered by metadata language: Hindi sessions use only `hi` rows, others `en`.
-    Returns concatenated chunk text, trimmed to max_tokens. Empty string on error or empty table.
+
+    Architectural limit: the vector store is English-canonical. Hindi sessions
+    may also retrieve `hi` rows. Kannada, Tamil, Telugu, and Malayalam have
+    locale JSON but no dedicated vector language rows — retrieval quality for
+    those languages depends on the multilingual embedding of the query against
+    English (and optionally Hindi) chunks, plus locale JSON fallback in the
+    answer path. Translating the query to English is not treated as sufficient
+    on its own.
     """
     if not isinstance(query, str) or not query.strip():
         return ""

@@ -1,4 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  createOutboundCommandDispatcher,
+  type OutboundCommandDispatcher,
+} from '../lib/ws/outboundCommandDispatcher';
+import {
+  isUnitBackedNarrationPlan,
+  mergeTtsClipSlot,
+  unitIdFromPlanSegment,
+  type TtsClipSlot,
+} from '../lib/ws/ttsClipSlots';
 
 export type ConnectionPhase =
   | 'initial_connecting'
@@ -15,6 +25,19 @@ const GRACE_MS = 5000;
 const RECONNECT_DEBOUNCE_MS = 2000;
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 8000;
+
+/** Prefer a complete incoming clip list; keep a longer previously accumulated stream queue. */
+export function mergeTtsAudioQueue(incoming: unknown, previous: unknown): string[] {
+  const incomingQueue = Array.isArray(incoming)
+    ? incoming.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    : [];
+  const prevQueue = Array.isArray(previous)
+    ? previous.filter((x): x is string => typeof x === 'string' && x.length > 0)
+    : [];
+  if (incomingQueue.length >= prevQueue.length && incomingQueue.length > 0) return incomingQueue;
+  if (prevQueue.length > 0) return prevQueue;
+  return incomingQueue;
+}
 
 function readSessionGen(payload: unknown): number | undefined {
   if (!payload || typeof payload !== 'object') return undefined;
@@ -64,12 +87,24 @@ interface SharedEntry {
   lastAppliedWireSeq: number;
   connectionPhase: ConnectionPhase;
   setPhase: (phase: ConnectionPhase) => void;
+  /** Bumped on each new WebSocket so a stale onopen cannot flush. */
+  socketGeneration: number;
 }
 
 const sharedByUrl = new Map<string, SharedEntry>();
 const hasConnectedOnceByUrl = new Map<string, boolean>();
 const connectionPhaseByUrl = new Map<string, ConnectionPhase>();
 const phaseListenersByUrl = new Map<string, Set<() => void>>();
+const outboundDispatchersByUrl = new Map<string, OutboundCommandDispatcher>();
+
+function outboundDispatcherFor(url: string): OutboundCommandDispatcher {
+  let d = outboundDispatchersByUrl.get(url);
+  if (!d) {
+    d = createOutboundCommandDispatcher();
+    outboundDispatchersByUrl.set(url, d);
+  }
+  return d;
+}
 
 function notifyPhaseListeners(url: string) {
   phaseListenersByUrl.get(url)?.forEach((l) => l());
@@ -101,6 +136,7 @@ export function useWebSocket(url: string) {
 
   const bumpSessionGenForReset = useCallback(() => {
     const floor = bumpClientSessionFloor(url);
+    outboundDispatcherFor(url).invalidateBelow(floor);
     setAppliedSessionGen(floor);
     const entry = entryRef.current ?? sharedByUrl.get(url);
     if (entry) {
@@ -233,6 +269,7 @@ export function useWebSocket(url: string) {
     }
 
     const floorAtCreate = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+    const socketGeneration = outboundDispatcherFor(url).nextSocketGeneration();
     entry = {
       socket,
       refCount: 1,
@@ -250,6 +287,7 @@ export function useWebSocket(url: string) {
       wireStaleDrops: 0,
       lastAppliedWireSeq: 0,
       connectionPhase: initialPhase,
+      socketGeneration,
       setPhase: (phase: ConnectionPhase) => {
         connectionPhaseByUrl.set(url, phase);
         entry!.connectionPhase = phase;
@@ -280,6 +318,10 @@ export function useWebSocket(url: string) {
     }
 
     socket.onopen = () => {
+      const dispatcher = outboundDispatcherFor(url);
+      if (socketGeneration !== dispatcher.currentSocketGeneration()) {
+        return;
+      }
       hasConnectedOnceByUrl.set(url, true);
       // New TCP connection ⇒ new backend session dict (session_generation/wire_seq reset).
       // Clearing the floor avoids dropping every message as "stale" vs a pre-reconnect Home bump.
@@ -298,6 +340,7 @@ export function useWebSocket(url: string) {
       entry!.setPhase('connected');
       entry!.onConnected(true);
       setAppliedSessionGen(0);
+      dispatcher.flush(socket, socketGeneration);
       if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV)
         console.debug('CLARA WebSocket connected');
     };
@@ -335,6 +378,11 @@ export function useWebSocket(url: string) {
         }
 
         const nextAfterGuard = next;
+        const dispatcher = outboundDispatcherFor(url);
+        if (nextAfterGuard === 0 && dispatcher.shouldHoldSleep()) {
+          return;
+        }
+        dispatcher.acknowledgeInboundState(nextAfterGuard);
         entry!.state = nextAfterGuard;
 
         let outgoingPayload = rawPayload;
@@ -350,19 +398,45 @@ export function useWebSocket(url: string) {
         ) {
           const rp = rawPayload as Record<string, unknown>;
           const pp = prevPayload as Record<string, unknown>;
-          if (rp.tts_streaming === true && typeof rp.audioBase64 === 'string' && rp.audioBase64.length > 0) {
+          const unitBacked = isUnitBackedNarrationPlan(rp) || isUnitBackedNarrationPlan(pp);
+          const chunkIndex =
+            typeof rp.tts_chunk_index === 'number' && Number.isInteger(rp.tts_chunk_index)
+              ? rp.tts_chunk_index
+              : null;
+          if (rp.tts_streaming === true && chunkIndex !== null && unitBacked) {
+            const prevSlots = Array.isArray(pp.tts_clip_slots)
+              ? ([...(pp.tts_clip_slots as TtsClipSlot[])] as TtsClipSlot[])
+              : [];
+            const nextSlots = mergeTtsClipSlot(prevSlots, {
+              turnId: rp.turn_id as string,
+              segmentIndex: chunkIndex,
+              audioBase64: typeof rp.audioBase64 === 'string' ? rp.audioBase64 : null,
+              audioUnavailable: rp.audioUnavailable === true,
+              unitId:
+                unitIdFromPlanSegment(rp, chunkIndex) ?? unitIdFromPlanSegment(pp, chunkIndex),
+            });
+            outgoingPayload = { ...rp, tts_clip_slots: nextSlots } as typeof rawPayload;
+          } else if (
+            rp.tts_streaming === true &&
+            typeof rp.audioBase64 === 'string' &&
+            rp.audioBase64.length > 0
+          ) {
             const prevQueue = Array.isArray(pp.tts_audio_queue)
               ? ([...(pp.tts_audio_queue as string[])] as string[])
               : [];
             prevQueue.push(rp.audioBase64 as string);
             outgoingPayload = { ...rp, tts_audio_queue: prevQueue } as typeof rawPayload;
           } else if (rp.tts_streaming === false) {
-            const prevQueue = Array.isArray(pp.tts_audio_queue)
-              ? ([...(pp.tts_audio_queue as string[])] as string[])
-              : [];
             outgoingPayload = {
               ...rp,
-              tts_audio_queue: prevQueue.length ? prevQueue : pp.tts_audio_queue,
+              tts_audio_queue: unitBacked
+                ? []
+                : mergeTtsAudioQueue(rp.tts_audio_queue, pp.tts_audio_queue),
+              tts_clip_slots: unitBacked
+                ? Array.isArray(pp.tts_clip_slots)
+                  ? pp.tts_clip_slots
+                  : rp.tts_clip_slots
+                : rp.tts_clip_slots,
             } as typeof rawPayload;
           }
         }
@@ -375,6 +449,9 @@ export function useWebSocket(url: string) {
     };
 
     socket.onclose = () => {
+      if (socketGeneration !== outboundDispatcherFor(url).currentSocketGeneration()) {
+        return;
+      }
       entry!.setPhase('reconnecting');
       hasConnectedOnceByUrl.set(url, true);
       sharedByUrl.delete(url);
@@ -451,12 +528,14 @@ export function useWebSocket(url: string) {
   }, [url, reconnectTrigger]);
 
   const sendMessage = useCallback((msg: any): boolean => {
+    const dispatcher = outboundDispatcherFor(url);
+    const epoch = minAppliedBackendGenFloorByUrl.get(url) ?? 0;
+    const accepted = dispatcher.enqueue(msg, epoch);
     const entry = entryRef.current ?? sharedByUrl.get(url);
-    if (entry?.socket?.readyState === WebSocket.OPEN) {
-      entry.socket.send(JSON.stringify(msg));
-      return true;
+    if (entry?.socket) {
+      dispatcher.flush(entry.socket, entry.socketGeneration);
     }
-    return false;
+    return accepted;
   }, [url]);
 
   const setManualState = useCallback((newState: number, newPayload?: any) => {
@@ -514,11 +593,14 @@ export function peekClaraWsDiagnostics(url: string) {
     return {
       connected: false as const,
       floorGen: minAppliedBackendGenFloorByUrl.get(url) ?? 0,
+      pendingOutbound: outboundDispatcherFor(url).snapshot().pending.length,
     };
   }
   return {
     connected: true as const,
     socketReadyState: e.socket.readyState,
+    socketGeneration: e.socketGeneration,
+    pendingOutbound: outboundDispatcherFor(url).snapshot().pending.length,
     entryState: e.state,
     appliedBackendGen: e.appliedBackendGen,
     lastAppliedWireSeq: e.lastAppliedWireSeq,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { CardDataItem } from '../../lib/cardData';
+import type { PresentationCardModel } from '../../features/chat/presentation/PresentationCardModel';
 import ThreeDVisual from './cards/ThreeDVisual';
 import PremiumHODCard from './cards/PremiumHODCard';
 import { useCollegeData } from '../../hooks/useCollegeData';
@@ -89,10 +90,58 @@ const HOD_FALLBACK: Record<string, HodFallback> = {
   },
 };
 
-function toDepartmentKey(targetDepartment: string | null | undefined): string | null {
+export type HodUnitCopy = {
+  unitId: string;
+  departmentId: string;
+  label: string;
+  name: string;
+  title: string;
+  bio: string;
+};
+
+/**
+ * Unit-backed HOD text: PresentationCardModel is authoritative.
+ * Locale name/title may decorate when present in the *current* language.
+ * English HOD_FALLBACK must never replace an available localized body.
+ */
+export function hodCopyFromUnitCard(
+  model: PresentationCardModel,
+  localeRow?: { hod_name?: string; hod_title?: string } | null,
+): HodUnitCopy {
+  const label = (model.title || '').trim() || 'Faculty Spotlight';
+  const bio = (model.content || '').trim();
+  const localeName = localeRow?.hod_name?.trim() || '';
+  const localeTitle = localeRow?.hod_title?.trim() || '';
+  return {
+    unitId: model.unitId,
+    departmentId: model.departmentId,
+    label,
+    name: localeName || label,
+    title: localeTitle,
+    bio: bio || localeTitle || label,
+  };
+}
+
+export function toDepartmentKey(targetDepartment: string | null | undefined): string | null {
   if (!targetDepartment) return null;
   const raw = targetDepartment.trim().toLowerCase();
   if (!raw) return null;
+  const canonical = new Set([
+    'cse',
+    'cse_aiml',
+    'cse_ds',
+    'cse_cysec',
+    'cse_bs',
+    'ise',
+    'ece',
+    'civil',
+    'mechanical',
+    'mba',
+    'mathematics',
+    'physics',
+    'chemistry',
+  ]);
+  if (canonical.has(raw)) return raw;
   if (raw.includes('data science') || (raw.includes('cse') && raw.includes('data'))) return 'cse_ds';
   if (
     raw.includes('aiml') ||
@@ -120,18 +169,64 @@ export default function LeadershipOverview({
   cards,
   currentCardIdx,
   targetDepartment,
+  targetDepartments,
+  unitCards,
   onCardClick,
 }: {
   cards: CardDataItem[];
   currentCardIdx: number;
   targetDepartment?: string | null;
+  targetDepartments?: string[] | null;
+  unitCards?: PresentationCardModel[] | null;
   onCardClick?: (idx: number) => void;
 }) {
   const collegeData = useCollegeData();
 
-  // Render a canonical HOD card from locale role_holders when a department is resolved.
-  if (targetDepartment) {
-    const deptKey = toDepartmentKey(targetDepartment);
+  const hodModels = Array.isArray(unitCards)
+    ? unitCards.filter((m) => m.cardType === 'hod' && m.unitId)
+    : [];
+
+  if (hodModels.length) {
+    const safeIdx = Math.min(Math.max(0, currentCardIdx), hodModels.length - 1);
+    const model = hodModels[safeIdx]!;
+    const deptKey = toDepartmentKey(model.departmentId) || model.departmentId;
+    const row = deptKey ? collegeData.role_holders?.hod_by_department?.[deptKey] : undefined;
+    const copy = hodCopyFromUnitCard(model, row);
+    return (
+      <div
+        className="w-full h-full flex items-center justify-center"
+        data-testid="hod-card"
+        data-unit-id={copy.unitId}
+        data-hod-dept={deptKey}
+        data-hod-count={hodModels.length}
+        data-card-index={safeIdx}
+      >
+        <PremiumHODCard
+          name={copy.name}
+          title={copy.title}
+          bio={copy.bio}
+          label={copy.label}
+          portrait={HOD_PORTRAITS[deptKey] ?? placeholderImg}
+        />
+      </div>
+    );
+  }
+
+  const resolvedDepartments =
+    (Array.isArray(targetDepartments) && targetDepartments.length
+      ? targetDepartments
+      : targetDepartment
+        ? [targetDepartment]
+        : []) ?? [];
+
+  // Legacy non-unit HOD path (no PresentationCardModel).
+  if (resolvedDepartments.length) {
+    const safeIdx = Math.min(
+      Math.max(0, currentCardIdx),
+      Math.max(0, resolvedDepartments.length - 1),
+    );
+    const deptId = resolvedDepartments[safeIdx];
+    const deptKey = toDepartmentKey(deptId);
     const roleHolders = collegeData.role_holders?.hod_by_department;
     const row = deptKey ? roleHolders?.[deptKey] : undefined;
     const fallback = deptKey ? HOD_FALLBACK[deptKey] : undefined;
@@ -140,7 +235,13 @@ export default function LeadershipOverview({
     const bio = row?.hod_bio || fallback?.bio;
     if (deptKey && name && title && bio) {
       return (
-        <div className="w-full h-full flex items-center justify-center">
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="hod-card"
+          data-hod-dept={deptKey}
+          data-hod-count={resolvedDepartments.length}
+          data-card-index={safeIdx}
+        >
           <PremiumHODCard
             name={name}
             title={title}

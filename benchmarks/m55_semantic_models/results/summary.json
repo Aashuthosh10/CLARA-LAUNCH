@@ -1,0 +1,547 @@
+{
+  "started_utc": "2026-08-18T17:32:34.040628+00:00",
+  "finished_utc": "2026-08-18T18:23:41.755558+00:00",
+  "repeats": 3,
+  "n_cases": 46,
+  "schema_alignment": {
+    "mission_scope": "single | multi",
+    "m54_scope": "single | full_department",
+    "benchmark_uses": "single | full_department",
+    "reason": "ResponseDecision.scope and SemanticRequest.requested_scope are single|full_department. Multiple cards are ordered items, not scope=multi."
+  },
+  "reasoning_family_difference": {
+    "note": "Identical temperature, JSON mode, seed, timeout, retry, prompt, dataset. reasoning_effort enums are disjoint across families; lowest reasonable setting used per family.",
+    "gpt_oss": "reasoning_effort=low, include_reasoning=true (family does not support none)",
+    "qwen": "reasoning_effort=none (family does not support low; default would enable unlimited-ish reasoning)"
+  },
+  "probes": [
+    {
+      "model": "openai/gpt-oss-20b",
+      "ok": true,
+      "http_status": 200,
+      "error": null,
+      "latency_ms": 921.1895000189543
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "ok": true,
+      "http_status": 200,
+      "error": null,
+      "latency_ms": 725.8013000246137
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "ok": true,
+      "http_status": 200,
+      "error": null,
+      "latency_ms": 458.6905000032857
+    }
+  ],
+  "models": {
+    "openai/gpt-oss-20b": {
+      "available": true,
+      "overall_semantic_score": 0.918252242926156,
+      "rates": {
+        "semantic": 0.9057971014492754,
+        "mode": 0.9130434782608695,
+        "entity": 0.9565217391304348,
+        "topic": 0.9492753623188406,
+        "pairing": 0.9492753623188406,
+        "order": 0.9710144927536232,
+        "schema": 1.0,
+        "no_hallucination": 1.0,
+        "multilingual": 0.9777777777777777,
+        "romanized": 0.9583333333333334,
+        "code_switch": 0.9743589743589743,
+        "multi_card": 0.8095238095238095,
+        "clarify": 1.0,
+        "fallback": 1.0,
+        "answer": 1.0,
+        "adversarial": 0.6,
+        "entity_cases": 0.7142857142857143,
+        "topic_cases": 1.0
+      },
+      "by_category": {
+        "adversarial": {
+          "n": 15,
+          "semantic": 0.6
+        },
+        "answer": {
+          "n": 15,
+          "semantic": 1.0
+        },
+        "clarify": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "conversation": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "english_card": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "entity": {
+          "n": 6,
+          "semantic": 0.5
+        },
+        "fallback": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hindi": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "kannada": {
+          "n": 15,
+          "semantic": 0.9333333333333333
+        },
+        "malayalam": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "multi_card": {
+          "n": 12,
+          "semantic": 0.75
+        },
+        "tamil": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "telugu": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "topic": {
+          "n": 6,
+          "semantic": 1.0
+        }
+      },
+      "by_language": {
+        "en": {
+          "n": 93,
+          "semantic": 0.8709677419354839
+        },
+        "hi": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hi-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn-roman": {
+          "n": 12,
+          "semantic": 0.9166666666666666
+        },
+        "ml": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ml-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te-roman": {
+          "n": 3,
+          "semantic": 1.0
+        }
+      },
+      "failure_counts": {
+        "SCHEMA_ERROR": 0,
+        "HALLUCINATION": 0,
+        "ENTITY_ERROR": 6,
+        "TOPIC_ERROR": 7,
+        "PAIRING_ERROR": 7,
+        "ORDER_ERROR": 4,
+        "MODE_ERROR": 12,
+        "MULTILINGUAL_ERROR": 1,
+        "ROMANIZATION_ERROR": 1,
+        "FALLBACK_ERROR": 3,
+        "CLARIFICATION_ERROR": 3,
+        "OTHER": 0
+      },
+      "latency_ms": {
+        "avg": 7756.012722459264,
+        "p50": 9755.416700034402,
+        "p95": 15900.189415022032,
+        "p99": 17886.65145400562,
+        "max": 18212.41989999544,
+        "n": 138
+      },
+      "tokens": {
+        "prompt": 169650,
+        "completion": 15913,
+        "reasoning": 9466,
+        "total": 185563
+      },
+      "cost_usd_estimate": 0.017498,
+      "api_failures": 0,
+      "malformed": 0,
+      "verbose_reasoning": 64,
+      "reasoning_config": {
+        "reasoning_effort": "low",
+        "include_reasoning": true
+      }
+    },
+    "openai/gpt-oss-120b": {
+      "available": true,
+      "overall_semantic_score": 0.9274844720496894,
+      "rates": {
+        "semantic": 0.9130434782608695,
+        "mode": 0.9130434782608695,
+        "entity": 0.9347826086956522,
+        "topic": 0.9347826086956522,
+        "pairing": 0.9347826086956522,
+        "order": 0.9782608695652174,
+        "schema": 1.0,
+        "no_hallucination": 1.0,
+        "multilingual": 1.0,
+        "romanized": 1.0,
+        "code_switch": 1.0,
+        "multi_card": 0.8571428571428571,
+        "clarify": 1.0,
+        "fallback": 1.0,
+        "answer": 1.0,
+        "adversarial": 0.6,
+        "entity_cases": 0.7142857142857143,
+        "topic_cases": 1.0
+      },
+      "by_category": {
+        "adversarial": {
+          "n": 15,
+          "semantic": 0.6
+        },
+        "answer": {
+          "n": 15,
+          "semantic": 1.0
+        },
+        "clarify": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "conversation": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "english_card": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "entity": {
+          "n": 6,
+          "semantic": 0.5
+        },
+        "fallback": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hindi": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "kannada": {
+          "n": 15,
+          "semantic": 1.0
+        },
+        "malayalam": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "multi_card": {
+          "n": 12,
+          "semantic": 0.75
+        },
+        "tamil": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "telugu": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "topic": {
+          "n": 6,
+          "semantic": 1.0
+        }
+      },
+      "by_language": {
+        "en": {
+          "n": 93,
+          "semantic": 0.8709677419354839
+        },
+        "hi": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hi-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn-roman": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "ml": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ml-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te-roman": {
+          "n": 3,
+          "semantic": 1.0
+        }
+      },
+      "failure_counts": {
+        "SCHEMA_ERROR": 0,
+        "HALLUCINATION": 0,
+        "ENTITY_ERROR": 9,
+        "TOPIC_ERROR": 9,
+        "PAIRING_ERROR": 9,
+        "ORDER_ERROR": 3,
+        "MODE_ERROR": 12,
+        "MULTILINGUAL_ERROR": 0,
+        "ROMANIZATION_ERROR": 0,
+        "FALLBACK_ERROR": 3,
+        "CLARIFICATION_ERROR": 3,
+        "OTHER": 0
+      },
+      "latency_ms": {
+        "avg": 4815.662033333733,
+        "p50": 2828.140449943021,
+        "p95": 11261.892935063224,
+        "p99": 12024.68346400419,
+        "max": 12470.27009993326,
+        "n": 138
+      },
+      "tokens": {
+        "prompt": 169650,
+        "completion": 15559,
+        "reasoning": 9113,
+        "total": 185209
+      },
+      "cost_usd_estimate": 0.034783,
+      "api_failures": 0,
+      "malformed": 0,
+      "verbose_reasoning": 78,
+      "reasoning_config": {
+        "reasoning_effort": "low",
+        "include_reasoning": true
+      }
+    },
+    "qwen/qwen3.6-27b": {
+      "available": true,
+      "overall_semantic_score": 0.9630434782608696,
+      "rates": {
+        "semantic": 0.9347826086956522,
+        "mode": 0.9347826086956522,
+        "entity": 0.9565217391304348,
+        "topic": 0.9565217391304348,
+        "pairing": 0.9565217391304348,
+        "order": 1.0,
+        "schema": 1.0,
+        "no_hallucination": 1.0,
+        "multilingual": 1.0,
+        "romanized": 1.0,
+        "code_switch": 1.0,
+        "multi_card": 1.0,
+        "clarify": 1.0,
+        "fallback": 1.0,
+        "answer": 1.0,
+        "adversarial": 0.8,
+        "entity_cases": 0.7142857142857143,
+        "topic_cases": 1.0
+      },
+      "by_category": {
+        "adversarial": {
+          "n": 15,
+          "semantic": 0.8
+        },
+        "answer": {
+          "n": 15,
+          "semantic": 1.0
+        },
+        "clarify": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "conversation": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "english_card": {
+          "n": 12,
+          "semantic": 0.75
+        },
+        "entity": {
+          "n": 6,
+          "semantic": 0.5
+        },
+        "fallback": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hindi": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "kannada": {
+          "n": 15,
+          "semantic": 1.0
+        },
+        "malayalam": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "multi_card": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "tamil": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "telugu": {
+          "n": 6,
+          "semantic": 1.0
+        },
+        "topic": {
+          "n": 6,
+          "semantic": 1.0
+        }
+      },
+      "by_language": {
+        "en": {
+          "n": 93,
+          "semantic": 0.9032258064516129
+        },
+        "hi": {
+          "n": 9,
+          "semantic": 1.0
+        },
+        "hi-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "kn-roman": {
+          "n": 12,
+          "semantic": 1.0
+        },
+        "ml": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ml-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "ta-roman": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te": {
+          "n": 3,
+          "semantic": 1.0
+        },
+        "te-roman": {
+          "n": 3,
+          "semantic": 1.0
+        }
+      },
+      "failure_counts": {
+        "SCHEMA_ERROR": 0,
+        "HALLUCINATION": 0,
+        "ENTITY_ERROR": 6,
+        "TOPIC_ERROR": 6,
+        "PAIRING_ERROR": 6,
+        "ORDER_ERROR": 0,
+        "MODE_ERROR": 9,
+        "MULTILINGUAL_ERROR": 0,
+        "ROMANIZATION_ERROR": 0,
+        "FALLBACK_ERROR": 0,
+        "CLARIFICATION_ERROR": 3,
+        "OTHER": 0
+      },
+      "latency_ms": {
+        "avg": 9497.967078985706,
+        "p50": 9639.964800036978,
+        "p95": 11081.123655050766,
+        "p99": 16770.95835703658,
+        "max": 16833.494700025767,
+        "n": 138
+      },
+      "tokens": {
+        "prompt": 164616,
+        "completion": 10611,
+        "reasoning": 0,
+        "total": 175227
+      },
+      "cost_usd_estimate": 0.130603,
+      "api_failures": 0,
+      "malformed": 0,
+      "verbose_reasoning": 0,
+      "reasoning_config": {
+        "reasoning_effort": "none"
+      }
+    }
+  },
+  "ranking": [
+    [
+      "qwen/qwen3.6-27b",
+      0.9630434782608696
+    ],
+    [
+      "openai/gpt-oss-120b",
+      0.9274844720496894
+    ],
+    [
+      "openai/gpt-oss-20b",
+      0.918252242926156
+    ]
+  ]
+}

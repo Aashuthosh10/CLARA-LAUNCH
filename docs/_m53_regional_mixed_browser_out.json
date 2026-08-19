@@ -1,0 +1,75 @@
+{
+  "href": "http://localhost:5176/?e2e=1",
+  "nameVisible": true,
+  "ready": true,
+  "wsUrls": [
+    "ws://localhost:5176/?token=rDt8JjHJQvje",
+    "ws://localhost:6969/ws/clara"
+  ],
+  "wsPlans": [
+    {
+      "t_ms": 12546,
+      "showCard": "department_overview",
+      "intent": "HOD_PROFILE",
+      "departmentId": "CSE (Data Science)",
+      "unitIds": [
+        "cse_ds.hod",
+        "cse_aiml.hod"
+      ]
+    }
+  ],
+  "debug": {
+    "cardIndex": 0,
+    "slideCount": 0,
+    "hodCount": 2,
+    "hodDepartments": [
+      "cse_ds",
+      "cse_aiml"
+    ],
+    "feesDepartmentId": null,
+    "isFeesStage": false,
+    "isHodStage": true,
+    "isDepartmentOverviewStage": false,
+    "isInfoSlideStage": false,
+    "unitIds": [
+      "cse_ds.hod",
+      "cse_aiml.hod"
+    ],
+    "unitCardContents": [
+      {
+        "unitId": "cse_ds.hod",
+        "title": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ನಾಗಶ್ರೀ ಎನ್ ಅವರು ಅತ್ಯಾಧುನಿಕ ಪರಿಕಲ್ಪನೆಗಳು ಮತ್ತು ಕಠಿಣ ವಿಶ್ಲೇಷಣಾತ್ಮಕ ತರಬೇತಿಯ ಮೂಲಕ ಜ್ಞಾನವನ್ನು ಉತ್ಪಾದಿಸುವ ನಮ್ಮ ಬದ್ಧತೆಯನ್ನು ನಿರ್ದೇಶಿಸುತ್ತಾರೆ.",
+        "content": "ಡಾ. ನಾಗಶ್ರೀ ಎನ್ ಅವರು ಅತ್ಯಾಧುನಿಕ ಪರಿಕಲ್ಪನೆಗಳು ಮತ್ತು ಕಠಿಣ ವಿಶ್ಲೇಷಣಾತ್ಮಕ ತರಬೇತಿಯ ಮೂಲಕ ಜ್ಞಾನವನ್ನು ಉತ್ಪಾದಿಸುವ ನಮ್ಮ ಬದ್ಧತೆಯನ್ನು ನಿರ್ದೇಶಿಸುತ್ತಾರೆ."
+      },
+      {
+        "unitId": "cse_aiml.hod",
+        "title": "HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ಟಿ ಜಿ ಮಂಜುನಾಥರ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ, ಆಳವಾದ ಕಲಿಕೆ ಮತ್ತು ನೈಜ-ಪ್ರಪಂಚದ AI ಅಪ್ಲಿಕೇಶನ್‌ಗಳೊಂದಿಗೆ ಪುಷ್ಟೀಕರಿಸಿದ NEP-2020 ಕಂಪ್ಲೈಂಟ್ ಪಠ್ಯಕ್ರಮಕ್ಕೆ ನಾವು ಒತ್ತು ನೀಡುತ್ತೇವೆ.",
+        "content": "ಡಾ. ಟಿ ಜಿ ಮಂಜುನಾಥರ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ, ಆಳವಾದ ಕಲಿಕೆ ಮತ್ತು ನೈಜ-ಪ್ರಪಂಚದ AI ಅಪ್ಲಿಕೇಶನ್‌ಗಳೊಂದಿಗೆ ಪುಷ್ಟೀಕರಿಸಿದ NEP-2020 ಕಂಪ್ಲೈಂಟ್ ಪಠ್ಯಕ್ರಮಕ್ಕೆ ನಾವು ಒತ್ತು ನೀಡುತ್ತೇವೆ."
+      }
+    ],
+    "visibleUnitId": "cse_ds.hod",
+    "playhead": 0,
+    "queueLength": 1,
+    "queueUnitIds": [
+      "cse_ds.hod"
+    ],
+    "clipStatuses": [
+      "PLAYABLE"
+    ],
+    "playbackUnitId": "cse_ds.hod",
+    "engineUnitId": "cse_ds.hod",
+    "engineState": "WAITING_FOR_AUDIO",
+    "playbackGen": 8,
+    "hasCurrentAudio": true
+  },
+  "hod": {
+    "visible": true,
+    "unitId": "cse_ds.hod",
+    "count": "2"
+  },
+  "overview": {
+    "isDepartmentOverviewStage": false,
+    "bodySnippet": "ಕ್ಯಾಂಪಸ್ ನ್ಯಾವಿಗೇಶನ್\nCollege Brochure\nHOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ನಾಗಶ್ರೀ ಎನ್ ಅವರು ಅತ್ಯಾಧುನಿಕ ಪರಿಕಲ್ಪನೆಗಳು ಮತ್ತು ಕಠಿಣ ವಿಶ್ಲೇಷಣಾತ್ಮಕ ತರಬೇತಿಯ ಮೂಲಕ ಜ್ಞಾನವನ್ನು ಉತ್ಪಾದಿಸುವ ನಮ್ಮ ಬದ್ಧತೆಯನ್ನು ನಿರ್ದೇಶಿಸುತ್ತಾರೆ.\nHOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ ಡಾ. ನಾಗಶ್ರೀ ಎನ್ ಅವರು ಅತ್ಯಾಧುನಿಕ ಪರಿಕಲ್ಪನೆಗಳು ಮತ್ತು ಕಠಿಣ ವಿಶ್ಲೇಷಣಾತ್ಮಕ ತರಬೇತಿಯ ಮೂಲಕ ಜ್ಞಾನವನ್ನು ಉತ್ಪಾದಿಸುವ ನಮ್ಮ ಬದ್ಧತೆಯನ್ನು ನಿರ್ದೇಶಿಸುತ್ತಾರೆ.\n\nಡಾ. ನಾಗಶ್ರೀ ಎನ್ ಅವರು ಅತ್ಯಾಧುನಿಕ ಪರಿಕಲ್ಪನೆಗಳು ಮತ್ತು ಕಠಿಣ ವಿಶ್ಲೇಷಣಾತ್ಮಕ ತರಬೇತಿಯ ಮೂಲಕ ಜ್ಞಾನವನ್ನು ಉತ್ಪಾದಿಸುವ ನಮ್ಮ ಬದ್ಧತೆಯನ್ನು ನಿರ್ದೇಶಿಸುತ್ತಾರೆ.\n\n"
+  },
+  "elapsed_ms": 12685
+}

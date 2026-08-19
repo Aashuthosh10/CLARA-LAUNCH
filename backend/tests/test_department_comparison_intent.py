@@ -27,6 +27,14 @@ class DepartmentComparisonIntentTests(unittest.TestCase):
         self.assertTrue(f.is_hod_query)
         self.assertEqual(resolve_intent_from_features(f), INTENT_HOD_PROFILE)
 
+    def test_hods_plural_beats_multi_department_conjunction(self):
+        f = extract_features(
+            "Who are the HODs of AIML, Data Science and CSE?",
+            department_hint=None,
+        )
+        self.assertTrue(f.is_hod_query)
+        self.assertEqual(resolve_intent_from_features(f), INTENT_HOD_PROFILE)
+
     def test_documents_beats_comparison(self):
         text = "Admission documents compare list for cse"
         self.assertTrue(is_documents_query(text))

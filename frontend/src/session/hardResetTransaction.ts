@@ -9,7 +9,7 @@ export type HardResetTransactionDeps = {
   resetKioskSnapshot: () => void;
   forceKioskSemanticSleep: () => void;
   clearAppOwnedGates: () => void;
-  /** Backend reset MUST be attempted; caller may reconcile if false. */
+  /** Backend reset is enqueued on the outbound dispatcher (accepted while CONNECTING). */
   sendBackendResetPayload: () => boolean;
   /** Force route + payload to sleep on the client websocket adapter. */
   applyClientSleepUi: () => void;
@@ -17,7 +17,7 @@ export type HardResetTransactionDeps = {
   scheduleFullRuntimeRemount: () => void;
 };
 
-/** Returns whether backend reset envelope was dispatched on an OPEN socket (best-effort telemetry). */
+/** Returns whether the reset envelope was accepted by the outbound dispatcher. */
 export function runHardResetTransaction(d: HardResetTransactionDeps): boolean {
   d.bumpWsSessionFloor();
   d.resetLanguageToDefault();

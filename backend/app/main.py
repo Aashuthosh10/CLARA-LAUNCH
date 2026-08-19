@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.clients.provider_clients import (
     close_clients,
     get_groq_client,
+    groq_completion_kwargs,
     sarvam_stt_from_wav,
     sarvam_tts_to_base64,
     warmup_clients,
@@ -40,11 +41,12 @@ from backend.app.audio_utils import (
     normalize_tts_pronunciation,
     split_first_sentence,
 )
-from backend.services.narration_plan import build_pre_llm_narration_plan, finalize_segment_list
+from backend.services.narration_plan import finalize_segment_list
 from backend.app.session_state import (
     append_session_history,
     assistant_last_reply_used_guest_name,
     history_for_llm,
+    prior_user_question,
 )
 from backend.app.telemetry import debug_payload, log_turn_metrics, text_preview
 from backend.app.ws_schemas import parse_inbound_ws_message
@@ -75,6 +77,7 @@ from backend.config.settings import (
     LOW_LATENCY_VOICE_MODE,
     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
     PORT,
+    PRESENTATION_CONTRACT_ENFORCED,
     PRODUCTION_STRICT_READY,
     FRONTEND_URL,
     FIRST_SENTENCE_TTS_MAX_CHARS,
@@ -93,7 +96,12 @@ from backend.config.settings import (
 )
 from backend.core.audio_pipeline import get_input_device_info, record_audio, validate_audio_devices
 from backend.core.language_detection import detect_language
-from backend.core.rag import get_relevant_context, get_rag_document_count, warmup_rag
+from backend.core.rag import (
+    build_retrieval_query,
+    get_relevant_context,
+    get_rag_document_count,
+    warmup_rag,
+)
 from backend.services.greetings import (
     get_greeting,
     get_language_required_nudge_english,
@@ -108,6 +116,38 @@ from backend.services.greetings import (
 from backend.services.faq_answers import get_faq_answer_for_question
 from backend.services.tts_chunking import split_tts_chunks
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
+from backend.services.conversation import govern_answer_length
+from backend.services.conversation.answer_language import resolve_answer_language
+from backend.services.conversation.intent_confidence import is_card_intent
+from backend.services.orchestration import ConversationOrchestrator, should_short_circuit
+from backend.services.orchestration.emit_gate import (
+    assert_can_emit,
+    require_live_turn,
+    safe_deterministic_fallback_resolution,
+    seal_out_of_band_deterministic,
+)
+from backend.services.orchestration.localization_resolver import resolve_localization
+from backend.services.orchestration.outbound_builder import (
+    build_answer_outbound,
+    build_template_outbound,
+)
+from backend.services.orchestration.response_authority import (
+    ResponseAuthority,
+    assert_authority_allows,
+    seal_authority,
+)
+from backend.services.orchestration.types import PresentationMode
+from backend.services.runtime import (
+    finalize_turn,
+    freeze_localization,
+    reject_if_finalized,
+    release_localization,
+    run_startup_integrity,
+    sync_runtime_from_session,
+    validate_before_narration_plan,
+)
+from backend.services.runtime.localization import is_language_frozen
+from backend.services.runtime.diagnostics import log_runtime_event
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
@@ -126,6 +166,7 @@ from backend.services.answer_generation import (
     INTENT_TRUSTEES_PROFILE,
     INTENT_VICE_PRINCIPAL_PROFILE,
     build_narrator_system_prompt,
+    build_receptionist_answer_system_prompt,
     build_system_prompt,
     build_target_card_payload,
     department_label_to_json_key,
@@ -367,6 +408,33 @@ def _location_direct_reply(language_key: str) -> str:
     return mapping.get(language_key, mapping["en"])
 
 
+def _apply_response_decision_to_intent(
+    *,
+    intent: str,
+    conversation_resolution: Any | None,
+) -> str:
+    """
+    Make the sealed response mode win over locally re-derived feature intent.
+
+    `extract_features` is retained for RAG/narration detail (bus, documents,
+    comparison, FAQ, policy), but it may no longer convert an ANSWER turn into a card
+    or a card turn into a fallback.
+    """
+    mode = getattr(conversation_resolution, "response_mode", None) if conversation_resolution else None
+    if not mode:
+        return intent
+
+    if mode == "ANSWER" and is_card_intent(intent):
+        logger.info("[RESPONSE_DECISION] demoting card intent %s to answer", intent)
+        return INTENT_NORMAL_QUERY
+    if mode == "FALLBACK":
+        return INTENT_OFF_TOPIC
+    if mode == "CLARIFY" and is_card_intent(intent):
+        logger.info("[RESPONSE_DECISION] clarify turn suppresses card intent %s", intent)
+        return INTENT_NORMAL_QUERY
+    return intent
+
+
 def _card_direct_reply(intent: str, language_key: str, department: str | None = None) -> str | None:
     dept = (department or "").strip()
     if intent == INTENT_ADMISSIONS:
@@ -440,6 +508,28 @@ def _load_svit_json_context(language_code_key: str | None) -> str:
     except Exception as exc:
         logger.warning("Could not load JSON context: %s", exc)
         _svit_json_context_cache[locale] = ""
+        return ""
+
+
+_ANSWER_LOCALE_KEYS = ("institution_overview", "placements_and_training")
+
+
+def _load_answer_locale_evidence(language_code_key: str | None) -> str:
+    """Compact locale facts for ANSWER turns — not the full department catalog."""
+    locale = locale_file_id_for_lang_key(language_code_key)
+    try:
+        path = _SVIT_LOCALES_DIR / f"{locale}.json"
+        if not path.is_file():
+            return ""
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return ""
+        sliced = {key: data[key] for key in _ANSWER_LOCALE_KEYS if key in data}
+        if not sliced:
+            return ""
+        return json.dumps(sliced, ensure_ascii=False, separators=(",", ":"))
+    except Exception as exc:
+        logger.warning("Could not load ANSWER locale evidence: %s", exc)
         return ""
 
 
@@ -577,6 +667,7 @@ async def tts_to_base64_cached(
     turn_id: str | None = None,
     utterance_kind: str = "reply",
     timeout_s: float | None = None,
+    allow_english_fallback: bool = True,
 ) -> tuple[str | None, bool]:
     tts_text = normalize_tts_pronunciation(text)
     key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(tts_text)}"
@@ -633,7 +724,7 @@ async def tts_to_base64_cached(
                 exc,
             )
             audio = None
-        if not audio and language_code != "en-IN":
+        if not audio and language_code != "en-IN" and allow_english_fallback:
             logger.warning(
                 "TTS primary language failed turn_id=%s kind=%s lang=%s; retrying en-IN",
                 turn_id or "-",
@@ -760,22 +851,28 @@ async def _stream_groq_reply(
     on_first_sentence: Any | None = None,
     turn_gen_marker: int,
     max_tokens: int | None = None,
+    include_conversation_history: bool = True,
 ) -> tuple[str, str]:
     client = await get_groq_client()
     if not client:
         return "", ""
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(history_for_llm(session))
+    if include_conversation_history:
+        messages.extend(history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
 
     timing.mark("llm_start")
+    groq_params = groq_completion_kwargs(
+        RAG_MODEL,
+        max_tokens if max_tokens is not None else LLM_MAX_TOKENS,
+        temperature=LLM_TEMPERATURE,
+    )
     stream = await client.chat.completions.create(
         model=RAG_MODEL,
         messages=messages,
         stream=True,
-        max_tokens=max_tokens if max_tokens is not None else LLM_MAX_TOKENS,
-        temperature=LLM_TEMPERATURE,
+        **groq_params,
     )
 
     chunks: list[str] = []
@@ -837,20 +934,26 @@ async def _complete_groq_reply(
     system_prompt: str,
     timing: TurnTiming,
     max_tokens: int | None = None,
+    include_conversation_history: bool = True,
 ) -> tuple[str, str]:
     client = await get_groq_client()
     if not client:
         return "", ""
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(history_for_llm(session))
+    if include_conversation_history:
+        messages.extend(history_for_llm(session))
     messages.append({"role": "user", "content": user_text})
     timing.mark("llm_start")
+    groq_params = groq_completion_kwargs(
+        RAG_MODEL,
+        max_tokens if max_tokens is not None else LLM_MAX_TOKENS,
+        temperature=LLM_TEMPERATURE,
+    )
     completion = await client.chat.completions.create(
         model=RAG_MODEL,
         messages=messages,
         stream=False,
-        max_tokens=max_tokens if max_tokens is not None else LLM_MAX_TOKENS,
-        temperature=LLM_TEMPERATURE,
+        **groq_params,
     )
     timing.mark("llm_first_token")
     timing.set_if_missing("first_feedback")
@@ -917,6 +1020,9 @@ async def _complete_guest_name_turn(
         session["guest_name"] = normalize_guest_name(text)
 
     reply_text = get_ready_prompt(language_display, session.get("guest_name"))
+    res = seal_out_of_band_deterministic(
+        session, reply_text=reply_text, answer_source="guest_name_ready"
+    )
 
     append_session_history(session, "user", text, max_turns=3)
     append_session_history(session, "assistant", reply_text, max_turns=3)
@@ -940,36 +1046,23 @@ async def _complete_guest_name_turn(
     timing.mark("tts_end")
 
     timing.mark("turn_end")
-    utterance_kind = "guest_name_ready_prompt"
-    payload: dict[str, Any] = {
-        "messages": session["messages"],
-        "isProcessing": False,
-        "isSpeaking": bool(audio_b64),
-        "audioPending": False,
-        "turn_id": "ready_after_language_pick",
-        "assistantText": reply_text,
-        "spokenText": reply_text.strip(),
-        "utterance_kind": utterance_kind,
-        "segment_index": 0,
-        "is_final_segment": True,
-        "direct_reply": True,
-        "rag_used": False,
-        "llm_used": False,
-        "tts_cache_hit": tts_cache_hit,
-        "llm_cache_hit": False,
-    }
-    if audio_b64:
-        payload["audioBase64"] = audio_b64
-        payload["audioUnavailable"] = False
-        if not timing.has("play_start"):
-            timing.mark("play_start")
-            est = estimate_wav_duration_ms(audio_b64)
-            if est is not None and not timing.has("play_end"):
-                timing.marks["play_end"] = timing.marks["play_start"] + est
-    else:
-        payload["audioUnavailable"] = True
-
-    payload.update(debug_payload(timing))
+    outbound = build_template_outbound(
+        text=reply_text,
+        resolution=res,
+        utterance_kind="guest_name_ready_prompt",
+    )
+    payload = outbound.to_ws_payload(
+        messages=session["messages"],
+        turn_id="ready_after_language_pick",
+        debug=debug_payload(timing),
+        audio_b64=audio_b64,
+        extra={"tts_cache_hit": tts_cache_hit, "audioUnavailable": not bool(audio_b64)},
+    )
+    if audio_b64 and not timing.has("play_start"):
+        timing.mark("play_start")
+        est = estimate_wav_duration_ms(audio_b64)
+        if est is not None and not timing.has("play_end"):
+            timing.marks["play_end"] = timing.marks["play_start"] + est
     try:
         if not _turn_stale(session, turn_gen_marker):
             await _ws_send_json(websocket, 5, session, payload)
@@ -980,9 +1073,106 @@ async def _complete_guest_name_turn(
                 tts_cache_hit=tts_cache_hit,
                 language=language_display or "English",
             )
+            finalize_turn(
+                session,
+                turn_id=timing.turn_id,
+                authority=ResponseAuthority.DETERMINISTIC.value,
+                language=language_display or "English",
+                duration_ms=(timing.summary_ms() or {}).get("total_ms"),
+                response_source="guest_name",
+                resolution=res,
+            )
     except Exception as exc:
         logger.warning("Guest name outbound failed: %s", exc)
 
+async def _emit_direct_conversation_reply(
+    session: dict[str, Any],
+    text: str,
+    reply_text: str,
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+    *,
+    utterance_kind: str = "conversation_policy_direct",
+    length_kind: str = "clarification",
+) -> None:
+    """Emit a policy short-circuit reply using the existing WS payload shape (no new fields)."""
+    _, lang_name, lang_code = resolve_session_language(session)
+    language_display = session.get("language_name") or lang_name
+
+    spoken = govern_answer_length((reply_text or "").strip(), length_kind)
+    res = session.get("_conversation_resolution")
+    if res is None or not getattr(res, "authority_sealed", False):
+        res = seal_out_of_band_deterministic(
+            session, reply_text=spoken, answer_source="direct_template"
+        )
+
+    append_session_history(session, "user", text, max_turns=3)
+    append_session_history(session, "assistant", spoken, max_turns=3)
+
+    user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()}
+    assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": spoken}
+    session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
+
+    try:
+        processing_payload: dict[str, Any] = {"isProcessing": True, "turn_id": timing.turn_id}
+        processing_payload.update(debug_payload(timing))
+        await _ws_send_json(websocket, 5, session, processing_payload)
+    except Exception as exc:
+        logger.warning("Could not send isProcessing for policy direct: %s", exc)
+
+    if _turn_stale(session, turn_gen_marker):
+        return
+
+    tts_cache_hit = False
+    timing.mark("tts_start")
+    audio_b64 = None
+    try:
+        audio_b64, tts_cache_hit = await tts_to_base64_cached(
+            spoken,
+            lang_code,
+            turn_id=timing.turn_id,
+            utterance_kind=utterance_kind,
+        )
+    except Exception as exc:
+        logger.exception("Policy direct TTS failed: %s", exc)
+    timing.mark("tts_end")
+    timing.mark("turn_end")
+
+    outbound = build_template_outbound(text=spoken, resolution=res, utterance_kind=utterance_kind)
+    payload = outbound.to_ws_payload(
+        messages=session["messages"],
+        turn_id=timing.turn_id,
+        debug=debug_payload(timing),
+        audio_b64=audio_b64,
+        extra={"tts_cache_hit": tts_cache_hit, "audioUnavailable": not bool(audio_b64)},
+    )
+    if audio_b64 and not timing.has("play_start"):
+        timing.mark("play_start")
+        est = estimate_wav_duration_ms(audio_b64)
+        if est is not None and not timing.has("play_end"):
+            timing.marks["play_end"] = timing.marks["play_start"] + est
+    try:
+        if not _turn_stale(session, turn_gen_marker):
+            await _ws_send_json(websocket, 5, session, payload)
+            log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=True)
+            log_turn_metrics(
+                timing,
+                llm_cache_hit=False,
+                tts_cache_hit=tts_cache_hit,
+                language=language_display or "English",
+            )
+            finalize_turn(
+                session,
+                turn_id=timing.turn_id,
+                authority=getattr(res, "response_authority", None),
+                language=language_display or "English",
+                duration_ms=(timing.summary_ms() or {}).get("total_ms"),
+                response_source="template",
+                resolution=res,
+            )
+    except Exception as exc:
+        logger.warning("Policy direct outbound failed: %s", exc)
 
 async def process_user_text_and_reply(
     session: dict[str, Any],
@@ -996,6 +1186,63 @@ async def process_user_text_and_reply(
     turn_gen_marker = int(session.get("session_generation", 0))
     if session.get("awaiting_guest_name"):
         await _complete_guest_name_turn(session, text, websocket, timing, turn_gen_marker)
+        return
+
+    # Detect language before orchestration so CARD localization and ANSWER
+    # routing see the same language as TTS. Narration is still deferred.
+    await maybe_auto_detect_session_language(session, text, websocket, timing, stt_meta=stt_meta)
+
+    # Milestone 3: ConversationOrchestrator (M1 CI + localization/presentation + flags).
+    conv_intel_length_kind = "normal"
+    conversation_resolution = None
+    orch_result = None
+    orch = ConversationOrchestrator()
+    try:
+        groq_for_entities = None
+        try:
+            groq_for_entities = await get_groq_client()
+        except Exception:
+            groq_for_entities = None
+        orch_result = await orch.run(
+            text,
+            session,
+            local_intent=local_intent if isinstance(local_intent, dict) else None,
+            turn_id=timing.turn_id,
+            groq_client=groq_for_entities,
+            model=RAG_MODEL,
+            defer_narration=True,
+        )
+        conversation_resolution = orch_result.resolution
+        session["_conversation_resolution"] = conversation_resolution
+        conv_intel_length_kind = conversation_resolution.length_kind or "normal"
+        if should_short_circuit(orch_result) and conversation_resolution.short_circuit_reply:
+            await _emit_direct_conversation_reply(
+                session,
+                text,
+                conversation_resolution.short_circuit_reply,
+                websocket,
+                timing,
+                turn_gen_marker,
+                utterance_kind=f"policy_{(conversation_resolution.policy or 'direct').lower()}",
+                length_kind=conversation_resolution.length_kind or "clarification",
+            )
+            return
+    except Exception:
+        logger.exception("Conversation orchestrator failed; emitting deterministic fallback")
+        conversation_resolution = safe_deterministic_fallback_resolution(
+            session, reason="orchestrator_failure"
+        )
+        orch_result = None
+        await _emit_direct_conversation_reply(
+            session,
+            text,
+            conversation_resolution.short_circuit_reply or "",
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="policy_deterministic_fallback",
+            length_kind="clarification",
+        )
         return
 
     append_session_history(session, "user", text, max_turns=3)
@@ -1037,8 +1284,31 @@ async def process_user_text_and_reply(
         logger.info("Stale process_user_text_and_reply after initial outbound (session_generation advanced)")
         return
 
-    await maybe_auto_detect_session_language(session, text, websocket, timing, stt_meta=stt_meta)
     lang_key, lang_name, lang_code = resolve_session_language(session)
+    if getattr(conversation_resolution, "response_mode", None) == "ANSWER":
+        lang_key, lang_name, lang_code = resolve_answer_language(text, session)
+    if conversation_resolution is not None:
+        resolve_localization(session, conversation_resolution)
+        conv_intel_length_kind = conversation_resolution.length_kind or conv_intel_length_kind
+        session["_conversation_resolution"] = conversation_resolution
+        # Milestone 3.5: seal deferred CARD attach before Groq/FAQ so authority is single.
+        if (
+            not conversation_resolution.authority_sealed
+            and conversation_resolution.should_generate_presentation
+            and conversation_resolution.presentation_mode == PresentationMode.CARD_PRESENTATION.value
+            and orch is not None
+        ):
+            try:
+                orch.attach_narration(
+                    conversation_resolution,
+                    session,
+                    text,
+                    turn_id=timing.turn_id,
+                    entities=conversation_resolution.canonical_entities,
+                )
+            except Exception:
+                logger.exception("Early deferred narration attach failed")
+            session["_conversation_resolution"] = conversation_resolution
 
     llm_cache_hit = False
     tts_cache_hit = False
@@ -1048,6 +1318,19 @@ async def process_user_text_and_reply(
 
     try:
         faq_direct_reply = get_faq_answer_for_question(text, lang_name)
+        # Milestone 3.6: FAQ emit only when sealed authority is FAQ (no legacy bypass).
+        if not (
+            conversation_resolution is not None
+            and require_live_turn(session, timing.turn_id, conversation_resolution)
+            and assert_can_emit(resolution=conversation_resolution, action="emit_faq")
+        ):
+            if faq_direct_reply and conversation_resolution is not None:
+                logger.info(
+                    "Orchestrator: blocking FAQ emit (authority=%s sealed=%s)",
+                    conversation_resolution.response_authority,
+                    conversation_resolution.authority_sealed,
+                )
+            faq_direct_reply = None
         if faq_direct_reply:
             preprocess = None
             english_translation = ""
@@ -1141,9 +1424,29 @@ async def process_user_text_and_reply(
 
             intent = maybe_override_intent_with_executive_profile(intent, merged_for_features)
 
+        # AUTHORITATIVE: the orchestrator already decided CARD / ANSWER / CLARIFY /
+        # FALLBACK for this turn. Everything above is feature extraction for RAG and
+        # narration only — it must not flip the turn into a different kind of response.
+        intent = _apply_response_decision_to_intent(
+            intent=intent,
+            conversation_resolution=conversation_resolution,
+        )
+
         rag_query = query_en
         llm_user_text = query_en
         entity_map = {"department": detected_department}
+        is_answer_turn = getattr(conversation_resolution, "response_mode", None) == "ANSWER"
+        include_conversation_history = not is_answer_turn
+        if is_answer_turn:
+            rag_query = build_retrieval_query(text, query_en)
+            prior = prior_user_question(session, text)
+            if prior:
+                llm_user_text = (
+                    f"Earlier visitor question (pronouns may refer to this): {prior}\n"
+                    f"Current visitor question: {text.strip()}"
+                )
+            else:
+                llm_user_text = text.strip()
 
         logger.info("[NLP_TRACE] RAW_INPUT=%r", text)
         logger.info("[NLP_TRACE] QUERY_EN=%r", query_en)
@@ -1158,28 +1461,16 @@ async def process_user_text_and_reply(
         if is_location_turn and intent != INTENT_BUS_ROUTES:
             intent = INTENT_NORMAL_QUERY
 
-        is_broad_course_menu = False
-        should_check_broad_course = (
-            not faq_direct_reply
-            and (
-            intent == INTENT_COURSE_MENU
-            or (intent == INTENT_NORMAL_QUERY and any(term in merged_for_features.lower() for term in _COURSE_QUERY_TERMS))
-            )
-        )
-        if should_check_broad_course:
-            try:
-                is_broad_course_menu = await asyncio.wait_for(
-                    _llm_detect_broad_course_intent(rag_query, lang_name),
-                    timeout=1.6,
-                )
-            except asyncio.TimeoutError:
-                is_broad_course_menu = False
-            if is_broad_course_menu:
-                intent = INTENT_COURSE_MENU
+        # M5.4: the Groq "is this a broad course question?" probe used to rewrite intent
+        # here. Course-menu detection is deterministic and owned by extract_features;
+        # an LLM must not choose the card surface.
 
         # Recover comparison when routing heuristics wrongly leave intent as NORMAL/COURSE_MENU or
         # even DEPARTMENT_OVERVIEW (first matched program). Contrast cue + ≥2 programs ⇒ table, not a single card.
-        if intent in (INTENT_NORMAL_QUERY, INTENT_COURSE_MENU, INTENT_DEPARTMENT_OVERVIEW):
+        # Never applies to an ANSWER / CLARIFY / FALLBACK turn.
+        if intent in (INTENT_NORMAL_QUERY, INTENT_COURSE_MENU, INTENT_DEPARTMENT_OVERVIEW) and (
+            getattr(conversation_resolution, "response_mode", None) in (None, "CARD")
+        ):
             comp_recover_labels = extract_comparison_department_canonical_labels(merged_for_features)
             if len(comp_recover_labels) >= 2 and (
                 text_has_department_comparison_cue(merged_for_features)
@@ -1204,10 +1495,11 @@ async def process_user_text_and_reply(
             comparison_dept_ids = seeds
             comparison_recommend_focus = _infer_comparison_focus(merged_for_features)
             comparison_highlight_id = comparison_dept_ids[0] if comparison_dept_ids else None
-            needs_llm = len(comparison_dept_ids) < 2 or bool(
+            # The LLM may refine which side to highlight and why, but it may not choose
+            # the departments — identity stays with the deterministic matcher.
+            if len(comparison_dept_ids) >= 2 and bool(
                 getattr(features, "is_comparison_recommendation", False)
-            )
-            if needs_llm:
+            ):
                 try:
                     spec = await asyncio.wait_for(
                         _llm_resolve_department_comparison_spec(rag_query, lang_name, comparison_dept_ids),
@@ -1216,9 +1508,6 @@ async def process_user_text_and_reply(
                 except asyncio.TimeoutError:
                     spec = {}
                 if isinstance(spec, dict):
-                    cand = validate_department_ids(list(spec.get("department_ids") or []))
-                    if len(cand) >= 2:
-                        comparison_dept_ids = cand
                     rf = spec.get("recommend_focus")
                     if isinstance(rf, str) and rf.strip():
                         comparison_recommend_focus = rf.strip().lower()
@@ -1226,9 +1515,14 @@ async def process_user_text_and_reply(
                     if isinstance(hid, str) and hid in comparison_dept_ids:
                         comparison_highlight_id = hid
             if len(comparison_dept_ids) < 2:
-                comparison_dept_ids = validate_department_ids(default_comparison_ids(3))
-            if comparison_highlight_id is None or comparison_highlight_id not in comparison_dept_ids:
-                comparison_highlight_id = comparison_dept_ids[0] if comparison_dept_ids else None
+                # Fewer than two resolvable SVIT departments is not a comparison.
+                # Never fall back to "the first three departments".
+                logger.info("Comparison suppressed: %d resolvable departments", len(comparison_dept_ids))
+                intent = INTENT_NORMAL_QUERY
+                comparison_dept_ids = []
+                comparison_highlight_id = None
+            elif comparison_highlight_id is None or comparison_highlight_id not in comparison_dept_ids:
+                comparison_highlight_id = comparison_dept_ids[0]
 
         off_topic_direct_reply: str | None = None
         if intent == INTENT_OFF_TOPIC:
@@ -1298,27 +1592,39 @@ async def process_user_text_and_reply(
                 )
                 intent = INTENT_NORMAL_QUERY
                 precomputed_card_direct_reply = None
-                try:
-                    context = await asyncio.wait_for(
-                        asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key="en"),
-                        timeout=RAG_CONTEXT_TIMEOUT_S,
-                    )
-                except asyncio.TimeoutError:
+                allow_rag = conversation_resolution is None or conversation_resolution.should_call_rag
+                if not allow_rag:
                     context = ""
-                finally:
                     timing.mark("rag_end")
-                if context.strip():
-                    context_source = "rag"
                 else:
-                    json_context = _load_svit_json_context(lang_key)
-                    if json_context:
-                        context = json_context
-                        context_source = "json_fallback"
+                    try:
+                        context = await asyncio.wait_for(
+                            asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key=lang_key if is_answer_turn else "en"),
+                            timeout=RAG_CONTEXT_TIMEOUT_S,
+                        )
+                    except asyncio.TimeoutError:
+                        context = ""
+                    finally:
+                        timing.mark("rag_end")
+                    if context.strip():
+                        context_source = "rag"
+                    else:
+                        json_context = _load_svit_json_context(lang_key)
+                        if json_context:
+                            context = json_context
+                            context_source = "json_fallback"
+        elif conversation_resolution is not None and not conversation_resolution.should_call_rag:
+            context = ""
+            timing.mark("rag_end")
+            logger.info(
+                "Orchestrator: skipping RAG (should_call_rag=False mode=%s)",
+                conversation_resolution.presentation_mode,
+            )
         else:
             # Normal query: English-indexed RAG chunks.
             try:
                 context = await asyncio.wait_for(
-                    asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key="en"),
+                    asyncio.to_thread(get_relevant_context, rag_query, min(RAG_TOP_K, 4), lang_key=lang_key if is_answer_turn else "en"),
                     timeout=RAG_CONTEXT_TIMEOUT_S,
                 )
             except asyncio.TimeoutError:
@@ -1337,6 +1643,21 @@ async def process_user_text_and_reply(
                     context_source = "json_fallback"
                     logger.info("RAG fallback: using JSON master context (%d chars)", len(context))
 
+        if is_answer_turn:
+            locale_ev = _load_answer_locale_evidence(lang_key)
+            if locale_ev:
+                if not context.strip() or context_source == "json_fallback":
+                    context = locale_ev
+                    context_source = "locale_answer_evidence"
+                else:
+                    context = f"{context.strip()}\n\n{locale_ev}"
+                logger.info(
+                    "ANSWER locale evidence: lang=%s chars=%d source=%s",
+                    lang_key,
+                    len(locale_ev),
+                    context_source,
+                )
+
         # Intent-driven prompt control
         unavailable_reply = get_unavailable_reply(lang_name)
         off_topic_reply = get_off_topic_reply(lang_name)
@@ -1348,6 +1669,11 @@ async def process_user_text_and_reply(
             )
         elif intent == INTENT_DEPARTMENT_COMPARISON:
             system_prompt = build_system_prompt(INTENT_DEPARTMENT_COMPARISON, lang_name, context)
+        elif getattr(conversation_resolution, "response_mode", None) == "ANSWER":
+            system_prompt = build_receptionist_answer_system_prompt(
+                lang_name, unavailable_reply, off_topic_reply
+            )
+            system_prompt = _append_guest_name_system_clause(system_prompt, session)
         else:
             system_prompt = (
                 f"You are CLARA, a warm and professional campus receptionist for SVIT. "
@@ -1365,7 +1691,7 @@ async def process_user_text_and_reply(
             system_prompt = _append_guest_name_system_clause(system_prompt, session)
 
         if context.strip() and narrator_payload is None and intent != INTENT_DEPARTMENT_COMPARISON:
-            if lang_key != "en" and context_source == "rag":
+            if lang_key != "en":
                 directive = multilingual_rag_reply_directive(lang_name)
             else:
                 directive = rag_language_enforcement_directive(lang_name)
@@ -1397,31 +1723,54 @@ async def process_user_text_and_reply(
                 cache_key_candidates.append(
                     f"v2-direct|{INTENT_NORMAL_QUERY}|{lang_key}|{raw_norm}|{context_sig}"
                 )
-        direct_reply = faq_direct_reply or off_topic_direct_reply
-        if is_location_turn:
-            direct_reply = _location_direct_reply(lang_key)
-        if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
-            # Deterministic guard: never default to CSE for ambiguous HOD requests.
-            direct_reply = "Please specify the department to know the HOD."
-        if intent == INTENT_COURSE_MENU:
-            direct_reply = get_course_menu_spoken_prompt(lang_name)
-        elif intent == INTENT_BUS_ROUTES:
-            direct_reply = get_bus_routes_spoken_prompt(lang_name)
-        elif intent == INTENT_DOCUMENTS:
-            direct_reply = _documents_card_direct_reply(lang_key)
-        elif intent == INTENT_DEPARTMENT_FEES:
-            direct_reply = _fees_card_direct_reply(lang_key, detected_department)
+        direct_reply = None
+        auth = (
+            conversation_resolution.response_authority
+            if conversation_resolution and conversation_resolution.authority_sealed
+            else None
+        )
+        # Milestone 3.6: templates only under DETERMINISTIC/FAQ/CARD — never while GROQ.
+        if auth == ResponseAuthority.FAQ.value:
+            direct_reply = faq_direct_reply
+        elif auth == ResponseAuthority.DETERMINISTIC.value:
+            if off_topic_direct_reply is not None:
+                direct_reply = off_topic_direct_reply
+            if is_location_turn:
+                direct_reply = _location_direct_reply(lang_key)
+            if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
+                direct_reply = "Please specify the department to know the HOD."
+        elif auth == ResponseAuthority.CARD_PRESENTATION.value:
+            if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
+                direct_reply = "Please specify the department to know the HOD."
+            elif intent == INTENT_COURSE_MENU:
+                direct_reply = get_course_menu_spoken_prompt(lang_name)
+            elif intent == INTENT_BUS_ROUTES:
+                direct_reply = get_bus_routes_spoken_prompt(lang_name)
+            elif intent == INTENT_DOCUMENTS:
+                direct_reply = _documents_card_direct_reply(lang_key)
+            elif intent == INTENT_DEPARTMENT_FEES:
+                direct_reply = _fees_card_direct_reply(lang_key, detected_department)
+            else:
+                direct_reply = precomputed_card_direct_reply
+            if direct_reply is None and not is_narrator_intent(intent):
+                direct_reply = get_profile_direct_reply(intent, lang_name)
+        elif auth == ResponseAuthority.GROQ.value:
+            # Never emit template helpers under GROQ — leave None for Groq/unavailable.
+            direct_reply = None
         else:
-            direct_reply = direct_reply or precomputed_card_direct_reply
-        if direct_reply is None and not is_narrator_intent(intent):
-            direct_reply = direct_reply or get_profile_direct_reply(intent, lang_name)
+            # Unsealed should not happen after orch; fail closed.
+            direct_reply = None
+
         reply_text = direct_reply
-        if reply_text is None:
+        if reply_text is None and auth == ResponseAuthority.GROQ.value:
             for candidate_key in cache_key_candidates:
                 cached = LLM_REPLY_CACHE.get(candidate_key)
                 if cached:
                     reply_text = cached
                     break
+        elif reply_text is None:
+            # Do not hydrate LLM cache for non-GROQ authorities.
+            pass
         first_sentence = ""
         llm_max_out_tokens = (
             LLM_MAX_TOKENS_DEPARTMENT_COMPARISON
@@ -1504,6 +1853,24 @@ async def process_user_text_and_reply(
             first_sentence, _ = split_first_sentence(reply_text)
             timing.set_if_missing("first_feedback")
             _maybe_start_first_sentence_tts(first_sentence)
+        elif conversation_resolution is not None and not assert_can_emit(
+            resolution=conversation_resolution, action="emit_groq"
+        ):
+            timing.mark("llm_start")
+            timing.mark("llm_first_token")
+            timing.mark("llm_end")
+            reply_text = (
+                conversation_resolution.short_circuit_reply
+                or reply_text
+                or ""
+            )
+            first_sentence, _ = split_first_sentence(reply_text)
+            timing.set_if_missing("first_feedback")
+            logger.info(
+                "Orchestrator: skipping Groq (authority=%s mode=%s)",
+                conversation_resolution.response_authority,
+                conversation_resolution.presentation_mode,
+            )
         else:
             try:
                 if ENABLE_LLM_STREAMING:
@@ -1517,6 +1884,7 @@ async def process_user_text_and_reply(
                             on_first_sentence=_maybe_start_first_sentence_tts,
                             turn_gen_marker=turn_gen_marker,
                             max_tokens=llm_max_out_tokens,
+                            include_conversation_history=include_conversation_history,
                         ),
                         timeout=LLM_STREAM_TIMEOUT_S,
                     )
@@ -1528,6 +1896,7 @@ async def process_user_text_and_reply(
                             system_prompt=system_prompt,
                             timing=timing,
                             max_tokens=llm_max_out_tokens,
+                            include_conversation_history=include_conversation_history,
                         ),
                         timeout=LLM_STREAM_TIMEOUT_S,
                     )
@@ -1541,9 +1910,15 @@ async def process_user_text_and_reply(
                 reply_text = ""
                 first_sentence = ""
 
-        # Normal RAG replies may be translated after English generation.
-        # Narrator replies are generated directly in the selected language from locale card JSON.
-        if reply_text and not direct_reply and narrator_payload is None and lang_name != "English":
+        # ANSWER is generated in the reply language already. Do not English-generate
+        # then translate — that is the English-first pipeline this product forbids.
+        if (
+            reply_text
+            and not direct_reply
+            and narrator_payload is None
+            and lang_name != "English"
+            and not is_answer_turn
+        ):
             try:
                 client = await get_groq_client()
                 reply_text = await translate_reply_to_session_language_async(
@@ -1572,7 +1947,20 @@ async def process_user_text_and_reply(
             else:
                 reply_text = unavailable_reply
 
-        if not llm_cache_hit:
+        # Answer length governor — non-card receptionist replies only (never narration_plan / cards).
+        if reply_text and not is_card_intent(intent):
+            kind = conv_intel_length_kind
+            if conversation_resolution is not None:
+                kind = conversation_resolution.length_kind or kind
+            if kind == "presentation":
+                kind = "normal"
+            reply_text = govern_answer_length(reply_text, kind)
+            if first_sentence and first_sentence.strip():
+                first_sentence = govern_answer_length(first_sentence, kind)
+
+        if not llm_cache_hit and assert_can_emit(
+            resolution=conversation_resolution, action="emit_groq"
+        ):
             LLM_REPLY_CACHE.set(cache_key, reply_text)
         append_session_history(session, "assistant", reply_text, max_turns=3)
 
@@ -1610,68 +1998,69 @@ async def process_user_text_and_reply(
             assistant_msg["isHidden"] = True
         
         # Mark card-driven intents so frontend opens the proper cards.
+        # Milestone 4.2: SurfaceSelector (via orch) is the sole surface owner —
+        # consume conversation_resolution.show_card; never re-derive or replace.
         show_card = None
         department_id = None
         course_menu_options = None
         if faq_direct_reply:
             show_card = None
-        elif intent == INTENT_COLLEGE_OVERVIEW:
-            show_card = "college"
-        elif intent == INTENT_ADMISSIONS:
-            # Regional/mixed fee queries without resolved department still open the fees card
-            # (all-departments table), instead of falling back to plain text admissions mode.
-            if getattr(features, "is_fee_query", False) and entity_map.get("department"):
-                show_card = "department_fees"
-                department_id = entity_map.get("department")
-            else:
-                show_card = "admissions"
-        elif intent == INTENT_PLACEMENTS:
-            show_card = "placements"
-        elif intent == INTENT_DEPARTMENT_OVERVIEW:
-            if entity_map.get("department"):
-                show_card = "department_overview"
-                department_id = entity_map.get("department")
-        elif intent == INTENT_DEPARTMENT_FEES:
-            if entity_map.get("department"):
-                show_card = "department_fees"
-                department_id = entity_map.get("department")
-        elif intent == INTENT_HOD_PROFILE:
-            if entity_map.get("department"):
-                show_card = "hod"
-                department_id = entity_map.get("department")
-            else:
-                show_card = None
-                department_id = None
-        elif intent == INTENT_TRUSTEES_PROFILE:
-            show_card = "college"
-        elif intent == INTENT_HOD_TRUSTEES_PROFILE:
-            if entity_map.get("department"):
-                show_card = "hod"
-                department_id = entity_map.get("department")
-            else:
-                show_card = "college"
-        elif intent == INTENT_COURSE_MENU:
-            show_card = "course_menu"
-            course_menu_options = get_course_menu_options()
-            reply_text = get_course_menu_spoken_prompt(lang_name)
-            assistant_msg["text"] = reply_text
-            assistant_msg["isHidden"] = True
-        elif intent == INTENT_DOCUMENTS:
-            show_card = "documents"
-            assistant_msg["text"] = _documents_card_direct_reply(lang_key)
-            assistant_msg["isHidden"] = True
-        elif intent == INTENT_BUS_ROUTES:
-            show_card = "bus_routes"
-            reply_text = get_bus_routes_spoken_prompt(lang_name)
-            assistant_msg["text"] = reply_text
-            assistant_msg["isHidden"] = True
-        elif intent == INTENT_PRINCIPAL_PROFILE:
-            show_card = "principal_profile"
-        elif intent == INTENT_VICE_PRINCIPAL_PROFILE:
-            show_card = "vice_principal_profile"
-        elif intent == INTENT_DEPARTMENT_COMPARISON:
-            show_card = "department_comparison"
+        elif conversation_resolution is not None and conversation_resolution.show_card:
+            show_card = conversation_resolution.show_card
+            department_id = (
+                conversation_resolution.department_label
+                or entity_map.get("department")
+            )
+        elif conversation_resolution is not None and conversation_resolution.card_surface:
+            show_card = conversation_resolution.card_surface
+            department_id = (
+                conversation_resolution.department_label
+                or entity_map.get("department")
+            )
 
+        # Non-selection side effects (spoken prompts / options) — do not change surface
+        if intent == INTENT_COURSE_MENU or show_card == "course_menu":
+            course_menu_options = get_course_menu_options()
+            if intent == INTENT_COURSE_MENU:
+                reply_text = get_course_menu_spoken_prompt(lang_name)
+                assistant_msg["text"] = reply_text
+                assistant_msg["isHidden"] = True
+        elif intent == INTENT_DOCUMENTS or show_card == "documents":
+            if intent == INTENT_DOCUMENTS:
+                assistant_msg["text"] = _documents_card_direct_reply(lang_key)
+                assistant_msg["isHidden"] = True
+        elif intent == INTENT_BUS_ROUTES or show_card == "bus_routes":
+            if intent == INTENT_BUS_ROUTES:
+                reply_text = get_bus_routes_spoken_prompt(lang_name)
+                assistant_msg["text"] = reply_text
+                assistant_msg["isHidden"] = True
+
+        # Fallback only when orch did not select a card (SurfaceSelector only — no parallel map).
+        # A turn qualifies when the response decision said CARD, or when there is no decision
+        # at all but the user physically clicked something. A spoken turn with no decision
+        # never opens a card here.
+        _response_mode = getattr(conversation_resolution, "response_mode", None)
+        _may_fall_back_to_surface = _response_mode == "CARD" or (
+            _response_mode is None and isinstance(local_intent, dict) and bool(local_intent)
+        )
+        if show_card is None and not faq_direct_reply and _may_fall_back_to_surface:
+            from backend.services.content.surface_selector import select_surface
+
+            _sel = select_surface(
+                entities=entity_map,
+                local_intent=local_intent if isinstance(local_intent, dict) else None,
+                semantic_topic=None,
+                user_text=text or "",
+                intent=intent,
+                faq_matched=False,
+            )
+            if _sel.supports_card and _sel.card_surface:
+                show_card = _sel.card_surface
+            if _sel.department:
+                department_id = department_id or _sel.department
+
+        if show_card is not None and department_id is None and entity_map.get("department"):
+            department_id = entity_map.get("department")
         if show_card is not None:
             assistant_msg["isCardData"] = True
             assistant_msg["isHidden"] = True
@@ -1735,6 +2124,9 @@ async def process_user_text_and_reply(
 
         tts_text = reply_text
         narration_segments = None
+        used_orch_attach = False
+        used_bundle_plan = False
+        presentation_bundle = None
         utterance_kind = "assistant_full_reply"
         segment_index = 0
         is_final_segment = True
@@ -1760,31 +2152,43 @@ async def process_user_text_and_reply(
                 utterance_kind = "assistant_remaining_reply"
                 segment_index = 1
 
-        # Card narration plan: replace raw text with deterministic, short segment text.
-        # Each segment will be streamed as its own TTS chunk so UI can flip exactly on chunk boundaries.
-        if show_card is not None and intent:
-            try:
-                narration_segments = build_pre_llm_narration_plan(
-                    intent,
-                    lang_key,
-                    user_text=text,
-                    detected_department_label=detected_department_label,
-                    menu_department_json_key=menu_department_json_key,
-                    comparison_department_ids=list(comparison_dept_ids) if comparison_dept_ids else None,
-                )
-            except Exception:
+        # Card narration: Milestone 3.6 — only from sealed PresentationBundle (no rebuild / no legacy).
+        presentation_bundle = (
+            conversation_resolution.presentation_bundle
+            if conversation_resolution is not None
+            else None
+        )
+        if conversation_resolution is not None and assert_can_emit(
+            resolution=conversation_resolution, action="emit_card"
+        ):
+            if presentation_bundle is None:
+                logger.warning("CARD authority without bundle; skipping narration_plan")
                 narration_segments = None
-                logger.exception("Failed to build narration plan (fallback to legacy tts_text)")
-        if narration_segments:
-            finalize_segment_list(timing.turn_id, narration_segments)
-            tts_text = "\n\n".join([s.tts_text for s in narration_segments if s.tts_text]).strip()
-            visible_payload["narration_plan"] = {
-                "turnId": timing.turn_id,
-                "mode": "card_narration",
-                "segments": [s.public_dict() for s in narration_segments],
-            }
+            elif reject_if_finalized(session, timing.turn_id, reason="duplicate_narration"):
+                presentation_bundle = None
+                narration_segments = None
+            else:
+                tts_text = presentation_bundle.joined_spoken_text()
+                visible_payload["narration_plan"] = presentation_bundle.narration_plan_payload(
+                    timing.turn_id
+                )
+                if presentation_bundle.card_surface:
+                    show_card = presentation_bundle.card_surface
+                used_bundle_plan = True
+                used_orch_attach = True
+                narration_segments = None
+        else:
+            narration_segments = None
 
         timing.mark("tts_start")
+        log_runtime_event(
+            "TTS_STARTED",
+            turn_id=timing.turn_id,
+            authority=getattr(conversation_resolution, "response_authority", None)
+            if conversation_resolution
+            else None,
+            language=lang_name,
+        )
         full_audio_b64 = None
         final_backup_audio_b64 = None
         tts_cache_hit = False
@@ -1858,6 +2262,13 @@ async def process_user_text_and_reply(
                 total_chars = len(tts_text.strip())
                 merged["tts_total_chars"] = total_chars
                 merged["tts_total_duration_estimate_ms"] = max(2500, int(total_chars * 55))
+            # M5.2 wire: PresentationBundle path sets narration_segments=None but still
+            # stores narration_plan on visible_payload. Propagate that existing field onto
+            # every assistant_audio_update ChatScreen consumes (interim + final). Do not
+            # gate on narration_segments — that drops the authoritative bundle plan.
+            plan = visible_payload.get("narration_plan")
+            if isinstance(plan, dict) and plan.get("mode") == "card_narration":
+                merged["narration_plan"] = plan
             merged.update(debug_payload(timing))
             return merged
 
@@ -1872,7 +2283,21 @@ async def process_user_text_and_reply(
                 max_chars = TTS_CHUNK_MAX_CHARS_COMPARISON
             else:
                 max_chars = TTS_CHUNK_MAX_CHARS
-            if narration_segments:
+            if used_bundle_plan and presentation_bundle is not None:
+                summaries = list(presentation_bundle.spoken_summaries or [])
+                plan_obj = visible_payload.get("narration_plan")
+                plan_n = (
+                    len(plan_obj.get("segments") or [])
+                    if isinstance(plan_obj, dict)
+                    else 0
+                )
+                if plan_n > 0:
+                    while len(summaries) < plan_n:
+                        summaries.append("")
+                    chunks = [s if isinstance(s, str) else "" for s in summaries[:plan_n]]
+                else:
+                    chunks = [s if isinstance(s, str) else "" for s in summaries]
+            elif narration_segments:
                 chunks = [s.tts_text for s in narration_segments if s.tts_text and s.tts_text.strip()]
             else:
                 chunks = split_tts_chunks(chunk_source_text, max_chars=max_chars)
@@ -1898,40 +2323,43 @@ async def process_user_text_and_reply(
                 else:
                     timeout_i = TTS_CHUNK_FIRST_TIMEOUT_S if i == 0 else TTS_CHUNK_TIMEOUT_S
                 chunk_kind = f"{utterance_kind}_chunk_{i}"
+                chunk_text = chunk.strip() if isinstance(chunk, str) else ""
                 audio_b64: str | None = None
                 hit = False
                 attempts = 0
-                for attempt in range(1, 4):
-                    attempts = attempt
-                    try:
-                        audio_b64, hit = await asyncio.wait_for(
-                            tts_to_base64_cached(
-                                chunk,
-                                lang_code,
-                                turn_id=timing.turn_id,
-                                utterance_kind=chunk_kind,
-                                timeout_s=timeout_i,
-                            ),
-                            timeout=timeout_i + 0.25,
-                        )
-                    except asyncio.TimeoutError:
+                if chunk_text:
+                    for attempt in range(1, 4):
+                        attempts = attempt
+                        try:
+                            audio_b64, hit = await asyncio.wait_for(
+                                tts_to_base64_cached(
+                                    chunk_text,
+                                    lang_code,
+                                    turn_id=timing.turn_id,
+                                    utterance_kind=chunk_kind,
+                                    timeout_s=timeout_i,
+                                    allow_english_fallback=not used_bundle_plan,
+                                ),
+                                timeout=timeout_i + 0.25,
+                            )
+                        except asyncio.TimeoutError:
+                            logger.warning(
+                                "TTS_CHUNK_ATTEMPT_TIMEOUT turn_id=%s chunk_index=%d attempts=%d timeout_s=%.2f",
+                                timing.turn_id,
+                                i,
+                                attempt,
+                                timeout_i,
+                            )
+                            audio_b64, hit = None, False
+                        if audio_b64:
+                            break
                         logger.warning(
-                            "TTS_CHUNK_ATTEMPT_TIMEOUT turn_id=%s chunk_index=%d attempts=%d timeout_s=%.2f",
+                            "TTS_CHUNK_ATTEMPT_EMPTY turn_id=%s chunk_index=%d attempts=%d timeout_s=%.2f",
                             timing.turn_id,
                             i,
                             attempt,
                             timeout_i,
                         )
-                        audio_b64, hit = None, False
-                    if audio_b64:
-                        break
-                    logger.warning(
-                        "TTS_CHUNK_ATTEMPT_EMPTY turn_id=%s chunk_index=%d attempts=%d timeout_s=%.2f",
-                        timing.turn_id,
-                        i,
-                        attempt,
-                        timeout_i,
-                    )
                 if not audio_b64:
                     failed_chunk_indices.append(i)
                     logger.warning(
@@ -1942,29 +2370,31 @@ async def process_user_text_and_reply(
                         attempts,
                         timeout_i,
                     )
-                    continue
-                successful_chunk_chars += len(chunk)
+                    if not used_bundle_plan:
+                        continue
+                else:
+                    successful_chunk_chars += len(chunk_text)
+                    tts_cache_hit = tts_cache_hit or hit
+                    full_audio_b64 = audio_b64
+                    logger.info(
+                        "TTS_CHUNK_SUCCESS turn_id=%s chunk_index=%d total_chunks=%d attempts=%d chars=%d",
+                        timing.turn_id,
+                        i,
+                        len(chunks),
+                        attempts,
+                        len(chunk_text),
+                    )
+                    if not timing.has("play_start"):
+                        timing.mark("play_start")
+                        est = estimate_wav_duration_ms(audio_b64)
+                        if est is not None:
+                            timing.marks["play_end"] = timing.marks["play_start"] + est
                 streamed_any = True
-                tts_cache_hit = tts_cache_hit or hit
-                full_audio_b64 = audio_b64
-                logger.info(
-                    "TTS_CHUNK_SUCCESS turn_id=%s chunk_index=%d total_chunks=%d attempts=%d chars=%d",
-                    timing.turn_id,
-                    i,
-                    len(chunks),
-                    attempts,
-                    len(chunk),
-                )
-                if not timing.has("play_start"):
-                    timing.mark("play_start")
-                    est = estimate_wav_duration_ms(audio_b64)
-                    if est is not None:
-                        timing.marks["play_end"] = timing.marks["play_start"] + est
                 interim = _merge_assistant_audio_payload(
                     audio_b64=audio_b64,
                     is_speaking=True,
                     audio_pending=False,
-                    audio_unavailable=False,
+                    audio_unavailable=not bool(audio_b64),
                     utterance_kind_val=chunk_kind,
                     segment_index_val=segment_index,
                     is_final_segment_val=False,
@@ -1972,8 +2402,6 @@ async def process_user_text_and_reply(
                     tts_streaming=True,
                     tts_chunk_index=i,
                 )
-                if narration_segments:
-                    interim["narration_plan"] = visible_payload.get("narration_plan")
                 if _turn_stale(session, turn_gen_marker):
                     logger.info("Stale streaming TTS chunk dropped (session_generation advanced)")
                     return
@@ -1988,67 +2416,73 @@ async def process_user_text_and_reply(
                 failed_chunk_indices,
                 streamed_any,
             )
-            needs_full_backup = (
-                successful_chunk_chars < len(chunk_source_text)
-                or bool(failed_chunk_indices)
-                or not streamed_any
-            )
-            logger.info(
-                "TTS_FULL_BACKUP_START turn_id=%s needs_full_backup=%s",
-                timing.turn_id,
-                needs_full_backup,
-            )
-            retry_kind = "assistant_full_reply_backup"
-            try:
-                retry_audio, retry_hit = await asyncio.wait_for(
-                    tts_to_base64_cached(
-                        chunk_source_text,
-                        lang_code,
-                        turn_id=timing.turn_id,
-                        utterance_kind=retry_kind,
-                        timeout_s=FULL_TTS_FALLBACK_TIMEOUT,
-                    ),
-                    timeout=FULL_TTS_FALLBACK_TIMEOUT + 0.5,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "TTS_FULL_BACKUP_TIMEOUT turn_id=%s timeout_s=%.2f",
-                    timing.turn_id,
-                    FULL_TTS_FALLBACK_TIMEOUT,
-                )
-                retry_audio, retry_hit = None, False
-            if retry_audio:
-                tts_cache_hit = tts_cache_hit or retry_hit
-                full_audio_b64 = retry_audio
-                final_backup_audio_b64 = retry_audio
-                utterance_kind = retry_kind
-                if not timing.has("play_start"):
-                    timing.mark("play_start")
-                    est = estimate_wav_duration_ms(retry_audio)
-                    if est is not None:
-                        timing.marks["play_end"] = timing.marks["play_start"] + est
+            if used_bundle_plan:
                 logger.info(
-                    "TTS_FULL_BACKUP_SUCCESS turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                    "TTS_FULL_BACKUP_SKIPPED turn_id=%s reason=unit_backed_slots",
                     timing.turn_id,
-                    needs_full_backup,
-                    streamed_any,
-                    failed_chunk_indices,
                 )
             else:
-                logger.warning(
-                    "TTS_FULL_BACKUP_EMPTY turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                needs_full_backup = (
+                    successful_chunk_chars < len(chunk_source_text)
+                    or bool(failed_chunk_indices)
+                    or not streamed_any
+                )
+                logger.info(
+                    "TTS_FULL_BACKUP_START turn_id=%s needs_full_backup=%s",
                     timing.turn_id,
                     needs_full_backup,
-                    streamed_any,
-                    failed_chunk_indices,
                 )
+                retry_kind = "assistant_full_reply_backup"
+                try:
+                    retry_audio, retry_hit = await asyncio.wait_for(
+                        tts_to_base64_cached(
+                            chunk_source_text,
+                            lang_code,
+                            turn_id=timing.turn_id,
+                            utterance_kind=retry_kind,
+                            timeout_s=FULL_TTS_FALLBACK_TIMEOUT,
+                        ),
+                        timeout=FULL_TTS_FALLBACK_TIMEOUT + 0.5,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "TTS_FULL_BACKUP_TIMEOUT turn_id=%s timeout_s=%.2f",
+                        timing.turn_id,
+                        FULL_TTS_FALLBACK_TIMEOUT,
+                    )
+                    retry_audio, retry_hit = None, False
+                if retry_audio:
+                    tts_cache_hit = tts_cache_hit or retry_hit
+                    full_audio_b64 = retry_audio
+                    final_backup_audio_b64 = retry_audio
+                    utterance_kind = retry_kind
+                    if not timing.has("play_start"):
+                        timing.mark("play_start")
+                        est = estimate_wav_duration_ms(retry_audio)
+                        if est is not None:
+                            timing.marks["play_end"] = timing.marks["play_start"] + est
+                    logger.info(
+                        "TTS_FULL_BACKUP_SUCCESS turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                        timing.turn_id,
+                        needs_full_backup,
+                        streamed_any,
+                        failed_chunk_indices,
+                    )
+                else:
+                    logger.warning(
+                        "TTS_FULL_BACKUP_EMPTY turn_id=%s needs_full_backup=%s streamed_any=%s failed_chunk_indices=%s",
+                        timing.turn_id,
+                        needs_full_backup,
+                        streamed_any,
+                        failed_chunk_indices,
+                    )
 
-            if not full_audio_b64 and reply_text.strip():
-                logger.warning(
-                    "TTS_NO_AUDIBLE_FALLBACK turn_id=%s failed_chunk_indices=%s",
-                    timing.turn_id,
-                    failed_chunk_indices,
-                )
+                if not full_audio_b64 and reply_text.strip():
+                    logger.warning(
+                        "TTS_NO_AUDIBLE_FALLBACK turn_id=%s failed_chunk_indices=%s",
+                        timing.turn_id,
+                        failed_chunk_indices,
+                    )
         elif tts_text:
             try:
                 full_audio_b64, tts_cache_hit = await asyncio.wait_for(
@@ -2124,6 +2558,40 @@ async def process_user_text_and_reply(
             return
         await _ws_send_json(websocket, 5, session, payload)
         reply_outbound_completed = True
+
+        # Milestone 3.5 — terminal turn finalization (release freeze, reject late work).
+        bundle = (
+            conversation_resolution.presentation_bundle
+            if conversation_resolution is not None
+            else None
+        )
+        summary = timing.summary_ms() if hasattr(timing, "summary_ms") else {}
+        finalize_turn(
+            session,
+            turn_id=timing.turn_id,
+            authority=getattr(conversation_resolution, "response_authority", None)
+            if conversation_resolution
+            else None,
+            presentation_id=getattr(bundle, "presentation_id", None) if bundle else None,
+            bundle_hash=getattr(bundle, "contract_hash", None) if bundle else None,
+            language=session.get("language_name") or lang_name,
+            duration_ms=summary.get("total_ms") if isinstance(summary, dict) else None,
+            response_source=(
+                "card_bundle"
+                if used_bundle_plan
+                else (
+                    "faq"
+                    if faq_direct_reply
+                    else (
+                        "groq"
+                        if conversation_resolution
+                        and conversation_resolution.response_authority == ResponseAuthority.GROQ.value
+                        else "template"
+                    )
+                )
+            ),
+            resolution=conversation_resolution,
+        )
 
         log_voice_turn_end(timing.turn_id, timing.summary_ms(), success=True)
 
@@ -2267,6 +2735,12 @@ async def lifespan(app: object):
         logger.warning("AUDIO validation timed out after %.1fs; continuing", AUDIO_DEVICE_VALIDATE_TIMEOUT_S)
 
     log_ws_auth_configuration_warnings()
+    try:
+        run_startup_integrity()
+    except Exception as exc:
+        logger.error("Runtime startup integrity failed: %s", exc)
+        if os.getenv("RUNTIME_STRICT_STARTUP", "").strip().lower() in ("1", "true", "yes", "on"):
+            raise
     asyncio.create_task(warmup_clients())
     yield
     await close_clients()
@@ -2550,6 +3024,14 @@ async def websocket_clara(websocket: WebSocket):
                 language = msg.get("language")
                 if language not in VALID_LANGUAGES:
                     await _ws_send_json(websocket, 5, session, None)
+                    continue
+                if is_language_frozen(session):
+                    log_runtime_event(
+                        "LOCALE_CHANGE_BLOCKED",
+                        reason="frozen",
+                        language=language,
+                    )
+                    await _ws_send_json(websocket, 5, session, {"error": "language_frozen"})
                     continue
                 code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
                 set_session_language(session, code_key, is_auto=False)

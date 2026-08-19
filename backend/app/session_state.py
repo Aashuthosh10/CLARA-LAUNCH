@@ -16,6 +16,18 @@ def append_session_history(session: dict, role: str, text: str, *, max_turns: in
         del history[:-max_items]
 
 
+def prior_user_question(session: dict, current_text: str) -> str:
+    """The immediately previous visitor utterance, if any. Never assistant speech."""
+    current = (current_text or "").strip()
+    for item in reversed(session.get("history") or []):
+        if item.get("role") != "user":
+            continue
+        text = (item.get("text") or "").strip()
+        if text and text != current:
+            return text
+    return ""
+
+
 def history_for_llm(session: dict) -> list[dict[str, str]]:
     """Last 3 conversational turns only (6 messages) to limit context bleed."""
     out: list[dict[str, str]] = []

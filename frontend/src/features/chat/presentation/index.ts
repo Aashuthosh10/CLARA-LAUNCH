@@ -1,0 +1,37 @@
+export type {
+  PresentationEngineState,
+  PresentationScene,
+  PresentationSnapshot,
+  NarrationPlanInput,
+  PresentationPlaybackEvent,
+} from './types';
+
+export {
+  planToScenes,
+  cardsToScenes,
+  singleScenePresentation,
+  mintPresentationId,
+  mintAudioToken,
+  mapSceneToComparisonSection,
+} from './planToScenes';
+
+export {
+  presentationCardsFromNarrationSegments,
+  departmentIdFromUnitId,
+  cardTypeFromUnitId,
+  selectedUnitIds,
+} from './PresentationCardModel';
+export type { PresentationCardModel, PresentationCardType } from './PresentationCardModel';
+
+export {
+  buildTimelineFromPlan,
+  validateTimeline,
+} from './presentationTimeline';
+export type { PresentationTimeline, TimelineEntry } from './presentationTimeline';
+
+export { PresentationEngine, type LoadPresentationArgs } from './PresentationEngine';
+export { PresentationAudioManager } from './PresentationAudioManager';
+export {
+  usePresentationController,
+  type PresentationControllerApi,
+} from './PresentationController';

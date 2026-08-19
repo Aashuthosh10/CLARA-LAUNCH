@@ -19,6 +19,14 @@ import { runHardResetTransaction } from './session/hardResetTransaction';
 import { kioskStore } from './store/kiosk/kioskStore';
 import { KioskState } from './store/kiosk/types';
 import { useFaceChannel } from './hooks/useFaceChannel';
+import {
+  getConversationRuntime,
+  getRuntimeTimeline,
+  patchConversationRuntime,
+  resetConversationRuntime,
+  runtimeSettings,
+} from './runtime';
+import { RuntimeDashboard } from './runtime/RuntimeDashboard';
 
 // Screens
 import SleepScreen from './screens/SleepScreen';
@@ -233,7 +241,12 @@ function ClaraKioskRuntime({
         lastHardResetAt,
         kioskSnapshot: kioskStore.getSnapshot(),
       }),
+      getRuntimeIntegrity: () => ({
+        snapshot: getConversationRuntime(),
+        timeline: getRuntimeTimeline(),
+      }),
       peekClaraWsDiagnostics: () => peekClaraWsDiagnostics(WS_URL),
+      retryConnect,
       requestHardResetRecovery: () => resetClaraSessionWithTimestamp(),
       recoverSemanticLocksOnly: () => kioskStore.clearSemanticLocks(),
       isStalePayloadGen,
@@ -249,7 +262,17 @@ function ClaraKioskRuntime({
     isStalePayloadGen,
     resetClaraSessionWithTimestamp,
     scheduleFullRuntimeRemount,
+    retryConnect,
   ]);
+
+  useEffect(() => {
+    resetConversationRuntime();
+    patchConversationRuntime({
+      generation: appliedSessionGen,
+      sessionId: `runtime-${runtimeSessionKey}`,
+      conversationId: `runtime-${runtimeSessionKey}`,
+    });
+  }, [runtimeSessionKey, appliedSessionGen]);
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -296,13 +319,7 @@ function ClaraKioskRuntime({
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
               onWake={() => {
-                let ok = sendMessage({ action: 'wake' });
-                if (!ok) {
-                  requestAnimationFrame(() => {
-                    ok = sendMessage({ action: 'wake' });
-                    if (!ok) retryConnect();
-                  });
-                }
+                sendMessage({ action: 'wake' });
                 setManualState(5);
                 setShowChatLanguageGate(true);
               }}
@@ -393,6 +410,7 @@ function ClaraKioskRuntime({
       <main className="relative z-10 w-full h-full">
         <AnimatePresence mode="wait">{renderState()}</AnimatePresence>
       </main>
+      {runtimeSettings.dashboardEnabled ? <RuntimeDashboard /> : null}
     </div>
   );
 }

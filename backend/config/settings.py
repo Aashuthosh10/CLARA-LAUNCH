@@ -73,14 +73,28 @@ TEMP_DIR = os.getenv("TEMP_DIR", str(BASE_DIR / "temp"))
 # RAG Configuration
 RAG_MAX_TOKENS = int(os.getenv("RAG_MAX_TOKENS", "6000"))
 # Must be a valid Groq chat model id; if API returns 404, set in .env (see https://console.groq.com/docs/models)
-RAG_MODEL = os.getenv("RAG_MODEL", "llama-3.1-8b-instant")
+# Groq decommissioned llama-3.1-8b-instant on 2026-08-16; openai/gpt-oss-20b is the documented successor.
+RAG_MODEL = os.getenv("RAG_MODEL", "openai/gpt-oss-20b")
 COLLEGE_KNOWLEDGE_PATH = os.getenv("COLLEGE_KNOWLEDGE_PATH", str(BASE_DIR / "college_knowledge.txt"))
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "5"))
 RAG_MIN_DOCUMENTS = int(os.getenv("RAG_MIN_DOCUMENTS", "500"))
 # Low-latency Groq model for mixed-language query normalization (Hinglish / regional + English).
-MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "llama-3.1-8b-instant")
+MULTILINGUAL_PREPROCESSOR_MODEL = os.getenv("MULTILINGUAL_PREPROCESSOR_MODEL", "openai/gpt-oss-20b")
 MULTILINGUAL_PREPROCESSOR_MAX_TOKENS = int(os.getenv("MULTILINGUAL_PREPROCESSOR_MAX_TOKENS", "320"))
 MULTILINGUAL_PREPROCESSOR_TIMEOUT_S = float(os.getenv("MULTILINGUAL_PREPROCESSOR_TIMEOUT_S", "1.6"))
+
+# M5.5 semantic-understanding proposal (not answer generation; not RAG_MODEL).
+SEMANTIC_ROUTER_ENABLED = os.getenv("SEMANTIC_ROUTER_ENABLED", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+SEMANTIC_ROUTER_MODEL = os.getenv("SEMANTIC_ROUTER_MODEL", "openai/gpt-oss-120b").strip() or "openai/gpt-oss-120b"
+try:
+    SEMANTIC_ROUTER_TIMEOUT_S = float(os.getenv("SEMANTIC_ROUTER_TIMEOUT_S", "6.0"))
+except ValueError:
+    SEMANTIC_ROUTER_TIMEOUT_S = 6.0
 
 # PostgreSQL + pgvector (RAG storage)
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
@@ -169,6 +183,73 @@ LLM_STREAM_PARTIAL_DEBOUNCE_MS = int(os.getenv("LLM_STREAM_PARTIAL_DEBOUNCE_MS",
 LLM_STREAM_TIMEOUT_S = float(os.getenv("LLM_STREAM_TIMEOUT_S", "8.0"))
 ENABLE_LLM_STREAMING = os.getenv("ENABLE_LLM_STREAMING", "true").strip().lower() in ("1", "true", "yes", "on")
 PERF_DEBUG_TIMINGS = os.getenv("PERF_DEBUG_TIMINGS", "true").strip().lower() in ("1", "true", "yes", "on")
+# Conversation Intelligence Layer (Milestone 1)
+try:
+    INTENT_CONFIDENCE_THRESHOLD = float(os.getenv("INTENT_CONFIDENCE_THRESHOLD", "0.60"))
+except ValueError:
+    INTENT_CONFIDENCE_THRESHOLD = 0.60
+INTENT_CONFIDENCE_THRESHOLD = max(0.0, min(1.0, INTENT_CONFIDENCE_THRESHOLD))
+_conv_intel_dbg = os.getenv("CONVERSATION_INTEL_DEBUG", "").strip().lower()
+if _conv_intel_dbg in ("1", "true", "yes", "on"):
+    CONVERSATION_INTEL_DEBUG = True
+elif _conv_intel_dbg in ("0", "false", "no", "off"):
+    CONVERSATION_INTEL_DEBUG = False
+else:
+    # Default: follow PERF_DEBUG_TIMINGS so production can silence both together.
+    CONVERSATION_INTEL_DEBUG = PERF_DEBUG_TIMINGS
+
+# Milestone 2 — Runtime integrity / localization
+_runtime_diag = os.getenv("RUNTIME_DIAGNOSTICS", "").strip().lower()
+if _runtime_diag in ("1", "true", "yes", "on"):
+    RUNTIME_DIAGNOSTICS = True
+elif _runtime_diag in ("0", "false", "no", "off"):
+    RUNTIME_DIAGNOSTICS = False
+else:
+    RUNTIME_DIAGNOSTICS = PERF_DEBUG_TIMINGS or CONVERSATION_INTEL_DEBUG
+RUNTIME_OWNERSHIP_ENFORCE = os.getenv("RUNTIME_OWNERSHIP_ENFORCE", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+RUNTIME_STRICT_STARTUP = os.getenv("RUNTIME_STRICT_STARTUP", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+try:
+    RUNTIME_TIMELINE_MAX = int(os.getenv("RUNTIME_TIMELINE_MAX", "200"))
+except ValueError:
+    RUNTIME_TIMELINE_MAX = 200
+RUNTIME_TIMELINE_MAX = max(20, min(2000, RUNTIME_TIMELINE_MAX))
+LOCALIZATION_FREEZE_ENABLED = os.getenv("LOCALIZATION_FREEZE_ENABLED", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+LOCALIZATION_VERIFY_STRICT = os.getenv("LOCALIZATION_VERIFY_STRICT", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+PRESENTATION_CONTRACT_ENFORCED = os.getenv("PRESENTATION_CONTRACT_ENFORCED", "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+try:
+    TRANSLATION_CACHE_MAX = int(os.getenv("TRANSLATION_CACHE_MAX", "256"))
+except ValueError:
+    TRANSLATION_CACHE_MAX = 256
+try:
+    TRANSLATION_CACHE_TTL_S = float(os.getenv("TRANSLATION_CACHE_TTL_S", "900"))
+except ValueError:
+    TRANSLATION_CACHE_TTL_S = 900.0
+
 RAG_CONTEXT_TIMEOUT_S = float(os.getenv("RAG_CONTEXT_TIMEOUT_S", "0.8"))
 TTS_TIMEOUT_S = float(os.getenv("TTS_TIMEOUT_S", "10.0"))
 STT_TIMEOUT_S = float(os.getenv("STT_TIMEOUT_S", "8.0"))

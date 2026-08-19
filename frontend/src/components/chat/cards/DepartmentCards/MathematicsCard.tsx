@@ -24,6 +24,8 @@ export default function MathematicsCard({
   departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
+  const visualSlotIndex =
+    typeof currentSlide?.slotIndex === 'number' ? currentSlide.slotIndex : currentIdx;
 
   const DEPT_INFO = {
     English: {
@@ -68,10 +70,11 @@ export default function MathematicsCard({
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
       departmentId={departmentId}
-      icon={MATH_ICONS[currentIdx % MATH_ICONS.length]}
-      isHOD={currentIdx === 1}
+      icon={MATH_ICONS[visualSlotIndex % MATH_ICONS.length]}
+      isHOD={visualSlotIndex === 1}
       hodName={info.hod}
       currentSlide={currentIdx}
+      visualSlotIndex={visualSlotIndex}
       totalSlides={slides.length}
       onNext={onNext}
       onPrev={onPrev}

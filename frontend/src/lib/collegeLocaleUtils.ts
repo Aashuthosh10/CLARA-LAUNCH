@@ -297,6 +297,8 @@ export function buildAllDepartmentSummaryCardsFromLocale(data: CollegeLocaleData
 export interface DepartmentStageSlide {
   title: string;
   content: string;
+  /** Optional template slot index used for correct image selection when subset decks are rendered. */
+  slotIndex?: number;
 }
 
 export function buildDepartmentSlidesFromRecord(
@@ -321,12 +323,43 @@ export function buildDepartmentSlidesFromRecord(
   const fees = clean(dept.fees) || L.notAvail;
 
   return [
-    { title: name, content: intro },
-    { title: L.hodAndVision, content: hod_voice },
-    { title: L.achievements, content: achievements },
-    { title: L.placements, content: placement },
-    { title: L.fees, content: fees },
+    { title: name, content: intro, slotIndex: 0 },
+    { title: L.hodAndVision, content: hod_voice, slotIndex: 1 },
+    { title: L.achievements, content: achievements, slotIndex: 2 },
+    { title: L.placements, content: placement, slotIndex: 3 },
+    { title: L.fees, content: fees, slotIndex: 4 },
   ];
+}
+
+const UNIT_SUFFIX_SLOT: Record<string, number> = {
+  overview: 0,
+  hod: 1,
+  achievements: 2,
+  placements: 3,
+  fees: 4,
+};
+
+/**
+ * Resolve one backend-selected `{dept}.{topic}` unit against its OWN department record.
+ *
+ * Mixed decks (`cse_ds.overview` + `cse_aiml.hod`) must not be read out of a single
+ * department's deck, so identity is taken from the unitId rather than an active
+ * department in UI state.
+ */
+export function buildDepartmentSlideForUnit(
+  data: CollegeLocaleData,
+  unitId: string,
+  language: Language
+): DepartmentStageSlide | null {
+  const uid = String(unitId || '').trim().toLowerCase();
+  const dot = uid.indexOf('.');
+  if (dot <= 0) return null;
+  const deptKey = uid.slice(0, dot);
+  const slot = UNIT_SUFFIX_SLOT[uid.slice(dot + 1)];
+  if (typeof slot !== 'number') return null;
+  const record = getDepartmentRecord(data, deptKey);
+  if (!record) return null;
+  return buildDepartmentSlidesFromRecord(record, deptKey, language)[slot] ?? null;
 }
 
 /**

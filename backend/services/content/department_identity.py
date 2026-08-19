@@ -1,0 +1,134 @@
+"""Canonical department identity — exclusive longest-span matching.
+
+Never uses substring identity (cse must not match inside cse_ds / CSE Data Science).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from backend.services.answer_generation import (
+    _CANONICAL_DEPARTMENT_TO_JSON_KEY,
+    _inject_regional_department_tokens,
+    department_label_to_json_key,
+)
+from backend.services.content.semantic_vocab.catalog import entries_for
+from backend.services.content.unicode_text import casefold_keep_scripts
+
+
+def normalize_for_department_match(text: str) -> str:
+    raw = _inject_regional_department_tokens(text or "")
+    return casefold_keep_scripts(raw)
+
+
+def _latinish(s: str) -> bool:
+    return all(ord(ch) < 128 for ch in s)
+
+
+def _find_unoccupied(hay: str, needle: str, occupied: list[bool], start: int = 0) -> int:
+    if not needle:
+        return -1
+    from_idx = start
+    while True:
+        idx = hay.find(needle, from_idx)
+        if idx < 0:
+            return -1
+        end = idx + len(needle)
+        if end <= len(occupied) and not any(occupied[idx:end]):
+            if _latinish(needle):
+                left_ok = idx == 0 or not (hay[idx - 1].isalnum() or hay[idx - 1] == "_")
+                right_ok = end >= len(hay) or not (hay[end].isalnum() or hay[end] == "_")
+                if not (left_ok and right_ok):
+                    from_idx = idx + 1
+                    continue
+            return idx
+        from_idx = idx + 1
+
+
+def department_alias_table() -> list[tuple[str, str]]:
+    """(variant, json_key) longest-first. Canonical labels included."""
+    rows: list[tuple[str, str]] = []
+    for e in entries_for(category="DEPARTMENT"):
+        v = casefold_keep_scripts(e.variant)
+        if v:
+            rows.append((v, e.canonical))
+    for label, jkey in _CANONICAL_DEPARTMENT_TO_JSON_KEY.items():
+        v = casefold_keep_scripts(label)
+        if v:
+            rows.append((v, jkey))
+    # Longest span first; compound keys before plain cse when length ties.
+    rows.sort(key=lambda x: (len(x[0]), 0 if "_" in x[1] or x[1] != "cse" else 1), reverse=True)
+    seen: set[tuple[str, str]] = set()
+    out: list[tuple[str, str]] = []
+    for v, k in rows:
+        if (v, k) in seen:
+            continue
+        seen.add((v, k))
+        out.append((v, k))
+    return out
+
+
+@dataclass(frozen=True)
+class DepartmentSpan:
+    """A department identity match with its position in the shared match haystack."""
+
+    json_key: str
+    start: int
+    end: int
+
+
+def match_department_spans_exclusive(text: str) -> tuple[DepartmentSpan, ...]:
+    """
+    Ordered unique department spans over ``normalize_for_department_match(text)``.
+
+    Positions are offsets into that haystack so topic spans detected on the same
+    haystack can be paired with entities by proximity.
+    """
+    hay = normalize_for_department_match(text)
+    if not hay:
+        return ()
+    occupied = [False] * len(hay)
+    hits: list[DepartmentSpan] = []
+    for alias, jkey in department_alias_table():
+        start = 0
+        while True:
+            idx = _find_unoccupied(hay, alias, occupied, start)
+            if idx < 0:
+                break
+            end = idx + len(alias)
+            for i in range(idx, end):
+                occupied[i] = True
+            hits.append(DepartmentSpan(json_key=jkey, start=idx, end=end))
+            start = end
+    hits.sort(key=lambda s: s.start)
+    out: list[DepartmentSpan] = []
+    seen: set[str] = set()
+    for span in hits:
+        if span.json_key in seen:
+            continue
+        seen.add(span.json_key)
+        out.append(span)
+    return tuple(out)
+
+
+def match_department_keys_exclusive(text: str) -> tuple[str, ...]:
+    """Ordered unique json keys. Consumes matched spans so cse cannot leak from cse_ds."""
+    return tuple(s.json_key for s in match_department_spans_exclusive(text))
+
+
+def resolve_label_to_json_key_exact(label: str | None) -> str | None:
+    """Exact canonical label or json key. No blob/substring search."""
+    if not label or not isinstance(label, str):
+        return None
+    direct = department_label_to_json_key(label)
+    if direct:
+        return direct
+    candidate = label.strip().lower().replace(" ", "_")
+    known = {e.canonical for e in entries_for(category="DEPARTMENT")}
+    known.update(_CANONICAL_DEPARTMENT_TO_JSON_KEY.values())
+    if candidate in known:
+        return candidate
+    keys = match_department_keys_exclusive(label)
+    if len(keys) == 1:
+        return keys[0]
+    return None

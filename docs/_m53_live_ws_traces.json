@@ -1,0 +1,926 @@
+{
+  "probe": "TEMPORARY Stage A live typed WS probe — not production",
+  "ws_url": "ws://127.0.0.1:6969/ws/clara",
+  "origin": "http://localhost:5176",
+  "connected": true,
+  "error": null,
+  "asr": "typed / N/A",
+  "total": 24,
+  "ws_expected_match": 5,
+  "ws_ir_match": 6,
+  "tts_verified": true,
+  "rows": [
+    {
+      "id": "parity_hod_ds_en",
+      "input": "Who is the HOD of CSE Data Science?",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": false,
+      "frame_count": 5,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_hod_ds_kn",
+      "input": "CSE Data Science HOD yaaru?",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 4,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_hod_ds_hi",
+      "input": "CSE Data Science ka HOD kaun hai?",
+      "language": "hi",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": false,
+      "frame_count": 5,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_hod_ds_ta",
+      "input": "CSE Data Science HOD yaar?",
+      "language": "ta",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 4,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_hod_ds_te",
+      "input": "CSE Data Science HOD evaru?",
+      "language": "te",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": false,
+      "frame_count": 5,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_hod_ds_ml",
+      "input": "CSE Data Science HOD aaranu?",
+      "language": "ml",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_ds",
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_ds.hod",
+        "cse.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 4,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_fees_aiml_en",
+      "input": "CSE AIML fees",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse_aiml"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "ws_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": true,
+      "frame_count": 5,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_mh_en",
+      "input": "Who is the HOD of AIML and Data Science?",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ws_unit_ids": [
+        "cse_aiml.fees"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "parity_mh_aimlds_kn",
+      "input": "AIML mattu Data Science HOD yaaru?",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse_aiml",
+        "cse_ds"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse_aiml",
+          "cse_ds"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ws_unit_ids": [
+        "cse_aiml.hod",
+        "cse_ds.hod"
+      ],
+      "ws_narration_mode": "card_narration",
+      "ws_has_audio": true,
+      "ws_error": null,
+      "ws_last_type": "assistant_audio_update",
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": true,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "en_col_fees",
+      "input": "CSE fees yestu?",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "en_place",
+      "input": "CSE placements",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "placements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.placements"
+      ],
+      "actual_semantic_request": {
+        "topic": "placements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.placements"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "en_ach",
+      "input": "CSE achievements",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": "achievements",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.achievements"
+      ],
+      "actual_semantic_request": {
+        "topic": "achievements",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.achievements"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "kn_lit_fees",
+      "input": "CSE ಶುಲ್ಕ",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.overview"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "kn_rom_fees",
+      "input": "CSE fees yestu?",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "kn_col_hod",
+      "input": "CSE HOD yaaru?",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "hod",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.hod"
+      ],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "kn_cs_ov",
+      "input": "CSE bagge heli",
+      "language": "kn",
+      "asr": "typed",
+      "expected_topic": "overview",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "full_department",
+      "expected_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "full_department",
+        "confidence": 0.85,
+        "language_code": "kn"
+      },
+      "actual_confidence_band": "HIGH",
+      "in_process_unit_ids": [
+        "cse.overview",
+        "cse.hod",
+        "cse.achievements",
+        "cse.placements",
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "hi_script_fees",
+      "input": "CSE फीस",
+      "language": "hi",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "overview",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.overview"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "hi_rom_fees",
+      "input": "CSE fees kitna",
+      "language": "hi",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "hi"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "ta_rom_fees",
+      "input": "CSE fees evlo",
+      "language": "ta",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ta"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "te_rom_fees",
+      "input": "CSE fees entha",
+      "language": "te",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "te"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "ml_rom_fees",
+      "input": "CSE fees ethra",
+      "language": "ml",
+      "asr": "typed",
+      "expected_topic": "fees",
+      "expected_entities": [
+        "cse"
+      ],
+      "expected_scope": "single",
+      "expected_unit_ids": [
+        "cse.fees"
+      ],
+      "actual_semantic_request": {
+        "topic": "fees",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "ml"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.fees"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": false,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "neg_fees_and_hod",
+      "input": "CSE fees and HOD",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": true,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "neg_hod_and_aiml_fees",
+      "input": "CSE HOD and AIML fees",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_semantic_request": {
+        "topic": "hod",
+        "entities": [
+          "cse",
+          "cse_aiml"
+        ],
+        "requested_scope": "single",
+        "confidence": 0.75,
+        "language_code": "en"
+      },
+      "actual_confidence_band": "MEDIUM",
+      "in_process_unit_ids": [
+        "cse.hod",
+        "cse_aiml.hod"
+      ],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": false,
+      "ws_expected_match": true,
+      "frame_count": 1,
+      "guest_name_sent": true
+    },
+    {
+      "id": "neg_which_dept",
+      "input": "which department?",
+      "language": "en",
+      "asr": "typed",
+      "expected_topic": null,
+      "expected_entities": [],
+      "expected_scope": null,
+      "expected_unit_ids": [],
+      "actual_semantic_request": null,
+      "actual_confidence_band": "NONE",
+      "in_process_unit_ids": [],
+      "ws_unit_ids": [],
+      "ws_narration_mode": null,
+      "ws_has_audio": false,
+      "ws_error": null,
+      "ws_last_type": null,
+      "ws_tts_language": null,
+      "ws_ir_unit_ids_match": true,
+      "ws_expected_match": true,
+      "frame_count": 1,
+      "guest_name_sent": true
+    }
+  ]
+}

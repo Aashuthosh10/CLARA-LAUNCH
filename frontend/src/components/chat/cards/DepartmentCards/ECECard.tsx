@@ -24,6 +24,8 @@ export default function ECECard({
   departmentId,
 }: CardProps) {
   const currentSlide = slides[currentIdx] || {};
+  const visualSlotIndex =
+    typeof currentSlide?.slotIndex === 'number' ? currentSlide.slotIndex : currentIdx;
 
   const DEPT_INFO = {
     English: {
@@ -68,10 +70,11 @@ export default function ECECard({
       tagline={currentSlide.tagline || ""}
       description={currentSlide.content || ""}
       departmentId={departmentId}
-      icon={ECE_ICONS[currentIdx % ECE_ICONS.length]}
-      isHOD={currentIdx === 1}
+      icon={ECE_ICONS[visualSlotIndex % ECE_ICONS.length]}
+      isHOD={visualSlotIndex === 1}
       hodName={info.hod}
       currentSlide={currentIdx}
+      visualSlotIndex={visualSlotIndex}
       totalSlides={slides.length}
       onNext={onNext}
       onPrev={onPrev}

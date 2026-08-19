@@ -221,7 +221,11 @@ export default function DepartmentFeesCard({ departmentId }: DepartmentFeesCardP
   const selectedKey = normalizeDepartmentKey(departmentId ?? '');
 
   return (
-    <div className="w-full max-w-5xl premium-glass-card p-10 overflow-hidden relative">
+    <div
+      className="w-full max-w-5xl premium-glass-card p-10 overflow-hidden relative"
+      data-testid="department-fees-card"
+      data-department-id={selectedKey}
+    >
       {/* Accent Glow inside card */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none" />
       

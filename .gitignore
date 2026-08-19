@@ -51,3 +51,7 @@ chroma_db/
 # Playwright
 frontend/test-results/
 playwright-report/
+
+# Local caches / generated
+facial-display/.vite-facial/
+
