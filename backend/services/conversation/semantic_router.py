@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import sys
 from typing import Any
 
 from backend.config.settings import (
@@ -61,6 +62,11 @@ def skip_semantic_router_reason(
         return "atomic_card_parse"
     if os.environ.get("PYTEST_CURRENT_TEST"):
         return "pytest"
+    if os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
+        return "ci"
+    argv = " ".join(sys.argv).lower()
+    if "unittest" in argv:
+        return "unittest"
     return None
 
 

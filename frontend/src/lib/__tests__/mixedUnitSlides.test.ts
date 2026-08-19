@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildDepartmentSlideForUnit } from '../collegeLocaleUtils';
-import type { CollegeLocaleData } from '../collegeLocaleUtils';
+import type { CollegeLocaleData } from '../../types/collegeData';
 
 const data = {
   departments: {

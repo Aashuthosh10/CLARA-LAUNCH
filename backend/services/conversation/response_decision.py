@@ -324,11 +324,13 @@ def resolve_response_decision(
     )
 
     # 3b. Evaluative institutional question: entity mention is not automatically CARD.
+    # Documents / admissions / course-menu / bus keep their card owners.
     if (
         institution_proposal
         and proposal is not None
         and proposal.mode_hint is ResponseMode.ANSWER
         and not atomic
+        and (ci_intent or "") not in NON_UNIT_CARD_INTENTS
     ):
         return _done(
             ResponseDecision(

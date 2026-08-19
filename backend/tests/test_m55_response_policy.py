@@ -131,6 +131,16 @@ class TestBAnswer(unittest.TestCase):
         proposal = institution_answer_proposal()
         self.assertIs(decide(text, proposal=proposal), ResponseMode.ANSWER)
 
+    def test_documents_card_is_not_stolen_by_answer_proposal(self) -> None:
+        self.assertIs(
+            decide(
+                "admission documents",
+                proposal=institution_answer_proposal(),
+                ci_intent="DOCUMENTS",
+            ),
+            ResponseMode.CARD,
+        )
+
 
 class TestCClarify(unittest.TestCase):
     def test_bare_hod(self) -> None:
