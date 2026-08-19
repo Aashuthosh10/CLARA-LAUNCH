@@ -1,8 +1,8 @@
 """Backend audio capture: device resolution, VAD, WAV output. For use via asyncio.to_thread(record_audio).
 
 On Linux, the `sounddevice` package requires the PortAudio system library (e.g. Debian/Ubuntu:
-`portaudio19-dev`). GitHub Actions installs this in `.github/workflows/ci.yml`. The import guard
-below still allows the rest of the app to load when PortAudio is missing locally.
+`portaudio19-dev`). CI does not install PortAudio; the import guard below lets the rest of
+the app and unit tests load on headless runners.
 """
 import io
 import logging
