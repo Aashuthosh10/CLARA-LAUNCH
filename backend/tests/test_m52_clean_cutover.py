@@ -128,12 +128,20 @@ class TestM52TtsContract(unittest.TestCase):
         seg = segs[0]
         title = (units[0].title or "").strip()
         body = (units[0].body or "").strip()
+        spoken = (seg.tts_text or "").strip()
         self.assertTrue(title)
         self.assertIn(title, seg.display_text)
-        self.assertTrue(seg.tts_text.strip())
-        self.assertNotIn(title, seg.tts_text)
-        # Body-only: spoken text is drawn from unit body (clipped), not title+body display.
-        self.assertTrue(body.startswith(seg.tts_text.strip()) or seg.tts_text.strip() in body)
+        self.assertTrue(spoken)
+        self.assertNotIn(title, spoken)
+        self.assertNotIn("View details", spoken)
+        self.assertNotEqual(spoken, (seg.display_text or "").strip())
+        # M5.9: narration planner speaks a sentence that still carries body facts.
+        # It is no longer a raw body clone (a short lead is allowed).
+        body_lead = body[:80].strip()
+        self.assertTrue(
+            body_lead in spoken or spoken in body,
+            msg=f"spoken narration lost unit facts: {spoken!r}",
+        )
 
     def test_finalize_preserves_explicit_tts(self) -> None:
         seg = NarrationSegment(
