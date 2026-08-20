@@ -128,9 +128,14 @@ Browser e2e (Chromium, mocked WS matching production card/TTS contract):
 
 Live Sarvam kiosk pass was not required to prove architecture; M5.8 TTS path is unchanged.
 
-## 13–14. Git
+## 13. GIT COMMIT
 
-See commit after push.
+`72de7dd6db1b71606f01a85b3e4183feed28c5d3`
+
+## 14. REMOTE HEAD
+
+`clara_finished` `refs/heads/main` = `72de7dd6db1b71606f01a85b3e4183feed28c5d3`  
+Verified with `git ls-remote clara_finished refs/heads/main`. Matches local HEAD.
 
 ## 15. Remaining limitations
 
