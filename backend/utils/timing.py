@@ -17,6 +17,7 @@ class TurnTiming:
     turn_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     started_ms: float = field(default_factory=_ms_now)
     marks: dict[str, float] = field(default_factory=dict)
+    extras: dict[str, Any] = field(default_factory=dict)
 
     def mark(self, name: str) -> None:
         self.marks[name] = _ms_now()

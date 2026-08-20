@@ -19,12 +19,16 @@ def text_preview(text: str, limit: int = 80) -> str:
 
 
 def debug_payload(timing: TurnTiming) -> dict[str, Any]:
-    if not PERF_DEBUG_TIMINGS:
+    tts_metrics = dict(getattr(timing, "extras", {}) or {})
+    debug: dict[str, Any] = {}
+    if PERF_DEBUG_TIMINGS:
+        debug["timings_ms"] = timing.summary_ms()
+    if tts_metrics:
+        debug["tts_metrics"] = tts_metrics
+    if not debug:
         return {}
     return {
-        "debug": {
-            "timings_ms": timing.summary_ms(),
-        },
+        "debug": debug,
         "turn_id": timing.turn_id,
     }
 

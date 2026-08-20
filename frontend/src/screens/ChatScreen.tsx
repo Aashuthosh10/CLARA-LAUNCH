@@ -3200,6 +3200,35 @@ export default function ChatScreen({
     if (tid && sched.turnId !== tid) {
       sched.beginTurn(tid);
     }
+    const streamChunkIndex =
+      typeof payload.tts_chunk_index === 'number' && Number.isInteger(payload.tts_chunk_index)
+        ? payload.tts_chunk_index
+        : null;
+    if (payload.tts_streaming === true && streamChunkIndex !== null) {
+      const expected =
+        typeof payload.tts_expected_clip_count === 'number' &&
+        Number.isInteger(payload.tts_expected_clip_count)
+          ? payload.tts_expected_clip_count
+          : null;
+      if (expected && expected > 0) {
+        sched.setExpectedCount(expected);
+      }
+      const planSeg =
+        narrationPlanRef.current?.turnId === tid
+          ? narrationPlanRef.current.segments[streamChunkIndex]
+          : payload?.narration_plan?.segments?.[streamChunkIndex];
+      sched.ingestClip({
+        turnId: tid,
+        sequence: streamChunkIndex,
+        audioBase64: typeof payload.audioBase64 === 'string' ? payload.audioBase64 : null,
+        audioUnavailable: payload.audioUnavailable === true || !payload.audioBase64,
+        unitId: (typeof planSeg?.unitId === 'string' && planSeg.unitId.trim()) || null,
+        sectionId: planSeg?.sectionId ?? null,
+        segmentId: planSeg?.segmentId ?? null,
+        isOverview: Boolean(streamAudioLayoutRef.current?.isOverview) && streamChunkIndex === 0,
+        cardsToSync: streamAudioLayoutRef.current?.cardsToSync ?? null,
+      });
+    }
     const unitBackedSlotsEarly =
       isUnitBackedNarrationPlan(payload) && Array.isArray(payload.tts_clip_slots);
     if (unitBackedSlotsEarly) {

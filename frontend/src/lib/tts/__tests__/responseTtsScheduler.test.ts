@@ -97,6 +97,26 @@ describe('response TTS scheduler', () => {
     expect(scheduler.isPresentationReady()).toBe(true);
   });
 
+  it('first playable clip presents while later clips are still PENDING', () => {
+    const scheduler = createResponseTtsScheduler();
+    scheduler.beginTurn('turn-a');
+    scheduler.setExpectedCount(3);
+    scheduler.ingestClip({ turnId: 'turn-a', sequence: 0, audioBase64: TINY_WAV });
+    expect(scheduler.isPresentationReady()).toBe(true);
+    expect(scheduler.nextPlayable()?.sequence).toBe(0);
+    expect(scheduler.snapshot().clips[1]?.status).toBe('PENDING');
+    expect(scheduler.snapshot().clips[2]?.status).toBe('PENDING');
+  });
+
+  it('FAILED first clip still presents when a later clip is READY', () => {
+    const scheduler = createResponseTtsScheduler();
+    scheduler.beginTurn('turn-a');
+    scheduler.ingestClip({ turnId: 'turn-a', sequence: 0, audioUnavailable: true });
+    scheduler.ingestClip({ turnId: 'turn-a', sequence: 1, audioBase64: TINY_WAV });
+    expect(scheduler.isPresentationReady()).toBe(true);
+    expect(scheduler.nextPlayable()?.sequence).toBe(1);
+  });
+
   it('invalid/empty audio is FAILED not READY', () => {
     const scheduler = createResponseTtsScheduler();
     scheduler.beginTurn('turn-a');

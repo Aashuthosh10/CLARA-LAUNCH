@@ -76,6 +76,9 @@ from backend.config.settings import (
     LLM_TEMPERATURE,
     LOW_LATENCY_VOICE_MODE,
     KIOSK_COMPLETE_RESPONSE_TTS,
+    KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO,
+    TTS_SHORT_ANSWER_MAX_CHARS,
+    TTS_CHUNK_MAX_ATTEMPTS,
     MULTILINGUAL_PREPROCESSOR_TIMEOUT_S,
     PORT,
     PRESENTATION_CONTRACT_ENFORCED,
@@ -89,6 +92,8 @@ from backend.config.settings import (
     RAG_TOP_K,
     REQUIRE_WS_AUTH_IN_PRODUCTION,
     SARVAM_API_KEY,
+    SARVAM_TTS_PACE,
+    SARVAM_TTS_SPEAKER,
     STT_TIMEOUT_S,
     TARGET_LANGUAGE_CODES,
     TTS_TIMEOUT_S,
@@ -116,6 +121,12 @@ from backend.services.greetings import (
 )
 from backend.services.faq_answers import get_faq_answer_for_question
 from backend.services.tts_chunking import split_tts_chunks
+from backend.services.tts_orchestrator import (
+    empty_tts_metrics,
+    needs_full_reply_backup,
+    plan_response_tts,
+    tts_cache_material,
+)
 from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
 from backend.services.conversation import govern_answer_length
 from backend.services.conversation.answer_language import resolve_answer_language
@@ -669,18 +680,29 @@ async def tts_to_base64_cached(
     utterance_kind: str = "reply",
     timeout_s: float | None = None,
     allow_english_fallback: bool = True,
+    metrics: dict[str, Any] | None = None,
 ) -> tuple[str | None, bool]:
     tts_text = normalize_tts_pronunciation(text)
-    key = f"{utterance_kind}|{language_code}|{_normalized_cache_text(tts_text)}"
+    key_material = tts_cache_material(
+        language_code=language_code,
+        speaker=SARVAM_TTS_SPEAKER,
+        pace=SARVAM_TTS_PACE,
+        model="bulbul:v3",
+        text=tts_text,
+    )
+    key = hashlib.sha256(key_material.encode("utf-8")).hexdigest()
     logger.info(
-        "TTS_REQUEST turn_id=%s kind=%s text_len=%d preview=%r",
+        "TTS_REQUEST turn_id=%s kind=%s lang=%s text_len=%d preview=%r",
         turn_id or "-",
         utterance_kind,
+        language_code,
         len(tts_text or ""),
         text_preview(tts_text),
     )
     cached = TTS_CACHE.get(key)
     if cached:
+        if metrics is not None:
+            metrics["tts_cache_hits_per_turn"] = int(metrics.get("tts_cache_hits_per_turn") or 0) + 1
         logger.info(
             "TTS_RESULT turn_id=%s kind=%s source=cache audio_bytes=%d wav_duration_s=%.3f",
             turn_id or "-",
@@ -694,6 +716,8 @@ async def tts_to_base64_cached(
     async with key_lock:
         cached = TTS_CACHE.get(key)
         if cached:
+            if metrics is not None:
+                metrics["tts_cache_hits_per_turn"] = int(metrics.get("tts_cache_hits_per_turn") or 0) + 1
             logger.info(
                 "TTS_RESULT turn_id=%s kind=%s source=cache_after_wait audio_bytes=%d wav_duration_s=%.3f",
                 turn_id or "-",
@@ -704,7 +728,10 @@ async def tts_to_base64_cached(
             return cached, True
 
         provider_timeout_s = timeout_s or TTS_TIMEOUT_S
+        if metrics is not None:
+            metrics["tts_requests_per_turn"] = int(metrics.get("tts_requests_per_turn") or 0) + 1
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
+        used_english_fallback = False
         try:
             audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, language_code), timeout=provider_timeout_s)
         except asyncio.TimeoutError:
@@ -732,6 +759,9 @@ async def tts_to_base64_cached(
                 utterance_kind,
                 language_code,
             )
+            used_english_fallback = True
+            if metrics is not None:
+                metrics["tts_retries_per_turn"] = int(metrics.get("tts_retries_per_turn") or 0) + 1
             try:
                 audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, "en-IN"), timeout=provider_timeout_s)
             except asyncio.TimeoutError:
@@ -751,14 +781,15 @@ async def tts_to_base64_cached(
                 )
                 audio = None
         logger.info("TTS_HTTP_END turn_id=%s kind=%s", turn_id or "-", utterance_kind)
-        if audio:
+        if audio and not used_english_fallback:
             TTS_CACHE.set(key, audio)
         logger.info(
-            "TTS_RESULT turn_id=%s kind=%s source=network audio_bytes=%d wav_duration_s=%.3f",
+            "TTS_RESULT turn_id=%s kind=%s source=network audio_bytes=%d wav_duration_s=%.3f fallback_en=%s",
             turn_id or "-",
             utterance_kind,
             audio_bytes_len(audio),
             ((estimate_wav_duration_ms(audio or "") or 0.0) / 1000.0),
+            used_english_fallback,
         )
         return audio, False
 
@@ -2103,7 +2134,7 @@ async def process_user_text_and_reply(
             visible_payload["departmentId"] = department_id
         if course_menu_options and not defer_card_until_tts_ready:
             visible_payload["options"] = course_menu_options
-        if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS:
+        if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
             timing.mark("visible_answer")
             timing.mark("turn_end")
             visible_payload.update(debug_payload(timing))
@@ -2197,17 +2228,19 @@ async def process_user_text_and_reply(
         tts_budget_s = TTS_TIMEOUT_S + 2.0
         if faq_direct_reply:
             # FAQ answers are deterministic and can be longer than the normal short voice reply.
-            # Do not use the low-latency audio-update budget here; the UI waits on thinking
-            # until this audio is ready so visible text and TTS stay matched.
             tts_budget_s = max(TTS_TIMEOUT_S + 12.0, 18.0)
         elif intent == INTENT_DEPARTMENT_COMPARISON:
-            # Full multi-section comparison narration + chunked TTS needs a larger end-to-end budget.
             tts_budget_s = max(TTS_TIMEOUT_S + 42.0, 72.0)
-        elif LOW_LATENCY_VOICE_MODE:
+        elif LOW_LATENCY_VOICE_MODE and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
+            # Legacy text-first path only: cap remaining TTS by the old visible-answer timeout.
             elapsed_before_tts_s = (timing.since_start("tts_start") or 0.0) / 1000.0
             tts_budget_s = max(0.5, AUDIO_UPDATE_TIMEOUT_S - elapsed_before_tts_s)
 
         spoken_for_payload = (tts_text or reply_text).strip()
+        tts_plan_mode: str | None = None
+        tts_expected_clip_count = 0
+        tts_metrics = empty_tts_metrics()
+        timing.extras = tts_metrics
 
         def _merge_assistant_audio_payload(
             *,
@@ -2269,6 +2302,12 @@ async def process_user_text_and_reply(
                 total_chars = len(tts_text.strip())
                 merged["tts_total_chars"] = total_chars
                 merged["tts_total_duration_estimate_ms"] = max(2500, int(total_chars * 55))
+            if tts_expected_clip_count:
+                merged["tts_expected_clip_count"] = tts_expected_clip_count
+            if tts_plan_mode:
+                merged["tts_plan_mode"] = tts_plan_mode
+            if tts_metrics:
+                merged["tts_metrics"] = dict(tts_metrics)
             # M5.2 wire: PresentationBundle path sets narration_segments=None but still
             # stores narration_plan on visible_payload. Propagate that existing field onto
             # every assistant_audio_update ChatScreen consumes (interim + final). Do not
@@ -2303,13 +2342,48 @@ async def process_user_text_and_reply(
                 if plan_n > 0:
                     while len(summaries) < plan_n:
                         summaries.append("")
-                    chunks = [s if isinstance(s, str) else "" for s in summaries[:plan_n]]
+                    card_segments = [s if isinstance(s, str) else "" for s in summaries[:plan_n]]
                 else:
-                    chunks = [s if isinstance(s, str) else "" for s in summaries]
+                    card_segments = [s if isinstance(s, str) else "" for s in summaries]
+                tts_plan = plan_response_tts(
+                    source_text=chunk_source_text,
+                    card_segments=card_segments,
+                    short_answer_max_chars=TTS_SHORT_ANSWER_MAX_CHARS,
+                    chunk_max_chars=max_chars,
+                    splitter=split_tts_chunks,
+                )
             elif narration_segments:
-                chunks = [s.tts_text for s in narration_segments if s.tts_text and s.tts_text.strip()]
+                tts_plan = plan_response_tts(
+                    source_text=chunk_source_text,
+                    card_segments=[
+                        s.tts_text for s in narration_segments if s.tts_text and s.tts_text.strip()
+                    ],
+                    short_answer_max_chars=TTS_SHORT_ANSWER_MAX_CHARS,
+                    chunk_max_chars=max_chars,
+                    splitter=split_tts_chunks,
+                )
             else:
-                chunks = split_tts_chunks(chunk_source_text, max_chars=max_chars)
+                tts_plan = plan_response_tts(
+                    source_text=chunk_source_text,
+                    card_segments=None,
+                    short_answer_max_chars=TTS_SHORT_ANSWER_MAX_CHARS,
+                    chunk_max_chars=max_chars,
+                    splitter=split_tts_chunks,
+                )
+            chunks = list(tts_plan.segments)
+            tts_plan_mode = tts_plan.mode
+            tts_expected_clip_count = tts_plan.clip_count
+            tts_metrics.update(empty_tts_metrics(plan_mode=tts_plan.mode, chunks=len(chunks)))
+            logger.info(
+                "TTS_PLAN turn_id=%s mode=%s reason=%s clips=%d source_chars=%d complete_mode=%s hold_thinking=%s",
+                timing.turn_id,
+                tts_plan.mode,
+                tts_plan.reason,
+                len(chunks),
+                tts_plan.source_chars,
+                KIOSK_COMPLETE_RESPONSE_TTS,
+                KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO,
+            )
             if not chunks:
                 chunks = [chunk_source_text]
             faq_chunk_t0 = max(TTS_CHUNK_FIRST_TIMEOUT_S, 8.0)
@@ -2337,8 +2411,10 @@ async def process_user_text_and_reply(
                 hit = False
                 attempts = 0
                 if chunk_text:
-                    for attempt in range(1, 4):
+                    for attempt in range(1, TTS_CHUNK_MAX_ATTEMPTS + 1):
                         attempts = attempt
+                        if attempt > 1:
+                            tts_metrics["tts_retries_per_turn"] = int(tts_metrics.get("tts_retries_per_turn") or 0) + 1
                         try:
                             audio_b64, hit = await asyncio.wait_for(
                                 tts_to_base64_cached(
@@ -2348,6 +2424,7 @@ async def process_user_text_and_reply(
                                     utterance_kind=chunk_kind,
                                     timeout_s=timeout_i,
                                     allow_english_fallback=not used_bundle_plan,
+                                    metrics=tts_metrics,
                                 ),
                                 timeout=timeout_i + 0.25,
                             )
@@ -2393,6 +2470,9 @@ async def process_user_text_and_reply(
                     successful_chunk_chars += len(chunk_text)
                     tts_cache_hit = tts_cache_hit or hit
                     full_audio_b64 = audio_b64
+                    if not timing.has("tts_first_end"):
+                        timing.mark("tts_first_end")
+                        tts_metrics["first_audio_ready_ms"] = timing.since_start("tts_first_end")
                     logger.info(
                         "TTS_CHUNK_SUCCESS turn_id=%s chunk_index=%d total_chunks=%d attempts=%d chars=%d",
                         timing.turn_id,
@@ -2445,6 +2525,8 @@ async def process_user_text_and_reply(
                 if _turn_stale(session, turn_gen_marker):
                     logger.info("Stale streaming TTS chunk dropped (session_generation advanced)")
                     return
+                if not timing.has("visible_answer"):
+                    timing.mark("visible_answer")
                 await _ws_send_json(websocket, 5, session, interim)
                 had_streaming_interim = True
 
@@ -2462,15 +2544,21 @@ async def process_user_text_and_reply(
                     timing.turn_id,
                 )
             else:
-                needs_full_backup = (
-                    successful_chunk_chars < len(chunk_source_text)
-                    or bool(failed_chunk_indices)
-                    or not streamed_any
+                successful_clip_count = sum(
+                    1
+                    for clip in collected_clips
+                    if isinstance(clip.get("audio"), str) and clip.get("audio")
+                )
+                needs_full_backup = needs_full_reply_backup(
+                    used_bundle_plan=used_bundle_plan,
+                    successful_clip_count=successful_clip_count,
                 )
                 logger.info(
-                    "TTS_FULL_BACKUP_START turn_id=%s needs_full_backup=%s",
+                    "TTS_FULL_BACKUP_START turn_id=%s needs_full_backup=%s successful_clips=%d failed_chunk_indices=%s",
                     timing.turn_id,
                     needs_full_backup,
+                    successful_clip_count,
+                    failed_chunk_indices,
                 )
                 if not needs_full_backup:
                     logger.info(
@@ -2487,6 +2575,7 @@ async def process_user_text_and_reply(
                                 turn_id=timing.turn_id,
                                 utterance_kind=retry_kind,
                                 timeout_s=FULL_TTS_FALLBACK_TIMEOUT,
+                                metrics=tts_metrics,
                             ),
                             timeout=FULL_TTS_FALLBACK_TIMEOUT + 0.5,
                         )
@@ -2502,6 +2591,7 @@ async def process_user_text_and_reply(
                         full_audio_b64 = retry_audio
                         final_backup_audio_b64 = retry_audio
                         utterance_kind = retry_kind
+                        tts_metrics["tts_backup_used"] = True
                         if not timing.has("play_start"):
                             timing.mark("play_start")
                             est = estimate_wav_duration_ms(retry_audio)
@@ -2538,6 +2628,7 @@ async def process_user_text_and_reply(
                         turn_id=timing.turn_id,
                         utterance_kind=utterance_kind,
                         timeout_s=tts_budget_s if faq_direct_reply else None,
+                        metrics=tts_metrics,
                     ),
                     timeout=tts_budget_s,
                 )
@@ -2556,6 +2647,7 @@ async def process_user_text_and_reply(
                     lang_code,
                     turn_id=timing.turn_id,
                     utterance_kind="assistant_full_reply_fallback",
+                    metrics=tts_metrics,
                 )
             if fallback_audio_b64:
                     full_audio_b64 = fallback_audio_b64
@@ -2565,7 +2657,15 @@ async def process_user_text_and_reply(
                     is_final_segment = True
                     tts_text = reply_text
         timing.mark("tts_end")
-        if tts_timed_out and LOW_LATENCY_VOICE_MODE and not faq_direct_reply:
+        tts_metrics["tts_generation_ms"] = timing.duration("tts_start", "tts_end")
+        tts_metrics["total_audio_ready_ms"] = timing.since_start("tts_end")
+        if tts_metrics.get("first_audio_ready_ms") is None and timing.has("tts_first_end"):
+            tts_metrics["first_audio_ready_ms"] = timing.since_start("tts_first_end")
+        elif tts_metrics.get("first_audio_ready_ms") is None and full_audio_b64:
+            tts_metrics["first_audio_ready_ms"] = timing.since_start("tts_end")
+        if not timing.has("visible_answer") and (full_audio_b64 or had_streaming_interim):
+            timing.mark("visible_answer")
+        if tts_timed_out and LOW_LATENCY_VOICE_MODE and not faq_direct_reply and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
             timing.marks["tts_end"] = timing.started_ms + (AUDIO_UPDATE_TIMEOUT_S * 1000.0)
         if full_audio_b64 and not timing.has("play_start"):
             timing.mark("play_start")
@@ -2624,13 +2724,17 @@ async def process_user_text_and_reply(
                 None if had_streaming_interim else full_audio_b64
             )
         logger.info(
-            "TTS_COMPLETE_RESPONSE turn_id=%s complete_mode=%s clips=%d queue=%s slots=%s audible=%s",
+            "TTS_COMPLETE_RESPONSE turn_id=%s complete_mode=%s hold_thinking=%s plan=%s clips=%d queue=%s slots=%s audible=%s requests=%s retries=%s",
             timing.turn_id,
             KIOSK_COMPLETE_RESPONSE_TTS,
+            KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO,
+            tts_plan_mode,
             len(collected_clips),
             bool(final_queue),
             len(clip_slots) if clip_slots else 0,
             audible_audio_ready,
+            tts_metrics.get("tts_requests_per_turn"),
+            tts_metrics.get("tts_retries_per_turn"),
         )
         payload = _merge_assistant_audio_payload(
             audio_b64=final_wire_audio if isinstance(final_wire_audio, str) else None,
@@ -2693,6 +2797,10 @@ async def process_user_text_and_reply(
             llm_cache_hit=llm_cache_hit,
             tts_cache_hit=tts_cache_hit,
             language=session.get("language_name") or "English",
+            tts_plan_mode=tts_plan_mode,
+            tts_requests_per_turn=tts_metrics.get("tts_requests_per_turn"),
+            tts_retries_per_turn=tts_metrics.get("tts_retries_per_turn"),
+            tts_chunks_per_turn=tts_metrics.get("tts_chunks_per_turn"),
         )
     except asyncio.CancelledError:
         timing.mark("turn_end")

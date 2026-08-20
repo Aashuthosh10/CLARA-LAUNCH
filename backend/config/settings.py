@@ -283,8 +283,17 @@ NARRATION_SEGMENT_TTS_BUDGET_S = max(3.0, min(120.0, NARRATION_SEGMENT_TTS_BUDGE
 ENABLE_ACK_EARCON = os.getenv("ENABLE_ACK_EARCON", "true").strip().lower() in ("1", "true", "yes", "on")
 ENABLE_EARLY_PARTIAL_TEXT = os.getenv("ENABLE_EARLY_PARTIAL_TEXT", "true").strip().lower() in ("1", "true", "yes", "on")
 LOW_LATENCY_VOICE_MODE = os.getenv("LOW_LATENCY_VOICE_MODE", "true").strip().lower() in ("1", "true", "yes", "on")
-# Complete-response TTS: hold presentation until required speech is ready (reliability > speed).
-KIOSK_COMPLETE_RESPONSE_TTS = os.getenv("KIOSK_COMPLETE_RESPONSE_TTS", "true").strip().lower() in (
+# Wait-for-all-clips before presenting. Off by default: M5.8 presents on first playable clip.
+KIOSK_COMPLETE_RESPONSE_TTS = os.getenv("KIOSK_COMPLETE_RESPONSE_TTS", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+# Hold THINKING until the first playable response clip is validated. Do not show text-first.
+KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO = os.getenv(
+    "KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO", "true"
+).strip().lower() in (
     "1",
     "true",
     "yes",
@@ -292,11 +301,22 @@ KIOSK_COMPLETE_RESPONSE_TTS = os.getenv("KIOSK_COMPLETE_RESPONSE_TTS", "true").s
 )
 FIRST_SENTENCE_TTS_MAX_CHARS = int(os.getenv("FIRST_SENTENCE_TTS_MAX_CHARS", "160"))
 AUDIO_UPDATE_TIMEOUT_S = float(os.getenv("AUDIO_UPDATE_TIMEOUT_S", "3.0"))
+# Short receptionist answers stay on one Sarvam call. Chunk only genuinely long replies.
+try:
+    TTS_SHORT_ANSWER_MAX_CHARS = int(os.getenv("TTS_SHORT_ANSWER_MAX_CHARS", "480"))
+except ValueError:
+    TTS_SHORT_ANSWER_MAX_CHARS = 480
+TTS_SHORT_ANSWER_MAX_CHARS = max(0, min(4000, TTS_SHORT_ANSWER_MAX_CHARS))
+try:
+    TTS_CHUNK_MAX_ATTEMPTS = int(os.getenv("TTS_CHUNK_MAX_ATTEMPTS", "2"))
+except ValueError:
+    TTS_CHUNK_MAX_ATTEMPTS = 2
+TTS_CHUNK_MAX_ATTEMPTS = max(1, min(4, TTS_CHUNK_MAX_ATTEMPTS))
 # Chunked low-latency TTS: per-chapter budgets (full reply is never generated in one blocking call).
 TTS_CHUNK_MAX_CHARS = int(os.getenv("TTS_CHUNK_MAX_CHARS", "220"))
 TTS_CHUNK_MAX_CHARS_NARRATOR = int(os.getenv("TTS_CHUNK_MAX_CHARS_NARRATOR", "260"))
 TTS_CHUNK_MAX_CHARS_COMPARISON = int(os.getenv("TTS_CHUNK_MAX_CHARS_COMPARISON", "340"))
-TTS_CHUNK_FIRST_TIMEOUT_S = float(os.getenv("TTS_CHUNK_FIRST_TIMEOUT_S", "6.0"))
+TTS_CHUNK_FIRST_TIMEOUT_S = float(os.getenv("TTS_CHUNK_FIRST_TIMEOUT_S", "10.0"))
 TTS_CHUNK_TIMEOUT_S = float(os.getenv("TTS_CHUNK_TIMEOUT_S", "5.0"))
 FULL_TTS_FALLBACK_TIMEOUT = float(os.getenv("FULL_TTS_FALLBACK_TIMEOUT", "20.0"))
 

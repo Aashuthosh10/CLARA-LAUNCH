@@ -113,7 +113,9 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
             main, "KIOSK_COMPLETE_RESPONSE_TTS", True
-        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+        ), patch.object(main, "TTS_SHORT_ANSWER_MAX_CHARS", 0), patch.object(
+            main, "ENABLE_ACK_EARCON", False
+        ), patch.object(
             main, "ENABLE_EARLY_PARTIAL_TEXT", False
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
@@ -156,6 +158,8 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
             main, "KIOSK_COMPLETE_RESPONSE_TTS", False
+        ), patch.object(main, "KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO", False), patch.object(
+            main, "TTS_SHORT_ANSWER_MAX_CHARS", 0
         ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
             main, "ENABLE_EARLY_PARTIAL_TEXT", False
         ), patch.object(
@@ -257,7 +261,9 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
             main, "KIOSK_COMPLETE_RESPONSE_TTS", True
-        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+        ), patch.object(main, "TTS_SHORT_ANSWER_MAX_CHARS", 0), patch.object(
+            main, "ENABLE_ACK_EARCON", False
+        ), patch.object(
             main, "ENABLE_EARLY_PARTIAL_TEXT", False
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
@@ -289,7 +295,7 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
         retry_kinds_called = [
             call.get("utterance_kind") for call in tts_calls
         ]
-        self.assertGreaterEqual(retry_kinds_called.count("assistant_full_reply_chunk_0"), 3)
+        self.assertGreaterEqual(retry_kinds_called.count("assistant_full_reply_chunk_0"), 2)
         self.assertIn("assistant_full_reply_backup", retry_kinds_called)
         self.assertNotIn("assistant_tts_failsafe", retry_kinds_called)
 
@@ -347,8 +353,10 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             return None, False
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
-            main, "ENABLE_ACK_EARCON", False
-        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", True
+        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+            main, "ENABLE_EARLY_PARTIAL_TEXT", False
+        ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
         ), patch.object(
             main,
@@ -397,6 +405,9 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             "tts_audio_queue",
             "tts_clip_slots",
             "narration_plan",
+            "tts_metrics",
+            "tts_expected_clip_count",
+            "tts_plan_mode",
             "debug",
             "session_gen",
             "wire_seq",

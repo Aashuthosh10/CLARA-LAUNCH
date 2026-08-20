@@ -11,7 +11,7 @@ def split_tts_chunks(text: str, *, max_chars: int = 220) -> list[str]:
     if not raw:
         return []
 
-    sentences = re.split(r"(?<=[.!?])\s+", raw)
+    sentences = re.split(r"(?<=[.!?।|])\s+", raw)
     chunks: list[str] = []
     current = ""
 

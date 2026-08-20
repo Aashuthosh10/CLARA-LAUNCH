@@ -66,8 +66,10 @@ class TestM53TtsClipSlots(unittest.IsolatedAsyncioTestCase):
             return await fake_tts(text, language_code, **kwargs)
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
-            main, "ENABLE_ACK_EARCON", False
-        ), patch.object(main, "ENABLE_EARLY_PARTIAL_TEXT", False), patch.object(
+            main, "KIOSK_COMPLETE_RESPONSE_TTS", True
+        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+            main, "ENABLE_EARLY_PARTIAL_TEXT", False
+        ), patch.object(
             main, "ENABLE_FIRST_SENTENCE_TTS", False
         ), patch.object(main, "FORCE_FINAL_TTS_ONLY", False), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)

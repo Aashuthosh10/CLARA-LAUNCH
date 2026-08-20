@@ -234,13 +234,18 @@ export function createResponseTtsScheduler() {
   };
 
   const isPresentationReady = (): boolean => {
-    if (!turnId) return false;
-    const required = expectedCount ?? (clips.length > 0 ? clips.length : null);
-    if (required === null || required <= 0) return false;
-    if (clips.length < required) return false;
-    const slice = clips.slice(0, required);
-    if (slice.some((c) => c.status === 'PENDING')) return false;
-    return slice.some((c) => c.status === 'READY' || c.status === 'PLAYING' || c.status === 'COMPLETED');
+    if (!turnId || clips.length === 0) return false;
+    const first = clips[0];
+    if (!first || first.status === 'PENDING') return false;
+    if (first.status === 'READY' || first.status === 'PLAYING' || first.status === 'COMPLETED') {
+      return true;
+    }
+    if (first.status === 'FAILED') {
+      return clips.some(
+        (c) => c.status === 'READY' || c.status === 'PLAYING' || c.status === 'COMPLETED',
+      );
+    }
+    return false;
   };
 
   const nextPlayable = (): ResponseTtsClip | null => {

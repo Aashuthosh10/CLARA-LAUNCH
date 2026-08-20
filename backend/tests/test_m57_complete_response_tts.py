@@ -72,7 +72,9 @@ class TestM57CompleteResponseTts(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(main, "LOW_LATENCY_VOICE_MODE", True), patch.object(
             main, "KIOSK_COMPLETE_RESPONSE_TTS", True
-        ), patch.object(main, "ENABLE_ACK_EARCON", False), patch.object(
+        ), patch.object(main, "TTS_SHORT_ANSWER_MAX_CHARS", 0), patch.object(
+            main, "ENABLE_ACK_EARCON", False
+        ), patch.object(
             main, "ENABLE_EARLY_PARTIAL_TEXT", False
         ), patch.object(
             main, "maybe_auto_detect_session_language", new=AsyncMock(side_effect=_no_auto_language)
