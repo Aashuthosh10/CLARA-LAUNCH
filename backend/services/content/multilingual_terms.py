@@ -9,6 +9,9 @@ TOPIC_HOD = "hod"
 TOPIC_FEES = "fees"
 TOPIC_ACHIEVEMENTS = "achievements"
 TOPIC_PLACEMENTS = "placements"
+TOPIC_PRINCIPAL = "principal"
+TOPIC_VICE_PRINCIPAL = "vice_principal"
+TOPIC_TRUSTEES = "trustees"
 
 
 # Achievements cues: answer_generation.extract_features does not expose a dedicated

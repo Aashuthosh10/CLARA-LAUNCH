@@ -71,6 +71,7 @@ export default function BaseDepartmentCard({
       data-testid="department-card"
       data-card-index={currentSlide}
       data-total-slides={totalSlides}
+      data-department-id={departmentId}
     >
       {/* Header - Department Info (Sticky/Permanent) */}
       <header className="pt-8 pb-4 text-center z-20 relative">

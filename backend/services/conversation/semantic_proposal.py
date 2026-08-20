@@ -40,7 +40,7 @@ CANONICAL_TOPICS: frozenset[str] = frozenset(
     {"overview", "hod", "fees", "achievements", "placements"}
 )
 ATOMIC_CARD_TOPICS: frozenset[str] = frozenset(
-    {"hod", "fees", "achievements", "placements"}
+    {"hod", "fees", "achievements", "placements", "principal", "vice_principal", "trustees"}
 )
 ALLOWED_SCOPES: frozenset[str] = frozenset({"single", "full_department"})
 ALLOWED_CLARIFY_TARGETS: frozenset[str] = frozenset(

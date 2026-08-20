@@ -2315,6 +2315,12 @@ async def process_user_text_and_reply(
             plan = visible_payload.get("narration_plan")
             if isinstance(plan, dict) and plan.get("mode") == "card_narration":
                 merged["narration_plan"] = plan
+            # Presentation localization contract: selected session language must reach
+            # the card UI. This is not a TTS architecture change.
+            if session.get("language_code_key"):
+                sess_lang_key, sess_lang_name, _ = resolve_session_language(session)
+                merged["language_code_key"] = sess_lang_key
+                merged["language_name"] = sess_lang_name
             merged.update(debug_payload(timing))
             return merged
 

@@ -21,6 +21,9 @@ export type PresentationCardType =
   | 'achievements'
   | 'placements'
   | 'department_fees'
+  | 'principal'
+  | 'vice_principal'
+  | 'trustees'
   | 'unsupported';
 
 export type PresentationCardModel = {
@@ -63,6 +66,10 @@ export function cardTypeFromUnitId(unitId: string): PresentationCardType {
   if (uid === 'fees.overview' || uid.startsWith('fees.')) return 'unsupported';
   if (uid === 'documents.overview' || uid === 'admission.documents_required') return 'unsupported';
   if (uid.startsWith('documents.') || uid.startsWith('admission.')) return 'unsupported';
+
+  if (uid === 'leadership.principal') return 'principal';
+  if (uid === 'leadership.vice_principal') return 'vice_principal';
+  if (uid === 'leadership.trustees') return 'trustees';
 
   const suffix = uid.split('.').slice(1).join('.');
   if (suffix === 'overview') return 'overview';

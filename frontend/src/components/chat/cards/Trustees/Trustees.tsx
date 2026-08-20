@@ -65,9 +65,10 @@ const trustees = [
 
 type TrusteesProps = {
   onNarrateTrustee?: (summary: string, index: number) => void;
+  language?: string;
 };
 
-export default function Trustees({ onNarrateTrustee }: TrusteesProps) {
+export default function Trustees({ onNarrateTrustee, language }: TrusteesProps) {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const currentTrustee = trustees[index];
@@ -92,7 +93,7 @@ export default function Trustees({ onNarrateTrustee }: TrusteesProps) {
   }, [currentTrustee.tts_summary, index, onNarrateTrustee]);
 
   return (
-    <div className="trustee-stage-shell">
+    <div className="trustee-stage-shell" data-testid="trustees-card" data-card-language={language || ''}>
       <AnimatePresence mode="wait">
         <TrusteeCard
           key={index}

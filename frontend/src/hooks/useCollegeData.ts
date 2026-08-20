@@ -33,7 +33,12 @@ const BY_LANGUAGE: Record<Language, CollegeLocaleData> = {
   Malayalam: collegeMl as CollegeLocaleData,
 };
 
-export function useCollegeData(): CollegeLocaleData {
+export function collegeDataForLanguage(language: Language): CollegeLocaleData {
+  return (BY_LANGUAGE[language] ?? collegeEn) as CollegeLocaleData;
+}
+
+export function useCollegeData(languageOverride?: Language | null): CollegeLocaleData {
   const { language } = useLanguage();
-  return useMemo(() => BY_LANGUAGE[language] ?? collegeEn, [language]) as CollegeLocaleData;
+  const resolved = languageOverride || language;
+  return useMemo(() => collegeDataForLanguage(resolved), [resolved]) as CollegeLocaleData;
 }

@@ -230,6 +230,39 @@ const DEFAULT_COURSE_MENU_OPTIONS = [
   'Basic Sciences',
 ];
 
+const LANGUAGE_FROM_CODE_KEY: Record<string, Language> = {
+  en: 'English',
+  hi: 'Hindi',
+  kn: 'Kannada',
+  ta: 'Tamil',
+  te: 'Telugu',
+  ml: 'Malayalam',
+};
+
+function languageFromPayload(payload: any): Language | null {
+  const name = payload?.language_name;
+  if (
+    name === 'English' ||
+    name === 'Kannada' ||
+    name === 'Hindi' ||
+    name === 'Tamil' ||
+    name === 'Telugu' ||
+    name === 'Malayalam'
+  ) {
+    return name;
+  }
+  const code = String(payload?.language_code_key || '').trim().toLowerCase();
+  return LANGUAGE_FROM_CODE_KEY[code] ?? null;
+}
+
+const DEPARTMENT_UNIT_CARD_TYPES = new Set([
+  'overview',
+  'hod',
+  'achievements',
+  'placements',
+  'department_fees',
+]);
+
 const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
   English: { placements: 'Placements & training' },
   Kannada: { placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
@@ -536,6 +569,7 @@ export default function ChatScreen({
   faceChannel,
 }: ChatScreenProps) {
   const { language, setLanguage, t } = useLanguage();
+  const presentationLanguage = languageFromPayload(payload) ?? language;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [displayMessages, setDisplayMessages] = useState<ChatMessage[]>(payloadMessages);
   
@@ -672,7 +706,7 @@ export default function ChatScreen({
   const uiClickDeckDepartmentRef = useRef<string | null>(null);
 
 
-  const collegeData = useCollegeData();
+  const collegeData = useCollegeData(presentationLanguage);
 
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
@@ -2693,6 +2727,7 @@ export default function ChatScreen({
       setIsHodStage(false);
       setExecutiveLeadershipKind(null);
       setIsFeesStage(false);
+      setIsTrusteesStage(false);
       setActiveFeesDepartmentId(null);
       setIsDocumentsStage(false);
       setDepartmentOverviewDeckUnitIds(null);
@@ -2720,6 +2755,9 @@ export default function ChatScreen({
         const allHod = models.every((m) => m.cardType === 'hod');
         const allFees = models.length === 1 && models[0]!.cardType === 'department_fees';
         const allPlacements = models.length === 1 && models[0]!.cardType === 'placements';
+        const allPrincipal = models.every((m) => m.cardType === 'principal');
+        const allVicePrincipal = models.every((m) => m.cardType === 'vice_principal');
+        const allTrustees = models.every((m) => m.cardType === 'trustees');
 
         if (allFees) {
           const deptKey = models[0]!.departmentId;
@@ -2761,6 +2799,60 @@ export default function ChatScreen({
           return;
         }
 
+        if (allPrincipal) {
+          setExecutiveLeadershipKind('principal');
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        if (allVicePrincipal) {
+          setExecutiveLeadershipKind('vice_principal');
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        if (allTrustees) {
+          setIsTrusteesStage(true);
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
         if (allPlacements) {
           setIsInfoSlideStage(true);
           const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
@@ -2788,18 +2880,25 @@ export default function ChatScreen({
         // cse_aiml.hod + cse.fees each render their real content.
         const slides = models.map((m) => {
           const slot = typeof m.slotIndex === 'number' ? m.slotIndex : 0;
-          const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, language);
+          const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, presentationLanguage);
           return {
             title: fromLocale?.title || m.title,
             content: fromLocale?.content || m.content,
             slotIndex: slot,
           };
         });
-        const isSingleDepartmentDeck = new Set(models.map((m) => m.departmentId)).size === 1;
+        const isSingleDepartmentDeck = new Set(
+          models.filter((m) => DEPARTMENT_UNIT_CARD_TYPES.has(m.cardType)).map((m) => m.departmentId),
+        ).size === 1;
+        const firstDept = models.find((m) => DEPARTMENT_UNIT_CARD_TYPES.has(m.cardType));
         setDepartmentOverviewDeckUnitIds(models.map((m) => m.unitId));
         setIsDepartmentOverviewStage(true);
         setActiveDepartmentId(
-          isSingleDepartmentDeck ? factoryDepartmentLabelFromJsonKey(models[0]!.departmentId) : null,
+          isSingleDepartmentDeck && firstDept
+            ? factoryDepartmentLabelFromJsonKey(firstDept.departmentId)
+            : firstDept
+              ? factoryDepartmentLabelFromJsonKey(firstDept.departmentId)
+              : null,
         );
         setLayoutMode('SPLIT_CARDS');
         setActiveCards(null);
@@ -4150,7 +4249,7 @@ export default function ChatScreen({
     if (Array.isArray(unitBackedCards) && unitBackedCards.length > 0) {
       return unitBackedCards.map((m) => {
         const slot = typeof m.slotIndex === 'number' ? m.slotIndex : 0;
-        const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, language);
+        const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, presentationLanguage);
         return {
           title: fromLocale?.title || m.title,
           content: fromLocale?.content || m.content,
@@ -4161,7 +4260,7 @@ export default function ChatScreen({
 
     if (Array.isArray(departmentOverviewDeckUnitIds) && departmentOverviewDeckUnitIds.length > 0) {
       return departmentOverviewDeckUnitIds
-        .map((unitId) => buildDepartmentSlideForUnit(collegeData, unitId, language))
+        .map((unitId) => buildDepartmentSlideForUnit(collegeData, unitId, presentationLanguage))
         .filter((x): x is DepartmentStageSlide => Boolean(x));
     }
 
@@ -4169,15 +4268,28 @@ export default function ChatScreen({
     if (!activeDepartmentId) return [];
     const jk = menuLabelToJsonKey(activeDepartmentId);
     if (!jk) return [];
-    return buildDepartmentSlidesFromRecord(getDepartmentRecord(collegeData, jk), jk, language);
+    return buildDepartmentSlidesFromRecord(getDepartmentRecord(collegeData, jk), jk, presentationLanguage);
   }, [
     isDepartmentOverviewStage,
     activeDepartmentId,
     departmentOverviewDeckUnitIds,
     unitBackedCards,
     collegeData,
-    language,
+    presentationLanguage,
   ]);
+
+  const currentUnitCard = useMemo(() => {
+    if (!Array.isArray(unitBackedCards) || unitBackedCards.length === 0) return null;
+    const idx = Math.min(Math.max(0, currentCardIdx), unitBackedCards.length - 1);
+    return unitBackedCards[idx] ?? null;
+  }, [unitBackedCards, currentCardIdx]);
+
+  const factoryDepartmentId = useMemo(() => {
+    if (currentUnitCard && DEPARTMENT_UNIT_CARD_TYPES.has(currentUnitCard.cardType)) {
+      return factoryDepartmentLabelFromJsonKey(currentUnitCard.departmentId);
+    }
+    return activeDepartmentId;
+  }, [currentUnitCard, activeDepartmentId]);
 
   useEffect(() => {
     if (!isE2EFlow) return;
@@ -4592,20 +4704,26 @@ export default function ChatScreen({
             >
               <div className={`visual-stage-70 flex flex-col items-center ${isCampusNavigationStage ? 'visual-stage-70--campus-map-only' : ''}`}>
                 {/* Content Layer */}
-                <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                <div
+                  className="relative z-10 w-full h-full flex flex-col items-center justify-center"
+                  data-card-language={presentationLanguage}
+                  data-current-unit-id={currentUnitCard?.unitId || ''}
+                >
 
                 {isCampusNavigationStage && selectedCampusDirection ? (
                   <CampusNavigationMapOnly
                     direction={selectedCampusDirection}
-                    language={language}
+                    language={presentationLanguage}
                     routeMode={campusRouteMode}
                     routeResult={campusRouteResult}
                     onMappedRoomSelect={handleMappedCampusRoomSelect}
                   />
-                ) : executiveLeadershipKind === 'principal' ? (
-                  <PremiumPrincipalCard language={language} />
-                ) : executiveLeadershipKind === 'vice_principal' ? (
-                  <PremiumVicePrincipalCard language={language} />
+                ) : currentUnitCard?.cardType === 'principal' || (executiveLeadershipKind === 'principal' && !currentUnitCard) ? (
+                  <PremiumPrincipalCard language={presentationLanguage} />
+                ) : currentUnitCard?.cardType === 'vice_principal' || (executiveLeadershipKind === 'vice_principal' && !currentUnitCard) ? (
+                  <PremiumVicePrincipalCard language={presentationLanguage} />
+                ) : currentUnitCard?.cardType === 'trustees' || (isTrusteesStage && !currentUnitCard) ? (
+                  <Trustees onNarrateTrustee={handleTrusteeNarration} language={presentationLanguage} />
                 ) : isHodStage ? (
                   <LeadershipOverview
                     cards={[]}
@@ -4618,17 +4736,20 @@ export default function ChatScreen({
                         : null
                     }
                   />
-                ) : isFeesStage ? (
-                  <DepartmentFeesCard departmentId={activeFeesDepartmentId} />
-                ) : isDepartmentOverviewStage && activeDepartmentId ? (
+                ) : currentUnitCard?.cardType === 'department_fees' || isFeesStage ? (
+                  <DepartmentFeesCard
+                    departmentId={currentUnitCard?.departmentId || activeFeesDepartmentId}
+                    language={presentationLanguage}
+                  />
+                ) : isDepartmentOverviewStage && factoryDepartmentId ? (
                   <DepartmentCardFactory 
-                    departmentId={activeDepartmentId}
+                    departmentId={factoryDepartmentId}
                     slides={departmentSlides}
                     currentIdx={currentCardIdx}
                     onNext={() => handleCardSelect(Math.min(departmentSlides.length - 1, currentCardIdx + 1))}
                     onPrev={() => handleCardSelect(Math.max(0, currentCardIdx - 1))}
                     onSelectSlide={handleCardSelect}
-                    language={language}
+                    language={presentationLanguage}
                     onClose={() => {
                       setIsDepartmentOverviewStage(false);
                       setActiveDepartmentId(null);
@@ -4648,7 +4769,7 @@ export default function ChatScreen({
                     onCardClick={handleCardSelect}
                   />
                 ) : isTrusteesStage ? (
-                  <Trustees onNarrateTrustee={handleTrusteeNarration} />
+                  <Trustees onNarrateTrustee={handleTrusteeNarration} language={presentationLanguage} />
                 ) : activeCards && activeCards.length > 0 ? (
                   <LeadershipOverview 
                     cards={activeCards} 

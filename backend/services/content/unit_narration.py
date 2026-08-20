@@ -1,0 +1,205 @@
+"""Intent-aware narration for selected ContentUnits.
+
+The planner produces spoken sentences. M5.8 TTS only speaks that text.
+Card UI keeps title/body; narration must not dump UI labels.
+"""
+
+from __future__ import annotations
+
+from backend.services.answer_generation import (
+    load_locale_data_for_lang_key,
+    locale_file_id_for_lang_key,
+)
+from backend.services.content.content_unit import ContentUnit
+from backend.services.content.leadership_units import (
+    TOPIC_PRINCIPAL,
+    TOPIC_TRUSTEES,
+    TOPIC_VICE_PRINCIPAL,
+)
+from backend.services.narration_plan import (
+    _DEPT_DISPLAY,
+    _clip_caption,
+    _effective_lang,
+    _init_executive_profiles,
+)
+from backend.services import narration_plan as _narration_plan_mod
+
+_SUPPORTED = ("en", "hi", "kn", "ta", "te", "ml")
+
+
+def _lk(lang_key: str) -> str:
+    locale_id = locale_file_id_for_lang_key(lang_key)
+    lk = _effective_lang(locale_id)
+    return lk if lk in _SUPPORTED else "en"
+
+
+def _dept_label(dept_key: str, lang_key: str) -> str:
+    lk = _lk(lang_key)
+    names = _DEPT_DISPLAY.get(lk) or _DEPT_DISPLAY["en"]
+    return names.get(dept_key, dept_key)
+
+
+def _hod_name(unit: ContentUnit) -> str:
+    meta = unit.metadata or {}
+    name = str(meta.get("hod_name") or "").strip()
+    if name:
+        return name
+    return ""
+
+
+def _fact_sentence(body: str) -> str:
+    text = (body or "").strip()
+    if not text:
+        return ""
+    return _clip_caption(text, 280)
+
+
+def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
+    """One concise spoken sentence (or short paragraph) for a resolved unit."""
+    lk = _lk(lang_key)
+    suffix = (unit.unit_id.split(".", 1) + [""])[1]
+    dept = (unit.entity_id or "").strip()
+    dept_label = _dept_label(dept, lk) if dept and unit.entity_type == "department" else ""
+
+    if suffix == "hod":
+        name = _hod_name(unit)
+        if name and dept_label:
+            return {
+                "en": f"The Head of the {dept_label} department is {name}.",
+                "kn": f"{dept_label} ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು {name}.",
+                "hi": f"{dept_label} विभाग के प्रमुख {name} हैं।",
+                "ta": f"{dept_label} துறையின் தலைவர் {name}.",
+                "te": f"{dept_label} విభాగం అధిపతి {name}.",
+                "ml": f"{dept_label} വിഭാഗത്തിന്റെ മേധാവി {name} ആണ്.",
+            }.get(lk, f"The Head of the {dept_label} department is {name}.")
+        return _fact_sentence(unit.body)
+
+    if suffix == "overview":
+        body = _fact_sentence(unit.body)
+        if not body:
+            return body
+        lead = {
+            "en": f"Here is the {dept_label} department." if dept_label else "",
+            "kn": f"{dept_label} ವಿಭಾಗದ ಮಾಹಿತಿ." if dept_label else "",
+            "hi": f"{dept_label} विभाग की जानकारी।" if dept_label else "",
+            "ta": f"{dept_label} துறை பற்றிய தகவல்." if dept_label else "",
+            "te": f"{dept_label} విభాగం సమాచారం." if dept_label else "",
+            "ml": f"{dept_label} വിഭാഗത്തിന്റെ വിവരം." if dept_label else "",
+        }.get(lk, "")
+        return f"{lead} {body}".strip() if lead else body
+
+    if suffix == "fees":
+        body = _fact_sentence(unit.body)
+        if dept_label:
+            lead = {
+                "en": f"{dept_label} fees.",
+                "kn": f"{dept_label} ಶುಲ್ಕ.",
+                "hi": f"{dept_label} शुल्क.",
+                "ta": f"{dept_label} கட்டணம்.",
+                "te": f"{dept_label} ఫీజు.",
+                "ml": f"{dept_label} ഫീസ്.",
+            }.get(lk, f"{dept_label} fees.")
+            return f"{lead} {body}".strip() if body else lead
+        return body
+
+    if suffix == "placements":
+        body = _fact_sentence(unit.body)
+        if dept_label:
+            lead = {
+                "en": f"{dept_label} placements.",
+                "kn": f"{dept_label} ಉದ್ಯೋಗಾವಕಾಶಗಳು.",
+                "hi": f"{dept_label} प्लेसमेंट.",
+                "ta": f"{dept_label} வேலைவாய்ப்பு.",
+                "te": f"{dept_label} ప్లేస్‌మెంట్‌లు.",
+                "ml": f"{dept_label} പ്ലേസ്‌മെന്റുകൾ.",
+            }.get(lk, f"{dept_label} placements.")
+            return f"{lead} {body}".strip() if body else lead
+        return body
+
+    if suffix == "achievements":
+        body = _fact_sentence(unit.body)
+        if dept_label:
+            lead = {
+                "en": f"{dept_label} achievements.",
+                "kn": f"{dept_label} ಸಾಧನೆಗಳು.",
+                "hi": f"{dept_label} उपलब्धियां.",
+                "ta": f"{dept_label} சாதனைகள்.",
+                "te": f"{dept_label} సాధనలు.",
+                "ml": f"{dept_label} നേട്ടങ്ങൾ.",
+            }.get(lk, f"{dept_label} achievements.")
+            return f"{lead} {body}".strip() if body else lead
+        return body
+
+    if suffix == TOPIC_PRINCIPAL:
+        _init_executive_profiles()
+        pack = _narration_plan_mod.EXEC_PRINCIPAL or {}
+        p = pack.get(lk) or pack.get("en") or {}
+        name = str(p.get("name") or "").strip()
+        if name:
+            return {
+                "en": f"The Principal of Sai Vidya Institute of Technology is {name}.",
+                "kn": f"ಸಾಯಿ ವಿದ್ಯಾ ಇನ್‌ಸ್ಟಿಟ್ಯೂಟ್ ಆಫ್ ಟೆಕ್ನಾಲಜಿಯ ಪ್ರಾಂಶುಪಾಲರು {name}.",
+                "hi": f"साई विद्या इंस्टिट्यूट ऑफ टेक्नोलॉजी के प्राचार्य {name} हैं।",
+                "ta": f"Sai Vidya Institute of Technology முதல்வர் {name}.",
+                "te": f"Sai Vidya Institute of Technology ప్రిన్సిపాల్ {name}.",
+                "ml": f"Sai Vidya Institute of Technology പ്രിൻസിപ്പൽ {name} ആണ്.",
+            }.get(lk, f"The Principal of Sai Vidya Institute of Technology is {name}.")
+        return _fact_sentence(unit.body)
+
+    if suffix == TOPIC_VICE_PRINCIPAL:
+        _init_executive_profiles()
+        pack = _narration_plan_mod.EXEC_VICE or {}
+        p = pack.get(lk) or pack.get("en") or {}
+        name = str(p.get("name") or "").strip()
+        if name:
+            return {
+                "en": f"The Vice Principal and Dean Academics is {name}.",
+                "kn": f"ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್ {name}.",
+                "hi": f"उप प्राचार्य और शैक्षणिक डीन {name} हैं।",
+                "ta": f"துணை முதல்வர் மற்றும் கல்வி டீன் {name}.",
+                "te": f"ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్ {name}.",
+                "ml": f"ഉപ പ്രിൻസിപ്പലും അക്കാദമിക് ഡീനും {name} ആണ്.",
+            }.get(lk, f"The Vice Principal and Dean Academics is {name}.")
+        return _fact_sentence(unit.body)
+
+    if suffix == TOPIC_TRUSTEES:
+        names = _trustee_names(lk)
+        joined = ", ".join(names[:4])
+        if joined:
+            more = "…" if len(names) > 4 else ""
+            return {
+                "en": f"The trustees of SVIT include {joined}{more}.",
+                "kn": f"SVIT ಟ್ರಸ್ಟಿಗಳಲ್ಲಿ {joined}{more} ಇದ್ದಾರೆ.",
+                "hi": f"SVIT के ट्रस्टी में {joined}{more} शामिल हैं।",
+                "ta": f"SVIT அறங்காவலர்களில் {joined}{more} உள்ளனர்.",
+                "te": f"SVIT ట్రస్టీలలో {joined}{more} ఉన్నారు.",
+                "ml": f"SVIT ട്രസ്റ്റിമാരിൽ {joined}{more} ഉൾപ്പെടുന്നു.",
+            }.get(lk, f"The trustees of SVIT include {joined}{more}.")
+        return _fact_sentence(unit.body)
+
+    return _fact_sentence(unit.body)
+
+
+def _trustee_names(lang_key: str) -> list[str]:
+    data = load_locale_data_for_lang_key(lang_key)
+    holders = data.get("role_holders") if isinstance(data, dict) else None
+    trustees = holders.get("trustees") if isinstance(holders, dict) else None
+    names: list[str] = []
+    if isinstance(trustees, list):
+        for item in trustees:
+            if isinstance(item, dict):
+                name = str(item.get("name") or "").strip()
+                if name:
+                    names.append(name)
+    if names:
+        return names
+    en = load_locale_data_for_lang_key("en")
+    holders = en.get("role_holders") if isinstance(en, dict) else None
+    trustees = holders.get("trustees") if isinstance(holders, dict) else None
+    if isinstance(trustees, list):
+        for item in trustees:
+            if isinstance(item, dict):
+                name = str(item.get("name") or "").strip()
+                if name:
+                    names.append(name)
+    return names

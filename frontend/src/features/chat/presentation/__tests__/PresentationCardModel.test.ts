@@ -19,6 +19,9 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('cse.achievements')).toBe('achievements');
     expect(cardTypeFromUnitId('cse.placements')).toBe('placements');
     expect(cardTypeFromUnitId('cse.fees')).toBe('department_fees');
+    expect(cardTypeFromUnitId('leadership.principal')).toBe('principal');
+    expect(cardTypeFromUnitId('leadership.vice_principal')).toBe('vice_principal');
+    expect(cardTypeFromUnitId('leadership.trustees')).toBe('trustees');
   });
 
   it('never maps fees.overview / documents identities to department fees', () => {

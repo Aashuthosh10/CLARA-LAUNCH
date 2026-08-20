@@ -8,7 +8,11 @@ import principalPortrait from '../../../../assets/Principle and Vice principle/P
 export default function PremiumPrincipalCard({ language }: { language: Language }) {
   const copy = PRINCIPAL_COPY[language] ?? PRINCIPAL_COPY.English;
   return (
-    <div className="w-full h-full flex items-center justify-center">
+    <div
+      className="w-full h-full flex items-center justify-center"
+      data-testid="principal-card"
+      data-card-language={language}
+    >
       <PremiumHODCard
         label={copy.label}
         name={copy.name}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from backend.core.language_detection import LANGUAGE_KEY_TO_NAME
 from backend.services.content.content_unit import ContentUnit
 from backend.services.content.content_unit_registry import (
     ContentUnitDescriptor,
@@ -11,13 +12,19 @@ from backend.services.content.diagnostics import content_event
 from backend.services.content.resolver import ContentResolver
 from backend.services.content.types import (
     SURFACE_DEPARTMENT_OVERVIEW,
+    SURFACE_PRINCIPAL,
+    SURFACE_TRUSTEES,
+    SURFACE_VICE_PRINCIPAL,
     CanonicalContent,
     ContentSection,
     ResolveRequest,
 )
 from backend.services.content.validators import compute_unit_hash, validate_content_unit
 from backend.services.narration_plan import dept_labels, _effective_lang
-from backend.services.answer_generation import locale_file_id_for_lang_key
+from backend.services.answer_generation import (
+    load_locale_data_for_lang_key,
+    locale_file_id_for_lang_key,
+)
 
 _SOURCE_VERSION = "m5.0"
 
@@ -50,6 +57,8 @@ def resolve_unit(
         unit = _resolve_fees_overview(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key == "documents":
         unit = _resolve_documents_unit(descriptor, language=language, language_code=language_code)
+    elif descriptor.adapter_key in {"principal", "vice_principal", "trustees"}:
+        unit = _resolve_leadership_unit(descriptor, language=language, language_code=language_code)
     else:
         content_event("CONTENT_UNIT_FAILED", unit_id=unit_id, reason="unsupported_adapter")
         return None
@@ -126,6 +135,9 @@ def _unit_from_department_content(
 
     body = (sec.body or "").strip() or labels["notAvail"]
     summary = body[:200] if body else title
+    hod_name = ""
+    if descriptor.section_id == "hod_voice":
+        hod_name = _hod_name_for_department(descriptor.entity_id, content.language_code)
 
     unit_hash = compute_unit_hash(
         unit_id=descriptor.unit_id,
@@ -154,10 +166,60 @@ def _unit_from_department_content(
         canonical_source=descriptor.canonical_source,
         source_version=_SOURCE_VERSION,
         content_hash=unit_hash,
-        metadata={"department": descriptor.entity_id},
+        metadata={"department": descriptor.entity_id, "hod_name": hod_name} if hod_name else {"department": descriptor.entity_id},
         keywords=(descriptor.entity_id, descriptor.unit_suffix),
         presentation_capabilities=("dept_slide",),
     )
+
+
+def _hod_name_for_department(dept_key: str, language_code: str) -> str:
+    """Official HOD name from locale role_holders; English fallback. Proper noun, not translated."""
+    key = (dept_key or "").strip().lower()
+    for code in (language_code, "en"):
+        data = load_locale_data_for_lang_key(code)
+        holders = data.get("role_holders") if isinstance(data, dict) else None
+        by_dept = holders.get("hod_by_department") if isinstance(holders, dict) else None
+        row = by_dept.get(key) if isinstance(by_dept, dict) else None
+        if isinstance(row, dict):
+            name = str(row.get("hod_name") or "").strip()
+            if name:
+                return name
+    return ""
+
+
+def _resolve_leadership_unit(
+    descriptor: ContentUnitDescriptor,
+    *,
+    language: str,
+    language_code: str,
+) -> ContentUnit | None:
+    surface = {
+        "principal": SURFACE_PRINCIPAL,
+        "vice_principal": SURFACE_VICE_PRINCIPAL,
+        "trustees": SURFACE_TRUSTEES,
+    }.get(descriptor.adapter_key)
+    if not surface:
+        return None
+    display = (language or "").strip() or LANGUAGE_KEY_TO_NAME.get(language_code, "English")
+    content = ContentResolver().resolve(
+        ResolveRequest(
+            surface=surface,
+            language=display,
+            language_code=language_code,
+        )
+    )
+    if content is None:
+        return None
+    bio = ""
+    title = (content.title or "").strip()
+    by_id = {s.id: s for s in content.sections}
+    if "bio" in by_id:
+        bio = (by_id["bio"].body or "").strip()
+        title = (by_id.get("title").body if by_id.get("title") else title) or title
+    elif content.sections:
+        bio = "\n".join(s.body for s in content.sections if s.body).strip()
+    body = bio or (content.summary or title)
+    return _unit_from_aggregate_content(descriptor, content, body=body, title=title or content.title)
 
 
 def _resolve_fees_overview(
@@ -267,6 +329,9 @@ def build_unit_from_section(
 
     body = (section.body or "").strip() or labels["notAvail"]
     summary = body[:200] if body else title
+    hod_name = ""
+    if descriptor.section_id == "hod_voice":
+        hod_name = _hod_name_for_department(descriptor.entity_id, content.language_code)
     unit_hash = compute_unit_hash(
         unit_id=descriptor.unit_id,
         context=descriptor.context,
@@ -293,7 +358,7 @@ def build_unit_from_section(
         canonical_source=descriptor.canonical_source,
         source_version=_SOURCE_VERSION,
         content_hash=unit_hash,
-        metadata={"department": descriptor.entity_id},
+        metadata={"department": descriptor.entity_id, "hod_name": hod_name} if hod_name else {"department": descriptor.entity_id},
         keywords=(descriptor.entity_id, descriptor.unit_suffix),
         presentation_capabilities=("dept_slide",),
     )

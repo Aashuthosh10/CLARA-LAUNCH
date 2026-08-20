@@ -7,9 +7,17 @@ import json
 import uuid
 from typing import Sequence
 
-from backend.services.content.content_unit_registry import list_department_unit_descriptors
+from backend.services.content.content_unit_registry import (
+    get_unit_descriptor,
+    list_department_unit_descriptors,
+)
 from backend.services.content.content_unit_resolver import resolve_unit
 from backend.services.content.content_unit import ContentUnit
+from backend.services.content.leadership_units import (
+    LEADERSHIP_ENTITY,
+    is_leadership_topic,
+    unit_id_for_leadership_topic,
+)
 from backend.services.content.multilingual_terms import (
     TOPIC_ACHIEVEMENTS,
     TOPIC_FEES,
@@ -45,6 +53,19 @@ def _unit_id_for_topic(*, dept_key: str, topic: str) -> str | None:
     return f"{dept_key}.{suffix}"
 
 
+def _unit_id_for_item(*, entity: str, topic: str) -> str | None:
+    """Map one (entity, topic) pair to a registered unit id. No pairwise special cases."""
+    if is_leadership_topic(topic) or (entity or "").strip().lower() == LEADERSHIP_ENTITY:
+        uid = unit_id_for_leadership_topic(topic)
+        if uid and get_unit_descriptor(uid) is not None:
+            return uid
+        return None
+    uid = _unit_id_for_topic(dept_key=entity, topic=topic)
+    if uid and get_unit_descriptor(uid) is not None:
+        return uid
+    return None
+
+
 def select_content_units(
     semantic_request: SemanticRequest,
     *,
@@ -55,8 +76,9 @@ def select_content_units(
 
     - Never mutates CI intent values.
     - No RAG/LLM.
+    - N items → N units. No hidden card cap, no hardcoded pair families.
     """
-    if not semantic_request or not semantic_request.entities:
+    if not semantic_request:
         return None
     if semantic_request.confidence not in {"HIGH", "MEDIUM"}:
         return None
@@ -72,7 +94,7 @@ def select_content_units(
         if len(items) != 1:
             return None
         dept_key, topic = items[0]
-        if topic != TOPIC_OVERVIEW:
+        if topic != TOPIC_OVERVIEW or is_leadership_topic(topic):
             return None
         descriptors = list_department_unit_descriptors(dept_key)
         unit_ids = [d.unit_id for d in descriptors]
@@ -80,8 +102,8 @@ def select_content_units(
         # N compatible (entity, topic) pairs → N independently addressable units,
         # in user order. No first-only, no family lock, no arbitrary cap.
         seen: set[str] = set()
-        for dept_key, topic in items:
-            uid = _unit_id_for_topic(dept_key=dept_key, topic=topic)
+        for entity, topic in items:
+            uid = _unit_id_for_item(entity=entity, topic=topic)
             if not uid:
                 return None
             if uid in seen:

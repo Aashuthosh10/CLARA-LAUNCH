@@ -6,11 +6,23 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from backend.services.answer_generation import DEPARTMENT_JSON_KEY_ORDER
+from backend.services.content.leadership_units import (
+    LEADERSHIP_ENTITY,
+    TOPIC_PRINCIPAL,
+    TOPIC_TRUSTEES,
+    TOPIC_VICE_PRINCIPAL,
+    UNIT_PRINCIPAL,
+    UNIT_TRUSTEES,
+    UNIT_VICE_PRINCIPAL,
+)
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_DOCUMENTS,
+    SURFACE_PRINCIPAL,
+    SURFACE_TRUSTEES,
+    SURFACE_VICE_PRINCIPAL,
     ContentType,
 )
 from backend.services.narration_plan import _DEPT_SLIDE_SECTION_IDS
@@ -27,6 +39,7 @@ _SECTION_TO_UNIT_SUFFIX: dict[str, str] = {
 _DEPT_CANONICAL_SOURCE = "backend/data/locales/*.json#departments"
 _FEES_CANONICAL_SOURCE = "backend/services/narration_plan.py#_FEES_AMOUNT_BY_KEY"
 _DOCUMENTS_CANONICAL_SOURCE = "backend/services/narration_plan.py#DOCUMENT_ITEMS"
+_LEADERSHIP_CANONICAL_SOURCE = "backend/services/narration_plan.py#EXEC_PRINCIPAL|EXEC_VICE + locales role_holders"
 
 
 @dataclass(frozen=True)
@@ -109,6 +122,51 @@ _CONTEXT_SCOPED_DESCRIPTORS: tuple[ContentUnitDescriptor, ...] = (
     ),
 )
 
+_LEADERSHIP_DESCRIPTORS: tuple[ContentUnitDescriptor, ...] = (
+    ContentUnitDescriptor(
+        unit_id=UNIT_PRINCIPAL,
+        surface=SURFACE_PRINCIPAL,
+        content_type=ContentType.PRINCIPAL.value,
+        entity_type=LEADERSHIP_ENTITY,
+        entity_id=LEADERSHIP_ENTITY,
+        context=LEADERSHIP_ENTITY,
+        context_id=TOPIC_PRINCIPAL,
+        section_id=TOPIC_PRINCIPAL,
+        unit_suffix=TOPIC_PRINCIPAL,
+        canonical_source=_LEADERSHIP_CANONICAL_SOURCE,
+        adapter_key="principal",
+        presentation_role=TOPIC_PRINCIPAL,
+    ),
+    ContentUnitDescriptor(
+        unit_id=UNIT_VICE_PRINCIPAL,
+        surface=SURFACE_VICE_PRINCIPAL,
+        content_type=ContentType.VICE_PRINCIPAL.value,
+        entity_type=LEADERSHIP_ENTITY,
+        entity_id=LEADERSHIP_ENTITY,
+        context=LEADERSHIP_ENTITY,
+        context_id=TOPIC_VICE_PRINCIPAL,
+        section_id=TOPIC_VICE_PRINCIPAL,
+        unit_suffix=TOPIC_VICE_PRINCIPAL,
+        canonical_source=_LEADERSHIP_CANONICAL_SOURCE,
+        adapter_key="vice_principal",
+        presentation_role=TOPIC_VICE_PRINCIPAL,
+    ),
+    ContentUnitDescriptor(
+        unit_id=UNIT_TRUSTEES,
+        surface=SURFACE_TRUSTEES,
+        content_type=ContentType.TRUSTEES.value,
+        entity_type=LEADERSHIP_ENTITY,
+        entity_id=LEADERSHIP_ENTITY,
+        context=LEADERSHIP_ENTITY,
+        context_id=TOPIC_TRUSTEES,
+        section_id=TOPIC_TRUSTEES,
+        unit_suffix=TOPIC_TRUSTEES,
+        canonical_source="backend/data/locales/*.json#role_holders.trustees",
+        adapter_key="trustees",
+        presentation_role=TOPIC_TRUSTEES,
+    ),
+)
+
 
 @lru_cache(maxsize=1)
 def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
@@ -118,6 +176,8 @@ def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
             desc = _department_descriptor(dept_key, section_id)
             out[desc.unit_id] = desc
     for desc in _CONTEXT_SCOPED_DESCRIPTORS:
+        out[desc.unit_id] = desc
+    for desc in _LEADERSHIP_DESCRIPTORS:
         out[desc.unit_id] = desc
     return out
 

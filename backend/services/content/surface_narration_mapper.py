@@ -11,6 +11,7 @@ from backend.services.content.types import (
     CanonicalContent,
     ContentType,
 )
+from backend.services.content.unit_narration import narrate_unit
 from backend.services.narration_plan import (
     NarrationSegment,
     _clip_caption,
@@ -114,12 +115,14 @@ def map_content_units_to_segments(
             title = (unit.title or "").strip() or labels["department"]
         body = unit.body or labels["notAvail"]
         body_clipped = _clip_caption(body, 280)
+        spoken = narrate_unit(unit, lang_key) or body_clipped
         raw_line = f"{title}\n{body_clipped}".strip()
-        # M5.2 TTS contract: display = title+body; spoken = body only.
+        # Display keeps card facts. Spoken text is the intent-aware narration plan.
+        # M5.8 TTS only speaks tts_text.
         segments.append(
             NarrationSegment(
                 display_text=_clip_caption(raw_line, 320),
-                tts_text=body_clipped,
+                tts_text=spoken,
                 card_index=i,
                 card_id="dept_slide",
                 section_id=unit.section_id,

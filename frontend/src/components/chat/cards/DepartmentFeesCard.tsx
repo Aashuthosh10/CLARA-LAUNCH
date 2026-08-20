@@ -198,6 +198,7 @@ const FEES_COPY_BY_LANGUAGE: Record<Language, FeesCopy> = {
 
 interface DepartmentFeesCardProps {
   departmentId?: string | null;
+  language?: Language;
 }
 
 function normalizeDepartmentKey(departmentId: string): string {
@@ -210,8 +211,9 @@ function formatInr(value: number | undefined): string {
   return `₹${value.toLocaleString('en-IN')}`;
 }
 
-export default function DepartmentFeesCard({ departmentId }: DepartmentFeesCardProps) {
-  const { language } = useLanguage();
+export default function DepartmentFeesCard({ departmentId, language: languageProp }: DepartmentFeesCardProps) {
+  const { language: contextLanguage } = useLanguage();
+  const language = languageProp || contextLanguage;
   const copy = useMemo(
     () => FEES_COPY_BY_LANGUAGE[language] ?? FEES_COPY_BY_LANGUAGE.English,
     [language],

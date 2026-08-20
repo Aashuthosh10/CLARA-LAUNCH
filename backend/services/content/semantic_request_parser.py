@@ -14,6 +14,12 @@ from backend.services.content.multilingual_terms import (
     TOPIC_OVERVIEW,
 )
 from backend.services.content.semantic_anaphora import has_anaphora
+from backend.services.content.leadership_units import (
+    LEADERSHIP_ENTITY,
+    detect_leadership_spans,
+    is_show_multi_overview_request,
+    leadership_items_from_text,
+)
 from backend.services.content.semantic_composition import (
     SemanticItem,
     detect_topic_spans,
@@ -75,22 +81,28 @@ def parse_semantic_request(
             language_code_key=language_code_key,
             allow_carry_over=has_anaphora(raw_text),
         )
-    if not entity_spans:
-        return None
+    if entity_spans:
+        entity_spans = _validate_entity_spans(
+            entity_spans=entity_spans,
+            language_code_key=language_code_key,
+        )
 
-    entity_spans = _validate_entity_spans(
-        entity_spans=entity_spans,
-        language_code_key=language_code_key,
+    leadership_spans = detect_leadership_spans(raw_text)
+    leadership_items = tuple(
+        SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic) for span in leadership_spans
     )
-    if not entity_spans:
+    if not leadership_items:
+        leadership_items = leadership_items_from_text(raw_text)
+
+    if not entity_spans and not leadership_items:
         return None
 
-    topic_spans = detect_topic_spans(raw_text)
+    topic_spans = detect_topic_spans(raw_text) if entity_spans else ()
 
     # The span detector runs on raw text only. `detect_atomic_topics` additionally sees
     # the normalized text, so a topic can be known without having a bindable position.
     # In that case the request is not composable and must clarify rather than guess.
-    atomic = detect_atomic_topics(raw_text, normalized)
+    atomic = detect_atomic_topics(raw_text, normalized) if entity_spans else frozenset()
     span_topics = {s.topic for s in topic_spans}
     unpositioned = atomic - span_topics
     if unpositioned:
@@ -100,27 +112,61 @@ def parse_semantic_request(
         span_topics = set()
 
     has_explicit_topic = bool(span_topics or atomic)
-    is_full_scope = not has_explicit_topic and is_full_department_scope(raw_text, normalized)
+    is_full_scope = (
+        bool(entity_spans)
+        and not has_explicit_topic
+        and not leadership_items
+        and is_full_department_scope(raw_text, normalized)
+    )
 
-    items = pair_entities_and_topics(
+    dept_items: tuple[SemanticItem, ...] | None = None
+    if entity_spans:
+        dept_items = pair_entities_and_topics(
+            entity_spans=entity_spans,
+            topic_spans=topic_spans,
+            fallback_topic=TOPIC_OVERVIEW,
+        )
+        if (
+            dept_items is None
+            and not has_explicit_topic
+            and not is_full_scope
+            and len(entity_spans) > 1
+            and is_show_multi_overview_request(raw_text, normalized)
+        ):
+            # "Show me CSE Data Science and CSE AIML." — N overview units, not a guess
+            # at comparison vs two full decks ("tell me about CSE and AIML" stays closed).
+            dept_items = tuple(
+                SemanticItem(entity=span.json_key, topic=TOPIC_OVERVIEW) for span in entity_spans
+            )
+        if unpositioned and dept_items is not None and len(dept_items) == 1:
+            # Single entity, single topic known only after normalization (e.g. a script
+            # cue lost by grapheme folding). Identity is unambiguous, so honour it.
+            dept_items = (SemanticItem(entity=dept_items[0].entity, topic=next(iter(atomic))),)
+
+    items = _merge_department_and_leadership_items(
+        dept_items=dept_items or (),
+        leadership_spans=leadership_spans,
         entity_spans=entity_spans,
-        topic_spans=topic_spans,
-        fallback_topic=TOPIC_OVERVIEW,
     )
     if not items:
         return None
 
-    if unpositioned and len(items) == 1:
-        # Single entity, single topic known only after normalization (e.g. a script
-        # cue lost by grapheme folding). Identity is unambiguous, so honour it.
-        items = (SemanticItem(entity=items[0].entity, topic=next(iter(atomic))),)
+    requested_scope = (
+        "full_department"
+        if is_full_scope and len(items) == 1 and items[0].entity != LEADERSHIP_ENTITY
+        else "single"
+    )
 
-    requested_scope = "full_department" if is_full_scope and len(items) == 1 else "single"
-
-    entities = _dedupe_keep_order([item.entity for item in items])
+    entities = _dedupe_keep_order(
+        [item.entity for item in items if item.entity != LEADERSHIP_ENTITY]
+    )
     topics = [item.topic for item in items]
     primary_topic = topics[0]
     mixed = len(set(topics)) > 1
+    has_leadership = any(item.entity == LEADERSHIP_ENTITY for item in items)
+    context = "leadership" if has_leadership and not entities else (
+        "mixed" if has_leadership else "department"
+    )
 
     confidence: str
     if requested_scope == "full_department":
@@ -134,7 +180,7 @@ def parse_semantic_request(
         language_code=language_code_key,
         topic=str(primary_topic),
         entities=entities,
-        context="department",
+        context=context,
         confidence=confidence,  # type: ignore[arg-type]
         requested_scope=requested_scope,
         source="m5.4_semantic_request_parser",
@@ -146,8 +192,36 @@ def parse_semantic_request(
             "span_topics": sorted(span_topics),
             "mixed_composition": mixed,
             "confidence": confidence,
+            "leadership_topics": [s.topic for s in leadership_spans],
         },
     )
+
+
+def _merge_department_and_leadership_items(
+    *,
+    dept_items: tuple[SemanticItem, ...],
+    leadership_spans: tuple,
+    entity_spans,
+) -> tuple[SemanticItem, ...]:
+    """Preserve user order across department and leadership items. No pairwise special cases."""
+    tagged: list[tuple[int, int, SemanticItem]] = []
+    entity_start = {span.json_key: span.start for span in entity_spans or ()}
+    for i, item in enumerate(dept_items):
+        tagged.append((entity_start.get(item.entity, 0), i, item))
+    for i, span in enumerate(leadership_spans or ()):
+        tagged.append((span.start, 1000 + i, SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic)))
+    if not tagged:
+        return ()
+    tagged.sort(key=lambda row: (row[0], row[1]))
+    out: list[SemanticItem] = []
+    seen: set[tuple[str, str]] = set()
+    for _, _, item in tagged:
+        key = (item.entity, item.topic)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return tuple(out)
 
 
 def _entity_spans_from_hint(
