@@ -200,11 +200,13 @@ Live WebSocket was run against a **fresh** uvicorn on `127.0.0.1:6971` from this
 
 ## 16. Git commit hash
 
-Recorded after commit/push in the follow-up line of this file and in chat.
+`b7bb1eb` — *Restore first-playable TTS pipelining without dropping M5.7 ACK isolation or turn fencing.*
+
+If a follow-up commit records GitHub verification, `git rev-parse HEAD` after push is authoritative.
 
 ## 17. GitHub verification result
 
-Recorded after `git push` to `https://github.com/Naveenkumar2027/clara_finished-.git` `main`.
+Pending `git push` to `clara_finished` `main` (`https://github.com/Naveenkumar2027/clara_finished-.git`).
 
 ## 18. Remaining limitations
 
@@ -243,5 +245,5 @@ Recorded after `git push` to `https://github.com/Naveenkumar2027/clara_finished-
 - [x] TTS request count measured
 - [x] No unrelated architecture changed
 - [x] Relevant tests pass
-- [ ] Changes committed (this revision)
+- [x] Changes committed (`b7bb1eb`)
 - [ ] Changes pushed and GitHub HEAD verified
