@@ -159,6 +159,9 @@ _SKIP_GUEST_NAME_PHRASES: frozenset[str] = frozenset(
         "anonymous",
         "skip please",
         "no name",
+        "ಬೇಡ",
+        "ಹೆಸರು ಬೇಡ",
+        "ಬಿಡಿ",
     }
 )
 

@@ -40,7 +40,7 @@ from backend.services.answer_generation import (
     INTENT_VICE_PRINCIPAL_PROFILE,
     maybe_override_intent_with_executive_profile,
 )
-from backend.services.content.campus_units import is_campus_entity
+from backend.services.content.campus_units import is_bare_hostel_request, is_campus_entity
 from backend.services.content.semantic_composition import detect_topic_spans
 from backend.services.content.semantic_request import SemanticRequest
 from backend.services.content.semantic_topics import cue_in_hay, detect_atomic_topics, is_full_department_scope
@@ -492,6 +492,19 @@ def resolve_response_decision(
                 domain_relevance=DomainRelevance.INSTITUTION,
                 confidence=0.75,
                 evidence="topic_cue_without_entity",
+            )
+        )
+
+    # 9b. Bare "hostel" without girls/boys must clarify, not guess or dump RAG.
+    if is_bare_hostel_request(raw):
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CLARIFY,
+                clarification_target="hostel",
+                clarification_reason="unrecognised_request",
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.8,
+                evidence="bare_hostel_without_gender",
             )
         )
 

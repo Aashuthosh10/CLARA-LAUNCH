@@ -458,6 +458,9 @@ RAG_PIPELINE_TOP_K = 4
 RAG_PIPELINE_MAX_TOKENS = 1000
 
 CONTROLLED_FALLBACK_EN = "I'm sorry, I don't have that information right now."
+CONTROLLED_FALLBACK_KN = "ಕ್ಷಮಿಸಿ, ಆ ಮಾಹಿತಿಯನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ನನಗೆ ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
+FALLBACK_MSG = "I'm sorry, I couldn't process your request right now."
+FALLBACK_MSG_KN = "ಕ್ಷಮಿಸಿ, ಆ ಮಾಹಿತಿಯನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ನನಗೆ ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
 
 _STRUCTURED_PROMPT_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=128, ttl_seconds=600.0)
 
@@ -1256,9 +1259,9 @@ PROFILE_REPLY_TEMPLATES: dict[str, dict[str, str]] = {
         "both": "Sure. HOD: {hod}. Trustees: {trustees}.",
     },
     "Kannada": {
-        "hod": "ಖಂಡಿತ. HOD ಹೆಸರು: {hod}.",
-        "trustees": "ಖಂಡಿತ. ಟ್ರಸ್ಟಿಗಳ ಹೆಸರುಗಳು: {trustees}.",
-        "both": "ಖಂಡಿತ. HOD: {hod}. ಟ್ರಸ್ಟಿಗಳು: {trustees}.",
+        "hod": "{hod} ಅವರು ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು.",
+        "trustees": "ಟ್ರಸ್ಟಿಗಳು: {trustees}.",
+        "both": "{hod} ಅವರು ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು. ಟ್ರಸ್ಟಿಗಳು: {trustees}.",
     },
     "Hindi": {
         "hod": "ज़रूर। HOD का नाम: {hod}।",
@@ -1351,6 +1354,13 @@ def build_receptionist_answer_system_prompt(
     off_topic_reply: str,
 ) -> str:
     """Groq system prompt for ResponseMode.ANSWER institutional turns."""
+    kannada_contract = (
+        " Write grammatically natural Kannada. Use honorific ಅವರು for people. "
+        "Do not reply in English. Do not translate an English paragraph word-for-word. "
+        "Keep official names, department codes, and CLARA in their original form."
+        if language == "Kannada"
+        else ""
+    )
     return (
         f"You are CLARA, a warm and professional campus receptionist for "
         f"Sai Vidya Institute of Technology (SVIT). "
@@ -1361,6 +1371,7 @@ def build_receptionist_answer_system_prompt(
         "Do not answer in English merely because some reference text is English. "
         "Do not write a longer regional-language answer than you would in English. "
         "Maximum 2 to 4 short sentences in every language. Plain text only — no markdown or bullet lists. "
+        f"{kannada_contract}"
         "The visitor asked an institutional question about SVIT — faculty quality, campus life, "
         "facilities, culture, placements, internships, hackathons, or what makes the college special. "
         "Answer naturally as a helpful receptionist. Use the college reference below; you may "
@@ -1902,6 +1913,8 @@ def _inject_regional_department_tokens(text: str) -> str:
         (r"ಎಎಂಎಲ್", " aiml "),
         (r"ಎ\s*ಎಂ\s*ಎಲ್\s*ಡಿಪಾರ್ಟ್ಮೆಂಟ್", " aiml department "),
         (r"ಡೇಟಾ\s*ಸೈನ್ಸ್", " data science "),
+        (r"ಸಿಎಸ್\s*ಇ", " cse "),
+        (r"ಸಿಎಸ್ಇ", " cse "),
         (r"ಸೈಬರ್\s*ಸೆಕ್ಯುರಿಟಿ", " cyber security "),
         (r"ಬಿಸಿನೆಸ್\s*ಸಿಸ್ಟಮ್ಸ್", " business systems "),
         (r"ಮಾಹಿತಿ\s*ವಿಜ್ಞಾನ", " information science "),
@@ -2543,16 +2556,26 @@ async def normalize_and_classify_query(user_text: str, session_lang: str) -> dic
         return fallback
 
 
-FALLBACK_MSG = "I'm sorry, I couldn't process your request right now."
 FALLBACK_CONTEXT_PREFIX = "I am having trouble processing that right now, please try again. "
 FALLBACK_CONTEXT_MAX_CHARS = 600
 
 
-def _fallback_reply(context: str) -> str:
-    """Return safe fallback when LLM fails. Never returns None."""
-    if context and context.strip():
-        return FALLBACK_MSG
+def controlled_fallback_reply(language: str | None) -> str:
+    if language == "Kannada":
+        return CONTROLLED_FALLBACK_KN
+    return CONTROLLED_FALLBACK_EN
+
+
+def process_fallback_reply(language: str | None) -> str:
+    if language == "Kannada":
+        return FALLBACK_MSG_KN
     return FALLBACK_MSG
+
+
+def _fallback_reply(context: str, language: str | None = None) -> str:
+    """Return safe fallback when LLM fails. Never returns None."""
+    _ = context
+    return process_fallback_reply(language)
 
 
 def build_overview_context(lang_key: str | None = None) -> str:

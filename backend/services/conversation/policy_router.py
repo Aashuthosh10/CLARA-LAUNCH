@@ -21,7 +21,20 @@ from backend.services.conversation.types import (
     TranscriptAssessment,
 )
 
-_GREETING_RE_WORDS = frozenset({"hello", "hi", "hey", "namaste", "namaskar", "good morning", "good afternoon", "good evening"})
+_GREETING_RE_WORDS = frozenset(
+    {
+        "hello",
+        "hi",
+        "hey",
+        "namaste",
+        "namaskar",
+        "namaskara",
+        "ನಮಸ್ಕಾರ",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    }
+)
 _SMALL_TALK_HINTS = frozenset({"how are you", "how's it going", "whats up", "what's up", "thank you", "thanks", "bye", "goodbye"})
 
 

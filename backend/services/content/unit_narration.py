@@ -69,7 +69,7 @@ def narrate_unit(unit: ContentUnit, lang_key: str, guest_name: str | None = None
         if name and dept_label:
             return {
                 "en": f"The Head of the {dept_label} department is {name}.",
-                "kn": f"{dept_label} ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು {name}.",
+                "kn": f"{dept_label} ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು {name} ಅವರು.",
                 "hi": f"{dept_label} विभाग के प्रमुख {name} हैं।",
                 "ta": f"{dept_label} துறையின் தலைவர் {name}.",
                 "te": f"{dept_label} విభాగం అధిపతి {name}.",
@@ -131,7 +131,7 @@ def narrate_unit(unit: ContentUnit, lang_key: str, guest_name: str | None = None
         if name:
             return {
                 "en": f"The Principal of Sai Vidya Institute of Technology is {name}.",
-                "kn": f"ಸಾಯಿ ವಿದ್ಯಾ ಇನ್‌ಸ್ಟಿಟ್ಯೂಟ್ ಆಫ್ ಟೆಕ್ನಾಲಜಿಯ ಪ್ರಾಂಶುಪಾಲರು {name}.",
+                "kn": f"ಸಾಯಿ ವಿದ್ಯಾ ಇನ್‌ಸ್ಟಿಟ್ಯೂಟ್ ಆಫ್ ಟೆಕ್ನಾಲಜಿಯ ಪ್ರಾಂಶುಪಾಲರು {name} ಅವರು.",
                 "hi": f"साई विद्या इंस्टिट्यूट ऑफ टेक्नोलॉजी के प्राचार्य {name} हैं।",
                 "ta": f"Sai Vidya Institute of Technology முதல்வர் {name}.",
                 "te": f"Sai Vidya Institute of Technology ప్రిన్సిపాల్ {name}.",
@@ -147,7 +147,7 @@ def narrate_unit(unit: ContentUnit, lang_key: str, guest_name: str | None = None
         if name:
             return {
                 "en": f"The Vice Principal and Dean Academics is {name}.",
-                "kn": f"ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್ {name}.",
+                "kn": f"ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್ {name} ಅವರು.",
                 "hi": f"उप प्राचार्य और शैक्षणिक डीन {name} हैं।",
                 "ta": f"துணை முதல்வர் மற்றும் கல்வி டீன் {name}.",
                 "te": f"ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్ {name}.",
@@ -176,7 +176,11 @@ def _with_sparse_guest_name(spoken: str, guest_name: str | None, unit: ContentUn
         return text
     if ". " in text:
         first, rest = text.split(". ", 1)
-        return f"{first}. {name}, {rest[0].lower() + rest[1:] if rest else rest}"
+        rest_lead = rest[:1]
+        rest_tail = rest[1:] if len(rest) > 1 else ""
+        if rest_lead.isascii() and rest_lead.isalpha():
+            rest = rest_lead.lower() + rest_tail
+        return f"{first}. {name}, {rest}"
     if text.endswith("."):
         return f"{text[:-1]}, {name}."
     return f"{text}, {name}."

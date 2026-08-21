@@ -53,6 +53,7 @@ GREETING_WORDS = frozenset(
         "namaskara",
         "vanakkam",
         "namaskaram",
+        "ನಮಸ್ಕಾರ",
         "good morning",
         "good afternoon",
         "good evening",

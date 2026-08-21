@@ -62,6 +62,15 @@ _CLARIFY_DEPARTMENT: dict[str, str] = {
     "Malayalam": "നിങ്ങൾക്ക് ഏത് ഡിപ്പാർട്ട്മെന്റിനെക്കുറിച്ചാണ് അറിയേണ്ടത്?",
 }
 
+_CLARIFY_HOSTEL: dict[str, str] = {
+    "English": "Are you asking about the girls hostel or the boys hostel?",
+    "Kannada": "ನೀವು ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಅಥವಾ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ ಬಗ್ಗೆ ಕೇಳುತ್ತಿದ್ದೀರಾ?",
+    "Hindi": "क्या आप गर्ल्स हॉस्टल के बारे में पूछ रहे हैं या बॉयज़ हॉस्टल के बारे में?",
+    "Tamil": "நீங்கள் பெண்கள் விடுதி பற்றி கேட்கிறீர்களா அல்லது ஆண்கள் விடுதி பற்றி?",
+    "Telugu": "మీరు గర్ల్స్ హాస్టల్ గురించా లేక బాయ్స్ హాస్టల్ గురించా అడుగుతున్నారు?",
+    "Malayalam": "നിങ്ങൾ ഗേൾസ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ബോയ്സ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ചോദിക്കുന്നത്?",
+}
+
 _NAME_ACK: dict[str, str] = {
     "English": "Nice to meet you, {name}.",
     "Kannada": "ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷ, {name}.",
@@ -73,7 +82,7 @@ _NAME_ACK: dict[str, str] = {
 
 _GREETING: dict[str, str] = {
     "English": "Hello. How may I help you today?",
-    "Kannada": "ನಮಸ್ಕಾರ. ಇಂದು ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+    "Kannada": "ನಮಸ್ಕಾರ! CLARAಗೆ ಸ್ವಾಗತ. ಇಂದು ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
     "Hindi": "नमस्ते। आज मैं आपकी कैसे मदद कर सकती हूँ?",
     "Tamil": "வணக்கம். இன்று நான் எப்படி உதவ முடியும்?",
     "Telugu": "నమస్కారం. ఈరోజు నేను మీకు ఎలా సహాయపడగలను?",
@@ -105,8 +114,11 @@ def unknown_reply(language: str | None) -> str:
 
 def clarification_reply(language: str | None, target: str | None = None) -> str:
     """Clarification text. `target` names the slot CLARA still needs."""
-    if (target or "").strip().lower() == "department":
+    slot = (target or "").strip().lower()
+    if slot == "department":
         return _pick(_CLARIFY_DEPARTMENT, language)
+    if slot == "hostel":
+        return _pick(_CLARIFY_HOSTEL, language)
     return _pick(_CLARIFICATION, language)
 
 
@@ -129,6 +141,7 @@ def _assert_parity() -> None:
         ("_UNKNOWN", _UNKNOWN),
         ("_CLARIFICATION", _CLARIFICATION),
         ("_CLARIFY_DEPARTMENT", _CLARIFY_DEPARTMENT),
+        ("_CLARIFY_HOSTEL", _CLARIFY_HOSTEL),
         ("_NAME_ACK", _NAME_ACK),
         ("_GREETING", _GREETING),
         ("_SMALL_TALK", _SMALL_TALK),

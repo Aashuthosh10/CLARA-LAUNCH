@@ -157,6 +157,7 @@ _EVENT_CUES: tuple[tuple[str, str], ...] = (
     ("events.techvidya", "tech vidya"),
     ("events.techvidya", "tech-vidya"),
     ("events.techvidya", "ಟೆಕ್ ವಿದ್ಯಾ"),
+    ("events.techvidya", "ಟೆಕ್‌ವಿದ್ಯಾ"),
     ("events.techvidya", "टेक विद्या"),
     ("events.techvidya", "டெக் வித்யா"),
     ("events.techvidya", "టెక్ విద్యా"),
@@ -267,6 +268,7 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("hygiene", "cleanliness"),
     ("hygiene", "clean"),
     ("hygiene", "ನೈರ್ಮಲ್ಯ"),
+    ("hygiene", "ಸ್ವಚ್ಛತೆ"),
     ("hygiene", "स्वच्छता"),
     ("hygiene", "சுகாதாரம்"),
     ("hygiene", "పరిశుభ్రత"),
@@ -511,6 +513,9 @@ def _bind_campus_proximity(
     best: dict[tuple[str, int], int] = {}
     for topic in distinct:
         for e_index, ent in enumerate(entities):
+            mapped = _normalize_topic_for_family(topic, ent.family)
+            if not _topic_allowed(mapped, ent.family):
+                continue
             distances = [
                 _distance(ts.start, ts.end, ent.start, ent.end)
                 for ts in topics
@@ -554,3 +559,21 @@ def campus_items_from_text(raw_text: str) -> tuple[SemanticItem, ...]:
         return ()
     topics = detect_campus_topic_spans(raw_text)
     return pair_campus_items(entity_spans=entities, topic_spans=topics)
+
+
+_BARE_HOSTEL_CUES: tuple[str, ...] = (
+    "hostel",
+    "hostal",
+    "ಹಾಸ್ಟೆಲ್",
+    "ವಸತಿ ನಿಲಯ",
+)
+
+
+def is_bare_hostel_request(raw_text: str) -> bool:
+    """True when the user mentioned a hostel but not girls vs boys."""
+    if detect_campus_entity_spans(raw_text):
+        return False
+    hay = casefold_keep_scripts(raw_text or "")
+    if not hay:
+        return False
+    return any(casefold_keep_scripts(cue) in hay for cue in _BARE_HOSTEL_CUES if cue)

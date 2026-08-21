@@ -701,6 +701,8 @@ export default function ChatScreen({
   >(null);
   /** M5.2 unit-backed composition models (null = legacy / non-unit path). */
   const [unitBackedCards, setUnitBackedCards] = useState<PresentationCardModel[] | null>(null);
+  const unitBackedCardsRef = useRef<PresentationCardModel[] | null>(null);
+  unitBackedCardsRef.current = unitBackedCards;
   /** Turn id owning sticky fees under department_overview showCard. */
   const feesStickyTurnIdRef = useRef<string | null>(null);
   /**
@@ -889,7 +891,7 @@ export default function ChatScreen({
         ctrl.cancel();
         releaseLocalizationFreeze();
         if (fallback === 'single_card') {
-          freezeLocalization(language);
+          freezeLocalization(presentationLanguage);
           ctrl.loadPresentation({
             kind: 'single',
             cardId: 'stage',
@@ -907,7 +909,7 @@ export default function ChatScreen({
       lastLoadedPresentationTurnRef.current = turnId;
       const est = finitePositiveMs(payload?.tts_total_duration_estimate_ms);
       const ctrl = presentationRef.current;
-      freezeLocalization(language);
+      freezeLocalization(presentationLanguage);
       ctrl.setSceneAdvanceMode('per_clip');
       const presentationId = ctrl.loadPresentation({
         kind: 'plan',
@@ -929,6 +931,7 @@ export default function ChatScreen({
   }, [
     payload,
     language,
+    presentationLanguage,
     activeCards,
     isFeesStage,
     isHodStage,
@@ -1422,6 +1425,11 @@ export default function ChatScreen({
         typeof seg.unitId === 'string' && seg.unitId.trim() ? seg.unitId.trim() : null;
       if (unitId) {
         presentationRef.current.activateByUnitId(unitId);
+        const cards = unitBackedCardsRef.current;
+        if (Array.isArray(cards) && cards.length > 0) {
+          const idx = cards.findIndex((m) => m.unitId === unitId);
+          if (idx >= 0) setCurrentCardIdx(idx);
+        }
         return;
       }
       const sectionId =
@@ -1817,6 +1825,11 @@ export default function ChatScreen({
           })
         ) {
           presentationRef.current.activateByUnitId(unitId);
+          const cards = unitBackedCardsRef.current;
+          if (Array.isArray(cards) && cards.length > 0) {
+            const idx = cards.findIndex((m) => m.unitId === unitId);
+            if (idx >= 0) setCurrentCardIdx(idx);
+          }
         }
       } else if (sectionId) {
         const pid = presentationRef.current.snapshot.presentationId;
@@ -2043,6 +2056,11 @@ export default function ChatScreen({
           })
         ) {
           ctrl.activateByUnitId(unitId);
+          const cards = unitBackedCardsRef.current;
+          if (Array.isArray(cards) && cards.length > 0) {
+            const idx = cards.findIndex((m) => m.unitId === unitId);
+            if (idx >= 0) setCurrentCardIdx(idx);
+          }
         }
         const engine = ctrl.engine.current;
         const snap = engine?.snapshot();
