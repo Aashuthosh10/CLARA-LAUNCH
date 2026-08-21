@@ -11,6 +11,7 @@ export {
   canChangeLanguageNow,
   freezeLocalization,
   isLocalizationFrozen,
+  localizationCodeKey,
   releaseLocalizationFreeze,
 } from './localizationFreeze';
 export {

@@ -246,8 +246,17 @@ export class PresentationEngine {
     this.emitDiag('PRESENTATION_STARTED', {
       presentationId,
       sectionIds: scenes.map((s) => s.sectionId),
+      unitIds: scenes.map((s) => s.unitId || null),
       sceneCount: scenes.length,
     });
+    const missingUnit = scenes.filter((s) => !String(s.unitId || '').trim());
+    if (missingUnit.length && args.kind === 'plan') {
+      this.emitDiag('PRESENTATION_MISSING_UNIT_ID', {
+        presentationId,
+        missingCount: missingUnit.length,
+        sceneCount: scenes.length,
+      });
+    }
     this.emit();
     return presentationId;
   }
@@ -409,6 +418,10 @@ export class PresentationEngine {
         segmentId: active?.sceneId,
         sceneIndex: this.sceneIndex,
       });
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug(`[Presentation] activating ${uid}`);
+      }
       return true;
     }
 
@@ -437,6 +450,10 @@ export class PresentationEngine {
         segmentId: scene?.sceneId,
         sceneIndex: idx,
       });
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug(`[Presentation] activating ${uid}`);
+      }
     }
     return ok;
   }
@@ -610,7 +627,7 @@ export class PresentationEngine {
   private emitDiag(event: string, fields: Record<string, unknown>): void {
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
-      console.debug(`[PresentationEngine] ${event}`, fields);
+      console.debug(`[Presentation] ${event}`, fields);
     }
   }
 

@@ -3,16 +3,34 @@
 import { getConversationRuntime, patchConversationRuntime } from './conversationRuntimeStore';
 import { pushRuntimeEvent } from './diagnostics';
 
+export function localizationCodeKey(
+  languageName: string | null | undefined,
+  payloadCode?: string | null,
+): string {
+  const fromPayload = String(payloadCode || '').trim().toLowerCase();
+  if (fromPayload) return fromPayload;
+  const map: Record<string, string> = {
+    English: 'en',
+    Kannada: 'kn',
+    Hindi: 'hi',
+    Tamil: 'ta',
+    Telugu: 'te',
+    Malayalam: 'ml',
+  };
+  return map[(languageName || '').trim()] || 'en';
+}
+
 export function freezeLocalization(languageName: string, codeKey = 'en'): void {
+  const key = (codeKey || 'en').trim().toLowerCase() || 'en';
   patchConversationRuntime({
     currentLanguage: languageName,
     localization: {
-      codeKey,
+      codeKey: key,
       languageName,
       frozen: true,
     },
   });
-  pushRuntimeEvent('LOCALE_FREEZE', { language: languageName });
+  pushRuntimeEvent('LOCALE_FREEZE', { language: languageName, codeKey: key });
 }
 
 export function releaseLocalizationFreeze(): void {

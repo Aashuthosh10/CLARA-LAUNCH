@@ -51,10 +51,16 @@ import {
   unitIdForCardIndex,
 } from '../features/chat/presentation/playbackSeek';
 import {
+  shouldAllowLegacySingle,
+  shouldLoadUnitPlan,
+  unitIdsFromSegments,
+} from '../features/chat/presentation/presentationOwnership';
+import {
   assertLivePresentationOwnership,
   canChangeLanguageNow,
   choosePresentationFallback,
   freezeLocalization,
+  localizationCodeKey,
   patchConversationRuntime,
   pushRuntimeEvent,
   releaseLocalizationFreeze,
@@ -701,8 +707,6 @@ export default function ChatScreen({
   >(null);
   /** M5.2 unit-backed composition models (null = legacy / non-unit path). */
   const [unitBackedCards, setUnitBackedCards] = useState<PresentationCardModel[] | null>(null);
-  const unitBackedCardsRef = useRef<PresentationCardModel[] | null>(null);
-  unitBackedCardsRef.current = unitBackedCards;
   /** Turn id owning sticky fees under department_overview showCard. */
   const feesStickyTurnIdRef = useRef<string | null>(null);
   /**
@@ -853,6 +857,51 @@ export default function ChatScreen({
       }
       narrationPlanRef.current = plan as NarrationPlan;
       const turnId = typeof plan.turnId === 'string' ? plan.turnId : '';
+      const incomingUnitIds = unitIdsFromSegments(plan.segments);
+      const loadedIds = (presentationRef.current.snapshot.scenes || [])
+        .map((s) => (typeof s.unitId === 'string' ? s.unitId.trim() : ''))
+        .filter(Boolean);
+      const replaceWithUnitPlan = shouldLoadUnitPlan({
+        incomingTurnId: turnId,
+        lastLoadedTurnId: lastLoadedPresentationTurnRef.current,
+        incomingUnitIds,
+        loadedSceneUnitIds: loadedIds,
+      });
+
+      if (!replaceWithUnitPlan && lastLoadedPresentationTurnRef.current === turnId) {
+        return;
+      }
+
+      const localeKey = localizationCodeKey(
+        presentationLanguage,
+        typeof payload?.language_code_key === 'string' ? payload.language_code_key : null,
+      );
+
+      if (incomingUnitIds.length > 0 && (replaceWithUnitPlan || lastLoadedPresentationTurnRef.current !== turnId)) {
+        lastLoadedPresentationTurnRef.current = turnId;
+        const est = finitePositiveMs(payload?.tts_total_duration_estimate_ms);
+        const ctrl = presentationRef.current;
+        freezeLocalization(presentationLanguage, localeKey);
+        ctrl.setSceneAdvanceMode('per_clip');
+        const presentationId = ctrl.loadPresentation({
+          kind: 'plan',
+          plan: {
+            turnId,
+            mode: 'card_narration',
+            segments: plan.segments,
+          },
+          estimatedTotalDurationMs: est,
+        });
+        patchConversationRuntime({
+          turnId,
+          activePresentationId: presentationId,
+          runtimeState: 'presenting',
+          ...(typeof gen === 'number' ? { generation: gen } : {}),
+        });
+        ctrl.play();
+        return;
+      }
+
       if (!turnId || lastLoadedPresentationTurnRef.current === turnId) {
         return;
       }
@@ -890,8 +939,8 @@ export default function ChatScreen({
         const ctrl = presentationRef.current;
         ctrl.cancel();
         releaseLocalizationFreeze();
-        if (fallback === 'single_card') {
-          freezeLocalization(presentationLanguage);
+        if (fallback === 'single_card' && shouldAllowLegacySingle(incomingUnitIds)) {
+          freezeLocalization(presentationLanguage, localeKey);
           ctrl.loadPresentation({
             kind: 'single',
             cardId: 'stage',
@@ -909,7 +958,7 @@ export default function ChatScreen({
       lastLoadedPresentationTurnRef.current = turnId;
       const est = finitePositiveMs(payload?.tts_total_duration_estimate_ms);
       const ctrl = presentationRef.current;
-      freezeLocalization(presentationLanguage);
+      freezeLocalization(presentationLanguage, localeKey);
       ctrl.setSceneAdvanceMode('per_clip');
       const presentationId = ctrl.loadPresentation({
         kind: 'plan',
@@ -1425,11 +1474,6 @@ export default function ChatScreen({
         typeof seg.unitId === 'string' && seg.unitId.trim() ? seg.unitId.trim() : null;
       if (unitId) {
         presentationRef.current.activateByUnitId(unitId);
-        const cards = unitBackedCardsRef.current;
-        if (Array.isArray(cards) && cards.length > 0) {
-          const idx = cards.findIndex((m) => m.unitId === unitId);
-          if (idx >= 0) setCurrentCardIdx(idx);
-        }
         return;
       }
       const sectionId =
@@ -1772,6 +1816,31 @@ export default function ChatScreen({
     const plan = narrationPlanRef.current;
     if (plan && plan.turnId === tid) {
       presentationRef.current.setSceneAdvanceMode('per_clip');
+      const incomingUnitIds = unitIdsFromSegments(plan.segments);
+      const loadedIds = (presentationRef.current.snapshot.scenes || [])
+        .map((s) => (typeof s.unitId === 'string' ? s.unitId.trim() : ''))
+        .filter(Boolean);
+      if (
+        shouldLoadUnitPlan({
+          incomingTurnId: tid,
+          lastLoadedTurnId: lastLoadedPresentationTurnRef.current,
+          incomingUnitIds,
+          loadedSceneUnitIds: loadedIds,
+        })
+      ) {
+        const ctrl = presentationRef.current;
+        ctrl.loadPresentation({
+          kind: 'plan',
+          plan: {
+            turnId: tid,
+            mode: 'card_narration',
+            segments: plan.segments,
+          },
+          estimatedTotalDurationMs: finitePositiveMs(totalDurationEstimateMs),
+        });
+        ctrl.play();
+        lastLoadedPresentationTurnRef.current = tid;
+      }
       const chunkIdx =
         typeof clipMeta?.chunkIndex === 'number' && Number.isFinite(clipMeta.chunkIndex)
           ? Math.max(0, Math.floor(clipMeta.chunkIndex))
@@ -1825,11 +1894,6 @@ export default function ChatScreen({
           })
         ) {
           presentationRef.current.activateByUnitId(unitId);
-          const cards = unitBackedCardsRef.current;
-          if (Array.isArray(cards) && cards.length > 0) {
-            const idx = cards.findIndex((m) => m.unitId === unitId);
-            if (idx >= 0) setCurrentCardIdx(idx);
-          }
         }
       } else if (sectionId) {
         const pid = presentationRef.current.snapshot.presentationId;
@@ -1846,13 +1910,15 @@ export default function ChatScreen({
         applyComparisonNarrationSegment(plan.segments[chunkIdx]!, chunkIdx);
       }
     } else if (isOverview && cardsToSync && cardsToSync.length > 0) {
-      // Fallback multi-card single/shared clip path.
+      // Fallback multi-card path only when this turn has no unit-backed plan.
+      const planUnits = unitIdsFromSegments(narrationPlanRef.current?.segments);
       const ctrl = presentationRef.current;
       if (
-        ctrl.engineState === 'IDLE' ||
-        ctrl.engineState === 'CANCELLED' ||
-        ctrl.engineState === 'PRESENTATION_COMPLETE' ||
-        !ctrl.isPresenting
+        shouldAllowLegacySingle(planUnits) &&
+        (ctrl.engineState === 'IDLE' ||
+          ctrl.engineState === 'CANCELLED' ||
+          ctrl.engineState === 'PRESENTATION_COMPLETE' ||
+          !ctrl.isPresenting)
       ) {
         const streaming =
           latestPayloadRef.current?.tts_streaming === true;
@@ -1874,19 +1940,21 @@ export default function ChatScreen({
         presentationRef.current.engineState === 'CANCELLED' ||
         presentationRef.current.engineState === 'PRESENTATION_COMPLETE')
     ) {
-      // Single-scene surfaces (fees, HOD, principal, VP, documents, bus) without a plan.
-      const ctrl = presentationRef.current;
-      ctrl.setSceneAdvanceMode('per_clip');
-      const singleTurn = tid || `card-${Date.now()}`;
-      ctrl.loadPresentation({
-        kind: 'single',
-        turnId: singleTurn,
-        cardId: 'stage',
-        caption: '',
-        spokenSummary: '',
-      });
-      ctrl.play();
-      lastLoadedPresentationTurnRef.current = singleTurn;
+      const planUnits = unitIdsFromSegments(narrationPlanRef.current?.segments);
+      if (shouldAllowLegacySingle(planUnits)) {
+        const ctrl = presentationRef.current;
+        ctrl.setSceneAdvanceMode('per_clip');
+        const singleTurn = tid || `card-${Date.now()}`;
+        ctrl.loadPresentation({
+          kind: 'single',
+          turnId: singleTurn,
+          cardId: 'stage',
+          caption: '',
+          spokenSummary: '',
+        });
+        ctrl.play();
+        lastLoadedPresentationTurnRef.current = singleTurn;
+      }
     }
 
     // Bind tokenized listeners — engine owns scene completion; ChatScreen still chains the queue.
@@ -2056,11 +2124,6 @@ export default function ChatScreen({
           })
         ) {
           ctrl.activateByUnitId(unitId);
-          const cards = unitBackedCardsRef.current;
-          if (Array.isArray(cards) && cards.length > 0) {
-            const idx = cards.findIndex((m) => m.unitId === unitId);
-            if (idx >= 0) setCurrentCardIdx(idx);
-          }
         }
         const engine = ctrl.engine.current;
         const snap = engine?.snapshot();
@@ -2762,7 +2825,6 @@ export default function ChatScreen({
       setIsDocumentsStage(false);
       setDepartmentOverviewDeckUnitIds(null);
       setActiveHodDepartments([]);
-      setUnitBackedCards(null);
       feesStickyTurnIdRef.current = null;
 
       const targetRaw = String(targetDepartment || '');
@@ -2779,9 +2841,9 @@ export default function ChatScreen({
           ? payload!.narration_plan!.segments
           : [],
       );
+      setUnitBackedCards(models.length > 0 ? models : null);
 
       if (models.length > 0) {
-        setUnitBackedCards(models);
         const allHod = models.every((m) => m.cardType === 'hod');
         const allFees = models.length === 1 && models[0]!.cardType === 'department_fees';
         const allPrincipal = models.every((m) => m.cardType === 'principal');
@@ -2935,7 +2997,12 @@ export default function ChatScreen({
           segmentKey,
           turnId: turnId,
           isOverview: true,
-          cardsToSync: slides.map((s) => ({ title: s.title, content: s.content, type: 'dept' })),
+          cardsToSync: slides.map((s, i) => ({
+            title: s.title,
+            content: s.content,
+            type: 'dept',
+            unitId: models[i]?.unitId,
+          })),
           targetLayout: 'SPLIT_CARDS',
         });
         return;

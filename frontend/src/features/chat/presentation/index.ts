@@ -16,6 +16,14 @@ export {
 } from './planToScenes';
 
 export {
+  unitIdsFromSegments,
+  loadedSceneUnitIds,
+  shouldLoadUnitPlan,
+  shouldAllowLegacySingle,
+  unitSequencesEqual,
+} from './presentationOwnership';
+
+export {
   presentationCardsFromNarrationSegments,
   departmentIdFromUnitId,
   cardTypeFromUnitId,
