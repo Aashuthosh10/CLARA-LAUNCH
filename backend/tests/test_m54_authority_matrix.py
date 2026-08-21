@@ -205,7 +205,6 @@ class TestLInstitutionalAnswer(unittest.TestCase):
             "Campus life?",
             "Are professors experienced?",
             "What are the labs like?",
-            "How is the canteen?",
         ):
             with self.subTest(text=text):
                 self.assertIs(decide(text), ResponseMode.ANSWER)

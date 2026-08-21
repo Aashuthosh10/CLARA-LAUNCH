@@ -13,6 +13,10 @@ from backend.services.content.content_unit_registry import (
 )
 from backend.services.content.content_unit_resolver import resolve_unit
 from backend.services.content.content_unit import ContentUnit
+from backend.services.content.campus_units import (
+    is_campus_entity,
+    unit_id_for_campus_item,
+)
 from backend.services.content.leadership_units import (
     LEADERSHIP_ENTITY,
     is_leadership_topic,
@@ -55,6 +59,11 @@ def _unit_id_for_topic(*, dept_key: str, topic: str) -> str | None:
 
 def _unit_id_for_item(*, entity: str, topic: str) -> str | None:
     """Map one (entity, topic) pair to a registered unit id. No pairwise special cases."""
+    if is_campus_entity(entity) or (entity or "").startswith("events.") or (entity or "").startswith("hostel."):
+        uid = unit_id_for_campus_item(entity, topic)
+        if uid and get_unit_descriptor(uid) is not None:
+            return uid
+        return None
     if is_leadership_topic(topic) or (entity or "").strip().lower() == LEADERSHIP_ENTITY:
         uid = unit_id_for_leadership_topic(topic)
         if uid and get_unit_descriptor(uid) is not None:

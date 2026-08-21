@@ -15,11 +15,15 @@ from backend.services.content.leadership_units import (
     UNIT_TRUSTEES,
     UNIT_VICE_PRINCIPAL,
 )
+from backend.services.content.campus_units import CAMPUS_UNIT_IDS
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
+    SURFACE_CANTEEN,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_DOCUMENTS,
+    SURFACE_EVENT,
+    SURFACE_HOSTEL,
     SURFACE_PRINCIPAL,
     SURFACE_TRUSTEES,
     SURFACE_VICE_PRINCIPAL,
@@ -39,6 +43,7 @@ _SECTION_TO_UNIT_SUFFIX: dict[str, str] = {
 _DEPT_CANONICAL_SOURCE = "backend/data/locales/*.json#departments"
 _FEES_CANONICAL_SOURCE = "backend/services/narration_plan.py#_FEES_AMOUNT_BY_KEY"
 _DOCUMENTS_CANONICAL_SOURCE = "backend/services/narration_plan.py#DOCUMENT_ITEMS"
+_CAMPUS_CANONICAL_SOURCE = "backend/data/locales/*.json#campus_units"
 _LEADERSHIP_CANONICAL_SOURCE = "backend/services/narration_plan.py#EXEC_PRINCIPAL|EXEC_VICE + locales role_holders"
 
 
@@ -168,6 +173,64 @@ _LEADERSHIP_DESCRIPTORS: tuple[ContentUnitDescriptor, ...] = (
 )
 
 
+def _campus_descriptor(unit_id: str) -> ContentUnitDescriptor:
+    uid = unit_id.strip().lower()
+    if uid.startswith("hostel."):
+        parts = uid.split(".")
+        entity_id = ".".join(parts[:2])
+        suffix = parts[-1]
+        return ContentUnitDescriptor(
+            unit_id=uid,
+            surface=SURFACE_HOSTEL,
+            content_type=ContentType.HOSTEL.value,
+            entity_type="hostel",
+            entity_id=entity_id,
+            context="hostel",
+            context_id=entity_id,
+            section_id=suffix,
+            unit_suffix=suffix,
+            canonical_source=_CAMPUS_CANONICAL_SOURCE,
+            adapter_key="campus_unit",
+            presentation_role=suffix,
+        )
+    if uid.startswith("canteen."):
+        suffix = uid.split(".", 1)[1]
+        return ContentUnitDescriptor(
+            unit_id=uid,
+            surface=SURFACE_CANTEEN,
+            content_type=ContentType.CANTEEN.value,
+            entity_type="canteen",
+            entity_id="canteen",
+            context="canteen",
+            context_id="canteen",
+            section_id=suffix,
+            unit_suffix=suffix,
+            canonical_source=_CAMPUS_CANONICAL_SOURCE,
+            adapter_key="campus_unit",
+            presentation_role=suffix,
+        )
+    suffix = uid.split(".", 1)[1] if "." in uid else uid
+    return ContentUnitDescriptor(
+        unit_id=uid,
+        surface=SURFACE_EVENT,
+        content_type=ContentType.EVENT.value,
+        entity_type="event",
+        entity_id=uid,
+        context="event",
+        context_id=uid,
+        section_id="overview",
+        unit_suffix=suffix,
+        canonical_source=_CAMPUS_CANONICAL_SOURCE,
+        adapter_key="campus_unit",
+        presentation_role="overview",
+    )
+
+
+_CAMPUS_DESCRIPTORS: tuple[ContentUnitDescriptor, ...] = tuple(
+    _campus_descriptor(uid) for uid in CAMPUS_UNIT_IDS
+)
+
+
 @lru_cache(maxsize=1)
 def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
     out: dict[str, ContentUnitDescriptor] = {}
@@ -178,6 +241,8 @@ def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
     for desc in _CONTEXT_SCOPED_DESCRIPTORS:
         out[desc.unit_id] = desc
     for desc in _LEADERSHIP_DESCRIPTORS:
+        out[desc.unit_id] = desc
+    for desc in _CAMPUS_DESCRIPTORS:
         out[desc.unit_id] = desc
     return out
 

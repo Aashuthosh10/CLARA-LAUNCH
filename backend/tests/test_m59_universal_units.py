@@ -54,6 +54,7 @@ class TestM59Registry(unittest.TestCase):
         self.assertIn(UNIT_TRUSTEES, ids)
         self.assertNotIn("campus_environment", ids)
         self.assertNotIn("canteen", ids)
+        self.assertNotIn("hostel.girls", ids)
         self.assertIsNotNone(get_unit_descriptor(UNIT_PRINCIPAL))
 
     def test_ids_are_unique(self) -> None:
@@ -119,9 +120,11 @@ class TestM59MultiUnit(unittest.TestCase):
 
 
 class TestM59NonCards(unittest.TestCase):
-    def test_campus_and_canteen_are_answers(self) -> None:
-        self.assertIsNone(plan_units("Tell me about the campus and canteen."))
-        self.assertIs(decide("Tell me about the campus and canteen."), ResponseMode.ANSWER)
+    def test_campus_without_unit_is_answer_canteen_is_card(self) -> None:
+        self.assertIsNone(plan_units("Tell me about the campus."))
+        self.assertIs(decide("Tell me about the campus."), ResponseMode.ANSWER)
+        self.assertEqual(plan_units("Tell me about the campus and canteen."), ("canteen.overview",))
+        self.assertIs(decide("Tell me about the campus and canteen."), ResponseMode.CARD)
 
     def test_mixed_faculty_code_switch_is_answer(self) -> None:
         self.assertIs(decide("teachers hegiddare?"), ResponseMode.ANSWER)

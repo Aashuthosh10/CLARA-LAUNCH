@@ -24,6 +24,9 @@ export type PresentationCardType =
   | 'principal'
   | 'vice_principal'
   | 'trustees'
+  | 'hostel'
+  | 'canteen'
+  | 'event'
   | 'unsupported';
 
 export type PresentationCardModel = {
@@ -46,10 +49,14 @@ export type NarrationSegmentLike = {
   cardIndex?: number | null;
 };
 
-/** departmentId from unit identity: `cse_aiml.hod` → `cse_aiml`. */
+/** Entity id from unit identity: `hostel.girls.rooms` → `hostel.girls`, `cse_aiml.hod` → `cse_aiml`. */
 export function departmentIdFromUnitId(unitId: string): string {
   const uid = (unitId || '').trim();
   if (!uid) return '';
+  if (uid.startsWith('hostel.')) {
+    const parts = uid.split('.');
+    return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : uid;
+  }
   const dot = uid.indexOf('.');
   return dot > 0 ? uid.slice(0, dot) : uid;
 }
@@ -70,6 +77,9 @@ export function cardTypeFromUnitId(unitId: string): PresentationCardType {
   if (uid === 'leadership.principal') return 'principal';
   if (uid === 'leadership.vice_principal') return 'vice_principal';
   if (uid === 'leadership.trustees') return 'trustees';
+  if (uid.startsWith('hostel.')) return 'hostel';
+  if (uid.startsWith('canteen.')) return 'canteen';
+  if (uid.startsWith('events.')) return 'event';
 
   const suffix = uid.split('.').slice(1).join('.');
   if (suffix === 'overview') return 'overview';

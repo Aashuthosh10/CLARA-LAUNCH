@@ -165,7 +165,9 @@ def select_surface(
         department=dept,
     )
 
-    if topic in UNSUPPORTED_TOPICS:
+    from backend.services.content.campus_units import campus_items_from_text
+
+    if topic in UNSUPPORTED_TOPICS and not campus_items_from_text(user_text or ""):
         return _finish(
             surface=None,
             confidence=1.0,

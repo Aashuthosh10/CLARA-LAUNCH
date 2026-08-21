@@ -61,16 +61,15 @@ class CanonicalEntityTests(unittest.TestCase):
 class UnsupportedTopicTests(unittest.TestCase):
     """M5.4: FOOD / ENVIRONMENT are card-unsupported, not unanswerable."""
 
-    def test_food_is_answered_but_never_carded(self):
+    def test_canteen_food_quality_is_a_card_unit(self):
         async def _run():
             session = {"language_code_key": "en", "language_name": "English"}
             orch = ConversationOrchestrator()
             result = await orch.run("How is the canteen food quality?", session, defer_narration=True)
             res = result.resolution
-            self.assertEqual(res.presentation_mode, PresentationMode.NORMAL_REPLY.value)
-            self.assertTrue(res.should_call_rag)
-            self.assertFalse(res.should_generate_presentation)
-            self.assertIsNone(res.show_card)
+            self.assertEqual(res.presentation_mode, PresentationMode.CARD_PRESENTATION.value)
+            self.assertTrue(res.should_generate_presentation)
+            self.assertFalse(res.should_call_rag)
 
         asyncio.run(_run())
 

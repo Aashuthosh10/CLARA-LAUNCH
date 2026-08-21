@@ -103,10 +103,10 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertTrue(is_short_circuit(result))
         self.assertEqual(result.decision.action, PolicyAction.NO_SPEECH_RETRY)
 
-    def test_canteen_is_answered_not_unknown(self):
+    def test_canteen_is_carded(self):
         result = self._run("How is the canteen food quality?")
         self.assertFalse(is_short_circuit(result))
-        self.assertEqual(result.decision.action, PolicyAction.ANSWER)
+        self.assertEqual(result.decision.action, PolicyAction.CARD_PRESENTATION)
         self.assertFalse(result.decision.unknown_fallback)
 
     def test_environment_is_answered_not_unknown(self):

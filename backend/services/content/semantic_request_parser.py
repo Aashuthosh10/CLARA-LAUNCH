@@ -14,6 +14,10 @@ from backend.services.content.multilingual_terms import (
     TOPIC_OVERVIEW,
 )
 from backend.services.content.semantic_anaphora import has_anaphora
+from backend.services.content.campus_units import (
+    campus_items_from_text,
+    detect_campus_entity_spans,
+)
 from backend.services.content.leadership_units import (
     LEADERSHIP_ENTITY,
     detect_leadership_spans,
@@ -94,7 +98,10 @@ def parse_semantic_request(
     if not leadership_items:
         leadership_items = leadership_items_from_text(raw_text)
 
-    if not entity_spans and not leadership_items:
+    campus_spans = detect_campus_entity_spans(raw_text)
+    campus_items = campus_items_from_text(raw_text) if campus_spans else ()
+
+    if not entity_spans and not leadership_items and not campus_items:
         return None
 
     topic_spans = detect_topic_spans(raw_text) if entity_spans else ()
@@ -143,10 +150,12 @@ def parse_semantic_request(
             # cue lost by grapheme folding). Identity is unambiguous, so honour it.
             dept_items = (SemanticItem(entity=dept_items[0].entity, topic=next(iter(atomic))),)
 
-    items = _merge_department_and_leadership_items(
+    items = _merge_department_leadership_and_campus_items(
         dept_items=dept_items or (),
         leadership_spans=leadership_spans,
         entity_spans=entity_spans,
+        campus_items=campus_items,
+        campus_spans=campus_spans,
     )
     if not items:
         return None
@@ -164,8 +173,16 @@ def parse_semantic_request(
     primary_topic = topics[0]
     mixed = len(set(topics)) > 1
     has_leadership = any(item.entity == LEADERSHIP_ENTITY for item in items)
-    context = "leadership" if has_leadership and not entities else (
-        "mixed" if has_leadership else "department"
+    has_campus = any(
+        item.entity == "canteen"
+        or item.entity.startswith("hostel.")
+        or item.entity.startswith("events.")
+        for item in items
+    )
+    context = "leadership" if has_leadership and not entities and not has_campus else (
+        "campus" if has_campus and not entities and not has_leadership else (
+            "mixed" if has_leadership or has_campus else "department"
+        )
     )
 
     confidence: str
@@ -197,19 +214,24 @@ def parse_semantic_request(
     )
 
 
-def _merge_department_and_leadership_items(
+def _merge_department_leadership_and_campus_items(
     *,
     dept_items: tuple[SemanticItem, ...],
     leadership_spans: tuple,
     entity_spans,
+    campus_items: tuple[SemanticItem, ...],
+    campus_spans: tuple,
 ) -> tuple[SemanticItem, ...]:
-    """Preserve user order across department and leadership items. No pairwise special cases."""
+    """Preserve user order across department, leadership, and campus items."""
     tagged: list[tuple[int, int, SemanticItem]] = []
     entity_start = {span.json_key: span.start for span in entity_spans or ()}
+    campus_start = {span.entity: span.start for span in campus_spans or ()}
     for i, item in enumerate(dept_items):
         tagged.append((entity_start.get(item.entity, 0), i, item))
     for i, span in enumerate(leadership_spans or ()):
         tagged.append((span.start, 1000 + i, SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic)))
+    for i, item in enumerate(campus_items or ()):
+        tagged.append((campus_start.get(item.entity, 0), 2000 + i, item))
     if not tagged:
         return ()
     tagged.sort(key=lambda row: (row[0], row[1]))
@@ -222,6 +244,21 @@ def _merge_department_and_leadership_items(
         seen.add(key)
         out.append(item)
     return tuple(out)
+
+
+def _merge_department_and_leadership_items(
+    *,
+    dept_items: tuple[SemanticItem, ...],
+    leadership_spans: tuple,
+    entity_spans,
+) -> tuple[SemanticItem, ...]:
+    return _merge_department_leadership_and_campus_items(
+        dept_items=dept_items,
+        leadership_spans=leadership_spans,
+        entity_spans=entity_spans,
+        campus_items=(),
+        campus_spans=(),
+    )
 
 
 def _entity_spans_from_hint(

@@ -57,6 +57,9 @@ def _fact_sentence(body: str) -> str:
 def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
     """One concise spoken sentence (or short paragraph) for a resolved unit."""
     lk = _lk(lang_key)
+    campus_spoken = _campus_unit_spoken(unit, lk)
+    if campus_spoken:
+        return campus_spoken
     suffix = (unit.unit_id.split(".", 1) + [""])[1]
     dept = (unit.entity_id or "").strip()
     dept_label = _dept_label(dept, lk) if dept and unit.entity_type == "department" else ""
@@ -168,6 +171,23 @@ def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
             return spoken
         return _fact_sentence(unit.body)
     return _fact_sentence(unit.body)
+
+
+def _campus_unit_spoken(unit: ContentUnit, lang_key: str) -> str:
+    """Speak the same locale tts_summary shown on the campus unit card."""
+    if (unit.entity_type or "") not in {"hostel", "canteen", "event"}:
+        return ""
+    spoken = str((unit.metadata or {}).get("tts_summary") or "").strip()
+    if spoken:
+        return _clip_caption(spoken, 280)
+    data = load_locale_data_for_lang_key(lang_key)
+    block = data.get("campus_units") if isinstance(data, dict) else None
+    row = block.get(unit.unit_id) if isinstance(block, dict) else None
+    if isinstance(row, dict):
+        text = str(row.get("tts_summary") or "").strip()
+        if text:
+            return _clip_caption(text, 280)
+    return ""
 
 
 def _trustee_opening_spoken(lang_key: str) -> str:

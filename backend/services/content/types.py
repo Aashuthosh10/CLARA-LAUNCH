@@ -23,6 +23,9 @@ class ContentType(str, Enum):
     BUS = "bus"
     COURSE_MENU = "course_menu"
     FAQ = "faq"
+    HOSTEL = "hostel"
+    CANTEEN = "canteen"
+    EVENT = "event"
 
 
 # Surfaces mirror backend showCard / card_trigger_hints values.
@@ -40,6 +43,9 @@ SURFACE_COMPARISON = "department_comparison"
 SURFACE_BUS = "bus_routes"
 SURFACE_COURSE_MENU = "course_menu"
 SURFACE_FAQ = "faq"
+SURFACE_HOSTEL = "hostel"
+SURFACE_CANTEEN = "canteen"
+SURFACE_EVENT = "event"
 
 ALL_SURFACES: frozenset[str] = frozenset(
     {
@@ -57,6 +63,9 @@ ALL_SURFACES: frozenset[str] = frozenset(
         SURFACE_BUS,
         SURFACE_COURSE_MENU,
         SURFACE_FAQ,
+        SURFACE_HOSTEL,
+        SURFACE_CANTEEN,
+        SURFACE_EVENT,
     }
 )
 

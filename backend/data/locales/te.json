@@ -468,5 +468,287 @@
       "hod_by_department.cse_bs.no_official_record",
       "hod_by_department.basic_sciences.no_official_record"
     ]
+  },
+  "campus_units": {
+    "hostel.girls.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — అవలోకనం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — అవలోకనం గురించి. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — గదులు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. గది రకం, నివాసులు మరియు సామగ్రి.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — గదులు గురించి. గది రకం, నివాసులు మరియు సామగ్రి. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "గది రకం, నివాసులు మరియు సామగ్రి — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు గురించి. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — ఆహారం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — ఆహారం గురించి. మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — భద్రత",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — భద్రత గురించి. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — కార్యకలాపాలు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — కార్యకలాపాలు గురించి. హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.girls.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలికల హాస్టల్ — ఫీజు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలికల హాస్టల్ — ఫీజు గురించి. హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — అవలోకనం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — అవలోకనం గురించి. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — గదులు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. గది రకం, నివాసులు మరియు సామగ్రి.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — గదులు గురించి. గది రకం, నివాసులు మరియు సామగ్రి. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "గది రకం, నివాసులు మరియు సామగ్రి — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు గురించి. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — ఆహారం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — ఆహారం గురించి. మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "మెస్ ఆహార నాణ్యత, తాజాదనం మరియు పరిశుభ్రత — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — భద్రత",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — భద్రత గురించి. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — కార్యకలాపాలు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — కార్యకలాపాలు గురించి. హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "హాస్టల్ కార్యకలాపాలు మరియు విద్యార్థి జీవితం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "hostel.boys.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "బాలుర హాస్టల్ — ఫీజు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది.",
+      "tts_summary": "ఈ నమూనా కార్డ్ బాలుర హాస్టల్ — ఫీజు గురించి. హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "హాస్టల్ ఫీజు మరియు ఏమి ఉంటుంది — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — అవలోకనం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — అవలోకనం గురించి. సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సాధారణ సౌకర్యాలు మరియు రోజువారీ జీవితం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.food_quality": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — ఆహార నాణ్యత",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. రుచి, తాజాదనం మరియు తయారీ నాణ్యత.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — ఆహార నాణ్యత గురించి. రుచి, తాజాదనం మరియు తయారీ నాణ్యత. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "రుచి, తాజాదనం మరియు తయారీ నాణ్యత — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.hygiene": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — పరిశుభ్రత",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. వంటగది పరిశుభ్రత మరియు వడ్డన పరిశుభ్రత.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — పరిశుభ్రత గురించి. వంటగది పరిశుభ్రత మరియు వడ్డన పరిశుభ్రత. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "వంటగది పరిశుభ్రత మరియు వడ్డన పరిశుభ్రత — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.variety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — వైవిధ్యం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. మెనూ వైవిధ్యం మరియు ఆహార ఎంపికలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — వైవిధ్యం గురించి. మెనూ వైవిధ్యం మరియు ఆహార ఎంపికలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "మెనూ వైవిధ్యం మరియు ఆహార ఎంపికలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.pricing": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — ధర",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సాధారణ భోజనం యొక్క సరసమైన ధర.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — ధర గురించి. సాధారణ భోజనం యొక్క సరసమైన ధర. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సాధారణ భోజనం యొక్క సరసమైన ధర — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — ప్రవేశ మరియు నిష్క్రమణ సమయాలు గురించి. ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ప్రవేశం, నిష్క్రమణ మరియు క్యాంపస్ సమయాలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "canteen.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "కాంటీన్ — భద్రత",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం.",
+      "tts_summary": "ఈ నమూనా కార్డ్ కాంటీన్ — భద్రత గురించి. సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "సురక్షిత ప్రవేశం, పర్యవేక్షణ మరియు ర్యాగింగ్ నిషేధం — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.sanchalana": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "సంచలన",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ సంచలన గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.techvidya": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "టెక్ విద్యా",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ టెక్ విద్యా గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.sirikannada_utsava": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "సిరికన్నడ ఉత్సవం",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ సిరికన్నడ ఉత్సవం గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.freshers_fest": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ఫ్రెషర్స్ ఫెస్ట్ (నమూనా)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ ఫ్రెషర్స్ ఫెస్ట్ (నమూనా) గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.sports_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "క్రీడా కూటం (నమూనా)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ క్రీడా కూటం (నమూనా) గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.project_expo": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ప్రాజెక్ట్ ఎక్స్‌పో (నమూనా)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ ప్రాజెక్ట్ ఎక్స్‌పో (నమూనా) గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    },
+    "events.alumni_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "పూర్వ విద్యార్థి సమావేశం (నమూనా)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు.",
+      "tts_summary": "ఈ నమూనా కార్డ్ పూర్వ విద్యార్థి సమావేశం (నమూనా) గురించి. ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు. అధికారిక విషయాలు ఇంకా నిర్ధారణ కాలేదు.",
+      "points": [
+        "ఉద్దేశ్యం, ప్రేక్షకులు మరియు నమూనా ప్రత్యేకతలు — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. అధికారిక వివరాలు ఇంకా నిర్ధారించబడలేదు."
+      ]
+    }
   }
 }

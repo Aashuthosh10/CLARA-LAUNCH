@@ -23,6 +23,7 @@ import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/Premi
 import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import Trustees from '../components/chat/cards/Trustees/Trustees';
+import CampusUnitCard from '../components/chat/cards/CampusUnitCard/CampusUnitCard';
 import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
 import BusRoutesFullscreen from '../components/bus/BusRoutesFullscreen';
 import ChatOrbControl from './chat/ChatOrbControl';
@@ -264,6 +265,8 @@ const DEPARTMENT_UNIT_CARD_TYPES = new Set([
   'placements',
   'department_fees',
 ]);
+
+const CAMPUS_UNIT_CARD_TYPES = new Set(['hostel', 'canteen', 'event']);
 
 const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
   English: { placements: 'Placements & training' },
@@ -2861,6 +2864,24 @@ export default function ChatScreen({
           return;
         }
 
+        const campusOnly = models.every((m) => CAMPUS_UNIT_CARD_TYPES.has(m.cardType));
+        if (campusOnly) {
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
         // Overview / achievements / placements / mixed multi-unit: exactly models.length slides.
         // Each unit resolves against its OWN department, so cse_ds.overview +
         // cse_aiml.hod + cse.fees each render their real content.
@@ -4706,6 +4727,8 @@ export default function ChatScreen({
                     routeResult={campusRouteResult}
                     onMappedRoomSelect={handleMappedCampusRoomSelect}
                   />
+                ) : currentUnitCard && CAMPUS_UNIT_CARD_TYPES.has(currentUnitCard.cardType) ? (
+                  <CampusUnitCard card={currentUnitCard} language={presentationLanguage} />
                 ) : currentUnitCard?.cardType === 'principal' || (executiveLeadershipKind === 'principal' && !currentUnitCard) ? (
                   <PremiumPrincipalCard language={presentationLanguage} />
                 ) : currentUnitCard?.cardType === 'vice_principal' || (executiveLeadershipKind === 'vice_principal' && !currentUnitCard) ? (

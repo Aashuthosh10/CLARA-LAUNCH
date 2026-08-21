@@ -134,9 +134,15 @@ def resolve_presentation(
     resolution.canonical_entities = dict(entities or {})
     resolution.short_circuit_reply = decision.reply_text
 
-    # Hard rule: FOOD / ENVIRONMENT never become nearest-department cards. They may
-    # still be answered — the surface selector refuses the card, the answer path stays.
-    if semantic_topic in UNSUPPORTED_TOPICS and action == PolicyAction.CARD_PRESENTATION:
+    from backend.services.content.campus_units import campus_items_from_text
+
+    # FOOD / ENVIRONMENT must not become nearest-department cards. Independently
+    # registered hostel / canteen / event units are real cards and skip this veto.
+    if (
+        semantic_topic in UNSUPPORTED_TOPICS
+        and action == PolicyAction.CARD_PRESENTATION
+        and not campus_items_from_text(user_text)
+    ):
         action = PolicyAction.ANSWER
         resolution.policy = PolicyAction.ANSWER.value
 

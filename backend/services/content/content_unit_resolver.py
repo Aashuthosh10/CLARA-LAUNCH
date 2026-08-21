@@ -59,6 +59,8 @@ def resolve_unit(
         unit = _resolve_documents_unit(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key in {"principal", "vice_principal", "trustees"}:
         unit = _resolve_leadership_unit(descriptor, language=language, language_code=language_code)
+    elif descriptor.adapter_key == "campus_unit":
+        unit = _resolve_campus_unit(descriptor, language=language, language_code=language_code)
     else:
         content_event("CONTENT_UNIT_FAILED", unit_id=unit_id, reason="unsupported_adapter")
         return None
@@ -263,6 +265,61 @@ def _resolve_documents_unit(
     body = "\n".join(f"{i + 1}. {s.body}" for i, s in enumerate(content.sections)).strip()
     title = content.title
     return _unit_from_aggregate_content(descriptor, content, body=body, title=title)
+
+
+def _resolve_campus_unit(
+    descriptor: ContentUnitDescriptor,
+    *,
+    language: str,
+    language_code: str,
+) -> ContentUnit | None:
+    data = load_locale_data_for_lang_key(language_code)
+    block = data.get("campus_units") if isinstance(data, dict) else None
+    row = block.get(descriptor.unit_id) if isinstance(block, dict) else None
+    if not isinstance(row, dict):
+        return None
+    title = str(row.get("title") or descriptor.unit_id).strip()
+    body = str(row.get("body") or "").strip()
+    summary = str(row.get("tts_summary") or body or title).strip()
+    points = row.get("points") if isinstance(row.get("points"), list) else []
+    if points:
+        extra = "\n".join(str(p).strip() for p in points if str(p).strip())
+        if extra and extra not in body:
+            body = f"{body}\n{extra}".strip()
+    display = (language or "").strip() or LANGUAGE_KEY_TO_NAME.get(language_code, "English")
+    unit_hash = compute_unit_hash(
+        unit_id=descriptor.unit_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        body=body,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+    )
+    return ContentUnit(
+        unit_id=descriptor.unit_id,
+        surface=descriptor.surface,
+        content_type=descriptor.content_type,
+        entity_type=descriptor.entity_type,
+        entity_id=descriptor.entity_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        title=title,
+        summary=summary[:200],
+        body=body,
+        language=display,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+        source_version=_SOURCE_VERSION,
+        content_hash=unit_hash,
+        metadata={
+            "content_status": str(row.get("content_status") or ""),
+            "tts_summary": summary,
+        },
+        keywords=(descriptor.entity_id, descriptor.unit_suffix),
+        presentation_capabilities=("campus_unit",),
+    )
 
 
 def _unit_from_aggregate_content(

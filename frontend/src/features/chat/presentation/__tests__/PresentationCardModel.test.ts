@@ -25,6 +25,10 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('leadership.principal')).toBe('principal');
     expect(cardTypeFromUnitId('leadership.vice_principal')).toBe('vice_principal');
     expect(cardTypeFromUnitId('leadership.trustees')).toBe('trustees');
+    expect(cardTypeFromUnitId('hostel.girls.rooms')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.boys.fees')).toBe('hostel');
+    expect(cardTypeFromUnitId('canteen.hygiene')).toBe('canteen');
+    expect(cardTypeFromUnitId('events.techvidya')).toBe('event');
     expect(cardTypeFromUnitId('cse_bs.overview')).toBe('overview');
     expect(cardTypeFromUnitId('cse_bs.hod')).toBe('hod');
     expect(cardTypeFromUnitId('cse_bs.achievements')).toBe('achievements');
@@ -48,6 +52,21 @@ describe('presentationCardsFromNarrationSegments — no hidden expansion', () =>
     ]);
     expect(selectedUnitIds(models)).toEqual(['cse.overview', 'cse.hod', 'cse.fees']);
     expect(models).toHaveLength(3);
+  });
+
+  it('builds mixed campus units without collapsing them', () => {
+    const models = presentationCardsFromNarrationSegments([
+      { unitId: 'hostel.girls.rooms', displayText: 'Rooms\nBody', cardIndex: 0 },
+      { unitId: 'canteen.hygiene', displayText: 'Hygiene\nBody', cardIndex: 1 },
+      { unitId: 'events.techvidya', displayText: 'TechVidya\nBody', cardIndex: 2 },
+    ]);
+    expect(selectedUnitIds(models)).toEqual([
+      'hostel.girls.rooms',
+      'canteen.hygiene',
+      'events.techvidya',
+    ]);
+    expect(models.map((m) => m.cardType)).toEqual(['hostel', 'canteen', 'event']);
+    expect(models[0]!.departmentId).toBe('hostel.girls');
   });
 
   it('builds five models from five unitIds with no expansion', () => {

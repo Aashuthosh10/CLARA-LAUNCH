@@ -60,4 +60,13 @@ export interface CollegeLocaleData {
   departments?: Record<string, CollegeDepartmentRecord>;
   placements_and_training?: Record<string, unknown>;
   role_holders?: RoleHoldersRecord;
+  campus_units?: Record<string, CampusUnitRecord>;
+}
+
+export interface CampusUnitRecord {
+  content_status?: string;
+  title?: string;
+  body?: string;
+  tts_summary?: string;
+  points?: string[];
 }

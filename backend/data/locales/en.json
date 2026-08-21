@@ -468,5 +468,287 @@
         "5. Mock Interviews & Group Discussions [cite: 417]"
       ]
     }
+  },
+  "campus_units": {
+    "hostel.girls.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — overview",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. general facilities and daily life.",
+      "tts_summary": "This sample card covers Girls hostel — overview. general facilities and daily life. Official facts are not confirmed yet.",
+      "points": [
+        "general facilities and daily life — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — rooms",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. room type, occupancy, and furnishings.",
+      "tts_summary": "This sample card covers Girls hostel — rooms. room type, occupancy, and furnishings. Official facts are not confirmed yet.",
+      "points": [
+        "room type, occupancy, and furnishings — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — entry and exit timings",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. entry, exit, and in-campus hours.",
+      "tts_summary": "This sample card covers Girls hostel — entry and exit timings. entry, exit, and in-campus hours. Official facts are not confirmed yet.",
+      "points": [
+        "entry, exit, and in-campus hours — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — food",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. mess food quality, freshness, and hygiene.",
+      "tts_summary": "This sample card covers Girls hostel — food. mess food quality, freshness, and hygiene. Official facts are not confirmed yet.",
+      "points": [
+        "mess food quality, freshness, and hygiene — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — safety",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. secure entry, supervision, and anti-ragging policy.",
+      "tts_summary": "This sample card covers Girls hostel — safety. secure entry, supervision, and anti-ragging policy. Official facts are not confirmed yet.",
+      "points": [
+        "secure entry, supervision, and anti-ragging policy — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — activities",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel activities and student life.",
+      "tts_summary": "This sample card covers Girls hostel — activities. hostel activities and student life. Official facts are not confirmed yet.",
+      "points": [
+        "hostel activities and student life — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.girls.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Girls hostel — fees",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel fee range and what is included.",
+      "tts_summary": "This sample card covers Girls hostel — fees. hostel fee range and what is included. Official facts are not confirmed yet.",
+      "points": [
+        "hostel fee range and what is included — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — overview",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. general facilities and daily life.",
+      "tts_summary": "This sample card covers Boys hostel — overview. general facilities and daily life. Official facts are not confirmed yet.",
+      "points": [
+        "general facilities and daily life — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — rooms",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. room type, occupancy, and furnishings.",
+      "tts_summary": "This sample card covers Boys hostel — rooms. room type, occupancy, and furnishings. Official facts are not confirmed yet.",
+      "points": [
+        "room type, occupancy, and furnishings — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — entry and exit timings",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. entry, exit, and in-campus hours.",
+      "tts_summary": "This sample card covers Boys hostel — entry and exit timings. entry, exit, and in-campus hours. Official facts are not confirmed yet.",
+      "points": [
+        "entry, exit, and in-campus hours — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — food",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. mess food quality, freshness, and hygiene.",
+      "tts_summary": "This sample card covers Boys hostel — food. mess food quality, freshness, and hygiene. Official facts are not confirmed yet.",
+      "points": [
+        "mess food quality, freshness, and hygiene — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — safety",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. secure entry, supervision, and anti-ragging policy.",
+      "tts_summary": "This sample card covers Boys hostel — safety. secure entry, supervision, and anti-ragging policy. Official facts are not confirmed yet.",
+      "points": [
+        "secure entry, supervision, and anti-ragging policy — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — activities",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel activities and student life.",
+      "tts_summary": "This sample card covers Boys hostel — activities. hostel activities and student life. Official facts are not confirmed yet.",
+      "points": [
+        "hostel activities and student life — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "hostel.boys.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Boys hostel — fees",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel fee range and what is included.",
+      "tts_summary": "This sample card covers Boys hostel — fees. hostel fee range and what is included. Official facts are not confirmed yet.",
+      "points": [
+        "hostel fee range and what is included — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — overview",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. general facilities and daily life.",
+      "tts_summary": "This sample card covers Canteen — overview. general facilities and daily life. Official facts are not confirmed yet.",
+      "points": [
+        "general facilities and daily life — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.food_quality": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — food quality",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. taste, freshness, and preparation quality.",
+      "tts_summary": "This sample card covers Canteen — food quality. taste, freshness, and preparation quality. Official facts are not confirmed yet.",
+      "points": [
+        "taste, freshness, and preparation quality — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.hygiene": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — hygiene",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. kitchen cleanliness and serving hygiene.",
+      "tts_summary": "This sample card covers Canteen — hygiene. kitchen cleanliness and serving hygiene. Official facts are not confirmed yet.",
+      "points": [
+        "kitchen cleanliness and serving hygiene — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.variety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — variety",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. menu range and dietary options.",
+      "tts_summary": "This sample card covers Canteen — variety. menu range and dietary options. Official facts are not confirmed yet.",
+      "points": [
+        "menu range and dietary options — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.pricing": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — pricing",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. affordability of typical meals.",
+      "tts_summary": "This sample card covers Canteen — pricing. affordability of typical meals. Official facts are not confirmed yet.",
+      "points": [
+        "affordability of typical meals — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — entry and exit timings",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. entry, exit, and in-campus hours.",
+      "tts_summary": "This sample card covers Canteen — entry and exit timings. entry, exit, and in-campus hours. Official facts are not confirmed yet.",
+      "points": [
+        "entry, exit, and in-campus hours — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "canteen.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Canteen — safety",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. secure entry, supervision, and anti-ragging policy.",
+      "tts_summary": "This sample card covers Canteen — safety. secure entry, supervision, and anti-ragging policy. Official facts are not confirmed yet.",
+      "points": [
+        "secure entry, supervision, and anti-ragging policy — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.sanchalana": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Sanchalana",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers Sanchalana. purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.techvidya": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "TechVidya",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers TechVidya. purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.sirikannada_utsava": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "SiriKannada Utsava",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers SiriKannada Utsava. purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.freshers_fest": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Freshers fest (sample)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers Freshers fest (sample). purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.sports_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Sports meet (sample)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers Sports meet (sample). purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.project_expo": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Project expo (sample)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers Project expo (sample). purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    },
+    "events.alumni_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "Alumni meet (sample)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
+      "tts_summary": "This sample card covers Alumni meet (sample). purpose, audience, and sample highlights. Official facts are not confirmed yet.",
+      "points": [
+        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
+      ]
+    }
   }
 }

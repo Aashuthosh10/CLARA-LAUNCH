@@ -468,5 +468,287 @@
       "hod_by_department.cse_bs.no_official_record",
       "hod_by_department.basic_sciences.no_official_record"
     ]
+  },
+  "campus_units": {
+    "hostel.girls.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಅವಲೋಕನ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಅವಲೋಕನ ಬಗ್ಗೆ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಕೊಠಡಿಗಳು",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಕೊಠಡಿಗಳು ಬಗ್ಗೆ. ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ ಬಗ್ಗೆ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಆಹಾರ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಆಹಾರ ಬಗ್ಗೆ. ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಭದ್ರತೆ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಭದ್ರತೆ ಬಗ್ಗೆ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಚಟುವಟಿಕೆಗಳು",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಚಟುವಟಿಕೆಗಳು ಬಗ್ಗೆ. ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.girls.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಶುಲ್ಕ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ — ಶುಲ್ಕ ಬಗ್ಗೆ. ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಅವಲೋಕನ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಅವಲೋಕನ ಬಗ್ಗೆ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.rooms": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಕೊಠಡಿಗಳು",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಕೊಠಡಿಗಳು ಬಗ್ಗೆ. ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಕೊಠಡಿ ಪ್ರಕಾರ, ವಾಸಿಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಸಾಮಗ್ರಿ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ ಬಗ್ಗೆ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.food": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಆಹಾರ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಆಹಾರ ಬಗ್ಗೆ. ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಮೆಸ್ ಆಹಾರದ ಗುಣಮಟ್ಟ, ತಾಜಾತನ ಮತ್ತು ನೈರ್ಮಲ್ಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಭದ್ರತೆ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಭದ್ರತೆ ಬಗ್ಗೆ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.activities": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಚಟುವಟಿಕೆಗಳು",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಚಟುವಟಿಕೆಗಳು ಬಗ್ಗೆ. ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಹಾಸ್ಟೆಲ್ ಚಟುವಟಿಕೆಗಳು ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಜೀವನ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "hostel.boys.fees": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಶುಲ್ಕ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ — ಶುಲ್ಕ ಬಗ್ಗೆ. ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಹಾಸ್ಟೆಲ್ ಶುಲ್ಕ ಮತ್ತು ಒಳಗೊಂಡಿರುವ ವಿವರ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.overview": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ಅವಲೋಕನ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ಅವಲೋಕನ ಬಗ್ಗೆ. ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸಾಮಾನ್ಯ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ದೈನಂದಿನ ಜೀವನ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.food_quality": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ಆಹಾರದ ಗುಣಮಟ್ಟ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ರುಚಿ, ತಾಜಾತನ ಮತ್ತು ತಯಾರಿಕೆ ಗುಣಮಟ್ಟ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ಆಹಾರದ ಗುಣಮಟ್ಟ ಬಗ್ಗೆ. ರುಚಿ, ತಾಜಾತನ ಮತ್ತು ತಯಾರಿಕೆ ಗುಣಮಟ್ಟ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ರುಚಿ, ತಾಜಾತನ ಮತ್ತು ತಯಾರಿಕೆ ಗುಣಮಟ್ಟ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.hygiene": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ನೈರ್ಮಲ್ಯ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಅಡುಗೆಮನೆ ಸ್ವಚ್ಛತೆ ಮತ್ತು ಬಡಿಸುವ ನೈರ್ಮಲ್ಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ನೈರ್ಮಲ್ಯ ಬಗ್ಗೆ. ಅಡುಗೆಮನೆ ಸ್ವಚ್ಛತೆ ಮತ್ತು ಬಡಿಸುವ ನೈರ್ಮಲ್ಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಅಡುಗೆಮನೆ ಸ್ವಚ್ಛತೆ ಮತ್ತು ಬಡಿಸುವ ನೈರ್ಮಲ್ಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.variety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ವೈವಿಧ್ಯ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಮೆನು ವ್ಯಾಪ್ತಿ ಮತ್ತು ಆಹಾರ ಆಯ್ಕೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ವೈವಿಧ್ಯ ಬಗ್ಗೆ. ಮೆನು ವ್ಯಾಪ್ತಿ ಮತ್ತು ಆಹಾರ ಆಯ್ಕೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಮೆನು ವ್ಯಾಪ್ತಿ ಮತ್ತು ಆಹಾರ ಆಯ್ಕೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.pricing": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ಬೆಲೆ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸಾಮಾನ್ಯ ಊಟದ ಕೈಗೆಟುಕುವಿಕೆ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ಬೆಲೆ ಬಗ್ಗೆ. ಸಾಮಾನ್ಯ ಊಟದ ಕೈಗೆಟುಕುವಿಕೆ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸಾಮಾನ್ಯ ಊಟದ ಕೈಗೆಟುಕುವಿಕೆ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.timings": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ಪ್ರವೇಶ ಮತ್ತು ನಿರ್ಗಮನ ಸಮಯ ಬಗ್ಗೆ. ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಪ್ರವೇಶ, ನಿರ್ಗಮನ ಮತ್ತು ಆವರಣದ ಸಮಯ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "canteen.safety": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ಯಾಂಟೀನ್ — ಭದ್ರತೆ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ಯಾಂಟೀನ್ — ಭದ್ರತೆ ಬಗ್ಗೆ. ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಸುರಕ್ಷಿತ ಪ್ರವೇಶ, ಮೇಲ್ವಿಚಾರಣೆ ಮತ್ತು ರ್ಯಾಗಿಂಗ್ ನಿಷೇಧ — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.sanchalana": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಸಂಚಲನ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಸಂಚಲನ ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.techvidya": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಟೆಕ್ ವಿದ್ಯಾ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಟೆಕ್ ವಿದ್ಯಾ ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.sirikannada_utsava": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಸಿರಿಕನ್ನಡ ಉತ್ಸವ",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಸಿರಿಕನ್ನಡ ಉತ್ಸವ ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.freshers_fest": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಫ್ರೆಷರ್ಸ್ ಫೆಸ್ಟ್ (ಮಾದರಿ)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಫ್ರೆಷರ್ಸ್ ಫೆಸ್ಟ್ (ಮಾದರಿ) ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.sports_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಕ್ರೀಡಾ ಕೂಟ (ಮಾದರಿ)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಕ್ರೀಡಾ ಕೂಟ (ಮಾದರಿ) ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.project_expo": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್‌ಪೋ (ಮಾದರಿ)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್‌ಪೋ (ಮಾದರಿ) ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    },
+    "events.alumni_meet": {
+      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
+      "title": "ಹಳೆಯ ವಿದ್ಯಾರ್ಥಿ ಸಮಾವೇಶ (ಮಾದರಿ)",
+      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು.",
+      "tts_summary": "ಈ ಮಾದರಿ ಕಾರ್ಡ್ ಹಳೆಯ ವಿದ್ಯಾರ್ಥಿ ಸಮಾವೇಶ (ಮಾದರಿ) ಬಗ್ಗೆ. ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು. ಅಧಿಕೃತ ಅಂಶಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ.",
+      "points": [
+        "ಉದ್ದೇಶ, ಪ್ರೇಕ್ಷಕರು ಮತ್ತು ಮಾದರಿ ವಿಶೇಷತೆಗಳು — SAMPLE_REPLACE_WITH_OFFICIAL",
+        "SAMPLE_REPLACE_WITH_OFFICIAL. ಅಧಿಕೃತ ವಿವರಗಳು ಇನ್ನೂ ದೃಢಪಟ್ಟಿಲ್ಲ."
+      ]
+    }
   }
 }
