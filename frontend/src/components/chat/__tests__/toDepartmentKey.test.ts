@@ -7,6 +7,8 @@ describe('toDepartmentKey', () => {
     expect(toDepartmentKey('cse_aiml')).toBe('cse_aiml');
     expect(toDepartmentKey('cse_ds')).toBe('cse_ds');
     expect(toDepartmentKey('cse')).toBe('cse');
+    expect(toDepartmentKey('cse_bs')).toBe('cse_bs');
+    expect(toDepartmentKey('CSE (Business Systems)')).toBe('cse_bs');
   });
 });
 

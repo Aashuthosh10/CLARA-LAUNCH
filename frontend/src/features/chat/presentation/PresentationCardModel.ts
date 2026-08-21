@@ -159,6 +159,7 @@ export function factoryDepartmentLabelFromJsonKey(jsonKey: string): string {
     cse_aiml: 'CSE (AI & ML)',
     cse_ds: 'CSE (Data Science)',
     cse_cysec: 'CSE (Cyber Security)',
+    cse_bs: 'CSE (Business Systems)',
     ece: 'ECE',
     civil: 'Civil',
     mechanical: 'Mechanical',
@@ -169,4 +170,23 @@ export function factoryDepartmentLabelFromJsonKey(jsonKey: string): string {
     basic_sciences: 'Basic Sciences',
   };
   return map[k] || jsonKey;
+}
+
+/** True when UnitSelector selected a department `{dept}.placements` unit. */
+export function hasDepartmentPlacementUnit(models: PresentationCardModel[]): boolean {
+  return models.some(
+    (m) => m.cardType === 'placements' && Boolean(m.departmentId) && m.departmentId !== 'placements',
+  );
+}
+
+/**
+ * College-wide placement slides are a legacy `showCard=placements` surface.
+ * They must not replace a selected `{dept}.placements` unit.
+ */
+export function shouldUseCollegeWidePlacementDeck(
+  cardTrigger: string | null | undefined,
+  models: PresentationCardModel[],
+): boolean {
+  if ((cardTrigger || '').trim() !== 'placements') return false;
+  return !hasDepartmentPlacementUnit(models);
 }

@@ -11,12 +11,14 @@ import MBACard from './MBACard';
 import MathematicsCard from './MathematicsCard';
 import PhysicsCard from './PhysicsCard';
 import ChemistryCard from './ChemistryCard';
+import BusinessSystemsCard from './BusinessSystemsCard';
 
 const COMPONENT_MAP: Record<string, any> = {
   'CSE': CSECard,
   'CSE (AI & ML)': AIMLCard,
   'CSE (Data Science)': DataScienceCard,
   'CSE (Cyber Security)': CyberSecurityCard,
+  'CSE (Business Systems)': BusinessSystemsCard,
   'ISE': ISECard,
   'ECE': ECECard,
   'Civil': CivilCard,
@@ -37,4 +39,8 @@ export default function DepartmentCardFactory({
 }) {
   const Component = COMPONENT_MAP[departmentId] || COMPONENT_MAP['CSE'];
   return <Component {...props} departmentId={departmentId} />;
+}
+
+export function hasDedicatedDepartmentFactoryCard(departmentId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(COMPONENT_MAP, departmentId);
 }

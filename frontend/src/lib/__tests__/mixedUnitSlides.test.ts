@@ -22,6 +22,13 @@ const data = {
       hod_voice: 'CSE HOD',
       fees: 'CSE fees',
     },
+    cse_bs: {
+      name: 'CSE (Business Systems)',
+      intro: 'Business Systems intro',
+      hod_voice: 'Business Systems HOD',
+      placement: 'Business Systems placements',
+      fees: 'Business Systems fees',
+    },
   },
 } as unknown as CollegeLocaleData;
 
@@ -48,5 +55,30 @@ describe('mixed unit decks resolve against their own department', () => {
     expect(buildDepartmentSlideForUnit(data, 'documents.overview', 'English')).toBeNull();
     expect(buildDepartmentSlideForUnit(data, 'quantum_weaving.hod', 'English')).toBeNull();
     expect(buildDepartmentSlideForUnit(data, 'cse', 'English')).toBeNull();
+  });
+
+  it('resolves cse_bs and department placements against their own unit, not a sibling', () => {
+    const bsPlacement = buildDepartmentSlideForUnit(data, 'cse_bs.placements', 'English');
+    const dsPlacement = buildDepartmentSlideForUnit(data, 'cse_ds.placements', 'English');
+    const aimlPlacement = buildDepartmentSlideForUnit(data, 'cse_aiml.placements', 'English');
+    const csePlacement = buildDepartmentSlideForUnit(data, 'cse.placements', 'English');
+
+    expect(bsPlacement?.content).toBe('Business Systems placements');
+    expect(dsPlacement?.content).not.toBe('Business Systems placements');
+    expect(aimlPlacement).not.toBeNull();
+    expect(csePlacement).not.toBeNull();
+    expect(buildDepartmentSlideForUnit(data, 'cse_bs.overview', 'English')?.content).toBe(
+      'Business Systems intro',
+    );
+  });
+
+  it('keeps department placement content in a regional language', () => {
+    const knData = {
+      departments: {
+        cse_ds: { name: 'CSE (Data Science)', placement: 'ಡೇಟಾ ಸೈನ್ಸ್ ಪ್ಲೇಸ್‌ಮೆಂಟ್' },
+      },
+    } as unknown as CollegeLocaleData;
+    const slide = buildDepartmentSlideForUnit(knData, 'cse_ds.placements', 'Kannada');
+    expect(slide?.content).toContain('ಪ್ಲೇಸ್‌ಮೆಂಟ್');
   });
 });

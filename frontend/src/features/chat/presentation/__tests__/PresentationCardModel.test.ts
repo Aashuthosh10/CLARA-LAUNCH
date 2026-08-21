@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   cardTypeFromUnitId,
   departmentIdFromUnitId,
+  factoryDepartmentLabelFromJsonKey,
+  hasDepartmentPlacementUnit,
   presentationCardsFromNarrationSegments,
   selectedUnitIds,
+  shouldUseCollegeWidePlacementDeck,
 } from '../PresentationCardModel';
 
 describe('PresentationCardModel identity helpers', () => {
@@ -22,6 +25,11 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('leadership.principal')).toBe('principal');
     expect(cardTypeFromUnitId('leadership.vice_principal')).toBe('vice_principal');
     expect(cardTypeFromUnitId('leadership.trustees')).toBe('trustees');
+    expect(cardTypeFromUnitId('cse_bs.overview')).toBe('overview');
+    expect(cardTypeFromUnitId('cse_bs.hod')).toBe('hod');
+    expect(cardTypeFromUnitId('cse_bs.achievements')).toBe('achievements');
+    expect(cardTypeFromUnitId('cse_bs.placements')).toBe('placements');
+    expect(cardTypeFromUnitId('cse_bs.fees')).toBe('department_fees');
   });
 
   it('never maps fees.overview / documents identities to department fees', () => {
@@ -111,5 +119,46 @@ describe('presentationCardsFromNarrationSegments — no hidden expansion', () =>
       { unitId: 'cse.overview', sectionId: 'intro', displayText: 'Overview\nBody', cardIndex: 1 },
     ]);
     expect(selectedUnitIds(models)).toEqual(['cse.overview']);
+  });
+});
+
+describe('cse_bs factory identity', () => {
+  it('maps cse_bs to CSE (Business Systems) and does not collapse to CSE', () => {
+    expect(factoryDepartmentLabelFromJsonKey('cse_bs')).toBe('CSE (Business Systems)');
+    expect(factoryDepartmentLabelFromJsonKey('cse')).toBe('CSE');
+    expect(departmentIdFromUnitId('cse_bs.overview')).toBe('cse_bs');
+    expect(departmentIdFromUnitId('cse_bs.hod')).toBe('cse_bs');
+    expect(departmentIdFromUnitId('cse_bs.achievements')).toBe('cse_bs');
+    expect(departmentIdFromUnitId('cse_bs.placements')).toBe('cse_bs');
+    expect(departmentIdFromUnitId('cse_bs.fees')).toBe('cse_bs');
+  });
+});
+
+describe('department placements vs college-wide deck', () => {
+  it('keeps a singleton department placements unit as that department', () => {
+    const models = presentationCardsFromNarrationSegments([
+      { unitId: 'cse_ds.placements', sectionId: 'placement', displayText: 'Placements\nDS body', cardIndex: 0 },
+    ]);
+    expect(models).toHaveLength(1);
+    expect(models[0]!.unitId).toBe('cse_ds.placements');
+    expect(models[0]!.departmentId).toBe('cse_ds');
+    expect(hasDepartmentPlacementUnit(models)).toBe(true);
+    expect(shouldUseCollegeWidePlacementDeck('department_overview', models)).toBe(false);
+    expect(shouldUseCollegeWidePlacementDeck('placements', models)).toBe(false);
+  });
+
+  it('preserves college-wide placements when no department unit is selected', () => {
+    expect(shouldUseCollegeWidePlacementDeck('placements', [])).toBe(true);
+    expect(shouldUseCollegeWidePlacementDeck('department_overview', [])).toBe(false);
+  });
+
+  it('keeps placements identity in a multi-unit plan', () => {
+    const models = presentationCardsFromNarrationSegments([
+      { unitId: 'cse_ds.hod', sectionId: 'hod_voice', displayText: 'HOD\nBody', cardIndex: 0 },
+      { unitId: 'cse_ds.placements', sectionId: 'placement', displayText: 'Placements\nDS body', cardIndex: 1 },
+    ]);
+    expect(selectedUnitIds(models)).toEqual(['cse_ds.hod', 'cse_ds.placements']);
+    expect(hasDepartmentPlacementUnit(models)).toBe(true);
+    expect(shouldUseCollegeWidePlacementDeck('placements', models)).toBe(false);
   });
 });

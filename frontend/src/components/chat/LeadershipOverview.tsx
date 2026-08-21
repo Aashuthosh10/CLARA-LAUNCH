@@ -157,6 +157,7 @@ export function toDepartmentKey(targetDepartment: string | null | undefined): st
   if (raw.includes('mathematics') || raw.includes('math')) return 'mathematics';
   if (raw.includes('physics')) return 'physics';
   if (raw.includes('chemistry')) return 'chemistry';
+  if (raw.includes('business system') || (raw.includes('cse') && raw.includes('business'))) return 'cse_bs';
   if (raw.includes('cse') || raw.includes('computer')) return 'cse';
   return null;
 }

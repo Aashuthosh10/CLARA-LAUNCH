@@ -39,7 +39,9 @@ import { usePresentationController } from '../features/chat/presentation';
 import {
   departmentIdFromUnitId,
   factoryDepartmentLabelFromJsonKey,
+  hasDepartmentPlacementUnit,
   presentationCardsFromNarrationSegments,
+  shouldUseCollegeWidePlacementDeck,
   type PresentationCardModel,
 } from '../features/chat/presentation/PresentationCardModel';
 import {
@@ -2213,6 +2215,13 @@ export default function ChatScreen({
       ? getPayloadMessageText(lastUserForInference).trim()
       : '';
     const cardTrigger = normalizeCardTrigger(nativeTrigger);
+    const unitModelsFromPayload = presentationCardsFromNarrationSegments(
+      Array.isArray(payload?.narration_plan?.segments) ? payload.narration_plan.segments : [],
+    );
+    const useCollegeWidePlacements = shouldUseCollegeWidePlacementDeck(
+      cardTrigger,
+      unitModelsFromPayload,
+    );
 
     const departmentIdFromPayload = typeof payload?.departmentId === 'string' ? payload.departmentId : null;
     const targetDepartment =
@@ -2554,7 +2563,7 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'placements') {
+    if (useCollegeWidePlacements) {
       engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
       setIsHodStage(false);
       setExecutiveLeadershipKind(null);
@@ -2678,7 +2687,7 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'placements') {
+    if (useCollegeWidePlacements) {
       setIsHodStage(false);
       setIsFeesStage(false);
       setExecutiveLeadershipKind(null);
@@ -2717,7 +2726,7 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'department_overview') {
+    if (cardTrigger === 'department_overview' || hasDepartmentPlacementUnit(unitModelsFromPayload)) {
       // UnitSelector is the sole composition authority. The unitIds on narration_plan
       // decide how many cards exist, in which order, and for which department.
       engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
@@ -2754,7 +2763,6 @@ export default function ChatScreen({
         setUnitBackedCards(models);
         const allHod = models.every((m) => m.cardType === 'hod');
         const allFees = models.length === 1 && models[0]!.cardType === 'department_fees';
-        const allPlacements = models.length === 1 && models[0]!.cardType === 'placements';
         const allPrincipal = models.every((m) => m.cardType === 'principal');
         const allVicePrincipal = models.every((m) => m.cardType === 'vice_principal');
         const allTrustees = models.every((m) => m.cardType === 'trustees');
@@ -2853,31 +2861,11 @@ export default function ChatScreen({
           return;
         }
 
-        if (allPlacements) {
-          setIsInfoSlideStage(true);
-          const chips = INFO_STAGE_CHIPS[language] ?? INFO_STAGE_CHIPS.English;
-          setInfoSlideChip(chips.placements);
-          const slides = buildPlacementCardsFromLocale(collegeData, language);
-          setInfoSlides(slides);
-          setLayoutMode('SPLIT_CARDS');
-          setActiveCards(null);
-          setIsDepartmentOverviewStage(false);
-          setActiveDepartmentId(null);
-          setSuppressedTurnId(turnId);
-          offerAssistantAudio({
-            audioBase64,
-            segmentKey,
-            turnId: turnId,
-            isOverview: true,
-            cardsToSync: slides.map((s) => ({ title: s.title, content: s.content, type: 'dept' })),
-            targetLayout: 'SPLIT_CARDS',
-          });
-          return;
-        }
-
-        // Overview / achievements / mixed multi-unit: exactly models.length slides.
+        // Overview / achievements / placements / mixed multi-unit: exactly models.length slides.
         // Each unit resolves against its OWN department, so cse_ds.overview +
         // cse_aiml.hod + cse.fees each render their real content.
+        // A singleton `{dept}.placements` uses that department's placement unit, not
+        // the college-wide placements_and_training deck.
         const slides = models.map((m) => {
           const slot = typeof m.slotIndex === 'number' ? m.slotIndex : 0;
           const fromLocale = buildDepartmentSlideForUnit(collegeData, m.unitId, presentationLanguage);
