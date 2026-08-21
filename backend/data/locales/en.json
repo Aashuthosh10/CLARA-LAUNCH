@@ -79,40 +79,89 @@
     }
   ],
   "role_holders": {
+    "ui": {
+      "board_label": "Board of Trustees"
+    },
     "principal": {
       "name": "Dr. Manjunath T N",
-      "title": "Principal, Sai Vidya Institute of Technology (SVIT), Bengaluru",
+      "title": "Principal",
       "profile": "Dr. Manjunath T N leads SVIT with the motto 'Learn to Lead,' focusing on academic excellence, innovation, and student success. Under his leadership, SVIT emphasizes industry-aligned engineering and management education with strong links to VTU affiliation, AICTE recognition, NAAC 'A' grade, and NBA-accredited programs. He highlights student-centric teaching, dedicated faculty, and strong support for co-curricular activities and placements to make students industry-ready. His vision is to develop technically skilled, innovative, and socially responsible leaders who can navigate complexity with wisdom and humility. Through encouragement of research, internships, and entrepreneurship, he aims to transform students' aspirations into real achievements."
     },
     "vice_principal": {
       "name": "Dr. Lakshminarayanachari K",
-      "title": "Vice Principal & Dean Academics, Sai Vidya Institute of Technology (SVIT)",
+      "title": "Vice Principal & Dean Academics",
       "profile": "Dr. Lakshminarayanachari K serves as Vice Principal and Dean Academics at SVIT, supporting academic planning, curriculum implementation, and teaching quality enhancement, while also contributing to research and publications; he plays a key role in coordinating faculty, improving learning outcomes, and aligning academic processes with institutional goals and regulatory requirements."
     },
     "trustees": [
       {
+        "id": "holla",
         "name": "Prof. M. R. Holla",
-        "designation": "Founder Trustee & President"
+        "display_name": "Prof. M. R. Holla",
+        "designation": "Founder Trustee & President",
+        "description": "Prof. M R Holla is a distinguished academician and recipient of the Karnataka Rajyothsava Award for Academic Excellence. With over 50 years of academic and administrative experience, he serves as the visionary leader and core architect of SVIT.",
+        "tts_summary": "Prof. M R Holla is a distinguished academician and recipient of the Karnataka Rajyothsava Award for Academic Excellence. With over 50 years of academic and administrative experience, he serves as the visionary leader and core architect of SVIT.",
+        "image_key": "holla",
+        "localization_status": "complete"
       },
       {
-        "name": "Dr. Y. Jayasimha",
-        "designation": "Founder Trustee"
-      },
-      {
-        "name": "Prof. R. C. Shanmukha Swamy",
-        "designation": "Founder Trustee"
-      },
-      {
+        "id": "padma_reddy",
         "name": "Dr. A. M. Padma Reddy",
-        "designation": "Founder Trustee"
+        "display_name": "Dr. A. M. Padma Reddy",
+        "designation": "Founder Trustee & Vice President",
+        "description": "Dr. A M Padma Reddy is a renowned professor in Computer Science and Engineering and Dean of Student Affairs. He promotes quality education and encourages participation in sports, cultural, NSS, and NCC activities.",
+        "tts_summary": "Dr. A M Padma Reddy is a renowned professor in Computer Science and Engineering and Dean of Student Affairs. He promotes quality education and encourages participation in sports, cultural, NSS, and NCC activities.",
+        "image_key": "padma",
+        "localization_status": "complete"
       },
       {
+        "id": "srinivas_raju",
         "name": "Sri R. Srinivas Raju",
-        "designation": "Trustee"
+        "display_name": "Sri R. Srinivas Raju",
+        "designation": "Managing Trustee & Secretary",
+        "description": "Sri R Srinivas Raju is a serial entrepreneur with over 30 years of experience in infrastructure and business development. His industry insights strengthen SVIT's practical approach to engineering education.",
+        "tts_summary": "Sri R Srinivas Raju is a serial entrepreneur with over 30 years of experience in infrastructure and business development. His industry insights strengthen SVIT's practical approach to engineering education.",
+        "image_key": "srinivas",
+        "localization_status": "complete"
       },
       {
+        "id": "shanmukha",
+        "name": "Prof. R. C. Shanmukha Swamy",
+        "display_name": "Prof. R. C. Shanmukha Swamy",
+        "designation": "Founder Trustee & Joint Secretary",
+        "description": "Prof. R C Shanmukha Swamy brings extensive academic and administrative expertise, contributing to SVIT's policies and strategic direction with decades of educational experience.",
+        "tts_summary": "Prof. R C Shanmukha Swamy brings extensive academic and administrative expertise, contributing to SVIT's policies and strategic direction with decades of educational experience.",
+        "image_key": "shanmukha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "manohar",
         "name": "Sri M. K. Manohar",
-        "designation": "Trustee"
+        "display_name": "Sri M. K. Manohar",
+        "designation": "Founder Trustee & Treasurer",
+        "description": "Sri Manohar M K is a Chartered Accountant managing SVIT's financial operations, ensuring strong fiscal discipline and sustainable institutional growth.",
+        "tts_summary": "Sri Manohar M K is a Chartered Accountant managing SVIT's financial operations, ensuring strong fiscal discipline and sustainable institutional growth.",
+        "image_key": "manohar",
+        "localization_status": "complete"
+      },
+      {
+        "id": "jayasimha",
+        "name": "Dr. Y. Jayasimha",
+        "display_name": "Dr. Y. Jayasimha",
+        "designation": "Founder Trustee",
+        "description": "Dr. Y Jayasimha is an accomplished academician contributing to SVIT's development through academic leadership and institutional growth strategies.",
+        "tts_summary": "Dr. Y Jayasimha is an accomplished academician contributing to SVIT's development through academic leadership and institutional growth strategies.",
+        "image_key": "jayasimha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "narayan",
+        "name": "Sri Narayan Raju",
+        "display_name": "Sri Narayan Raju",
+        "designation": "Founder Trustee (Deceased)",
+        "description": "Sri Narayan Raju was a key administrator in SVIT's foundation, whose contributions to institutional systems and governance remain part of its legacy.",
+        "tts_summary": "Sri Narayan Raju was a key administrator in SVIT's foundation, whose contributions to institutional systems and governance remain part of its legacy.",
+        "image_key": "narayan",
+        "localization_status": "complete"
       }
     ],
     "hod_by_department": {
@@ -120,80 +169,128 @@
         "department_name": "Computer Science & Engineering",
         "hod_name": "Dr. Shashikumar D R",
         "hod_title": "Professor & HOD, Computer Science & Engineering",
-        "hod_bio": "With extensive teaching and research experience in core computer science, Dr. Shashikumar D R leads the CSE department with a strong focus on fundamentals and industry-oriented learning. He has guided multiple student projects, promotes coding culture and hackathons, and actively works on curriculum enhancement aligned with emerging technologies. His areas of interest span algorithms, software engineering, and modern computing practices.",
-        "aliases": ["cse", "computer science", "computer science & engineering"]
+        "aliases": [
+          "cse",
+          "computer science",
+          "computer science & engineering"
+        ],
+        "hod_bio": "With extensive teaching and research experience in core computer science, Dr. Shashikumar D R leads the CSE department with a strong focus on fundamentals and industry-oriented learning. He has guided multiple student projects, promotes coding culture and hackathons, and actively works on curriculum enhancement aligned with emerging technologies. His areas of interest span algorithms, software engineering, and modern computing practices."
       },
       "cse_aiml": {
-        "department_name": "CSE (Artificial Intelligence & Machine Learning)",
+        "department_name": "CSE (AI & ML)",
         "hod_name": "Dr. T G Manjunatha",
         "hod_title": "Professor & HOD, CSE (Artificial Intelligence & Machine Learning)",
-        "hod_bio": "Dr. T G Manjunatha heads the AIML department, emphasizing solid foundations in AI, machine learning, and data-driven problem solving. He has significant academic and research experience, guiding projects that apply AI techniques to real-world applications. Under his leadership, the department conducts workshops, coding events, and hands-on sessions to build strong practical skills.",
-        "aliases": ["aiml", "ai ml", "artificial intelligence", "machine learning", "cse ai ml"]
+        "aliases": [
+          "aiml",
+          "ai ml",
+          "artificial intelligence",
+          "machine learning",
+          "cse ai ml"
+        ],
+        "hod_bio": "Dr. T G Manjunatha heads the AIML department, emphasizing solid foundations in AI, machine learning, and data-driven problem solving. He has significant academic and research experience, guiding projects that apply AI techniques to real-world applications. Under his leadership, the department conducts workshops, coding events, and hands-on sessions to build strong practical skills."
       },
       "cse_ds": {
         "department_name": "CSE (Data Science)",
         "hod_name": "Dr. Nagashree N",
         "hod_title": "Associate Professor & HOD, CSE (Data Science)",
-        "hod_bio": "With 20 years of experience, Dr. Nagashree N holds a Ph.D. from Visvesvaraya Technological University and specializes in Data Science, Machine Learning, and Deep Learning. She has over 35 publications in international journals and conferences, reflecting strong research contributions. As HOD of CSE (Data Science), she leads initiatives that blend theory with practical analytics and AI applications for real-world problems.",
-        "aliases": ["data science", "datascience", "cse data science", "cse ds"]
+        "aliases": [
+          "data science",
+          "datascience",
+          "cse data science",
+          "cse ds"
+        ],
+        "hod_bio": "With 20 years of experience, Dr. Nagashree N holds a Ph.D. from Visvesvaraya Technological University and specializes in Data Science, Machine Learning, and Deep Learning. She has over 35 publications in international journals and conferences, reflecting strong research contributions. As HOD of CSE (Data Science), she leads initiatives that blend theory with practical analytics and AI applications for real-world problems."
       },
       "ise": {
-        "department_name": "Information Science & Engineering",
+        "department_name": "Information Science",
         "hod_name": "Dr. Vrinda Shetty",
         "hod_title": "Professor & HOD, Information Science & Engineering",
-        "hod_bio": "Dr. Vrinda Shetty leads the ISE department with a focus on information systems, data management, and modern software technologies. She has rich teaching experience and encourages students to work on industry-relevant projects and internships. Her interests include databases, networking, and emerging trends in information science.",
-        "aliases": ["ise", "information science", "information science & engineering"]
+        "aliases": [
+          "ise",
+          "information science",
+          "information science & engineering"
+        ],
+        "hod_bio": "Dr. Vrinda Shetty leads the ISE department with a focus on information systems, data management, and modern software technologies. She has rich teaching experience and encourages students to work on industry-relevant projects and internships. Her interests include databases, networking, and emerging trends in information science."
       },
       "ece": {
-        "department_name": "Electronics & Communication Engineering",
+        "department_name": "Electronics & Communication",
         "hod_name": "Dr. Venkatesha M",
         "hod_title": "Professor & HOD, Electronics & Communication Engineering",
-        "hod_bio": "Dr. Venkatesha M heads the ECE department, focusing on core electronics, communication systems, and embedded technologies. He has many years of academic experience and actively supports student participation in hardware projects and research. His work spans VLSI, communication networks, and applied electronics.",
-        "aliases": ["ece", "ec", "electronics", "electronics and communication"]
+        "aliases": [
+          "ece",
+          "ec",
+          "electronics",
+          "electronics and communication"
+        ],
+        "hod_bio": "Dr. Venkatesha M heads the ECE department, focusing on core electronics, communication systems, and embedded technologies. He has many years of academic experience and actively supports student participation in hardware projects and research. His work spans VLSI, communication networks, and applied electronics."
       },
       "civil": {
         "department_name": "Civil Engineering",
         "hod_name": "Dr. Ananthayya M B",
         "hod_title": "Professor & HOD, Civil Engineering",
-        "hod_bio": "Dr. Ananthayya M B leads the Civil Engineering department with emphasis on structural, environmental, and construction engineering. He has considerable teaching and field experience, encouraging students to engage in practical design and site-related learning. His academic interests cover core civil domains and sustainable infrastructure.",
-        "aliases": ["civil", "civil engineering"]
+        "aliases": [
+          "civil",
+          "civil engineering"
+        ],
+        "hod_bio": "Dr. Ananthayya M B leads the Civil Engineering department with emphasis on structural, environmental, and construction engineering. He has considerable teaching and field experience, encouraging students to engage in practical design and site-related learning. His academic interests cover core civil domains and sustainable infrastructure."
       },
       "mechanical": {
         "department_name": "Mechanical Engineering",
         "hod_name": "Dr. Raghavendra S",
         "hod_title": "Professor & HOD, Mechanical Engineering",
-        "hod_bio": "Dr. Raghavendra S heads the Mechanical Engineering department, focusing on design, manufacturing, and thermal engineering. He has strong academic and research exposure and supports project-based learning, labs, and industry interaction. His interests include advanced manufacturing and applied mechanics.",
-        "aliases": ["mechanical", "mech", "mechanical engineering"]
+        "aliases": [
+          "mechanical",
+          "mech",
+          "mechanical engineering"
+        ],
+        "hod_bio": "Dr. Raghavendra S heads the Mechanical Engineering department, focusing on design, manufacturing, and thermal engineering. He has strong academic and research exposure and supports project-based learning, labs, and industry interaction. His interests include advanced manufacturing and applied mechanics."
       },
       "mba": {
-        "department_name": "Master of Business Administration (MBA)",
+        "department_name": "Master of Business Administration",
         "hod_name": "Dr. Jogish D",
         "hod_title": "Professor & HOD, Master of Business Administration (MBA)",
-        "hod_bio": "Dr. Jogish D leads the MBA department, integrating management education with practical exposure to industry practices. He has experience in teaching, training, and consultancy, guiding students towards careers in business, analytics, and entrepreneurship. His interests span marketing, strategy, and organizational development.",
-        "aliases": ["mba", "management", "business administration"]
+        "aliases": [
+          "mba",
+          "management",
+          "business administration"
+        ],
+        "hod_bio": "Dr. Jogish D leads the MBA department, integrating management education with practical exposure to industry practices. He has experience in teaching, training, and consultancy, guiding students towards careers in business, analytics, and entrepreneurship. His interests span marketing, strategy, and organizational development."
       },
       "mathematics": {
         "department_name": "Mathematics",
         "hod_name": "Dr. Arun Kumar R",
         "hod_title": "Professor & HOD, Mathematics",
-        "hod_bio": "Dr. Arun Kumar R heads the Mathematics department, ensuring strong mathematical foundations for all engineering disciplines. He has extensive teaching experience and focuses on applied mathematics relevant to engineering and data analysis. His work supports advanced courses and research that rely on rigorous quantitative skills.",
-        "aliases": ["mathematics", "maths", "math"]
+        "aliases": [
+          "mathematics",
+          "maths",
+          "math"
+        ],
+        "hod_bio": "Dr. Arun Kumar R heads the Mathematics department, ensuring strong mathematical foundations for all engineering disciplines. He has extensive teaching experience and focuses on applied mathematics relevant to engineering and data analysis. His work supports advanced courses and research that rely on rigorous quantitative skills."
       },
       "physics": {
         "department_name": "Physics",
         "hod_name": "Dr. Shankar P",
         "hod_title": "Professor & HOD, Physics",
-        "hod_bio": "Dr. Shankar P leads the Physics department, concentrating on engineering physics and fundamental science education. He emphasizes conceptual clarity and experimental skills through well-designed laboratory work. His interests include materials, electronics-related physics, and applied physical sciences.",
-        "aliases": ["physics"]
+        "aliases": [
+          "physics"
+        ],
+        "hod_bio": "Dr. Shankar P leads the Physics department, concentrating on engineering physics and fundamental science education. He emphasizes conceptual clarity and experimental skills through well-designed laboratory work. His interests include materials, electronics-related physics, and applied physical sciences."
       },
       "chemistry": {
         "department_name": "Chemistry",
         "hod_name": "Dr. Bhagya N P",
         "hod_title": "Professor & HOD, Chemistry",
-        "hod_bio": "Dr. Bhagya N P heads the Chemistry department, teaching engineering chemistry and its applications in materials and environmental domains. She has strong academic experience and promotes lab-based learning to connect theory with practice. Her interests lie in applied chemistry relevant to engineering and industry processes.",
-        "aliases": ["chemistry"]
+        "aliases": [
+          "chemistry"
+        ],
+        "hod_bio": "Dr. Bhagya N P heads the Chemistry department, teaching engineering chemistry and its applications in materials and environmental domains. She has strong academic experience and promotes lab-based learning to connect theory with practice. Her interests lie in applied chemistry relevant to engineering and industry processes."
       }
-    }
+    },
+    "localization_gaps": [
+      "hod_by_department.cse_cysec.no_official_record",
+      "hod_by_department.cse_bs.no_official_record",
+      "hod_by_department.basic_sciences.no_official_record"
+    ]
   },
   "admissions_and_fees": {
     "eligibility": "10+2 with 45% aggregate [cite: 344] Physics and Mathematics [cite: 345] Chemistry, Biotechnology, Biology, Computer Science, or Electronics [cite: 346] 45% aggregate marks [cite: 348] SC/ST/Category-1/OBC: 40% aggregate marks (with relaxation) [cite: 349] MBA: Graduation with minimum 50% aggregate [cite: 287]",

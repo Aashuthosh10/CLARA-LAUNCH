@@ -466,36 +466,41 @@ def _static_pack(code: str, key: str) -> list[dict[str, Any]]:
 
 def adapt_trustees(req: ResolveRequest) -> CanonicalContent | None:
     language, code = _lang_display(req.language, req.language_code)
-    cards = _static_pack(code, "trustees")
-    if not cards:
+    data = load_locale_data_for_lang_key(code)
+    holders = data.get("role_holders") if isinstance(data, dict) else None
+    trustees = holders.get("trustees") if isinstance(holders, dict) else None
+    if not isinstance(trustees, list) or not trustees:
         return None
     sections = []
-    for i, c in enumerate(cards):
-        if not isinstance(c, dict):
+    for i, item in enumerate(trustees):
+        if not isinstance(item, dict):
             continue
-        sections.append(
-            ContentSection(
-                id=f"trustee_{i}",
-                title=str(c.get("title") or f"Trustee {i+1}"),
-                body=str(c.get("content") or ""),
-            )
-        )
-    title = sections[0].title if sections else "Trustees"
-    summary = sections[0].body if sections else title
+        title = str(item.get("display_name") or item.get("name") or f"Trustee {i+1}").strip()
+        body = str(item.get("tts_summary") or item.get("description") or "").strip()
+        designation = str(item.get("designation") or "").strip()
+        if designation and body and designation not in body:
+            body = f"{designation}. {body}"
+        elif designation and not body:
+            body = designation
+        sections.append(ContentSection(id=str(item.get("id") or f"trustee_{i}"), title=title, body=body))
+    if not sections:
+        return None
+    ui = holders.get("ui") if isinstance(holders.get("ui"), dict) else {}
+    heading = str(ui.get("board_label") or "Trustees")
     return _finalize(
         content_id=f"trustees:{code}",
         content_type=ContentType.TRUSTEES.value,
         surface=SURFACE_TRUSTEES,
         language=language,
         language_code=code,
-        title="Trustees",
+        title=heading,
         subtitle="",
-        summary=summary,
+        summary=sections[0].body if sections else heading,
         sections=sections,
-        metadata={"slide_count": len(sections)},
+        metadata={"slide_count": len(sections), "trustee_ids": [s.id for s in sections]},
         keywords=["trustees"],
         presentation_mode="CARD_PRESENTATION",
-        canonical_source="backend/data/narration/static_cards.json#trustees",
+        canonical_source="backend/data/locales/*.json#role_holders.trustees",
     )
 
 

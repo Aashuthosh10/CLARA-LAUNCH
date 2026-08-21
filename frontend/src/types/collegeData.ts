@@ -23,8 +23,14 @@ export interface RoleHolderPrincipal {
 }
 
 export interface RoleHolderTrustee {
+  id?: string;
   name?: string;
+  display_name?: string;
   designation?: string;
+  description?: string;
+  tts_summary?: string;
+  image_key?: string;
+  localization_status?: string;
 }
 
 export interface RoleHolderDepartment {
@@ -32,13 +38,19 @@ export interface RoleHolderDepartment {
   hod_name?: string;
   hod_title?: string;
   hod_bio?: string;
+  hod_bio_source?: string;
   aliases?: string[];
 }
 
 export interface RoleHoldersRecord {
+  ui?: {
+    board_label?: string;
+  };
   principal?: RoleHolderPrincipal;
+  vice_principal?: RoleHolderPrincipal;
   trustees?: RoleHolderTrustee[];
   hod_by_department?: Record<string, RoleHolderDepartment>;
+  localization_gaps?: string[];
 }
 
 export interface CollegeLocaleData {

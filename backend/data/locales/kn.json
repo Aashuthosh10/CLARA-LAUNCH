@@ -254,5 +254,219 @@
         "5. ಮಾಕ್ ಸಂದರ್ಶನಗಳು ಮತ್ತು ಗುಂಪು ಚರ್ಚೆಗಳು"
       ]
     }
+  },
+  "role_holders": {
+    "ui": {
+      "board_label": "SVIT ಟ್ರಸ್ಟಿಗಳು"
+    },
+    "principal": {
+      "name": "ಡಾ. ಮಂಜುನಾಥ್ ಟಿ ಎನ್",
+      "title": "ಪ್ರಾಂಶುಪಾಲರು",
+      "profile": "ಡಾ. ಮಂಜುನಾಥ್ ಟಿ ಎನ್ ಅವರು ಸಾಯಿ ವಿದ್ಯಾ ಇಂಜಿನಿಯರಿಂಗ್ ಕಾಲೇಜಿನ ಪ್ರಾಂಶುಪಾಲರು. ಇಂಜಿನಿಯರಿಂಗ್ ಶಿಕ್ಷಣ, ಸಂಶೋಧನಾ ಉತ್ತೇಜನೆ ಮತ್ತು ಸಂಸ್ಥೆಯ ಬೆಳವಣಿಗೆಯಲ್ಲಿ ಗಣನೀಯ ಕೊಡುಗೆ ನೀಡಿರುವ ಹಿರಿಯ ಶೈಕ್ಷಣಿಕ ಮತ್ತು ಆಡಳಿತಗಾರರು."
+    },
+    "vice_principal": {
+      "name": "ಡಾ. ಲಕ್ಷ್ಮಿನಾರಾಯಣಾಚಾರಿ ಕೆ",
+      "title": "ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್",
+      "profile": "ಡಾ. ಲಕ್ಷ್ಮಿನಾರಾಯಣಾಚಾರಿ ಕೆ ಅವರು ಎಸ್ವಿಐಟಿಯಲ್ಲಿ ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಮತ್ತು ಶೈಕ್ಷಣಿಕ ಡೀನ್ ಆಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಾರೆ."
+    },
+    "trustees": [
+      {
+        "id": "holla",
+        "name": "Prof. M. R. Holla",
+        "display_name": "ಪ್ರೊ. ಎಂ. ಆರ್. ಹೊಳ್ಳ",
+        "designation": "ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ ಮತ್ತು ಅಧ್ಯಕ್ಷರು",
+        "description": "ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ ಮತ್ತು ಅಧ್ಯಕ್ಷರು; 50+ ವರ್ಷದ ತಾಂತ್ರಿಕ ಶಿಕ್ಷಣ ಅನುಭವ ಹೊಂದಿದ ಗಣ್ಯ ಶಿಕ್ಷಣತಜ್ಞರು.",
+        "tts_summary": "ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ ಮತ್ತು ಅಧ್ಯಕ್ಷರು; 50+ ವರ್ಷದ ತಾಂತ್ರಿಕ ಶಿಕ್ಷಣ ಅನುಭವ ಹೊಂದಿದ ಗಣ್ಯ ಶಿಕ್ಷಣತಜ್ಞರು.",
+        "image_key": "holla",
+        "localization_status": "complete"
+      },
+      {
+        "id": "padma_reddy",
+        "name": "Dr. A. M. Padma Reddy",
+        "display_name": "ಡಾ. ಎ. ಎಂ. ಪದ್ಮಾ ರೆಡ್ಡಿ",
+        "designation": "",
+        "description": "ಖ್ಯಾತ ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಕಲ್ಯಾಣಕ್ಕೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "tts_summary": "ಖ್ಯಾತ ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಕಲ್ಯಾಣಕ್ಕೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "image_key": "padma",
+        "localization_status": "complete"
+      },
+      {
+        "id": "srinivas_raju",
+        "name": "Sri R. Srinivas Raju",
+        "display_name": "ಶ್ರೀ ಆರ್. ಶ್ರೀನಿವಾಸ್ ರಾಜು",
+        "designation": "ಟ್ರಸ್ಟಿ. ಅಭ್ಯಾಸ ನಾಗರಿಕ ಎಂಜಿನಿಯರ್",
+        "description": "ಟ್ರಸ್ಟಿ. ಅಭ್ಯಾಸ ನಾಗರಿಕ ಎಂಜಿನಿಯರ್; ಆಡಳಿತ ಮತ್ತು ಮೂಲಸೌಕರ್ಯ ದೃಷ್ಟಿಕೋನಕ್ಕೆ ಕೊಡುಗೆ.",
+        "tts_summary": "ಟ್ರಸ್ಟಿ. ಅಭ್ಯಾಸ ನಾಗರಿಕ ಎಂಜಿನಿಯರ್; ಆಡಳಿತ ಮತ್ತು ಮೂಲಸೌಕರ್ಯ ದೃಷ್ಟಿಕೋನಕ್ಕೆ ಕೊಡುಗೆ.",
+        "image_key": "srinivas",
+        "localization_status": "complete"
+      },
+      {
+        "id": "shanmukha",
+        "name": "Prof. R. C. Shanmukha Swamy",
+        "display_name": "ಪ್ರೊ. ಆರ್. ಸಿ. ಶಣ್ಮುಖಸ್ವಾಮಿ",
+        "designation": "",
+        "description": "ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಿಕಲ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ಆಡಳಿತ ಶ್ರೇಷ್ಠತೆಗೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "tts_summary": "ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಿಕಲ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ಆಡಳಿತ ಶ್ರೇಷ್ಠತೆಗೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "image_key": "shanmukha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "manohar",
+        "name": "Sri M. K. Manohar",
+        "display_name": "ಶ್ರೀ ಎಂ. ಕೆ. ಮನೋಹರ್",
+        "designation": "ಟ್ರಸ್ಟಿ. ನೋಂದಣಿ ಖಾತೆ ಪರಿಶೋಧಕ",
+        "description": "ಟ್ರಸ್ಟಿ. ನೋಂದಣಿ ಖಾತೆ ಪರಿಶೋಧಕ; ಹಣಕಾಸು ನಿರ್ವಹಣೆ ಮತ್ತು ಪಾರದರ್ಶಕತೆ.",
+        "tts_summary": "ಟ್ರಸ್ಟಿ. ನೋಂದಣಿ ಖಾತೆ ಪರಿಶೋಧಕ; ಹಣಕಾಸು ನಿರ್ವಹಣೆ ಮತ್ತು ಪಾರದರ್ಶಕತೆ.",
+        "image_key": "manohar",
+        "localization_status": "complete"
+      },
+      {
+        "id": "jayasimha",
+        "name": "Dr. Y. Jayasimha",
+        "display_name": "ಡಾ. ವೈ. ಜಯಸಿಂಹ",
+        "designation": "",
+        "description": "ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಪ್ರೊಫೆಸರ್, ಡೀನ್ (ಅಕಾಡೆಮಿಕ್ಸ್), ಮತ್ತು SVITನ ದೃಷ್ಟಿವಂತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "tts_summary": "ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಪ್ರೊಫೆಸರ್, ಡೀನ್ (ಅಕಾಡೆಮಿಕ್ಸ್), ಮತ್ತು SVITನ ದೃಷ್ಟಿವಂತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.",
+        "image_key": "jayasimha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "narayan",
+        "name": "Sri Narayan Raju",
+        "display_name": "ದಿವಂಗತ ಶ್ರೀ ನಾರಾಯಣ ರಾಜು",
+        "designation": "ಖ್ಯಾತ ಶೈಕ್ಷಣಿಕ ಆಡಳಿತಗಾರ",
+        "description": "ದಿವಂಗತ ಶ್ರೀ ನಾರಾಯಣ ರಾಜು — ಖ್ಯಾತ ಶೈಕ್ಷಣಿಕ ಆಡಳಿತಗಾರ",
+        "tts_summary": "ದಿವಂಗತ ಶ್ರೀ ನಾರಾಯಣ ರಾಜು — ಖ್ಯಾತ ಶೈಕ್ಷಣಿಕ ಆಡಳಿತಗಾರ",
+        "image_key": "narayan",
+        "localization_status": "complete"
+      }
+    ],
+    "hod_by_department": {
+      "cse": {
+        "department_name": "ಕಂಪ್ಯೂಟರ್ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್",
+        "hod_name": "Dr. Shashikumar D R",
+        "hod_title": "ಕಂಪ್ಯೂಟರ್ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "cse",
+          "computer science",
+          "computer science & engineering"
+        ],
+        "hod_bio_source": "departments.cse.hod_voice"
+      },
+      "cse_aiml": {
+        "department_name": "CSE (AI & ML)",
+        "hod_name": "Dr. T G Manjunatha",
+        "hod_title": "CSE (AI & ML) ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "aiml",
+          "ai ml",
+          "artificial intelligence",
+          "machine learning",
+          "cse ai ml"
+        ],
+        "hod_bio_source": "departments.cse_aiml.hod_voice"
+      },
+      "cse_ds": {
+        "department_name": "CSE (ಡೇಟಾ ಸೈನ್ಸ್)",
+        "hod_name": "Dr. Nagashree N",
+        "hod_title": "CSE (ಡೇಟಾ ಸೈನ್ಸ್) ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "data science",
+          "datascience",
+          "cse data science",
+          "cse ds"
+        ],
+        "hod_bio_source": "departments.cse_ds.hod_voice"
+      },
+      "ise": {
+        "department_name": "ಮಾಹಿತಿ ವಿಜ್ಞಾನ",
+        "hod_name": "Dr. Vrinda Shetty",
+        "hod_title": "ಮಾಹಿತಿ ವಿಜ್ಞಾನ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "ise",
+          "information science",
+          "information science & engineering"
+        ],
+        "hod_bio_source": "departments.ise.hod_voice"
+      },
+      "ece": {
+        "department_name": "ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಮತ್ತು ಸಂವಹನ",
+        "hod_name": "Dr. Venkatesha M",
+        "hod_title": "ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಮತ್ತು ಸಂವಹನ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "ece",
+          "ec",
+          "electronics",
+          "electronics and communication"
+        ],
+        "hod_bio_source": "departments.ece.hod_voice"
+      },
+      "civil": {
+        "department_name": "ಸಿವಿಲ್ ಇಂಜಿನಿಯರಿಂಗ್",
+        "hod_name": "Dr. Ananthayya M B",
+        "hod_title": "ಸಿವಿಲ್ ಇಂಜಿನಿಯರಿಂಗ್ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "civil",
+          "civil engineering"
+        ],
+        "hod_bio_source": "departments.civil.hod_voice"
+      },
+      "mechanical": {
+        "department_name": "ಮೆಕ್ಯಾನಿಕಲ್ ಇಂಜಿನಿಯರಿಂಗ್",
+        "hod_name": "Dr. Raghavendra S",
+        "hod_title": "ಮೆಕ್ಯಾನಿಕಲ್ ಇಂಜಿನಿಯರಿಂಗ್ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "mechanical",
+          "mech",
+          "mechanical engineering"
+        ],
+        "hod_bio_source": "departments.mechanical.hod_voice"
+      },
+      "mba": {
+        "department_name": "ಮಾಸ್ಟರ್ ಆಫ್ ಬಿಸಿನೆಸ್ ಅಡ್ಮಿನಿಸ್ಟ್ರೇಷನ್",
+        "hod_name": "Dr. Jogish D",
+        "hod_title": "ಮಾಸ್ಟರ್ ಆಫ್ ಬಿಸಿನೆಸ್ ಅಡ್ಮಿನಿಸ್ಟ್ರೇಷನ್ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "mba",
+          "management",
+          "business administration"
+        ],
+        "hod_bio_source": "departments.mba.hod_voice"
+      },
+      "mathematics": {
+        "department_name": "Mathematics",
+        "hod_name": "Dr. Arun Kumar R",
+        "hod_title": "Mathematics ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "mathematics",
+          "maths",
+          "math"
+        ],
+        "hod_bio_source": "departments.mathematics.hod_voice"
+      },
+      "physics": {
+        "department_name": "Physics",
+        "hod_name": "Dr. Shankar P",
+        "hod_title": "Physics ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "physics"
+        ],
+        "hod_bio_source": "departments.physics.hod_voice"
+      },
+      "chemistry": {
+        "department_name": "Chemistry",
+        "hod_name": "Dr. Bhagya N P",
+        "hod_title": "Chemistry ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "aliases": [
+          "chemistry"
+        ],
+        "hod_bio_source": "departments.chemistry.hod_voice"
+      }
+    },
+    "localization_gaps": [
+      "hod_by_department.cse_cysec.no_official_record",
+      "hod_by_department.cse_bs.no_official_record",
+      "hod_by_department.basic_sciences.no_official_record"
+    ]
   }
 }

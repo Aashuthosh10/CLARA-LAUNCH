@@ -254,5 +254,219 @@
         "5. மாக் நேர்காணல்கள் மற்றும் குழு விவாதங்கள்"
       ]
     }
+  },
+  "role_holders": {
+    "ui": {
+      "board_label": "SVIT அறங்காவலர்கள்"
+    },
+    "principal": {
+      "name": "டாக்டர் மஞ்சுநாத் டி என்",
+      "title": "முதல்வர்",
+      "profile": "டாக்டர் மஞ்சுநாத் டி என் அவர்கள் சாயி வித்யா இன்ஸ்ட்டிட்யூட் ஆப் டெக்னாலஜியின் முதல்வர்."
+    },
+    "vice_principal": {
+      "name": "டாக்டர் லக்ஷ்மிநாராயணச்சாரி கே",
+      "title": "துணை முதல்வர் மற்றும் கல்வி டீன்",
+      "profile": "டாக்டர் லக்ஷ்மிநாராயணச்சாரி கே SVIT இல் துணை முதல்வரும் கல்வி டீனுமாக செயல்படுகிறார்."
+    },
+    "trustees": [
+      {
+        "id": "holla",
+        "name": "Prof. M. R. Holla",
+        "display_name": "ப்ரொஃ. எம். ஆர். ஹொள்ளா",
+        "designation": "நிறுவனர் அறங்காவலர் மற்றும் தலைவர்",
+        "description": "நிறுவனர் அறங்காவலர் மற்றும் தலைவர்; தொழில்நுட்பக் கல்வியில் 50+ ஆண்டுகள் அனுபவமுள்ள சிறந்த கல்வியாளர்.",
+        "tts_summary": "நிறுவனர் அறங்காவலர் மற்றும் தலைவர்; தொழில்நுட்பக் கல்வியில் 50+ ஆண்டுகள் அனுபவமுள்ள சிறந்த கல்வியாளர்.",
+        "image_key": "holla",
+        "localization_status": "complete"
+      },
+      {
+        "id": "padma_reddy",
+        "name": "Dr. A. M. Padma Reddy",
+        "display_name": "டாக்டர் ஏ. எம். பத்மா ரெட்டி",
+        "designation": "",
+        "description": "புகழ்பெற்ற Computer Science பேராசிரியர் மற்றும் மாணவர் நலனில் ஈடுபட்ட அறங்காவலர்.",
+        "tts_summary": "புகழ்பெற்ற Computer Science பேராசிரியர் மற்றும் மாணவர் நலனில் ஈடுபட்ட அறங்காவலர்.",
+        "image_key": "padma",
+        "localization_status": "complete"
+      },
+      {
+        "id": "srinivas_raju",
+        "name": "Sri R. Srinivas Raju",
+        "display_name": "ஸ்ரீ ஆர். ஸ்ரீனிவாஸ் ராஜு",
+        "designation": "",
+        "description": "அறங்காவலர். பயிற்சி பெற்ற சிவில் பொறியாளர்.",
+        "tts_summary": "அறங்காவலர். பயிற்சி பெற்ற சிவில் பொறியாளர்.",
+        "image_key": "srinivas",
+        "localization_status": "complete"
+      },
+      {
+        "id": "shanmukha",
+        "name": "Prof. R. C. Shanmukha Swamy",
+        "display_name": "ப்ரொஃ. ஆர். சி. சண்முகசுவாமி",
+        "designation": "",
+        "description": "புகழ்பெற்ற Electrical பேராசிரியர் மற்றும் நிர்வாக சிறப்பிற்கான அறங்காவலர்.",
+        "tts_summary": "புகழ்பெற்ற Electrical பேராசிரியர் மற்றும் நிர்வாக சிறப்பிற்கான அறங்காவலர்.",
+        "image_key": "shanmukha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "manohar",
+        "name": "Sri M. K. Manohar",
+        "display_name": "ஸ்ரீ எம். கே. மனோகர்",
+        "designation": "",
+        "description": "அறங்காவலர். நியமிக்கப்பட்ட கணக்காளர்.",
+        "tts_summary": "அறங்காவலர். நியமிக்கப்பட்ட கணக்காளர்.",
+        "image_key": "manohar",
+        "localization_status": "complete"
+      },
+      {
+        "id": "jayasimha",
+        "name": "Dr. Y. Jayasimha",
+        "display_name": "டாக்டர் வை. ஜெயசிம்ஹா",
+        "designation": "",
+        "description": "புகழ்பெற்ற Electronics பேராசிரியர், Dean (Academics), மற்றும் SVIT இன் தொலைநோக்கு நிறுவனர் அறங்காவலர்.",
+        "tts_summary": "புகழ்பெற்ற Electronics பேராசிரியர், Dean (Academics), மற்றும் SVIT இன் தொலைநோக்கு நிறுவனர் அறங்காவலர்.",
+        "image_key": "jayasimha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "narayan",
+        "name": "Sri Narayan Raju",
+        "display_name": "மறைந்த ஸ்ரீ நாராயண ராஜு",
+        "designation": "புகழ்பெற்ற கல்வி நிர்வாகி",
+        "description": "மறைந்த ஸ்ரீ நாராயண ராஜு — புகழ்பெற்ற கல்வி நிர்வாகி",
+        "tts_summary": "மறைந்த ஸ்ரீ நாராயண ராஜு — புகழ்பெற்ற கல்வி நிர்வாகி",
+        "image_key": "narayan",
+        "localization_status": "complete"
+      }
+    ],
+    "hod_by_department": {
+      "cse": {
+        "department_name": "கணினி அறிவியல் & பொறியியல்",
+        "hod_name": "Dr. Shashikumar D R",
+        "hod_title": "கணினி அறிவியல் & பொறியியல் துறைத் தலைவர்",
+        "aliases": [
+          "cse",
+          "computer science",
+          "computer science & engineering"
+        ],
+        "hod_bio_source": "departments.cse.hod_voice"
+      },
+      "cse_aiml": {
+        "department_name": "CSE (AI & ML)",
+        "hod_name": "Dr. T G Manjunatha",
+        "hod_title": "CSE (AI & ML) துறைத் தலைவர்",
+        "aliases": [
+          "aiml",
+          "ai ml",
+          "artificial intelligence",
+          "machine learning",
+          "cse ai ml"
+        ],
+        "hod_bio_source": "departments.cse_aiml.hod_voice"
+      },
+      "cse_ds": {
+        "department_name": "CSE (தரவு அறிவியல்)",
+        "hod_name": "Dr. Nagashree N",
+        "hod_title": "CSE (தரவு அறிவியல்) துறைத் தலைவர்",
+        "aliases": [
+          "data science",
+          "datascience",
+          "cse data science",
+          "cse ds"
+        ],
+        "hod_bio_source": "departments.cse_ds.hod_voice"
+      },
+      "ise": {
+        "department_name": "தகவல் அறிவியல்",
+        "hod_name": "Dr. Vrinda Shetty",
+        "hod_title": "தகவல் அறிவியல் துறைத் தலைவர்",
+        "aliases": [
+          "ise",
+          "information science",
+          "information science & engineering"
+        ],
+        "hod_bio_source": "departments.ise.hod_voice"
+      },
+      "ece": {
+        "department_name": "எலக்ட்ரானிக்ஸ் & கம்யூனிகேஷன்",
+        "hod_name": "Dr. Venkatesha M",
+        "hod_title": "எலக்ட்ரானிக்ஸ் & கம்யூனிகேஷன் துறைத் தலைவர்",
+        "aliases": [
+          "ece",
+          "ec",
+          "electronics",
+          "electronics and communication"
+        ],
+        "hod_bio_source": "departments.ece.hod_voice"
+      },
+      "civil": {
+        "department_name": "சிவில் இன்ஜினியரிங்",
+        "hod_name": "Dr. Ananthayya M B",
+        "hod_title": "சிவில் இன்ஜினியரிங் துறைத் தலைவர்",
+        "aliases": [
+          "civil",
+          "civil engineering"
+        ],
+        "hod_bio_source": "departments.civil.hod_voice"
+      },
+      "mechanical": {
+        "department_name": "இயந்திர பொறியியல்",
+        "hod_name": "Dr. Raghavendra S",
+        "hod_title": "இயந்திர பொறியியல் துறைத் தலைவர்",
+        "aliases": [
+          "mechanical",
+          "mech",
+          "mechanical engineering"
+        ],
+        "hod_bio_source": "departments.mechanical.hod_voice"
+      },
+      "mba": {
+        "department_name": "மாஸ்டர் ஆஃப் பிசினஸ் அட்மினிஸ்ட்ரேஷன்",
+        "hod_name": "Dr. Jogish D",
+        "hod_title": "மாஸ்டர் ஆஃப் பிசினஸ் அட்மினிஸ்ட்ரேஷன் துறைத் தலைவர்",
+        "aliases": [
+          "mba",
+          "management",
+          "business administration"
+        ],
+        "hod_bio_source": "departments.mba.hod_voice"
+      },
+      "mathematics": {
+        "department_name": "Mathematics",
+        "hod_name": "Dr. Arun Kumar R",
+        "hod_title": "Mathematics துறைத் தலைவர்",
+        "aliases": [
+          "mathematics",
+          "maths",
+          "math"
+        ],
+        "hod_bio_source": "departments.mathematics.hod_voice"
+      },
+      "physics": {
+        "department_name": "Physics",
+        "hod_name": "Dr. Shankar P",
+        "hod_title": "Physics துறைத் தலைவர்",
+        "aliases": [
+          "physics"
+        ],
+        "hod_bio_source": "departments.physics.hod_voice"
+      },
+      "chemistry": {
+        "department_name": "Chemistry",
+        "hod_name": "Dr. Bhagya N P",
+        "hod_title": "Chemistry துறைத் தலைவர்",
+        "aliases": [
+          "chemistry"
+        ],
+        "hod_bio_source": "departments.chemistry.hod_voice"
+      }
+    },
+    "localization_gaps": [
+      "hod_by_department.cse_cysec.no_official_record",
+      "hod_by_department.cse_bs.no_official_record",
+      "hod_by_department.basic_sciences.no_official_record"
+    ]
   }
 }

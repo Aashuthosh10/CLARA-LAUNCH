@@ -254,5 +254,219 @@
         "5. మాక్ ఇంటర్వ్యూలు మరియు గ్రూప్ చర్చలు"
       ]
     }
+  },
+  "role_holders": {
+    "ui": {
+      "board_label": "SVIT ట్రస్టీలు"
+    },
+    "principal": {
+      "name": "డాక్టర్ మంజునాథ్ టి ఎన్",
+      "title": "ప్రిన్సిపాల్",
+      "profile": "డాక్టర్ మంజునాథ్ టి ఎన్ సాయి విద్యా ఇన్‌స్టిట్యూట్ ఆఫ్ టెక్నాలజీ ప్రిన్సిపాల్ గా ఉన్నారు."
+    },
+    "vice_principal": {
+      "name": "డాక్టర్ లక్ష్మీనారాయణాచారి కె",
+      "title": "ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్",
+      "profile": "డాక్టర్ లక్ష్మీనారాయణాచారి కె SVIT లో ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్ గా ఉన్నారు."
+    },
+    "trustees": [
+      {
+        "id": "holla",
+        "name": "Prof. M. R. Holla",
+        "display_name": "ప్రొ. ఎం. ఆర్. హొల్లా",
+        "designation": "స్థాపక ట్రస్టీ మరియు అధ్యక్షులు",
+        "description": "స్థాపక ట్రస్టీ మరియు అధ్యక్షులు; సాంకేతిక విద్యలో 50+ సంవత్సరాల అనుభవం కలిగిన విశిష్ట విద్యావేత్త.",
+        "tts_summary": "స్థాపక ట్రస్టీ మరియు అధ్యక్షులు; సాంకేతిక విద్యలో 50+ సంవత్సరాల అనుభవం కలిగిన విశిష్ట విద్యావేత్త.",
+        "image_key": "holla",
+        "localization_status": "complete"
+      },
+      {
+        "id": "padma_reddy",
+        "name": "Dr. A. M. Padma Reddy",
+        "display_name": "డా. ఎ. ఎం. పద్మా రెడ్డి",
+        "designation": "",
+        "description": "ప్రముఖ కంప్యూటర్ సైన్స్ ప్రొఫెసర్ మరియు విద్యార్థి సంక్షేమంపై దృష్టి పెట్టిన స్థాపక ట్రస్టీ.",
+        "tts_summary": "ప్రముఖ కంప్యూటర్ సైన్స్ ప్రొఫెసర్ మరియు విద్యార్థి సంక్షేమంపై దృష్టి పెట్టిన స్థాపక ట్రస్టీ.",
+        "image_key": "padma",
+        "localization_status": "complete"
+      },
+      {
+        "id": "srinivas_raju",
+        "name": "Sri R. Srinivas Raju",
+        "display_name": "శ్రీ ఆర్. శ్రీనివాస్ రాజు",
+        "designation": "",
+        "description": "ట్రస్టీ. అభ్యాస సివిల్ ఇంజినీర్.",
+        "tts_summary": "ట్రస్టీ. అభ్యాస సివిల్ ఇంజినీర్.",
+        "image_key": "srinivas",
+        "localization_status": "complete"
+      },
+      {
+        "id": "shanmukha",
+        "name": "Prof. R. C. Shanmukha Swamy",
+        "display_name": "ప్రొ. ఆర్. సి. షణ్ముఖస్వామి",
+        "designation": "",
+        "description": "ప్రముఖ ఎలక్ట్రికల్ ప్రొఫెసర్ మరియు పరిపాలనలో ప్రతిభకు అంకితమైన స్థాపక ట్రస్టీ.",
+        "tts_summary": "ప్రముఖ ఎలక్ట్రికల్ ప్రొఫెసర్ మరియు పరిపాలనలో ప్రతిభకు అంకితమైన స్థాపక ట్రస్టీ.",
+        "image_key": "shanmukha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "manohar",
+        "name": "Sri M. K. Manohar",
+        "display_name": "శ్రీ ఎం. కె. మనోహర్",
+        "designation": "",
+        "description": "ట్రస్టీ. చార్టర్డ్ అకౌంటెంట్.",
+        "tts_summary": "ట్రస్టీ. చార్టర్డ్ అకౌంటెంట్.",
+        "image_key": "manohar",
+        "localization_status": "complete"
+      },
+      {
+        "id": "jayasimha",
+        "name": "Dr. Y. Jayasimha",
+        "display_name": "డా. వై. జయసింహ",
+        "designation": "",
+        "description": "ప్రముఖ ఎలక్ట్రానిక్స్ ప్రొఫెసర్, డీన్ (అకాడెమిక్స్), మరియు SVIT స్థాపక ట్రస్టీ.",
+        "tts_summary": "ప్రముఖ ఎలక్ట్రానిక్స్ ప్రొఫెసర్, డీన్ (అకాడెమిక్స్), మరియు SVIT స్థాపక ట్రస్టీ.",
+        "image_key": "jayasimha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "narayan",
+        "name": "Sri Narayan Raju",
+        "display_name": "స్వర్గీయ శ్రీ నారాయణ రాజు",
+        "designation": "ప్రసిద్ధ విద్యా పరిపాలకుడు",
+        "description": "స్వర్గీయ శ్రీ నారాయణ రాజు — ప్రసిద్ధ విద్యా పరిపాలకుడు",
+        "tts_summary": "స్వర్గీయ శ్రీ నారాయణ రాజు — ప్రసిద్ధ విద్యా పరిపాలకుడు",
+        "image_key": "narayan",
+        "localization_status": "complete"
+      }
+    ],
+    "hod_by_department": {
+      "cse": {
+        "department_name": "కంప్యూటర్ సైన్స్ & ఇంజనీరింగ్",
+        "hod_name": "Dr. Shashikumar D R",
+        "hod_title": "కంప్యూటర్ సైన్స్ & ఇంజనీరింగ్ విభాగం అధిపతి",
+        "aliases": [
+          "cse",
+          "computer science",
+          "computer science & engineering"
+        ],
+        "hod_bio_source": "departments.cse.hod_voice"
+      },
+      "cse_aiml": {
+        "department_name": "CSE (AI & ML)",
+        "hod_name": "Dr. T G Manjunatha",
+        "hod_title": "CSE (AI & ML) విభాగం అధిపతి",
+        "aliases": [
+          "aiml",
+          "ai ml",
+          "artificial intelligence",
+          "machine learning",
+          "cse ai ml"
+        ],
+        "hod_bio_source": "departments.cse_aiml.hod_voice"
+      },
+      "cse_ds": {
+        "department_name": "CSE (డేటా సైన్స్)",
+        "hod_name": "Dr. Nagashree N",
+        "hod_title": "CSE (డేటా సైన్స్) విభాగం అధిపతి",
+        "aliases": [
+          "data science",
+          "datascience",
+          "cse data science",
+          "cse ds"
+        ],
+        "hod_bio_source": "departments.cse_ds.hod_voice"
+      },
+      "ise": {
+        "department_name": "సమాచార శాస్త్రం",
+        "hod_name": "Dr. Vrinda Shetty",
+        "hod_title": "సమాచార శాస్త్రం విభాగం అధిపతి",
+        "aliases": [
+          "ise",
+          "information science",
+          "information science & engineering"
+        ],
+        "hod_bio_source": "departments.ise.hod_voice"
+      },
+      "ece": {
+        "department_name": "ఎలక్ట్రానిక్స్ & కమ్యూనికేషన్",
+        "hod_name": "Dr. Venkatesha M",
+        "hod_title": "ఎలక్ట్రానిక్స్ & కమ్యూనికేషన్ విభాగం అధిపతి",
+        "aliases": [
+          "ece",
+          "ec",
+          "electronics",
+          "electronics and communication"
+        ],
+        "hod_bio_source": "departments.ece.hod_voice"
+      },
+      "civil": {
+        "department_name": "సివిల్ ఇంజనీరింగ్",
+        "hod_name": "Dr. Ananthayya M B",
+        "hod_title": "సివిల్ ఇంజనీరింగ్ విభాగం అధిపతి",
+        "aliases": [
+          "civil",
+          "civil engineering"
+        ],
+        "hod_bio_source": "departments.civil.hod_voice"
+      },
+      "mechanical": {
+        "department_name": "మెకానికల్ ఇంజనీరింగ్",
+        "hod_name": "Dr. Raghavendra S",
+        "hod_title": "మెకానికల్ ఇంజనీరింగ్ విభాగం అధిపతి",
+        "aliases": [
+          "mechanical",
+          "mech",
+          "mechanical engineering"
+        ],
+        "hod_bio_source": "departments.mechanical.hod_voice"
+      },
+      "mba": {
+        "department_name": "మాస్టర్ ఆఫ్ బిజినెస్ అడ్మినిస్ట్రేషన్",
+        "hod_name": "Dr. Jogish D",
+        "hod_title": "మాస్టర్ ఆఫ్ బిజినెస్ అడ్మినిస్ట్రేషన్ విభాగం అధిపతి",
+        "aliases": [
+          "mba",
+          "management",
+          "business administration"
+        ],
+        "hod_bio_source": "departments.mba.hod_voice"
+      },
+      "mathematics": {
+        "department_name": "Mathematics",
+        "hod_name": "Dr. Arun Kumar R",
+        "hod_title": "Mathematics విభాగం అధిపతి",
+        "aliases": [
+          "mathematics",
+          "maths",
+          "math"
+        ],
+        "hod_bio_source": "departments.mathematics.hod_voice"
+      },
+      "physics": {
+        "department_name": "Physics",
+        "hod_name": "Dr. Shankar P",
+        "hod_title": "Physics విభాగం అధిపతి",
+        "aliases": [
+          "physics"
+        ],
+        "hod_bio_source": "departments.physics.hod_voice"
+      },
+      "chemistry": {
+        "department_name": "Chemistry",
+        "hod_name": "Dr. Bhagya N P",
+        "hod_title": "Chemistry విభాగం అధిపతి",
+        "aliases": [
+          "chemistry"
+        ],
+        "hod_bio_source": "departments.chemistry.hod_voice"
+      }
+    },
+    "localization_gaps": [
+      "hod_by_department.cse_cysec.no_official_record",
+      "hod_by_department.cse_bs.no_official_record",
+      "hod_by_department.basic_sciences.no_official_record"
+    ]
   }
 }

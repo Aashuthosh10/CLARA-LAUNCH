@@ -163,43 +163,41 @@ def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
         return _fact_sentence(unit.body)
 
     if suffix == TOPIC_TRUSTEES:
-        names = _trustee_names(lk)
-        joined = ", ".join(names[:4])
-        if joined:
-            more = "…" if len(names) > 4 else ""
-            return {
-                "en": f"The trustees of SVIT include {joined}{more}.",
-                "kn": f"SVIT ಟ್ರಸ್ಟಿಗಳಲ್ಲಿ {joined}{more} ಇದ್ದಾರೆ.",
-                "hi": f"SVIT के ट्रस्टी में {joined}{more} शामिल हैं।",
-                "ta": f"SVIT அறங்காவலர்களில் {joined}{more} உள்ளனர்.",
-                "te": f"SVIT ట్రస్టీలలో {joined}{more} ఉన్నారు.",
-                "ml": f"SVIT ട്രസ്റ്റിമാരിൽ {joined}{more} ഉൾപ്പെടുന്നു.",
-            }.get(lk, f"The trustees of SVIT include {joined}{more}.")
+        spoken = _trustee_opening_spoken(lk)
+        if spoken:
+            return spoken
         return _fact_sentence(unit.body)
-
     return _fact_sentence(unit.body)
 
 
+def _trustee_opening_spoken(lang_key: str) -> str:
+    """Speak the first trustee card's locale text so TTS matches the visible card."""
+    data = load_locale_data_for_lang_key(lang_key)
+    holders = data.get("role_holders") if isinstance(data, dict) else None
+    trustees = holders.get("trustees") if isinstance(holders, dict) else None
+    if not isinstance(trustees, list):
+        return ""
+    for item in trustees:
+        if not isinstance(item, dict):
+            continue
+        spoken = str(item.get("tts_summary") or item.get("description") or "").strip()
+        if spoken:
+            return spoken
+    return ""
+
+
 def _trustee_names(lang_key: str) -> list[str]:
+    """Display names from the active locale's trustee records. No English silent fallback."""
     data = load_locale_data_for_lang_key(lang_key)
     holders = data.get("role_holders") if isinstance(data, dict) else None
     trustees = holders.get("trustees") if isinstance(holders, dict) else None
     names: list[str] = []
-    if isinstance(trustees, list):
-        for item in trustees:
-            if isinstance(item, dict):
-                name = str(item.get("name") or "").strip()
-                if name:
-                    names.append(name)
-    if names:
+    if not isinstance(trustees, list):
         return names
-    en = load_locale_data_for_lang_key("en")
-    holders = en.get("role_holders") if isinstance(en, dict) else None
-    trustees = holders.get("trustees") if isinstance(holders, dict) else None
-    if isinstance(trustees, list):
-        for item in trustees:
-            if isinstance(item, dict):
-                name = str(item.get("name") or "").strip()
-                if name:
-                    names.append(name)
+    for item in trustees:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("display_name") or item.get("name") or "").strip()
+        if name:
+            names.append(name)
     return names

@@ -105,8 +105,8 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         owner_id="static_cards.trustees",
         adapter_key="trustees",
         content_type=ContentType.TRUSTEES.value,
-        canonical_source="backend/data/narration/static_cards.json#trustees",
-        notes="Spoken slides. Locale role_holders.trustees has fewer entries.",
+        canonical_source="backend/data/locales/*.json#role_holders.trustees",
+        notes="Localized source data; card UI and unit narration consume the same trustee records.",
     ),
     SURFACE_COLLEGE: ContentOwnerDescriptor(
         surface=SURFACE_COLLEGE,

@@ -300,5 +300,219 @@
         "5. Mock Interviews और Group Discussions"
       ]
     }
+  },
+  "role_holders": {
+    "ui": {
+      "board_label": "SVIT के ट्रस्टी"
+    },
+    "principal": {
+      "name": "डॉ. मंजुनाथ टी एन",
+      "title": "प्राचार्य",
+      "profile": "डॉ. मंजुनाथ टी एन साई विद्या इंस्टीट्यूट ऑफ टेक्नोलॉजी के प्राचार्य हैं."
+    },
+    "vice_principal": {
+      "name": "डॉ. लक्ष्मीनारायणाचारी के",
+      "title": "उप प्राचार्य और शैक्षणिक डीन",
+      "profile": "डॉ. लक्ष्मीनारायणाचारी के एसवीआईटी में उप प्राचार्य और शैक्षणिक डीन हैं।"
+    },
+    "trustees": [
+      {
+        "id": "holla",
+        "name": "Prof. M. R. Holla",
+        "display_name": "प्रो. एम. आर. होल्ला",
+        "designation": "संस्थापक ट्रस्टी एवं अध्यक्ष",
+        "description": "संस्थापक ट्रस्टी एवं अध्यक्ष; तकनीकी शिक्षा में 50+ वर्षों के अनुभव वाले विशिष्ट शिक्षाविद।",
+        "tts_summary": "संस्थापक ट्रस्टी एवं अध्यक्ष; तकनीकी शिक्षा में 50+ वर्षों के अनुभव वाले विशिष्ट शिक्षाविद।",
+        "image_key": "holla",
+        "localization_status": "complete"
+      },
+      {
+        "id": "padma_reddy",
+        "name": "Dr. A. M. Padma Reddy",
+        "display_name": "डॉ. ए. एम. पद्मा रेड्डी",
+        "designation": "",
+        "description": "प्रख्यात कंप्यूटर साइंस प्रोफेसर और छात्र कल्याण पर केंद्रित संस्थापक ट्रस्टी।",
+        "tts_summary": "प्रख्यात कंप्यूटर साइंस प्रोफेसर और छात्र कल्याण पर केंद्रित संस्थापक ट्रस्टी।",
+        "image_key": "padma",
+        "localization_status": "complete"
+      },
+      {
+        "id": "srinivas_raju",
+        "name": "Sri R. Srinivas Raju",
+        "display_name": "श्री आर. श्रीनिवास राजू",
+        "designation": "ट्रस्टी। अभ्यासरत सिविल इंजीनियर",
+        "description": "ट्रस्टी। अभ्यासरत सिविल इंजीनियर; शासन और अवसंरचण दृष्टिकोण।",
+        "tts_summary": "ट्रस्टी। अभ्यासरत सिविल इंजीनियर; शासन और अवसंरचण दृष्टिकोण।",
+        "image_key": "srinivas",
+        "localization_status": "complete"
+      },
+      {
+        "id": "shanmukha",
+        "name": "Prof. R. C. Shanmukha Swamy",
+        "display_name": "प्रो. आर. सी. शण्मुखस्वामी",
+        "designation": "",
+        "description": "प्रख्यात इलेक्ट्रिकल प्रोफेसर और प्रशासनिक उत्कृष्टता के लिए समर्पित संस्थापक ट्रस्टी।",
+        "tts_summary": "प्रख्यात इलेक्ट्रिकल प्रोफेसर और प्रशासनिक उत्कृष्टता के लिए समर्पित संस्थापक ट्रस्टी।",
+        "image_key": "shanmukha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "manohar",
+        "name": "Sri M. K. Manohar",
+        "display_name": "श्री एम. के. मनोहर",
+        "designation": "ट्रस्टी। चार्टर्ड अकाउंटेंट",
+        "description": "ट्रस्टी। चार्टर्ड अकाउंटेंट; वित्तीय प्रबंधन और पारदर्शिता।",
+        "tts_summary": "ट्रस्टी। चार्टर्ड अकाउंटेंट; वित्तीय प्रबंधन और पारदर्शिता।",
+        "image_key": "manohar",
+        "localization_status": "complete"
+      },
+      {
+        "id": "jayasimha",
+        "name": "Dr. Y. Jayasimha",
+        "display_name": "डॉ. वाई. जयसिम्हा",
+        "designation": "",
+        "description": "प्रख्यात इलेक्ट्रॉनिक्स प्रोफेसर, डीन (अकादमिक्स), और SVIT के दूरदर्शी संस्थापक ट्रस्टी।",
+        "tts_summary": "प्रख्यात इलेक्ट्रॉनिक्स प्रोफेसर, डीन (अकादमिक्स), और SVIT के दूरदर्शी संस्थापक ट्रस्टी।",
+        "image_key": "jayasimha",
+        "localization_status": "complete"
+      },
+      {
+        "id": "narayan",
+        "name": "Sri Narayan Raju",
+        "display_name": "स्व. श्री नारायण राजू",
+        "designation": "प्रसिद्ध शैक्षणिक प्रशासक",
+        "description": "स्व. श्री नारायण राजू - प्रसिद्ध शैक्षणिक प्रशासक",
+        "tts_summary": "स्व. श्री नारायण राजू - प्रसिद्ध शैक्षणिक प्रशासक",
+        "image_key": "narayan",
+        "localization_status": "complete"
+      }
+    ],
+    "hod_by_department": {
+      "cse": {
+        "department_name": "कंप्यूटर विज्ञान एवं इंजीनियरिंग",
+        "hod_name": "Dr. Shashikumar D R",
+        "hod_title": "कंप्यूटर विज्ञान एवं इंजीनियरिंग विभाग के प्रमुख",
+        "aliases": [
+          "cse",
+          "computer science",
+          "computer science & engineering"
+        ],
+        "hod_bio_source": "departments.cse.hod_voice"
+      },
+      "cse_aiml": {
+        "department_name": "सीएसई (एआई एवं एमएल)",
+        "hod_name": "Dr. T G Manjunatha",
+        "hod_title": "सीएसई (एआई एवं एमएल) विभाग के प्रमुख",
+        "aliases": [
+          "aiml",
+          "ai ml",
+          "artificial intelligence",
+          "machine learning",
+          "cse ai ml"
+        ],
+        "hod_bio_source": "departments.cse_aiml.hod_voice"
+      },
+      "cse_ds": {
+        "department_name": "सीएसई (डेटा विज्ञान)",
+        "hod_name": "Dr. Nagashree N",
+        "hod_title": "सीएसई (डेटा विज्ञान) विभाग के प्रमुख",
+        "aliases": [
+          "data science",
+          "datascience",
+          "cse data science",
+          "cse ds"
+        ],
+        "hod_bio_source": "departments.cse_ds.hod_voice"
+      },
+      "ise": {
+        "department_name": "सूचना विज्ञान",
+        "hod_name": "Dr. Vrinda Shetty",
+        "hod_title": "सूचना विज्ञान विभाग के प्रमुख",
+        "aliases": [
+          "ise",
+          "information science",
+          "information science & engineering"
+        ],
+        "hod_bio_source": "departments.ise.hod_voice"
+      },
+      "ece": {
+        "department_name": "इलेक्ट्रॉनिक्स एवं संचार",
+        "hod_name": "Dr. Venkatesha M",
+        "hod_title": "इलेक्ट्रॉनिक्स एवं संचार विभाग के प्रमुख",
+        "aliases": [
+          "ece",
+          "ec",
+          "electronics",
+          "electronics and communication"
+        ],
+        "hod_bio_source": "departments.ece.hod_voice"
+      },
+      "civil": {
+        "department_name": "असैनिक अभियंत्रण",
+        "hod_name": "Dr. Ananthayya M B",
+        "hod_title": "असैनिक अभियंत्रण विभाग के प्रमुख",
+        "aliases": [
+          "civil",
+          "civil engineering"
+        ],
+        "hod_bio_source": "departments.civil.hod_voice"
+      },
+      "mechanical": {
+        "department_name": "मैकेनिकल इंजीनियरिंग",
+        "hod_name": "Dr. Raghavendra S",
+        "hod_title": "मैकेनिकल इंजीनियरिंग विभाग के प्रमुख",
+        "aliases": [
+          "mechanical",
+          "mech",
+          "mechanical engineering"
+        ],
+        "hod_bio_source": "departments.mechanical.hod_voice"
+      },
+      "mba": {
+        "department_name": "व्यवसाय प्रबंधन में स्नातकोत्तर",
+        "hod_name": "Dr. Jogish D",
+        "hod_title": "व्यवसाय प्रबंधन में स्नातकोत्तर विभाग के प्रमुख",
+        "aliases": [
+          "mba",
+          "management",
+          "business administration"
+        ],
+        "hod_bio_source": "departments.mba.hod_voice"
+      },
+      "mathematics": {
+        "department_name": "Mathematics",
+        "hod_name": "Dr. Arun Kumar R",
+        "hod_title": "Mathematics विभाग के प्रमुख",
+        "aliases": [
+          "mathematics",
+          "maths",
+          "math"
+        ],
+        "hod_bio_source": "departments.mathematics.hod_voice"
+      },
+      "physics": {
+        "department_name": "Physics",
+        "hod_name": "Dr. Shankar P",
+        "hod_title": "Physics विभाग के प्रमुख",
+        "aliases": [
+          "physics"
+        ],
+        "hod_bio_source": "departments.physics.hod_voice"
+      },
+      "chemistry": {
+        "department_name": "Chemistry",
+        "hod_name": "Dr. Bhagya N P",
+        "hod_title": "Chemistry विभाग के प्रमुख",
+        "aliases": [
+          "chemistry"
+        ],
+        "hod_bio_source": "departments.chemistry.hod_voice"
+      }
+    },
+    "localization_gaps": [
+      "hod_by_department.cse_cysec.no_official_record",
+      "hod_by_department.cse_bs.no_official_record",
+      "hod_by_department.basic_sciences.no_official_record"
+    ]
   }
 }

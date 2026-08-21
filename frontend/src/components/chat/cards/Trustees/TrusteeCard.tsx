@@ -8,6 +8,7 @@ interface TrusteeCardProps {
   role: string;
   description: string;
   image: string;
+  boardLabel?: string;
 }
 
 export default function TrusteeCard({
@@ -15,7 +16,8 @@ export default function TrusteeCard({
   name,
   role,
   description,
-  image
+  image,
+  boardLabel = 'Board of Trustees',
 }: TrusteeCardProps) {
   return (
     <motion.div
@@ -41,7 +43,7 @@ export default function TrusteeCard({
               transition={{ delay: 0.3, duration: 0.5 }}
               className="trustee-card-label"
             >
-              Board of Trustees
+              {boardLabel}
             </motion.div>
 
             <motion.h2
@@ -53,6 +55,7 @@ export default function TrusteeCard({
               {name}
             </motion.h2>
 
+            {role ? (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -61,7 +64,9 @@ export default function TrusteeCard({
             >
               {role}
             </motion.div>
+            ) : null}
 
+            {description ? (
             <motion.p
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -70,6 +75,7 @@ export default function TrusteeCard({
             >
               {description}
             </motion.p>
+            ) : null}
           </div>
         </div>
 
