@@ -13,7 +13,8 @@ from backend.services.content.department_resolver import resolve_department_key
 from backend.services.content.multilingual_terms import (
     TOPIC_OVERVIEW,
 )
-from backend.services.content.semantic_anaphora import has_anaphora
+from backend.services.content.semantic_anaphora import has_anaphora, has_person_anaphora
+from backend.services.content.person_context import semantic_item_for_person_unit
 from backend.services.content.campus_units import (
     campus_items_from_text,
     detect_campus_entity_spans,
@@ -102,7 +103,30 @@ def parse_semantic_request(
     campus_items = campus_items_from_text(raw_text) if campus_spans else ()
 
     if not entity_spans and not leadership_items and not campus_items:
-        return None
+        person_item = _person_followup_item(
+            raw_text=raw_text,
+            normalized=normalized,
+            ci_entities=ci_entities if isinstance(ci_entities, dict) else None,
+        )
+        if person_item is None:
+            return None
+        items = (person_item,)
+        return SemanticRequest(
+            language_code=language_code_key,
+            topic=person_item.topic,
+            entities=() if person_item.entity == LEADERSHIP_ENTITY else (person_item.entity,),
+            context="leadership" if person_item.entity == LEADERSHIP_ENTITY else "department",
+            confidence="HIGH",
+            requested_scope="single",
+            source="m5.4_semantic_request_parser",
+            raw_text=raw_text,
+            items=((person_item.entity, person_item.topic),),
+            diagnostics={
+                "normalized": normalized,
+                "person_followup": True,
+                "last_person_unit_id": str((ci_entities or {}).get("last_person_unit_id") or ""),
+            },
+        )
 
     topic_spans = detect_topic_spans(raw_text) if entity_spans else ()
 
@@ -244,6 +268,23 @@ def _merge_department_leadership_and_campus_items(
         seen.add(key)
         out.append(item)
     return tuple(out)
+
+
+def _person_followup_item(
+    *,
+    raw_text: str,
+    normalized: str,
+    ci_entities: dict[str, Any] | None,
+) -> SemanticItem | None:
+    """Repeat the last person unit. Never invent a biography or switch to overview."""
+    if not ci_entities:
+        return None
+    if not has_person_anaphora(raw_text):
+        return None
+    if detect_atomic_topics(raw_text, normalized):
+        return None
+    uid = str(ci_entities.get("last_person_unit_id") or "").strip()
+    return semantic_item_for_person_unit(uid)
 
 
 def _merge_department_and_leadership_items(

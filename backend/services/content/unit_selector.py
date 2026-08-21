@@ -75,6 +75,11 @@ def _unit_id_for_item(*, entity: str, topic: str) -> str | None:
     return None
 
 
+def unit_id_for_item(*, entity: str, topic: str) -> str | None:
+    """Public map of one (entity, topic) pair to a registered unit id."""
+    return _unit_id_for_item(entity=entity, topic=topic)
+
+
 def select_content_units(
     semantic_request: SemanticRequest,
     *,

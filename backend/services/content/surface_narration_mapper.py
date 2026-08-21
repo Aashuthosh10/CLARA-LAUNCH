@@ -101,6 +101,7 @@ def map_content_units_to_segments(
     units: tuple[ContentUnit, ...] | list[ContentUnit],
     *,
     lang_key: str,
+    guest_name: str | None = None,
 ) -> list[NarrationSegment]:
     """Map ordered ContentUnits to narration segments (M4.3 section_id contract)."""
     locale_id = locale_file_id_for_lang_key(lang_key)
@@ -108,6 +109,7 @@ def map_content_units_to_segments(
     labels = dept_labels(lk)
 
     segments: list[NarrationSegment] = []
+    name_used = False
     for i, unit in enumerate(units):
         if unit.section_id == "intro":
             title = (unit.title or "").strip() or labels["department"]
@@ -115,7 +117,10 @@ def map_content_units_to_segments(
             title = (unit.title or "").strip() or labels["department"]
         body = unit.body or labels["notAvail"]
         body_clipped = _clip_caption(body, 280)
-        spoken = narrate_unit(unit, lang_key) or body_clipped
+        inject = None if name_used else guest_name
+        spoken = narrate_unit(unit, lang_key, guest_name=inject) or body_clipped
+        if inject and inject.strip() and inject.strip() in spoken:
+            name_used = True
         raw_line = f"{title}\n{body_clipped}".strip()
         # Display keeps card facts. Spoken text is the intent-aware narration plan.
         # M5.8 TTS only speaks tts_text.

@@ -1939,6 +1939,8 @@ def _inject_regional_department_tokens(text: str) -> str:
         (r"इलेक्ट्रॉनिक्स", " electronics "),
         (r"सिविल", " civil "),
         (r"मैकेनिकल", " mechanical "),
+        (r"सी\s*एस\s*ई", " cse "),
+        (r"सीएसई", " cse "),
     )
     for pat, repl in regional:
         out = re.sub(pat, repl, out, flags=re.IGNORECASE)

@@ -80,7 +80,11 @@ def resolve_narration(
             if plan and plan.units:
                 units = resolve_units_for_plan(plan)
                 if len(units) == len(plan.units):
-                    segs = map_content_units_to_segments(units, lang_key=lang_key)
+                    segs = map_content_units_to_segments(
+                        units,
+                        lang_key=lang_key,
+                        guest_name=str(ents.get("guest_name") or "").strip() or None,
+                    )
                     if segs and len(segs) == len(plan.units):
                         # Populate canonical metadata for M4.x migration parity checks.
                         # Multi-HOD: use first entity for canonical dept metadata only.

@@ -40,6 +40,39 @@ _LATIN_ANAPHORA: frozenset[str] = frozenset(
     }
 )
 
+_LATIN_PERSON_ANAPHORA: frozenset[str] = frozenset(
+    {
+        "he",
+        "she",
+        "him",
+        "his",
+        "her",
+        "hers",
+        "himself",
+        "herself",
+    }
+)
+
+_SCRIPT_PERSON_ANAPHORA: tuple[str, ...] = (
+    "ಅವರ",
+    "ಅವನ",
+    "ಅವಳ",
+    "उसका",
+    "उसकी",
+    "उसके",
+    "उन्हें",
+    "उनका",
+    "அவர்",
+    "அவன்",
+    "அவள்",
+    "ఆయన",
+    "ఆమె",
+    "అతని",
+    "അദ്ദേഹം",
+    "അവൻ",
+    "അവൾ",
+)
+
 _SCRIPT_ANAPHORA: tuple[str, ...] = (
     # Kannada
     "ಅದರ",
@@ -77,3 +110,14 @@ def has_anaphora(raw_text: str) -> bool:
 
     folded = strip_punctuation_keep_graphemes(text.lower())
     return any(token in _LATIN_ANAPHORA for token in folded.split())
+
+
+def has_person_anaphora(raw_text: str) -> bool:
+    """True when the utterance refers back to a previously selected person unit."""
+    text = (raw_text or "").strip()
+    if not text:
+        return False
+    if any(cue in text for cue in _SCRIPT_PERSON_ANAPHORA):
+        return True
+    folded = strip_punctuation_keep_graphemes(text.lower())
+    return any(token in _LATIN_PERSON_ANAPHORA for token in folded.split())

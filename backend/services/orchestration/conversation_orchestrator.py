@@ -76,6 +76,7 @@ class ConversationOrchestrator:
             groq_model=model,
             turn_id=turn_id,
             last_semantic_entities=_session_last_semantic_entities(session),
+            last_person_unit_id=str(session.get("last_person_unit_id") or "").strip() or None,
         )
 
         orch_event(
@@ -129,6 +130,9 @@ class ConversationOrchestrator:
         entities_for_pres = dict(ent_dict)
         if intel.entities.person_name:
             entities_for_pres["person_name"] = intel.entities.person_name
+        guest = str(session.get("guest_name") or "").strip()
+        if guest:
+            entities_for_pres["guest_name"] = guest
         if isinstance(local_intent, dict):
             dept_label = str(local_intent.get("departmentLabel") or "").strip()
             if dept_label and not entities_for_pres.get("department"):
@@ -146,6 +150,21 @@ class ConversationOrchestrator:
             if card_entities:
                 session["last_semantic_entities"] = list(card_entities)
                 session_updates["last_semantic_entities"] = list(card_entities)
+            from backend.services.content.person_context import last_person_unit_from_ids
+            from backend.services.content.unit_selector import unit_id_for_item
+
+            person_ids = []
+            for entity, topic in tuple(getattr(response_decision, "items", ()) or ()):
+                uid = unit_id_for_item(entity=entity, topic=topic)
+                if uid:
+                    person_ids.append(uid)
+            person_uid = last_person_unit_from_ids(person_ids)
+            if person_uid:
+                session["last_person_unit_id"] = person_uid
+                session_updates["last_person_unit_id"] = person_uid
+            elif getattr(response_decision, "items", ()):
+                session["last_person_unit_id"] = None
+                session_updates["last_person_unit_id"] = None
 
         # M5.4: FOOD / ENVIRONMENT are no longer forced to UNKNOWN here. "How is the
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;

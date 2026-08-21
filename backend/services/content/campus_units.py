@@ -288,7 +288,6 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("pricing", "വില"),
     ("overview", "facilities"),
     ("overview", "amenities"),
-    ("overview", "overview"),
 )
 
 

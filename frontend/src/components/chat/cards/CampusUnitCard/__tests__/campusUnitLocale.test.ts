@@ -10,6 +10,7 @@ describe('campus unit locale cards', () => {
     expect(en?.title).not.toBe(kn?.title);
     expect(kn?.title).toContain('ಕೊಠಡಿ');
     expect(en?.tts_summary).toContain('rooms');
+    expect(en?.tts_summary).not.toContain('This sample card');
     expect(kn?.tts_summary).not.toContain('Showing');
   });
 

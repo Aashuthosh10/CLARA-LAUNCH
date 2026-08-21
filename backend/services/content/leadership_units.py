@@ -136,6 +136,13 @@ def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
     if not hay:
         return ()
     occupied = [False] * len(hay)
+    # Longer campus words (Tamil கேண்டீன்) contain short dean cues (டீன்).
+    # Occupy campus entity spans first so leadership never steals a substring.
+    from backend.services.content.campus_units import detect_campus_entity_spans
+
+    for campus in detect_campus_entity_spans(raw_text):
+        for i in range(campus.start, min(campus.end, len(occupied))):
+            occupied[i] = True
     spans: list[LeadershipSpan] = []
 
     def _consume(topic: str, cues: tuple[str, ...]) -> None:

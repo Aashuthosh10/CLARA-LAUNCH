@@ -39,6 +39,7 @@ async def run_conversation_intelligence(
     turn_id: str | None = None,
     skip_faq_probe: bool = False,
     last_semantic_entities: tuple[str, ...] | None = None,
+    last_person_unit_id: str | None = None,
 ) -> ConversationIntelligenceResult:
     """
     Evaluate transcript → entities → intent confidence → policy.
@@ -107,6 +108,8 @@ async def run_conversation_intelligence(
         ci_entities["department"] = entities.department
     if last_semantic_entities:
         ci_entities["department_keys"] = list(last_semantic_entities)
+    if last_person_unit_id:
+        ci_entities["last_person_unit_id"] = last_person_unit_id
     semantic_request = parse_semantic_request(
         raw_text=text or "",
         language_code_key=language_code_key or "en",

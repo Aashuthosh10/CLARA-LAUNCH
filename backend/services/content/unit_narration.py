@@ -54,12 +54,12 @@ def _fact_sentence(body: str) -> str:
     return _clip_caption(text, 280)
 
 
-def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
+def narrate_unit(unit: ContentUnit, lang_key: str, guest_name: str | None = None) -> str:
     """One concise spoken sentence (or short paragraph) for a resolved unit."""
     lk = _lk(lang_key)
     campus_spoken = _campus_unit_spoken(unit, lk)
     if campus_spoken:
-        return campus_spoken
+        return _with_sparse_guest_name(campus_spoken, guest_name, unit)
     suffix = (unit.unit_id.split(".", 1) + [""])[1]
     dept = (unit.entity_id or "").strip()
     dept_label = _dept_label(dept, lk) if dept and unit.entity_type == "department" else ""
@@ -79,17 +79,7 @@ def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
 
     if suffix == "overview":
         body = _fact_sentence(unit.body)
-        if not body:
-            return body
-        lead = {
-            "en": f"Here is the {dept_label} department." if dept_label else "",
-            "kn": f"{dept_label} ವಿಭಾಗದ ಮಾಹಿತಿ." if dept_label else "",
-            "hi": f"{dept_label} विभाग की जानकारी।" if dept_label else "",
-            "ta": f"{dept_label} துறை பற்றிய தகவல்." if dept_label else "",
-            "te": f"{dept_label} విభాగం సమాచారం." if dept_label else "",
-            "ml": f"{dept_label} വിഭാഗത്തിന്റെ വിവരം." if dept_label else "",
-        }.get(lk, "")
-        return f"{lead} {body}".strip() if lead else body
+        return _with_sparse_guest_name(body, guest_name, unit) if body else body
 
     if suffix == "fees":
         body = _fact_sentence(unit.body)
@@ -171,6 +161,25 @@ def narrate_unit(unit: ContentUnit, lang_key: str) -> str:
             return spoken
         return _fact_sentence(unit.body)
     return _fact_sentence(unit.body)
+
+
+def _with_sparse_guest_name(spoken: str, guest_name: str | None, unit: ContentUnit) -> str:
+    """Insert the guest name once, mid-narration. Never a greeting prefix. Never on the card."""
+    name = (guest_name or "").strip()
+    text = (spoken or "").strip()
+    if not text or len(name) < 3:
+        return text
+    if name.casefold() in text.casefold():
+        return text
+    # Short factual leadership/HOD lines stay name-free.
+    if (unit.entity_type or "") in {"leadership"} or (unit.unit_id or "").endswith(".hod"):
+        return text
+    if ". " in text:
+        first, rest = text.split(". ", 1)
+        return f"{first}. {name}, {rest[0].lower() + rest[1:] if rest else rest}"
+    if text.endswith("."):
+        return f"{text[:-1]}, {name}."
+    return f"{text}, {name}."
 
 
 def _campus_unit_spoken(unit: ContentUnit, lang_key: str) -> str:
