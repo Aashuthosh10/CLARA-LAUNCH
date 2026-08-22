@@ -4057,22 +4057,21 @@ export default function ChatScreen({
     (departmentName: string) => {
       clearSuggestionLayer();
       setCourseMenuOptions([]);
-      
-      // DIRECT ACTION MAPPING (UI_CLICK = Deterministic Command)
-      // Completely bypass language pipeline by setting state IMMEDIATELY
-      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+
+      // Keep the click as a canonical department request. The response payload
+      // must own the presentation state so a menu click follows the same
+      // ContentUnit → narration_plan → PresentationEngine path as voice/text.
       uiClickDeckDepartmentRef.current = departmentName;
-      setActiveDepartmentId(departmentName);
-      setIsDepartmentOverviewStage(true);
-      setLayoutMode('SPLIT_CARDS');
-      
-      // Notify backend for audio response in current language
+
+      // The local intent preserves deterministic menu semantics while the
+      // backend resolves the department into its canonical overview unit.
       interceptAndSendMessage({
         action: 'user_message',
         text: departmentName,
         localIntent: {
           type: 'department_click',
           departmentLabel: departmentName,
+          requested_card: 'department_overview',
         },
       }, 'UI');
     },
