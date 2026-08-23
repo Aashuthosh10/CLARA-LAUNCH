@@ -34,7 +34,7 @@ from backend.services.presentation.presentation_plan import PresentationPlan
 from backend.services.presentation.presentation_policy import PresentationPolicy
 
 
-_PLANNER_VERSION = "m5.1-deterministic-unit-selector"
+_PLANNER_VERSION = "m5.10-partial-unit-preserving-selector"
 
 
 def _compute_plan_hash(*, units: Sequence[str], surface: str) -> str:
@@ -116,10 +116,15 @@ def select_content_units(
         # N compatible (entity, topic) pairs → N independently addressable units,
         # in user order. No first-only, no family lock, no arbitrary cap.
         seen: set[str] = set()
+        unresolved_items: list[tuple[str, str]] = []
         for entity, topic in items:
             uid = _unit_id_for_item(entity=entity, topic=topic)
             if not uid:
-                return None
+                # Preserve every valid requested unit.  A malformed or
+                # unsupported pair must not discard valid cards from the same
+                # turn, and no replacement entity is invented here.
+                unresolved_items.append((entity, topic))
+                continue
             if uid in seen:
                 continue
             seen.add(uid)
@@ -142,6 +147,7 @@ def select_content_units(
         presentation_policy=planner_policy,
         planner_version=_PLANNER_VERSION,
         plan_hash=plan_hash,
+        unresolved_items=tuple(unresolved_items) if semantic_request.requested_scope != "full_department" else (),
     )
 
 

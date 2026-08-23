@@ -11,11 +11,32 @@ from backend.services.answer_generation import (
     INTENT_PLACEMENTS,
 )
 from backend.services.content.semantic_request_parser import parse_semantic_request
+from backend.services.content.semantic_request import SemanticRequest
 from backend.services.content.unit_selector import select_content_units
 from backend.services.content.multilingual_terms import TOPIC_FEES, TOPIC_HOD, TOPIC_PLACEMENTS, TOPIC_OVERVIEW
 
 
 class TestUnitSelector(unittest.TestCase):
+    def test_partial_pair_keeps_valid_unit_and_reports_unresolved_pair(self) -> None:
+        req = SemanticRequest(
+            language_code="kn",
+            topic=TOPIC_FEES,
+            entities=("cse_ds",),
+            context="department",
+            requested_scope="single",
+            confidence="HIGH",
+            source="test",
+            raw_text="ಡೇಟಾ ಸೈನ್ಸ್ ಶುಲ್ಕ",
+            items=(("cse_ds", TOPIC_FEES), ("cse_ds", "unsupported_topic")),
+        )
+
+        plan = select_content_units(req, surface="department_overview")
+
+        self.assertIsNotNone(plan)
+        assert plan is not None
+        self.assertEqual(plan.units, ("cse_ds.fees",))
+        self.assertEqual(plan.unresolved_items, (("cse_ds", "unsupported_topic"),))
+
     def test_anti_expansion_overview_single(self) -> None:
         req = parse_semantic_request(raw_text="CSE overview", language_code_key="en")
         self.assertIsNotNone(req)

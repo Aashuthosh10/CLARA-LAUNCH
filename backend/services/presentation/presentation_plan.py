@@ -19,3 +19,7 @@ class PresentationPlan:
     presentation_policy: PresentationPolicy
     planner_version: str
     plan_hash: str
+    # Pairs that were understood as requested but have no registered content
+    # unit.  Valid units remain playable; this prevents one bad phrase from
+    # erasing otherwise valid cards while making the omission observable.
+    unresolved_items: tuple[tuple[str, str], ...] = ()

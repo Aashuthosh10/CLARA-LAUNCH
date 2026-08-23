@@ -97,6 +97,17 @@ export function useSpeechRecognition(
       setIsListening(false);
       releaseMicStream();
       if (code === 'aborted') return;
+      // Keep the browser-owned failure layer visible in Chrome DevTools. The
+      // UI callback intentionally remains user-friendly, while this trace
+      // preserves the actual Web Speech error and requested regional locale.
+      if (typeof console !== 'undefined') {
+        console.warn('[CLARA_SPEECH] browser speech error', {
+          errorCode: code,
+          recognitionLanguage: recognition.lang,
+          online: typeof navigator === 'undefined' ? undefined : navigator.onLine,
+          timestamp: new Date().toISOString(),
+        });
+      }
       const userMessage = errorCodeToMessage(code);
       if (userMessage) onError?.(code, userMessage);
       try {
