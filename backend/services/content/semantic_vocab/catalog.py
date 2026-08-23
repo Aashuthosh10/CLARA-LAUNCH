@@ -46,6 +46,12 @@ _ENTRIES: tuple[VocabEntry, ...] = (
     VocabEntry("hod", "kn", "ಮುಖ್ಯಸ್ಥರು", "TOPIC", "kannada_script_hod"),
     VocabEntry("hod", "kn", "ಮುಖ್ಯಸ್ಥ", "TOPIC", "kannada_script_hod"),
     VocabEntry("hod", "kn", "ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು", "TOPIC", "kannada_script_hod"),
+    # Observed Kannada browser-STT variants of HOD / head of department.
+    VocabEntry("hod", "kn", "ಹೋಡ್", "TOPIC", "kannada_stt_hod"),
+    VocabEntry("hod", "kn", "ಹೆಡ್", "TOPIC", "kannada_stt_head"),
+    VocabEntry("hod", "kn", "ಹೆಚ್ಒಡಿ", "TOPIC", "kannada_stt_hod_spelled"),
+    VocabEntry("hod", "kn", "ಹೆಚ್ಓಡಿ", "TOPIC", "kannada_stt_hod_spelled"),
+    VocabEntry("hod", "kn", "ವಿಭಾಗದ ಹೆಡ್", "TOPIC", "kannada_stt_department_head"),
     VocabEntry("hod", "*", "yaaru", "QUESTION", "kannada_who", "low"),
     VocabEntry("hod", "*", "yaar", "QUESTION", "tamil_who", "low"),
     VocabEntry("hod", "*", "kaun", "QUESTION", "hindi_who", "low"),

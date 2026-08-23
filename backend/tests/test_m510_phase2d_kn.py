@@ -64,6 +64,15 @@ class TestKannadaCardTriggers(unittest.TestCase):
         )
         self.assertIs(decide("ಸಿಎಸ್ಇ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು ಯಾರು?", "kn"), ResponseMode.CARD)
 
+    def test_browser_stt_spaced_acronym_and_phonetic_hod(self) -> None:
+        self.assertEqual(
+            plan_units("ಸಿ ಎಸ್ ಇ ಡಿಪಾರ್ಟ್ಮೆಂಟ್ ಹೋಡ್ ಯಾರು ಅಂಡ್ ಫೀಸ್", "kn"),
+            ("cse.hod", "cse.fees"),
+        )
+
+    def test_hod_variant_does_not_turn_overview_into_hod(self) -> None:
+        self.assertEqual(plan_units("CSE department overview", "en"), ("cse.overview",))
+
     def test_mixed_cse_ds_hod(self) -> None:
         self.assertEqual(
             plan_units("CSE Data Science HOD ಯಾರು?", "kn"),
