@@ -266,4 +266,13 @@ describe('ChatScreen currentCardIdx ownership invariant', () => {
     expect(src).toContain('shouldLoadUnitPlan');
     expect(src).toContain('shouldAllowLegacySingle');
   });
+
+  it('does not let legacy audio scenes run while a unit-backed plan exists', () => {
+    const src = readFileSync(join(HERE, '../../../../screens/ChatScreen.tsx'), 'utf8');
+    // Both legacy loaders must remain behind the no-unit-plan boundary. This
+    // prevents a late clip from replacing an N-scene unit presentation.
+    expect(src).toContain("unitIdsFromSegments(plan?.segments).length === 0");
+    expect(src).toMatch(/shouldAllowLegacySingle\(planUnits\)[\s\S]{0,900}kind: 'cards'/);
+    expect(src).toMatch(/shouldAllowLegacySingle\(planUnits\)[\s\S]{0,900}kind: 'single'/);
+  });
 });

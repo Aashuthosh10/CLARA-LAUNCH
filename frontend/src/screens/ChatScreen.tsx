@@ -1909,7 +1909,15 @@ export default function ChatScreen({
       } else if (typeof chunkIdx === 'number' && plan.segments[chunkIdx]) {
         applyComparisonNarrationSegment(plan.segments[chunkIdx]!, chunkIdx);
       }
-    } else if (isOverview && cardsToSync && cardsToSync.length > 0) {
+    } else if (
+      // A unit-backed plan owns the whole turn, even when a late/stale audio
+      // clip has a different turn id. Never let that clip install a legacy
+      // card scene without unit identity over the canonical plan.
+      unitIdsFromSegments(plan?.segments).length === 0 &&
+      isOverview &&
+      cardsToSync &&
+      cardsToSync.length > 0
+    ) {
       // Fallback multi-card path only when this turn has no unit-backed plan.
       const planUnits = unitIdsFromSegments(narrationPlanRef.current?.segments);
       const ctrl = presentationRef.current;
@@ -1935,6 +1943,7 @@ export default function ChatScreen({
         lastLoadedPresentationTurnRef.current = tid || lastLoadedPresentationTurnRef.current;
       }
     } else if (
+      unitIdsFromSegments(plan?.segments).length === 0 &&
       currentUiLockRef.current === 'CARD' &&
       (presentationRef.current.engineState === 'IDLE' ||
         presentationRef.current.engineState === 'CANCELLED' ||

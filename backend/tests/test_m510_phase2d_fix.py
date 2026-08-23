@@ -7,9 +7,13 @@ identity contract the frontend presentation engine must render in order.
 from __future__ import annotations
 
 import unittest
+import json
+from pathlib import Path
+import re
 
 from backend.tests.test_m59_universal_units import decide, plan_units
 from backend.services.conversation.response_decision import ResponseMode
+from backend.services.narration_plan import _FEES_AMOUNT_BY_KEY
 
 
 REQUIRED = [
@@ -57,3 +61,12 @@ class TestM510Phase2DFixSwitchingIdentity(unittest.TestCase):
                 self.assertIs(decide(raw, lang), ResponseMode.CARD)
                 self.assertEqual(plan_units(raw, "en"), expected)
                 self.assertEqual(plan_units(raw, "kn"), expected)
+
+    def test_data_science_locale_fee_matches_canonical_fee(self) -> None:
+        expected = str(_FEES_AMOUNT_BY_KEY["cse_ds"])
+        locale_dir = Path(__file__).resolve().parents[1] / "data" / "locales"
+        for code in ("en", "kn", "hi", "ta", "te", "ml"):
+            with self.subTest(language=code):
+                data = json.loads((locale_dir / f"{code}.json").read_text(encoding="utf-8"))
+                fee = data["departments"]["cse_ds"]["fees"]
+                self.assertIn(expected, re.sub(r"\D", "", fee))
