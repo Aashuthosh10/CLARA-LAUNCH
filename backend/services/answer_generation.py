@@ -1117,6 +1117,12 @@ HOD_PROFILE_KEYWORDS = [
     "yaaru",
     "kaun",
     "evaru",
+    # Exact HOD role-title phrases already shipped in authoritative locale data.
+    "ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+    "विभागाध्यक्ष",
+    "துறைத் தலைவர்",
+    "విభాగం అధిపతి",
+    "വിഭാഗത്തിന്റെ മേധാവി",
 ]
 
 TRUSTEES_PROFILE_KEYWORDS = [
@@ -1559,6 +1565,13 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         "yaar",
         "evaru",
         "aaranu",
+        # Exact locale-backed native HOD phrases; deliberately no broad single-word
+        # aliases such as generic "head" translations.
+        "ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು",
+        "विभागाध्यक्ष",
+        "துறைத் தலைவர்",
+        "విభాగం అధిపతి",
+        "വിഭാഗത്തിന്റെ മേധാവി",
     ]
     course_keywords = [
         "course",

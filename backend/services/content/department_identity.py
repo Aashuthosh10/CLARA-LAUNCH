@@ -9,8 +9,10 @@ from dataclasses import dataclass
 
 from backend.services.answer_generation import (
     _CANONICAL_DEPARTMENT_TO_JSON_KEY,
+    DEPARTMENT_JSON_KEY_ORDER,
     _inject_regional_department_tokens,
     department_label_to_json_key,
+    load_locale_data_for_lang_key,
 )
 from backend.services.content.semantic_vocab.catalog import entries_for
 from backend.services.content.unicode_text import casefold_keep_scripts
@@ -49,13 +51,32 @@ def department_alias_table() -> list[tuple[str, str]]:
     """(variant, json_key) longest-first. Canonical labels included."""
     rows: list[tuple[str, str]] = []
     for e in entries_for(category="DEPARTMENT"):
-        v = casefold_keep_scripts(e.variant)
+        v = normalize_for_department_match(e.variant)
         if v:
             rows.append((v, e.canonical))
     for label, jkey in _CANONICAL_DEPARTMENT_TO_JSON_KEY.items():
-        v = casefold_keep_scripts(label)
+        v = normalize_for_department_match(label)
         if v:
             rows.append((v, jkey))
+    # Authoritative backend locale names are display labels at the boundary only.
+    # Register their normalized forms against existing language-independent keys so
+    # translated text never becomes an internal identity. Normalizing aliases with
+    # the same regional-token injection as the user haystack is essential for
+    # compound names such as ``CSE (ಡೇಟಾ ಸೈನ್ಸ್)``: the complete specialization
+    # span must consume the parent CSE token instead of returning both identities.
+    for language in ("en", "kn", "hi", "ta", "te", "ml"):
+        locale = load_locale_data_for_lang_key(language)
+        departments = locale.get("departments") if isinstance(locale, dict) else None
+        if not isinstance(departments, dict):
+            continue
+        for jkey in DEPARTMENT_JSON_KEY_ORDER:
+            department = departments.get(jkey)
+            label = department.get("name") if isinstance(department, dict) else None
+            if not isinstance(label, str) or not label.strip():
+                continue
+            v = normalize_for_department_match(label)
+            if v:
+                rows.append((v, jkey))
     # Longest span first; compound keys before plain cse when length ties.
     rows.sort(key=lambda x: (len(x[0]), 0 if "_" in x[1] or x[1] != "cse" else 1), reverse=True)
     seen: set[tuple[str, str]] = set()
