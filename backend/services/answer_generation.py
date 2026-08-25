@@ -1833,33 +1833,38 @@ def _is_fee_query(normalized: str) -> bool:
     return bool(re.search(r"\bf(?:e|i){1,2}s\b", n))
 
 
+EXPLICIT_ADMISSIONS_PHRASES: tuple[str, ...] = (
+    "admission",
+    "admissions",
+    "admit",
+    "apply",
+    "application",
+    "eligibility",
+    "entrance",
+    "entrance exam",
+    "kcet",
+    "comedk",
+    "kea",
+    "counseling",
+    "counselling",
+    "quota",
+    "scholarship",
+    "scholarships",
+    "how to join",
+    "how to get admission",
+)
+
+
+def has_explicit_admissions_cue(text: str) -> bool:
+    """Match genuine admissions language, excluding fee-only legacy routing."""
+    normalized = _normalize_text(text)
+    return any(_contains_phrase(normalized, phrase) for phrase in EXPLICIT_ADMISSIONS_PHRASES)
+
+
 def _is_admissions_query(normalized: str) -> bool:
     if not normalized:
         return False
-    if _is_fee_query(normalized):
-        return True
-    admission_phrases = [
-        "admission",
-        "admissions",
-        "admit",
-        "apply",
-        "application",
-        "eligibility",
-        "entrance",
-        "entrance exam",
-        "kcet",
-        "comedk",
-        "kea",
-        "counseling",
-        "counselling",
-        "quota",
-        "scholarship",
-        "scholarships",
-        "fee structure",
-        "how to join",
-        "how to get admission",
-    ]
-    return any(_contains_phrase(normalized, p) for p in admission_phrases)
+    return _is_fee_query(normalized) or has_explicit_admissions_cue(normalized)
 
 
 def _is_placements_query(normalized: str) -> bool:

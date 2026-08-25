@@ -38,13 +38,18 @@ from backend.services.answer_generation import (
     INTENT_PRINCIPAL_PROFILE,
     INTENT_TRUSTEES_PROFILE,
     INTENT_VICE_PRINCIPAL_PROFILE,
+    has_explicit_admissions_cue,
     maybe_override_intent_with_executive_profile,
 )
 from backend.services.content.campus_units import is_bare_hostel_request, is_campus_entity
 from backend.services.content.semantic_composition import detect_topic_spans
 from backend.services.content.semantic_request import SemanticRequest
 from backend.services.content.semantic_topics import cue_in_hay, detect_atomic_topics, is_full_department_scope
-from backend.services.content.semantic_vocab.catalog import TOPIC_ACHIEVEMENTS, TOPIC_PLACEMENTS
+from backend.services.content.semantic_vocab.catalog import (
+    TOPIC_ACHIEVEMENTS,
+    TOPIC_FEES,
+    TOPIC_PLACEMENTS,
+)
 from backend.services.content.semantic_vocab.institution import institution_cues
 from backend.services.content.unicode_text import casefold_keep_scripts
 
@@ -323,6 +328,12 @@ def resolve_response_decision(
     institution_proposal = (
         proposal is not None and proposal.domain is DomainRelevance.INSTITUTION
     )
+    fee_requires_department = (
+        semantic_request is None
+        and not has_department_entity
+        and TOPIC_FEES in detect_atomic_topics(raw)
+        and not has_explicit_admissions_cue(raw)
+    )
 
     # 3b. Evaluative institutional question: entity mention is not automatically CARD.
     # Documents / admissions / course-menu / bus keep their card owners.
@@ -331,6 +342,7 @@ def resolve_response_decision(
         and proposal is not None
         and proposal.mode_hint is ResponseMode.ANSWER
         and not atomic
+        and not fee_requires_department
         and (ci_intent or "") not in NON_UNIT_CARD_INTENTS
     ):
         return _done(
@@ -348,6 +360,7 @@ def resolve_response_decision(
         and proposal.mode_hint is ResponseMode.CARD
         and proposal.items
         and semantic_request is None
+        and not fee_requires_department
     ):
         return _done(
             ResponseDecision(
@@ -428,6 +441,34 @@ def resolve_response_decision(
                 domain_relevance=DomainRelevance.INSTITUTION,
                 confidence=0.8,
                 evidence="department_card_without_entity",
+            )
+        )
+
+    # 6b. Fee-only requests without a validated department are not general
+    # admissions requests. Reuse the existing department clarification instead of
+    # allowing either the legacy ADMISSIONS demotion or an earlier LLM proposal to
+    # manufacture a card. Genuine admissions language keeps the admissions owner.
+    if fee_requires_department:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CLARIFY,
+                clarification_target="department",
+                clarification_reason="topic_without_department",
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.75,
+                evidence="topic_cue_without_entity",
+            )
+        )
+
+    # Preserve the narrow case where both explicit admissions language and the
+    # existing legacy Admissions owner agree. Do not promote NORMAL_QUERY text.
+    if has_explicit_admissions_cue(raw) and intent == INTENT_ADMISSIONS:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CARD,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.88,
+                evidence="explicit_admissions_cue",
             )
         )
 

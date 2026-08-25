@@ -9,7 +9,7 @@ from backend.services.content.department_identity import (
     DepartmentSpan,
     match_department_spans_exclusive,
 )
-from backend.services.content.department_resolver import resolve_department_key
+from backend.services.content.department_resolver import known_department_keys, resolve_department_key
 from backend.services.content.multilingual_terms import (
     TOPIC_OVERVIEW,
 )
@@ -315,15 +315,12 @@ def _entity_spans_from_hint(
     if isinstance(keys_raw, (list, tuple)):
         spans: list[DepartmentSpan] = []
         seen: set[str] = set()
+        known_keys = known_department_keys(language_code_key)
         for key in keys_raw:
-            resolved = resolve_department_key(
-                department=str(key),
-                language=language_code_key,
-                user_text="",
-            )
-            if resolved.json_key and resolved.json_key not in seen:
-                seen.add(resolved.json_key)
-                spans.append(DepartmentSpan(json_key=resolved.json_key, start=0, end=0))
+            canonical = str(key).strip().lower()
+            if canonical in known_keys and canonical not in seen:
+                seen.add(canonical)
+                spans.append(DepartmentSpan(json_key=canonical, start=0, end=0))
         if spans:
             return tuple(spans)
     hint = ci_entities.get("department") or ci_entities.get("departmentLabel")

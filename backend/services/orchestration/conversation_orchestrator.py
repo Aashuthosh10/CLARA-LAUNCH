@@ -148,6 +148,10 @@ class ConversationOrchestrator:
             )
             card_entities = tuple(getattr(response_decision, "entities", ()) or ())
             if card_entities:
+                # CI has already resolved these through the semantic request policy.
+                # Pass canonical keys to presentation so anaphoric unit planning can
+                # apply the same exact-key validation instead of reusing raw session text.
+                entities_for_pres["department_keys"] = list(card_entities)
                 session["last_semantic_entities"] = list(card_entities)
                 session_updates["last_semantic_entities"] = list(card_entities)
             from backend.services.content.person_context import last_person_unit_from_ids
