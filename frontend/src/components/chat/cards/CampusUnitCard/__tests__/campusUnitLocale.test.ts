@@ -12,6 +12,11 @@ describe('campus unit locale cards', () => {
     expect(en?.tts_summary).toContain('rooms');
     expect(en?.tts_summary).not.toContain('This sample card');
     expect(kn?.tts_summary).not.toContain('Showing');
+    expect(kn?.title).not.toContain('ಮಾದರಿ');
+    expect(kn?.body).toBe(
+      'ಈ ಮಾಹಿತಿಯನ್ನು ಇನ್ನೂ ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ.\nಹೆಚ್ಚಿನ ಮಾಹಿತಿಗಾಗಿ ಸಂಬಂಧಿತ ವಿಭಾಗವನ್ನು ಸಂಪರ್ಕಿಸಿ.',
+    );
+    expect(kn?.tts_summary).not.toContain('SAMPLE_REPLACE_WITH_OFFICIAL');
   });
 
   it('does not silently reuse another unit', () => {

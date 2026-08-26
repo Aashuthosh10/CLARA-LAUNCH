@@ -33,11 +33,6 @@ export default function MechanicalCard({
       tagline: "Precision engineering for a physical world",
       hod: "Dr. Raghavendra S"
     },
-    Kannada: {
-       name: "ಮೆಕ್ಯಾನಿಕಲ್ ಎಂಜಿನಿಯರಿಂಗ್",
-       tagline: "ಭೌತಿಕ ಜಗತ್ತಿಗಾಗಿ ನಿಖರ ಎಂಜಿನಿಯರಿಂಗ್",
-       hod: "ಡಾ. ರಾಘವೇಂದ್ರ ಎಸ್"
-    },
     Hindi: {
        name: "मैकेनिकल इंजीनियरिंग",
        tagline: "भौतिक दुनिया के लिए सटीक इंजीनियरिंग",
@@ -82,3 +77,4 @@ export default function MechanicalCard({
     />
   );
 }
+

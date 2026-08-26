@@ -23,8 +23,10 @@ from backend.services.narration_plan import (
     _init_executive_profiles,
 )
 from backend.services import narration_plan as _narration_plan_mod
+from backend.services.ui_localization import ui_text
 
 _SUPPORTED = ("en", "hi", "kn", "ta", "te", "ml")
+_SAMPLE_CONTENT_STATUS = "SAMPLE_REPLACE_WITH_OFFICIAL"
 
 
 def _lk(lang_key: str) -> str:
@@ -190,6 +192,8 @@ def _campus_unit_spoken(unit: ContentUnit, lang_key: str) -> str:
     """Speak the same locale tts_summary shown on the campus unit card."""
     if (unit.entity_type or "") not in {"hostel", "canteen", "event"}:
         return ""
+    if lang_key == "kn" and str((unit.metadata or {}).get("content_status") or "") == _SAMPLE_CONTENT_STATUS:
+        return ui_text(lang_key, "availability.official_fact_blocked").replace("\n", " ")
     spoken = str((unit.metadata or {}).get("tts_summary") or "").strip()
     if spoken:
         return _clip_caption(spoken, 280)

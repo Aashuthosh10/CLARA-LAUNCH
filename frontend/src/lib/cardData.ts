@@ -14,7 +14,7 @@ interface LocalizedCardData {
   trustees: CardDataItem[];
 }
 
-const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
+const LOCALIZED_CARD_DATA: Partial<Record<Language, LocalizedCardData>> = {
   English: {
     college: [
       { title: 'SVIT Presence', content: 'Established in 2008 by a group of eminent academicians and professionals, SVIT is a premier institution in Bengaluru.', type: 'college' },
@@ -48,41 +48,6 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
       { title: 'Sri R. Srinivas Raju', content: 'Trustee. Practicing Civil Engineer contributing governance and infrastructure perspective.', type: 'trustees' },
       { title: 'Sri M. K. Manohar', content: 'Trustee. Chartered Accountant bringing financial stewardship and transparency.', type: 'trustees' },
       { title: 'The SVIT Mission', content: 'Building a foundation for quality education through selfless service by visionary academicians.', type: 'trustees' },
-    ],
-  },
-  Kannada: {
-    college: [
-      { title: 'SVIT ಪರಿಚಯ', content: '2008ರಲ್ಲಿ ಖ್ಯಾತ ಶಿಕ್ಷಣತಜ್ಞರು ಮತ್ತು ವೃತ್ತಿಪರರಿಂದ ಸ್ಥಾಪಿತವಾದ SVIT, ಬೆಂಗಳೂರಿನ ಪ್ರಮುಖ ಶಿಕ್ಷಣ ಸಂಸ್ಥೆಯಾಗಿದೆ.', type: 'college' },
-      { title: 'NAAC A ಗ್ರೇಡ್', content: "SVITಗೆ NAAC 'A' ಗ್ರೇಡ್ ಮಾನ್ಯತೆ ದೊರೆತಿದ್ದು, ಶೈಕ್ಷಣಿಕ ಮತ್ತು ಸಂಶೋಧನಾ ಗುಣಮಟ್ಟವನ್ನು ತೋರಿಸುತ್ತದೆ.", type: 'college' },
-      { title: 'ಮೂಲಸೌಕರ್ಯ', content: '12 ಏಕರೆ ಹಸಿರು ಆವರಣದಲ್ಲಿ ಆಧುನಿಕ ಪ್ರಯೋಗಶಾಲೆಗಳು ಮತ್ತು ವೇಗವಾದ ವೈ-ಫೈ ಸೌಲಭ್ಯಗಳಿವೆ.', type: 'college' },
-      { title: 'ಮೂಲ ಮೌಲ್ಯಗಳು', content: 'ನೈತಿಕತೆ, ಗುಣಮಟ್ಟ, ಸಂಶೋಧನೆ ಮತ್ತು ನವೀನತೆ SVITನ ಪ್ರಮುಖ ಅಸ್ತಂಬಗಳಾಗಿವೆ.', type: 'college' },
-      { title: 'ಕ್ಯಾಂಪಸ್ ಜೀವನ', content: '1500ಕ್ಕಿಂತ ಹೆಚ್ಚು ವಿದ್ಯಾರ್ಥಿಗಳು ಮತ್ತು ಸಕ್ರಿಯ ಕ್ಲಬ್‌ಗಳೊಂದಿಗೆ SVIT ಸಮಗ್ರ ಬೆಳವಣಿಗೆಗೆ ಜೀವಂತ ವಾತಾವರಣ ಒದಗಿಸುತ್ತದೆ.', type: 'college' },
-    ],
-    dept: {
-      CSE: [
-        { title: 'CSE ವಿಭಾಗ', content: 'CSE ವಿಭಾಗವು ಸಾಫ್ಟ್‌ವೇರ್ ಮತ್ತು ಸಿಸ್ಟಂ ಕ್ಷೇತ್ರದ ಮೂಲತತ್ವಗಳು ಹಾಗೂ ನವೀನತೆಗಳ ಮೇಲೆ ಕೇಂದ್ರೀಕರಿಸುತ್ತದೆ.', type: 'dept' },
-        { title: 'ವಿಶೇಷೀಕರಣಗಳು', content: 'AI-ML, ಡೇಟಾ ಸೈನ್ಸ್ ಮತ್ತು ಸೈಬರ್ ಸೆಕ್ಯುರಿಟಿ ವಿಶೇಷೀಕರಣಗಳ ಮೂಲಕ ಇಂದಿನ ಕೈಗಾರಿಕಾ ಅಗತ್ಯಗಳಿಗೆ ವಿದ್ಯಾರ್ಥಿಗಳನ್ನು ಸಿದ್ಧಗೊಳಿಸಲಾಗುತ್ತದೆ.', type: 'dept' },
-        { title: 'ಅಧ್ಯಾಪಕರ ಶ್ರೇಷ್ಠತೆ', content: 'ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್ ಅವರ ನೇತೃತ್ವದಲ್ಲಿ ದಶಕಗಳ ಶೈಕ್ಷಣಿಕ ಮತ್ತು ಕೈಗಾರಿಕಾ ಅನುಭವ ಹೊಂದಿದ ಬಲವಾದ ಅಧ್ಯಾಪಕ ವೃಂದವಿದೆ.', type: 'dept' },
-        { title: 'ಜಾಗತಿಕ ಪ್ಲೇಸ್‌ಮೆಂಟ್', content: 'ಬಲವಾದ ಕೈಗಾರಿಕಾ ಸಹಭಾಗಿತ್ವದಿಂದ ಪರಿಣಾಮಕಾರಿ ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ವೃತ್ತಿ ಬೆಂಬಲ ದೊರಕುತ್ತದೆ.', type: 'dept' },
-        { title: 'ಇನ್ನೋವೇಷನ್ ಲ್ಯಾಬ್‌ಗಳು', content: 'ಪ್ರೋಟೋಟೈಪಿಂಗ್ ಮತ್ತು ಸೃಜನಾತ್ಮಕ ಪರಿಹಾರಗಳಿಗೆ ಆಧುನಿಕ ಸಾಫ್ಟ್‌ವೇರ್ ಲ್ಯಾಬ್‌ಗಳು ಮತ್ತು ಮೇಕರ್ ಸ್ಪೇಸ್‌ಗಳಿಗೆ ಪ್ರವೇಶವಿದೆ.', type: 'dept' },
-      ],
-    },
-    hod: [
-      { title: 'ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್', content: 'ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್ ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು; ಖ್ಯಾತ ಶಿಕ್ಷಣತಜ್ಞರು ಮತ್ತು ಸಂಶೋಧಕರು.', type: 'hod' },
-      { title: 'CSE ದೃಷ್ಟಿ', content: 'ಬಲಿಷ್ಠ ಭಾರತ ಮತ್ತು ಜಾಗತಿಕ ಪ್ರಗತಿಗೆ ಕೊಡುಗೆ ನೀಡುವ ಸಮರ್ಥ ಇಂಜಿನಿಯರ್‌ಗಳನ್ನು ರೂಪಿಸುವುದು.', type: 'hod' },
-      { title: 'ಶೈಕ್ಷಣಿಕ ನಾಯಕತ್ವ', content: 'ವಿತರಿತ ವ್ಯವಸ್ಥೆಗಳು, AI ಮತ್ತು ಡೀಪ್ ಲರ್ನಿಂಗ್ ಕ್ಷೇತ್ರಗಳಲ್ಲಿ 20+ ವರ್ಷದ ಅನುಭವ ಹೊಂದಿದ್ದಾರೆ.', type: 'hod' },
-      { title: 'ವಿದ್ಯಾರ್ಥಿ ಕೇಂದ್ರೀಕೃತತೆ', content: 'ಮೆಂಟರಿಂಗ್, ನೈತಿಕ ಎಂಜಿನಿಯರಿಂಗ್ ಮತ್ತು ಪ್ರಾಯೋಗಿಕ ಕೌಶಲ್ಯಾಭಿವೃದ್ಧಿಗೆ ಹೆಚ್ಚಿನ ಮಹತ್ವ ನೀಡಲಾಗುತ್ತದೆ.', type: 'hod' },
-    ],
-    trustees: [
-      { title: 'ಪ್ರೊ. ಎಂ. ಆರ್. ಹೊಳ್ಳ', content: 'ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ ಮತ್ತು ಅಧ್ಯಕ್ಷರು; 50+ ವರ್ಷದ ತಾಂತ್ರಿಕ ಶಿಕ್ಷಣ ಅನುಭವ ಹೊಂದಿದ ಗಣ್ಯ ಶಿಕ್ಷಣತಜ್ಞರು.', type: 'trustees' },
-      { title: 'ಡಾ. ಮಂಜುನಾಥ್ ಟಿ ಎನ್', content: 'ಪ್ರಿನ್ಸಿಪಾಲ್ ಮತ್ತು ಪ್ರೊಫೆಸರ್. ಶೈಕ್ಷಣಿಕ ದಿಕ್ಕು ಮತ್ತು ಸಾಂಸ್ಥಿಕ ಶ್ರೇಷ್ಠತೆಗೆ ನೇತೃತ್ವ.', type: 'trustees' },
-      { title: 'ಡಾ. ಲಕ್ಷ್ಮೀನಾರಾಯಣಾಚಾರಿ ಕೆ', content: 'ಉಪ ಪ್ರಾಂಶುಪಾಲರು. ಶೈಕ್ಷಣಿಕ ಕಾರ್ಯಾಚರಣೆ, ಆಡಳಿತ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಯಶಸ್ಸಿಗೆ ಬೆಂಬಲ.', type: 'trustees' },
-      { title: 'ಡಾ. ವೈ. ಜಯಸಿಂಹ', content: 'ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಪ್ರೊಫೆಸರ್, ಡೀನ್ (ಅಕಾಡೆಮಿಕ್ಸ್), ಮತ್ತು SVITನ ದೃಷ್ಟಿವಂತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
-      { title: 'ಪ್ರೊ. ಆರ್. ಸಿ. ಶಣ್ಮುಖಸ್ವಾಮಿ', content: 'ಖ್ಯಾತ ಎಲೆಕ್ಟ್ರಿಕಲ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ಆಡಳಿತ ಶ್ರೇಷ್ಠತೆಗೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
-      { title: 'ಡಾ. ಎ. ಎಂ. ಪದ್ಮಾ ರೆಡ್ಡಿ', content: 'ಖ್ಯಾತ ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ ಪ್ರೊಫೆಸರ್ ಮತ್ತು ವಿದ್ಯಾರ್ಥಿ ಕಲ್ಯಾಣಕ್ಕೆ ಸಮರ್ಪಿತ ಸ್ಥಾಪಕ ಟ್ರಸ್ಟಿ.', type: 'trustees' },
-      { title: 'ಶ್ರೀ ಆರ್. ಶ್ರೀನಿವಾಸ್ ರಾಜು', content: 'ಟ್ರಸ್ಟಿ. ಅಭ್ಯಾಸ ನಾಗರಿಕ ಎಂಜಿನಿಯರ್; ಆಡಳಿತ ಮತ್ತು ಮೂಲಸೌಕರ್ಯ ದೃಷ್ಟಿಕೋನಕ್ಕೆ ಕೊಡುಗೆ.', type: 'trustees' },
-      { title: 'ಶ್ರೀ ಎಂ. ಕೆ. ಮನೋಹರ್', content: 'ಟ್ರಸ್ಟಿ. ನೋಂದಣಿ ಖಾತೆ ಪರಿಶೋಧಕ; ಹಣಕಾಸು ನಿರ್ವಹಣೆ ಮತ್ತು ಪಾರದರ್ಶಕತೆ.', type: 'trustees' },
-      { title: 'SVIT ಮಿಷನ್', content: 'ದೃಷ್ಟಿವಂತ ಶಿಕ್ಷಣತಜ್ಞರ ನಿಸ್ವಾರ್ಥ ಸೇವೆಯಿಂದ ಗುಣಮಟ್ಟದ ಶಿಕ್ಷಣಕ್ಕೆ ಬಲವಾದ ಅಡಿಪಾಯ ನಿರ್ಮಿಸುವುದು.', type: 'trustees' },
     ],
   },
   Hindi: {
@@ -231,6 +196,9 @@ const LOCALIZED_CARD_DATA: Record<Language, LocalizedCardData> = {
  * Static marketing cards only. Department and HOD decks come from locale JSON via collegeLocaleUtils + useCollegeData.
  */
 export function getStaticCardsForTrigger(language: Language, trigger: string): CardDataItem[] | null {
+  // Kannada production cards are built from backend locale JSON by
+  // collegeLocaleUtils; never fall back to this legacy marketing catalog.
+  if (language === 'Kannada') return null;
   const normalized = (trigger || '').toLowerCase();
   const data = LOCALIZED_CARD_DATA[language] ?? LOCALIZED_CARD_DATA.English;
   if (['college', 'college_overview', 'overview', 'institution'].includes(normalized)) {

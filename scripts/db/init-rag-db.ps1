@@ -43,6 +43,7 @@ $envValues = Read-DotEnv ".env"
 $dbUser = if ($envValues["POSTGRES_USER"]) { $envValues["POSTGRES_USER"] } else { "clara_user" }
 $dbName = if ($envValues["POSTGRES_DB"]) { $envValues["POSTGRES_DB"] } else { "clara_db" }
 $dbPassword = $envValues["POSTGRES_PASSWORD"]
+$containerName = if ($envValues["POSTGRES_CONTAINER_NAME"]) { $envValues["POSTGRES_CONTAINER_NAME"] } else { "clara-postgres" }
 
 if (-not $dbPassword) {
     throw "POSTGRES_PASSWORD is empty in .env. Set it before initializing RAG."
@@ -53,27 +54,27 @@ docker compose up -d postgres | Out-Host
 
 Write-Host "Waiting for PostgreSQL health check..."
 for ($i = 0; $i -lt 30; $i++) {
-    $status = docker inspect -f "{{.State.Health.Status}}" clara-postgres 2>$null
+    $status = docker inspect -f "{{.State.Health.Status}}" $containerName 2>$null
     if ($status -eq "healthy") {
         break
     }
     Start-Sleep -Seconds 2
 }
 
-$status = docker inspect -f "{{.State.Health.Status}}" clara-postgres 2>$null
+$status = docker inspect -f "{{.State.Health.Status}}" $containerName 2>$null
 if ($status -ne "healthy") {
     throw "PostgreSQL container did not become healthy. Current status: $status"
 }
 
 Write-Host "Aligning database role password with .env..."
 $roleSql = "ALTER ROLE $(Sql-Identifier $dbUser) WITH LOGIN PASSWORD '$(Sql-Literal $dbPassword)';"
-docker exec clara-postgres psql -U $dbUser -d postgres -v ON_ERROR_STOP=1 -c $roleSql | Out-Host
+docker exec $containerName psql -U $dbUser -d postgres -v ON_ERROR_STOP=1 -c $roleSql | Out-Host
 
 Write-Host "Ensuring configured database exists..."
 $dbExistsSql = "SELECT 1 FROM pg_database WHERE datname = '$(Sql-Literal $dbName)';"
-$exists = docker exec clara-postgres psql -U $dbUser -d postgres -tAc $dbExistsSql
+$exists = docker exec $containerName psql -U $dbUser -d postgres -tAc $dbExistsSql
 if (($exists | Out-String).Trim() -ne "1") {
-    docker exec clara-postgres createdb -U $dbUser -O $dbUser -- $dbName | Out-Host
+    docker exec $containerName createdb -U $dbUser -O $dbUser -- $dbName | Out-Host
     Write-Host "Created database: $dbName"
 } else {
     Write-Host "Database already exists: $dbName"
@@ -81,6 +82,6 @@ if (($exists | Out-String).Trim() -ne "1") {
 
 Write-Host "Applying pgvector schema..."
 Get-Content -Raw -LiteralPath "scripts\db\init_pgvector.sql" |
-    docker exec -i clara-postgres psql -U $dbUser -d $dbName -v ON_ERROR_STOP=1 | Out-Host
+    docker exec -i $containerName psql -U $dbUser -d $dbName -v ON_ERROR_STOP=1 | Out-Host
 
 Write-Host "RAG database is initialized. Next: python -m backend.tools.ingest_college_knowledge_pg"

@@ -4,7 +4,7 @@
 services:
   postgres:
     image: pgvector/pgvector:pg15
-    container_name: clara-postgres
+    container_name: ${POSTGRES_CONTAINER_NAME:-clara-postgres}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-clara_db}
       POSTGRES_USER: ${POSTGRES_USER:-clara_user}
@@ -12,7 +12,7 @@ services:
     volumes:
       - clara_pgdata:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U clara_user"]

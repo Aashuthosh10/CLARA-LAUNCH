@@ -33,11 +33,6 @@ export default function ChemistryCard({
       tagline: "Unlocking the secrets of matter",
       hod: "Dr. Bhagya N P"
     },
-    Kannada: {
-       name: "ರಸಾಯನಶಾಸ್ತ್ರ ವಿಭಾಗ",
-       tagline: "ದ್ರವ್ಯದ ರಹಸ್ಯಗಳನ್ನು ಬಿಡಿಸುತ್ತಿದ್ದೇವೆ",
-       hod: "ಡಾ. ಭಾಗ್ಯ ಎನ್ ಪಿ"
-    },
     Hindi: {
        name: "रसायन विज्ञान विभाग",
        tagline: "पदार्थ के रहस्यों को उजागर करना",
@@ -82,3 +77,4 @@ export default function ChemistryCard({
     />
   );
 }
+

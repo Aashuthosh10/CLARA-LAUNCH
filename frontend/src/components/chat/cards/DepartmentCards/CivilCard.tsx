@@ -33,11 +33,6 @@ export default function CivilCard({
       tagline: "Building the foundations of the future",
       hod: "Dr. Ananthayya M B"
     },
-    Kannada: {
-       name: "ಸಿವಿಲ್ ಎಂಜಿನಿಯರಿಂಗ್",
-       tagline: "ಭವಿಷ್ಯದ ಅಡಿಪಾಯವನ್ನು ನಿರ್ಮಿಸುತ್ತಿದ್ದೇವೆ",
-       hod: "ಡಾ. ಅನಂತಯ್ಯ ಎಂ ಬಿ"
-    },
     Hindi: {
        name: "सिविल इंजीनियरिंग",
        tagline: "भविष्य की नींव बनाना",
@@ -82,3 +77,4 @@ export default function CivilCard({
     />
   );
 }
+

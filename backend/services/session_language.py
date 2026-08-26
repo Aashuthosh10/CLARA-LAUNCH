@@ -8,6 +8,21 @@ from backend.config.settings import TARGET_LANGUAGE_CODES
 from backend.core.language_detection import LANGUAGE_KEY_TO_NAME, SUPPORTED_LANGUAGE_KEYS
 
 
+def normalize_application_language(value: Any) -> str | None:
+    """Strictly validate an inbound application language code.
+
+    Accepts only the canonical internal codes (en/kn/hi/ta/te/ml).
+    Provider locales such as ``kn-IN`` and display names such as ``Kannada``
+    are application-state violations and return None (fail closed).
+    """
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip().lower()
+    if candidate in SUPPORTED_LANGUAGE_KEYS:
+        return candidate
+    return None
+
+
 def set_session_language(
     session: dict[str, Any],
     language_code_key: str,
@@ -16,8 +31,15 @@ def set_session_language(
     confidence: float | None = None,
     method: str | None = None,
     sample: str | None = None,
-) -> None:
-    code_key = language_code_key if language_code_key in SUPPORTED_LANGUAGE_KEYS else "en"
+) -> bool:
+    """Set the authoritative session language from a canonical code key.
+
+    Invalid values never become the active session language: the session is
+    left unchanged and False is returned (fail closed, no silent en coercion).
+    """
+    code_key = normalize_application_language(language_code_key)
+    if code_key is None:
+        return False
     language_name = LANGUAGE_KEY_TO_NAME.get(code_key, "English")
 
     session["language_code_key"] = code_key
@@ -34,6 +56,7 @@ def set_session_language(
             "confidence": float(confidence or 0.0),
             "sample": (sample or "")[:200],
         }
+    return True
 
 
 def resolve_session_language(session: dict[str, Any]) -> tuple[str, str, str]:

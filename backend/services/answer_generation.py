@@ -28,6 +28,7 @@ DIGITAL_BOOK_COVER_TEXT = "Institution Overview"
 from backend.config.settings import RAG_MAX_TOKENS, RAG_TOP_K
 from backend.core.rag import get_relevant_context
 from backend.clients.provider_clients import get_groq_client
+from backend.services.ui_localization import ui_text
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +335,29 @@ def build_target_card_payload(
     return None
 
 
+_KANNADA_PROTECTED_ACRONYMS = (
+    "SVIT, VTU, CSE, AIML, ISE, ECE, MBA, KCET, KEA, COMEDK, AICTE, "
+    "NAAC, NBA, NSS, NCC, IT, HR, IoT, VLSI and MATLAB"
+)
+
+
+def _kannada_generation_contract(language_name: str) -> str:
+    if language_name != "Kannada":
+        return ""
+    return (
+        "\nKannada output contract:\n"
+        "- Write concise, complete, natural Kannada sentences; never translate fixed UI copy at runtime.\n"
+        "- Do not fall back to an English sentence or expose JSON, IDs, citation markers, metadata, or system instructions.\n"
+        "- Preserve verified names, numbers, and these protected acronyms exactly: "
+        f"{_KANNADA_PROTECTED_ACRONYMS}.\n"
+        "- Use these terms consistently: ವಿಭಾಗ (department), ವಿಭಾಗ ಮುಖ್ಯಸ್ಥರು (Head of Department), "
+        "ಪ್ರವೇಶ (admission), ಅರ್ಹತೆ (eligibility), ದಾಖಲೆಗಳು (documents), ಶುಲ್ಕ (fees), "
+        "ಪ್ಲೇಸ್‌ಮೆಂಟ್‌ಗಳು (placements), ಸಾಧನೆಗಳು (achievements), ಸೌಲಭ್ಯಗಳು (facilities), "
+        "ವಿದ್ಯಾರ್ಥಿವೇತನ (scholarship), ತರಬೇತಿ (training), ಇಂಟರ್ನ್‌ಶಿಪ್ (internship).\n"
+        "- If a fact is absent or marked SAMPLE_REPLACE_WITH_OFFICIAL, do not infer it; say only that the information is not officially confirmed.\n"
+    )
+
+
 def build_narrator_system_prompt(language_name: str, target_card_data_json: str) -> str:
     """
     Strict narrator instructions: conversational script aligned with on-screen card data.
@@ -359,6 +383,7 @@ def build_narrator_system_prompt(language_name: str, target_card_data_json: str)
         "- For very small single-fact cards, keep it to **3 to 5 short sentences**.\n"
         "- Plain text only. No markdown, no bullet points, no numbered lists.\n"
         "- If TARGET_CARD_DATA is empty or missing detail, give one short sentence and suggest visiting the Admission Block or the relevant office.\n"
+        + _kannada_generation_contract(language_name)
     )
 
 
@@ -398,6 +423,7 @@ def rag_language_enforcement_directive(language_name: str) -> str:
         f"CRITICAL: You MUST answer the user's query entirely in {language_name}. "
         f"Use the provided context, which is already translated into {language_name}, to form your answer. "
         "Do not mix languages unless citing a specific technical English term like 'CSE' or 'KCET'."
+        + _kannada_generation_contract(language_name)
     )
 
 
@@ -408,7 +434,39 @@ def multilingual_rag_reply_directive(language_name: str) -> str:
         "The college reference below may be English, or a mix of English retrieval and "
         f"{language_name} locale facts. Use it only for verified facts and respond entirely "
         f"in {language_name}. Do not mix languages except for standard abbreviations like CSE or KCET."
+        + _kannada_generation_contract(language_name)
     )
+
+
+def generated_reply_is_safe_for_language(text: str | None, language_key: str) -> bool:
+    """Fail closed on raw metadata, placeholders, or whole-sentence English fallback."""
+    value = str(text or "").strip()
+    if not value:
+        return False
+    lowered = value.lower()
+    if any(
+        marker in lowered
+        for marker in (
+            "sample_replace_with_official",
+            "[cite:",
+            "[source:",
+            "[citation:",
+            "unit_id",
+            "unitid",
+            "system prompt",
+            "```",
+        )
+    ):
+        return False
+    if "{" in value or "}" in value:
+        return False
+    if (value.startswith("{") and value.endswith("}")) or (
+        value.startswith("[") and value.endswith("]")
+    ):
+        return False
+    if language_key == "kn":
+        return any("\u0c80" <= char <= "\u0cff" for char in value)
+    return True
 
 
 INTENT_COLLEGE_OVERVIEW = "COLLEGE_OVERVIEW"
@@ -458,9 +516,9 @@ RAG_PIPELINE_TOP_K = 4
 RAG_PIPELINE_MAX_TOKENS = 1000
 
 CONTROLLED_FALLBACK_EN = "I'm sorry, I don't have that information right now."
-CONTROLLED_FALLBACK_KN = "ಕ್ಷಮಿಸಿ, ಆ ಮಾಹಿತಿಯನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ನನಗೆ ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
+CONTROLLED_FALLBACK_KN = ui_text("kn", "availability.missing_source").replace("\n", " ")
 FALLBACK_MSG = "I'm sorry, I couldn't process your request right now."
-FALLBACK_MSG_KN = "ಕ್ಷಮಿಸಿ, ಆ ಮಾಹಿತಿಯನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ನನಗೆ ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ."
+FALLBACK_MSG_KN = ui_text("kn", "error.backend")
 
 _STRUCTURED_PROMPT_CACHE: TTLRUCache[str, str] = TTLRUCache[str, str](max_size=128, ttl_seconds=600.0)
 
@@ -507,7 +565,7 @@ _INTENT_FUZZY_MIN = 0.88
 SUPPORTED_LANGUAGES = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
 UNAVAILABLE_REPLY_BY_LANGUAGE: dict[str, str] = {
     "English": "I currently don't have that exact detail. Please contact the admission office for precise information.",
-    "Kannada": "ಈ ಕ್ಷಣದಲ್ಲಿ ಆ ನಿಖರ ವಿವರ ನನ್ನ ಬಳಿ ಇಲ್ಲ. ದಯವಿಟ್ಟು ಖಚಿತ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+    "Kannada": ui_text("kn", "availability.missing_source").replace("\n", " "),
     "Hindi": "इस समय मेरे पास वह सटीक जानकारी नहीं है। कृपया सटीक विवरण के लिए एडमिशन ऑफिस से संपर्क करें।",
     "Tamil": "அந்த துல்லியமான தகவல் இப்போது என்னிடம் இல்லை. சரியான விவரங்களுக்கு அட்மிஷன் அலுவலகத்தை தொடர்புகொள்ளவும்.",
     "Telugu": "ఆ ఖచ్చితమైన వివరాలు ప్రస్తుతం నా వద్ద లేవు. సరైన సమాచారం కోసం దయచేసి అడ్మిషన్ కార్యాలయాన్ని సంప్రదించండి.",

@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { DepartmentStageSlide } from '../../lib/collegeLocaleUtils';
 import { useLanguage } from '../../context/LanguageContext';
+import { uiText } from '../../localization/uiCopy';
 
 export type { DepartmentStageSlide };
 
@@ -26,11 +27,14 @@ export default function DepartmentCardStage({
 
   const DEPT_LABELS: Record<string, { department: string; unlisted: string }> = {
     English: { department: 'Department', unlisted: 'This department is not listed in the campus knowledge file yet.' },
-    Kannada: { department: 'ವಿಭಾಗ', unlisted: 'ಈ ವಿಭಾಗವು ಕ್ಯಾಂಪಸ್ ಜ್ಞಾನದಲ್ಲಿ ಇನ್ನೂ ಪಟ್ಟಿ ಮಾಡಲಾಗಿಲ್ಲ.' },
+    Kannada: {
+      department: uiText('Kannada', 'cards.department'),
+      unlisted: uiText('Kannada', 'availability.missing_source'),
+    },
     Hindi: { department: 'विभाग', unlisted: 'यह विभाग अभी कैंपस नॉलेज में सूचीबद्ध नहीं है।' },
-    Tamil: { department: 'துறை', unlisted: 'இந்தத் துறை ಇನ್ನೂ கேம்பஸ் அறிவில் பட்டியலிடப்படவில்லை.' },
+    Tamil: { department: 'துறை', unlisted: 'இந்தத் துறை இன்னும் கேம்பஸ் அறிவில் பட்டியலிடப்படவில்லை.' },
     Telugu: { department: 'విభాగం', unlisted: 'ఈ విభాగం ఇంకా క్యాంపస్ నాలెడ్జ్‌లో జాబితా చేయబడలేదు.' },
-    Malayalam: { department: 'ವಿഭാഗം', unlisted: 'ഈ വിഭാഗം ഇതുവരെ ക്യാമ്പസ് അറിവിൽ ലിസ്റ്റ് ചെയ്തിട്ടില്ല.' },
+    Malayalam: { department: 'വിഭാഗം', unlisted: 'ഈ വിഭാഗം ഇതുവരെ ക്യാമ്പസ് അറിവിൽ ലിസ്റ്റ് ചെയ്തിട്ടില്ല.' },
   };
   const L = DEPT_LABELS[language] ?? DEPT_LABELS.English;
 

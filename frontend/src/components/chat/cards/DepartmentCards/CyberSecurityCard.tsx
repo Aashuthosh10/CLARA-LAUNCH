@@ -33,11 +33,6 @@ export default function CyberSecurityCard({
       tagline: "Defending the digital frontier",
       hod: "Dr. Shashikumar D R"
     },
-    Kannada: {
-       name: "ಪರಿಗಣಕ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್ (Cyber Security)",
-       tagline: "ಡಿಜಿಟಲ್ ಗಡಿಗಳ ರಕ್ಷಣೆ",
-       hod: "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್"
-    },
     Hindi: {
        name: "कंप्यूटर विज्ञान और इंजीनियरिंग (Cyber Security)",
        tagline: "डिजिटल सीमाओं की रक्षा",
@@ -56,7 +51,7 @@ export default function CyberSecurityCard({
     Malayalam: {
        name: "കമ്പ്യൂട്ടർ സയൻസ് & എഞ്ചിനീയറിംഗ് (Cyber Security)",
        tagline: "ഡിജിറ്റൽ അതിർത്തികൾ കാക്കുന്നു",
-       hod: "ഡോ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್"
+       hod: "ഡോ. ശശികുമാർ ഡി ആർ"
     }
   };
 

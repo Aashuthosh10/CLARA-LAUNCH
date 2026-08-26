@@ -33,11 +33,6 @@ export default function DataScienceCard({
       tagline: "Turning raw information into actionable intelligence",
       hod: "Dr. Nagashree N"
     },
-    Kannada: {
-       name: "ಪರಿಗಣಕ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್ (Data Science)",
-       tagline: "ದತ್ತಾಂಶದಿಂದ ಜ್ಞಾನದತ್ತ ಪಯಣ",
-       hod: "ಡಾ. ನಾಗಶ್ರೀ ಎನ್"
-    },
     Hindi: {
        name: "कंप्यूटर विज्ञान और इंजीनियरिंग (Data Science)",
        tagline: "कच्ची जानकारी को कार्रवाई योग्य बुद्धिमत्ता में बदलना",
@@ -82,3 +77,4 @@ export default function DataScienceCard({
     />
   );
 }
+

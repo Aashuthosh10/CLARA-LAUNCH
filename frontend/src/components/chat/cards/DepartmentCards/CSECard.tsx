@@ -32,11 +32,6 @@ export default function CSECard({
       tagline: "The backbone of the digital revolution",
       hod: "Dr. Shashikumar D R"
     },
-    Kannada: {
-       name: "ಪರಿಗಣಕ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್",
-       tagline: "ಡಿಜಿಟಲ್ ಕ್ರಾಂತಿಯ ಬೆನ್ನೆಲುಬು",
-       hod: "ಡಾ. ಶಶಿಕುಮಾರ್ ಡಿ ಆರ್"
-    },
     Hindi: {
        name: "कंप्यूटर विज्ञान और इंजीनियरिंग",
        tagline: "डिजिटल क्रांति की रीढ़",
@@ -81,3 +76,4 @@ export default function CSECard({
     />
   );
 }
+

@@ -33,11 +33,6 @@ export default function MathematicsCard({
       tagline: "The language of logic and precision",
       hod: "Dr. Arun Kumar R"
     },
-    Kannada: {
-       name: "ಗಣಿತ ಶಾಸ್ತ್ರ ವಿಭಾಗ",
-       tagline: "ತರ್ಕ ಮತ್ತು ನಿಖರತೆಯ ಭಾಷೆ",
-       hod: "ಡಾ. ಅರುಣ್ ಕುಮಾರ್ ಆರ್"
-    },
     Hindi: {
        name: "गणित विभाग",
        tagline: "तर्क और सटीकता की भाषा",
@@ -82,3 +77,4 @@ export default function MathematicsCard({
     />
   );
 }
+

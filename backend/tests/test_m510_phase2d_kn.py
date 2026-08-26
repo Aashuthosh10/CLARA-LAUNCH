@@ -30,6 +30,7 @@ from backend.services.conversation.templates import (
 )
 from backend.services.conversation.transcript_validator import assess_transcript
 from backend.services.conversation.types import ExtractedEntities, IntentResult, PolicyAction
+from backend.services.ui_localization import ui_text
 from backend.tests.test_m59_universal_units import decide, plan_units
 
 
@@ -142,8 +143,7 @@ class TestKannadaAnswerAndConversation(unittest.TestCase):
             language="Kannada",
         )
         self.assertEqual(decision.action, PolicyAction.GREETING)
-        self.assertIn("ನಮಸ್ಕಾರ", greeting_reply("Kannada"))
-        self.assertIn("CLARA", greeting_reply("Kannada"))
+        self.assertEqual("ಸ್ವಾಗತ. ಇಂದು ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?", greeting_reply("Kannada"))
 
     def test_hostel_clarification(self) -> None:
         d = kn_decision("ಹಾಸ್ಟೆಲ್")
@@ -156,7 +156,8 @@ class TestKannadaAnswerAndConversation(unittest.TestCase):
 
     def test_fallback_and_error_are_kannada(self) -> None:
         self.assertIn("ಕ್ಷಮಿಸಿ", process_fallback_reply("Kannada"))
-        self.assertEqual(process_fallback_reply("Kannada"), CONTROLLED_FALLBACK_KN)
+        self.assertEqual(process_fallback_reply("Kannada"), ui_text("kn", "error.backend"))
+        self.assertEqual(get_unavailable_reply("Kannada"), CONTROLLED_FALLBACK_KN)
         self.assertFalse(_latin_sentences(get_unavailable_reply("Kannada").replace("SVIT", "")))
         self.assertIn("ವಿಭಾಗ", get_off_topic_reply("Kannada"))
         self.assertIn("ವಿಶ್ವಾಸಾರ್ಹ", unknown_reply("Kannada"))

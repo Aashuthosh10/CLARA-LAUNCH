@@ -12,6 +12,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from backend.config.settings import KIOSK_TIMEZONE
+from backend.services.ui_localization import ui_text
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam")
 
@@ -89,7 +90,7 @@ def greeting_font_family_css(language: str | None) -> str | None:
 # ---------------------------------------------------------------------------
 _READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
     "English": "Wonderful. I am ready to help you with care. What would you like to explore today?",
-    "Kannada": "ಅದ್ಭುತ. ನಿಮಗೆ ಆತ್ಮೀಯವಾಗಿ ಸಹಾಯ ಮಾಡಲು ನಾನು ಸಿದ್ಧವಾಗಿದ್ದೇನೆ. ಇಂದು ನೀವು ಏನನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
+    "Kannada": ui_text("kn", "welcome.general_narration"),
     "Hindi": "बहुत अच्छा। मैं पूरे ध्यान से आपकी मदद के लिए तैयार हूँ। आज आप क्या जानना चाहेंगे?",
     "Tamil": "மிக நன்று. உங்களுக்கு அக்கறையுடன் உதவ நான் தயார். இன்று நீங்கள் என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
     "Telugu": "చాలా మంచిది. మీకు శ్రద్ధగా సహాయం చేయడానికి నేను సిద్ధంగా ఉన్నాను. ఈరోజు మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
@@ -98,7 +99,7 @@ _READY_PROMPTS_BY_LANGUAGE: dict[str, str] = {
 
 _NAME_PROMPTS_BY_LANGUAGE: dict[str, str] = {
     "English": "May I know your preferred name?",
-    "Kannada": "ನಿಮ್ಮ ಆತ್ಮೀಯ ಹೆಸರನ್ನು ತಿಳಿಸಬಹುದೇ?",
+    "Kannada": ui_text("kn", "welcome.name_prompt"),
     "Hindi": "क्या मैं आपका नाम जान सकती हूँ?",
     "Tamil": "உங்கள் பெயரை அறியலாமா?",
     "Telugu": "మీ పేరు ఏమిటో చెప్పగలరా?",
@@ -111,10 +112,7 @@ _READY_PROMPTS_WITH_NAME_BY_LANGUAGE: dict[str, str] = {
         "Wonderful to meet you, {name}. I am ready to help you with care. "
         "What would you like to explore today?"
     ),
-    "Kannada": (
-        "{name}, ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗುವುದು ಸಂತೋಷ. ನಿಮಗೆ ಆತ್ಮೀಯವಾಗಿ ಸಹಾಯ ಮಾಡಲು ನಾನು ಸಿದ್ಧವಾಗಿದ್ದೇನೆ. "
-        "ಇಂದು ನೀವು ಏನನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?"
-    ),
+    "Kannada": ui_text("kn", "welcome.named_narration"),
     "Hindi": (
         "{name}, आपसे मिलकर अच्छा लगा। मैं पूरे ध्यान से आपकी मदद के लिए तैयार हूँ। "
         "आज आप क्या जानना चाहेंगे?"
@@ -172,7 +170,7 @@ _SKIP_GUEST_NAME_PHRASES: frozenset[str] = frozenset(
 _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     "morning": {
         "English": "Good morning. I am CLARA, your campus assistant.",
-        "Kannada": "ಶುಭೋದಯ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Kannada": ui_text("kn", "welcome.general_narration"),
         "Hindi": "सुप्रभात। मैं CLARA हूँ, आपकी कैंपस सहायक।",
         "Tamil": "காலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
         "Telugu": "శుభోదయం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
@@ -180,7 +178,7 @@ _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     },
     "afternoon": {
         "English": "Good afternoon. I am CLARA, your campus assistant.",
-        "Kannada": "ಶುಭ ಮಧ್ಯಾಹ್ನ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Kannada": ui_text("kn", "welcome.general_narration"),
         "Hindi": "शुभ दोपहर। मैं CLARA हूँ, आपकी कैंपस सहायक।",
         "Tamil": "மதிய வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
         "Telugu": "శుభ మధ్యాహ్నం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
@@ -188,7 +186,7 @@ _GREETINGS_BY_PERIOD: dict[str, dict[str, str]] = {
     },
     "evening": {
         "English": "Good evening. I am CLARA, your campus assistant.",
-        "Kannada": "ಶುಭ ಸಂಜೆ. ನಾನು ಕ್ಲಾರಾ, ನಿಮ್ಮ ಕ್ಯಾಂಪಸ್ ಸಹಾಯಕಿ.",
+        "Kannada": ui_text("kn", "welcome.general_narration"),
         "Hindi": "शुभ संध्या। मैं CLARA हूँ, आपकी कैंपस सहायक।",
         "Tamil": "மாலை வணக்கம். நான் கிளாரா, உங்கள் வளாக உதவியாளர்.",
         "Telugu": "శుభ సాయంత్రం. నేను CLARA, మీ క్యాంపస్ సహాయకురాలు.",
@@ -222,7 +220,18 @@ def normalize_guest_name(raw: str | None) -> str | None:
     if not s:
         return None
     if len(s) > _GUEST_NAME_MAX_LEN:
-        s = s[:_GUEST_NAME_MAX_LEN].rsplit(" ", 1)[0].strip() or s[:_GUEST_NAME_MAX_LEN].strip()
+        # Never cut an Indic grapheme cluster. Prefer complete name words; an
+        # overlong single token is rejected instead of producing broken text.
+        words = s.split()
+        kept: list[str] = []
+        for word in words:
+            candidate = " ".join((*kept, word))
+            if len(candidate) > _GUEST_NAME_MAX_LEN:
+                break
+            kept.append(word)
+        if not kept:
+            return None
+        s = " ".join(kept)
     if not s or (s.isdigit() and len(s) > 3):
         return None
     if sum(1 for c in s if c.isalpha()) < 1:

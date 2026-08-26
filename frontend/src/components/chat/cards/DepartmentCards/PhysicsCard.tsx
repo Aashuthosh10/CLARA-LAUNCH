@@ -33,11 +33,6 @@ export default function PhysicsCard({
       tagline: "Exploring the fundamental laws of nature",
       hod: "Dr. Shankar P"
     },
-    Kannada: {
-       name: "ಭೌತಶಾಸ್ತ್ರ ವಿಭಾಗ",
-       tagline: "ಪ್ರಕೃತಿಯ ಮೂಲಭೂತ ನಿಯಮಗಳ ಅನ್ವೇಷಣೆ",
-       hod: "ಡಾ. ಶಂಕರ್ ಪಿ"
-    },
     Hindi: {
        name: "भौतिकी विभाग",
        tagline: "प्रकृति के मूलभूत नियमों की खोज",
@@ -82,3 +77,4 @@ export default function PhysicsCard({
     />
   );
 }
+

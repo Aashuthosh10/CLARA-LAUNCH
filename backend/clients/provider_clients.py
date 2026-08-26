@@ -25,6 +25,7 @@ from backend.config.settings import (
     SARVAM_TTS_PACE,
     SARVAM_TTS_SPEAKER,
 )
+from backend.services.tts_text_contract import sanitize_tts_text
 
 logger = logging.getLogger(__name__)
 
@@ -125,13 +126,19 @@ def _parse_sarvam_audio(response_json: dict[str, Any]) -> str | None:
 
 
 async def sarvam_tts_to_base64(text: str, target_language_code: str) -> str | None:
-    if not SARVAM_API_KEY or not text.strip():
+    sanitized_tts_text = sanitize_tts_text(text)
+    if not SARVAM_API_KEY or not sanitized_tts_text:
+        if text and not sanitized_tts_text:
+            logger.warning(
+                "TTS_PROVIDER_TEXT_REJECTED provider=sarvam reason=empty_after_sanitization narration_chars=%d",
+                len(text) if isinstance(text, str) else 0,
+            )
         return None
 
     client = await get_http_client()
     headers = {"api-subscription-key": SARVAM_API_KEY, "Authorization": f"Bearer {SARVAM_API_KEY}"}
     payload = {
-        "text": text,
+        "text": sanitized_tts_text,
         "model": _SARVAM_TTS_MODEL,
         "target_language_code": target_language_code,
         "speaker": SARVAM_TTS_SPEAKER,
@@ -168,7 +175,7 @@ async def sarvam_tts_to_base64(text: str, target_language_code: str) -> str | No
         def _sync_call() -> str | None:
             sdk = SarvamAI(api_subscription_key=SARVAM_API_KEY)
             result = sdk.text_to_speech.convert(
-                text=text,
+                text=sanitized_tts_text,
                 model=_SARVAM_TTS_MODEL,
                 target_language_code=target_language_code,
                 speaker=SARVAM_TTS_SPEAKER,

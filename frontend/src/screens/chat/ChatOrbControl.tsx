@@ -1,6 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import SiriOrb from '../../components/SiriOrb';
+import { useLanguage } from '../../context/LanguageContext';
+import { uiText } from '../../localization/uiCopy';
+import { getScriptTypography } from '../../features/chat/typography/scriptTypography';
 
 export type ChatOrbState = 'idle' | 'listening' | 'processing' | 'speaking' | 'ready' | 'completed';
 
@@ -24,8 +27,14 @@ export default function ChatOrbControl({
   compact = false,
   comparisonMode = false,
 }: ChatOrbControlProps) {
+  const { language, t } = useLanguage();
+  const scriptClass = getScriptTypography(language).cssClass;
   const aria =
-    isProcessing ? 'Voice input thinking' : orbState === 'listening' ? 'Voice input listening' : 'Tap to speak';
+    isProcessing
+      ? uiText(language, 'status.thinking')
+      : orbState === 'listening'
+        ? uiText(language, 'status.listening')
+        : t('tapToSpeak');
 
   return (
     <motion.div
@@ -78,7 +87,7 @@ export default function ChatOrbControl({
       </div>
       <div className={bottomClassName} style={{ pointerEvents: 'none' }}>
         <span
-          className={`whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${
+          className={`${scriptClass} whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${
             orbState === 'listening'
               ? 'animate-pulse text-indigo-500'
               : isProcessing
@@ -89,7 +98,11 @@ export default function ChatOrbControl({
             opacity: comparisonMode ? 0.88 : isProcessing || orbState === 'listening' ? 0.9 : 0.7,
           }}
         >
-          {isProcessing ? 'Thinking...' : orbState === 'listening' ? 'Listening...' : 'Tap to speak'}
+          {isProcessing
+            ? uiText(language, 'status.thinking')
+            : orbState === 'listening'
+              ? uiText(language, 'status.listening')
+              : t('tapToSpeak')}
         </span>
       </div>
     </motion.div>

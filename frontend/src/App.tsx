@@ -14,8 +14,15 @@ import {
   useWebSocket,
 } from './hooks/useWebSocket';
 import { useLanguage } from './context/LanguageContext';
+import { uiText } from './localization/uiCopy';
+import { getScriptTypography } from './features/chat/typography/scriptTypography';
 import { agentLog, registerClaraDebugInteractionAudit } from './debug/interactionDebug';
 import { runHardResetTransaction } from './session/hardResetTransaction';
+import {
+  beginVisitorSession,
+  getVisitorLanguage,
+  getVisitorSessionId,
+} from './session/visitorSession';
 import { kioskStore } from './store/kiosk/kioskStore';
 import { KioskState } from './store/kiosk/types';
 import { useFaceChannel } from './hooks/useFaceChannel';
@@ -79,7 +86,8 @@ function ClaraKioskRuntime({
   runtimeSessionKey,
   scheduleFullRuntimeRemount,
 }: ClaraKioskRuntimeProps) {
-  const { resetToDefaultLanguage } = useLanguage();
+  const { language, resetToDefaultLanguage } = useLanguage();
+  const scriptClass = getScriptTypography(language).cssClass;
   const faceChannel = useFaceChannel();
   const {
     state,
@@ -150,6 +158,30 @@ function ClaraKioskRuntime({
     setLastHardResetAt(Date.now());
     resetClaraSession();
   }, [resetClaraSession]);
+
+  // K1: on every (re)connect, re-register the active visitor session and its
+  // canonical selected language so a new backend socket rebinds to `kn` etc.
+  // without replaying any welcome. Runs only when a selection is stored; after
+  // a visitor reset the storage is cleared so nothing stale is restored.
+  const lastConnectedRef = useRef(false);
+  useEffect(() => {
+    if (!isConnected) {
+      lastConnectedRef.current = false;
+      return;
+    }
+    if (lastConnectedRef.current) return;
+    lastConnectedRef.current = true;
+    const storedCode = getVisitorLanguage();
+    const visitorId = getVisitorSessionId();
+    if (storedCode && visitorId) {
+      sendMessage({
+        action: 'restore_language',
+        language_code_key: storedCode,
+        visitor_session_id: visitorId,
+        ui_state: effectiveStateRef.current,
+      });
+    }
+  }, [isConnected, sendMessage]);
 
   const scheduleChatUserInactivityTimer = useCallback(() => {
     clearChatUserInactivityTimer();
@@ -319,7 +351,10 @@ function ClaraKioskRuntime({
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
               onWake={() => {
-                sendMessage({ action: 'wake' });
+                // K1: waking begins a visitor session; the id is bound to the
+                // backend session so language restoration can be validated.
+                const visitorId = beginVisitorSession();
+                sendMessage({ action: 'wake', visitor_session_id: visitorId });
                 setManualState(5);
                 setShowChatLanguageGate(true);
               }}
@@ -343,7 +378,9 @@ function ClaraKioskRuntime({
                 voiceInputMode={VOICE_INPUT_MODE}
                 inlineLanguageGate={showChatLanguageGate}
                 onInlineLanguageResolved={() => setShowChatLanguageGate(false)}
-                onBack={() => setManualState(0)}
+                // K1: returning to sleep is a new-visitor boundary — run the
+                // full deterministic reset so no language persists across visitors.
+                onBack={resetClaraSessionWithTimestamp}
                 onHome={resetClaraSessionWithTimestamp}
                 onOrbTap={() => {
                   reportChatUserActivity();
@@ -386,10 +423,10 @@ function ClaraKioskRuntime({
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden font-sans">
       {showOfflineBanner && (
-        <div className="absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs text-center backdrop-blur-md">
-          System connectivity issues.{' '}
+        <div className={`${scriptClass} absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs text-center backdrop-blur-md`}>
+          {uiText(language, 'status.connectivity_issue')}{' '}
           <button type="button" onClick={retryConnect} className="underline font-bold">
-            Retry Connection
+            {uiText(language, 'session.retry_connection')}
           </button>
           {faceChannel.enabled && (
             <>
@@ -400,7 +437,7 @@ function ClaraKioskRuntime({
                 onClick={() => faceChannel.openFaceWindow()}
                 className="underline font-bold"
               >
-                Enable Face Display
+                {uiText(language, 'session.enable_face_display')}
               </button>
             </>
           )}

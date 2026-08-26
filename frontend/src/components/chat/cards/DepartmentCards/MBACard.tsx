@@ -33,11 +33,6 @@ export default function MBACard({
       tagline: "Developing leaders for a global economy",
       hod: "Dr. Jogish D"
     },
-    Kannada: {
-       name: "ಮಾಸ್ಟರ್ ಆಫ್ ಬಿಸಿನೆಸ್ ಅಡ್ಮಿನಿಸ್ಟ್ರೇಷನ್",
-       tagline: "ಜಾಗತಿಕ ಆರ್ಥಿಕತೆಗಾಗಿ ನಾಯಕರನ್ನು ರೂಪಿಸುತ್ತಿದ್ದೇವೆ",
-       hod: "ಡಾ. ಜೋಗಿಶ್ ಡಿ"
-    },
     Hindi: {
        name: "मास्टर ऑफ बिजनेस एडमिनिस्ट्रेशन",
        tagline: "वैश्विक अर्थव्यवस्था के लिए नेताओं का विकास",
@@ -82,3 +77,4 @@ export default function MBACard({
     />
   );
 }
+

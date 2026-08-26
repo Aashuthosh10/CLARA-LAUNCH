@@ -33,11 +33,6 @@ export default function ISECard({
       tagline: "Managing information, empowering minds",
       hod: "Dr. Vrinda Shetty"
     },
-    Kannada: {
-       name: "ಮಾಹಿತಿ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್",
-       tagline: "ಮಾಹಿತಿ ನಿರ್ವಹಣೆ, ಮನಸ್ಸುಗಳ ಸಬಲೀಕರಣ",
-       hod: "ಡಾ. ವೃಂದಾ ಶೆಟ್ಟಿ"
-    },
     Hindi: {
        name: "सूचना विज्ञान और इंजीनियरिंग",
        tagline: "सूचना प्रबंधन, दिमागों का सशक्तिकरण",
@@ -82,3 +77,4 @@ export default function ISECard({
     />
   );
 }
+

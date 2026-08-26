@@ -4,6 +4,7 @@ import type {
   TransitionPolicy,
 } from './types';
 import { buildTimelineFromPlan, validateTimeline } from './presentationTimeline';
+import { clipLocalizedText } from '../../../localization/clipLocalizedText';
 
 let presentationSeq = 0;
 
@@ -99,7 +100,7 @@ export function cardsToScenes(
     const record = card && typeof card === 'object' ? (card as Record<string, unknown>) : null;
     const title = typeof record?.title === 'string' ? record.title : '';
     const content = typeof record?.content === 'string' ? record.content : '';
-    const caption = [title, content].filter(Boolean).join(' — ').slice(0, 220);
+    const caption = clipLocalizedText([title, content].filter(Boolean).join(' — '), 220);
     const cardId = typeof record?.type === 'string' ? record.type : `card_${i}`;
     const unitId = typeof record?.unitId === 'string' && record.unitId.trim()
       ? record.unitId.trim()

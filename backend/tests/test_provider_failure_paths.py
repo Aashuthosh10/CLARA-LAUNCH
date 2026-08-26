@@ -37,9 +37,17 @@ class ProviderFailurePathTests(unittest.IsolatedAsyncioTestCase):
             ws_auth, "WS_AUTH_REQUIRED", False
         ), patch.object(main, "record_audio", return_value=(_minimal_wav(), None, {"duration_ms": 100.0})), patch.object(
             main, "sarvam_stt_from_wav", new=AsyncMock(side_effect=asyncio.TimeoutError)
+        ), patch.object(
+            # K1: the mic path is gated on an explicit language selection, so
+            # establish one before exercising the STT failure path.
+            main,
+            "tts_to_base64_cached",
+            new=AsyncMock(return_value=(None, {})),
         ):
             client = self._connect_client()
             with client.websocket_connect("/ws/clara", headers={"origin": "http://localhost:5176"}) as websocket:
+                websocket.receive_json()
+                websocket.send_json({"action": "language_selected", "language_code_key": "en"})
                 websocket.receive_json()
                 websocket.send_json({"action": "mic_start"})
                 seen_error = None
@@ -59,9 +67,17 @@ class ProviderFailurePathTests(unittest.IsolatedAsyncioTestCase):
             ws_auth, "WS_AUTH_REQUIRED", False
         ), patch.object(main, "record_audio", return_value=(_minimal_wav(), None, {"duration_ms": 100.0})), patch.object(
             main, "sarvam_stt_from_wav", new=AsyncMock(return_value=("", {}))
+        ), patch.object(
+            # K1: the mic path is gated on an explicit language selection, so
+            # establish one before exercising the STT failure path.
+            main,
+            "tts_to_base64_cached",
+            new=AsyncMock(return_value=(None, {})),
         ):
             client = self._connect_client()
             with client.websocket_connect("/ws/clara", headers={"origin": "http://localhost:5176"}) as websocket:
+                websocket.receive_json()
+                websocket.send_json({"action": "language_selected", "language_code_key": "en"})
                 websocket.receive_json()
                 websocket.send_json({"action": "mic_start"})
                 seen_error = None

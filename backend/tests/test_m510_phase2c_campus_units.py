@@ -180,7 +180,10 @@ class TestPhase2CLocalizationAndNarration(unittest.TestCase):
         self.assertTrue(all(u.language_code == "kn" for u in units))
         segs = map_content_units_to_segments(units, lang_key="kn")
         self.assertEqual([s.unit_id for s in segs], list(plan.units))
-        self.assertEqual(len({(s.tts_text or "") for s in segs}), 3)
+        # Unconfirmed Kannada sample facts retain their unit identities but
+        # must all narrate the approved status message, never placeholder copy.
+        self.assertTrue(all(SAMPLE_STATUS not in (s.tts_text or "") for s in segs))
+        self.assertTrue(all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in (s.tts_text or "") for s in segs))
 
 
 class TestPhase2CDecision(unittest.TestCase):

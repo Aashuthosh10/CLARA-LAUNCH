@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useLanguage, type Language } from '../../../context/LanguageContext';
+import { uiText } from '../../../localization/uiCopy';
 
 const DOCUMENTS_EN: string[] = [
   '10th Marks Card',
@@ -14,29 +15,16 @@ const DOCUMENTS_EN: string[] = [
   'VTU Eligibility Certificate (if required)',
 ];
 
-const TITLE_BY_LANGUAGE: Record<Language, string> = {
+const TITLE_BY_LANGUAGE: Partial<Record<Language, string>> = {
   English: 'Required Documents',
-  Kannada: 'ಅಗತ್ಯ ದಾಖಲೆಗಳು',
   Hindi: 'आवश्यक दस्तावेज़',
   Tamil: 'தேவையான ஆவணங்கள்',
   Telugu: 'అవసరమైన పత్రాలు',
   Malayalam: 'ആവശ്യമായ രേഖകൾ',
 };
 
-const DOCUMENT_TRANSLATIONS: Record<Language, Record<string, string>> = {
+const DOCUMENT_TRANSLATIONS: Partial<Record<Language, Record<string, string>>> = {
   English: {},
-  Kannada: {
-    '10th Marks Card': '10ನೇ ತರಗತಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್',
-    '12th / II PUC Marks Card': '12ನೇ / ದ್ವಿತೀಯ ಪಿಯುಸಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್',
-    'CET / COMEDK Rank Card + Allotment Letter': 'CET / COMEDK ರ್ಯಾಂಕ್ ಕಾರ್ಡ್ + ಅಲಾಟ್ಮೆಂಟ್ ಲೆಟರ್',
-    'Transfer Certificate (TC)': 'ಟ್ರಾನ್ಸ್‌ಫರ್ ಪ್ರಮಾಣಪತ್ರ (TC)',
-    'Conduct / Character Certificate': 'ಕಂಡಕ್ಟ್ / ಕ್ಯಾರಕ್ಟರ್ ಪ್ರಮಾಣಪತ್ರ',
-    'Caste / Income Certificate (if applicable)': 'ಜಾತಿ / ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ (ಅಗತ್ಯವಿದ್ದರೆ)',
-    'Aadhaar Card Copy': 'ಆಧಾರ್ ಕಾರ್ಡ್ ಪ್ರತ',
-    'Passport Size Photos (6–10)': 'ಪಾಸ್ಪೋರ್ಟ್ ಗಾತ್ರದ ಫೋಟೋಗಳು (6–10)',
-    'Migration Certificate (for other board students)': 'ಮೈಗ್ರೇಶನ್ ಪ್ರಮಾಣಪತ್ರ (ಇತರೆ ಬೋರ್ಡ್ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ)',
-    'VTU Eligibility Certificate (if required)': 'VTU ಅರ್ಹತಾ ಪ್ರಮಾಣಪತ್ರ (ಅಗತ್ಯವಿದ್ದರೆ)',
-  },
   Hindi: {
     '10th Marks Card': '10वीं अंकतालिका',
     '12th / II PUC Marks Card': '12वीं / II PUC अंकतालिका',
@@ -99,15 +87,34 @@ function iconForDocument(doc: string): string {
 
 export default function DocumentsBlock() {
   const { language } = useLanguage();
-  const title = TITLE_BY_LANGUAGE[language] ?? TITLE_BY_LANGUAGE.English;
-  const translations = DOCUMENT_TRANSLATIONS[language] ?? DOCUMENT_TRANSLATIONS.English;
+  const isKannada = language === 'Kannada';
+  const title = isKannada
+    ? uiText('Kannada', 'documents.title')
+    : TITLE_BY_LANGUAGE[language] ?? TITLE_BY_LANGUAGE.English;
+  const translations = DOCUMENT_TRANSLATIONS[language] ?? DOCUMENT_TRANSLATIONS.English ?? {};
   const items = useMemo(
     () =>
-      DOCUMENTS_EN.map((doc) => ({
-        text: translations[doc] ?? doc,
-        icon: iconForDocument(doc),
-      })),
-    [translations],
+      isKannada
+        ? [
+            'marks_10',
+            'marks_12',
+            'rank_allotment',
+            'transfer',
+            'conduct',
+            'caste_income',
+            'aadhaar',
+            'photos',
+            'migration',
+            'vtu_eligibility',
+          ].map((key) => ({
+            text: uiText('Kannada', `documents.items.${key}`),
+            icon: iconForDocument(key),
+          }))
+        : DOCUMENTS_EN.map((doc) => ({
+            text: translations[doc] ?? doc,
+            icon: iconForDocument(doc),
+          })),
+    [isKannada, translations],
   );
 
   return (
@@ -130,3 +137,4 @@ export default function DocumentsBlock() {
     </div>
   );
 }
+

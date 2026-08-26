@@ -412,7 +412,14 @@ def _clip_caption(text: str, max_len: int = 240) -> str:
     s = _clean(text)
     if len(s) <= max_len:
         return s
-    return s[: max_len - 1] + "…"
+    # Only emit complete words. This also prevents truncation between a
+    # Kannada base character and its dependent vowel/virama marks.
+    window = s[: max_len - 1]
+    boundaries = [window.rfind(mark) for mark in (" ", ".", "?", "!", ";", ",")]
+    boundary = max(boundaries)
+    if boundary < max_len // 2:
+        return s
+    return window[:boundary].rstrip() + "…"
 
 
 def _pick_department_prompt_hod(locale_id: str) -> str:
@@ -915,6 +922,12 @@ def _admissions_slides(data: dict[str, Any], locale_id: str) -> list[tuple[str, 
         ).strip()
 
     pg_body = _clean(fee_rec.get("pg_mba")) if isinstance(fee_rec, dict) else ""
+    if lk == "kn":
+        from backend.services.ui_localization import ui_text
+
+        blocked_fees = ui_text("kn", "availability.official_fact_blocked")
+        ug_body = blocked_fees
+        pg_body = blocked_fees
 
     scholarships_lines: list[str] = []
     if _clean(rec.get("scholarships")):

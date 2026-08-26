@@ -12,6 +12,7 @@ import MathematicsCard from './MathematicsCard';
 import PhysicsCard from './PhysicsCard';
 import ChemistryCard from './ChemistryCard';
 import BusinessSystemsCard from './BusinessSystemsCard';
+import CanonicalKannadaDepartmentCard from './CanonicalKannadaDepartmentCard';
 
 const COMPONENT_MAP: Record<string, any> = {
   'CSE': CSECard,
@@ -37,6 +38,9 @@ export default function DepartmentCardFactory({
   departmentId: string;
   [key: string]: any;
 }) {
+  if (props.language === 'Kannada') {
+    return <CanonicalKannadaDepartmentCard {...props} departmentId={departmentId} />;
+  }
   const Component = COMPONENT_MAP[departmentId] || COMPONENT_MAP['CSE'];
   return <Component {...props} departmentId={departmentId} />;
 }

@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import {
+  codeToLanguage,
+  languageToCode,
+  type LanguageCode,
+  type LanguageName,
+} from '../session/languageCodes';
+import {
+  endVisitorSession,
+  getVisitorLanguage,
+  setVisitorLanguage,
+} from '../session/visitorSession';
+import { uiText } from '../localization/uiCopy';
 
-export type Language = 'English' | 'Kannada' | 'Hindi' | 'Tamil' | 'Telugu' | 'Malayalam';
+export type Language = LanguageName;
 
 interface Translations {
   [key: string]: {
@@ -383,10 +395,26 @@ export const translations: Translations = {
   },
 };
 
+// Kannada fixed UI copy is owned by backend/data/locales/ui.json so the
+// browser and WebSocket backend cannot drift on user-visible states.
+translations.welcome.Kannada = uiText('Kannada', 'welcome.general_display');
+translations.selectLanguage.Kannada = uiText('Kannada', 'language.select');
+translations.mainMenu.Kannada = uiText('Kannada', 'welcome.general_narration');
+translations.listening.Kannada = uiText('Kannada', 'status.listening');
+translations.claraIsThinking.Kannada = uiText('Kannada', 'status.thinking');
+translations.chatBack.Kannada = uiText('Kannada', 'session.back');
+
 interface LanguageContextType {
   language: Language;
+  /**
+   * K1 canonical authority: the selected application language code, or null
+   * while no explicit selection has been made (null ≠ English).
+   */
+  selectedCode: LanguageCode | null;
+  /** Explicit selection by canonical code — the only authoritative write path. */
+  selectLanguageCode: (code: LanguageCode) => void;
   setLanguage: (lang: Language) => void;
-  /** Hard session reset: kiosk default language (fresh boot). */
+  /** Hard session reset: clears selection and visitor-scoped persistence. */
   resetToDefaultLanguage: () => void;
   t: (key: string) => string;
 }
@@ -394,19 +422,45 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('English');
+  // Initial state restores the visitor-session selection (refresh continuity);
+  // null means "language not selected" — UI chrome falls back to English until pick.
+  const [selectedCode, setSelectedCode] = useState<LanguageCode | null>(() =>
+    getVisitorLanguage()
+  );
+
+  const language: Language = selectedCode ? codeToLanguage(selectedCode) : 'English';
+
+  const selectLanguageCode = React.useCallback((code: LanguageCode) => {
+    setVisitorLanguage(code);
+    setSelectedCode(code);
+  }, []);
+
+  const setLanguage = React.useCallback(
+    (lang: Language) => {
+      selectLanguageCode(languageToCode(lang));
+    },
+    [selectLanguageCode]
+  );
 
   const t = (key: string) => {
     return translations[key]?.[language] || key;
   };
 
   const resetToDefaultLanguage = React.useCallback(() => {
-    setLanguage('English');
+    endVisitorSession();
+    setSelectedCode(null);
   }, []);
 
   return (
     <LanguageContext.Provider
-      value={{ language, setLanguage, resetToDefaultLanguage, t }}
+      value={{
+        language,
+        selectedCode,
+        selectLanguageCode,
+        setLanguage,
+        resetToDefaultLanguage,
+        t,
+      }}
     >
       {children}
     </LanguageContext.Provider>

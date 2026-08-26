@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Language } from '../context/LanguageContext';
+import { uiText } from '../localization/uiCopy';
 
 const LANGUAGE_TO_BCP47: Record<Language, string> = {
   English: 'en-IN',
@@ -10,27 +11,31 @@ const LANGUAGE_TO_BCP47: Record<Language, string> = {
   Malayalam: 'ml-IN',
 };
 
-function errorCodeToMessage(code: string): string {
+export function errorCodeToMessage(code: string, language: Language): string {
   switch (code) {
     case 'not-allowed':
-      return 'Microphone access denied.';
+      return uiText(language, 'error.microphone_denied');
     case 'no-speech':
-      return 'No speech heard. Try again.';
+      return uiText(language, 'error.no_speech');
     case 'network': {
       // Chrome Web Speech API talks to Google’s cloud STT — not CLARA’s backend.
       const offline =
         typeof navigator !== 'undefined' && navigator.onLine === false;
       if (offline) {
-        return 'You appear offline. Connect to the internet and tap to speak again.';
+        return uiText(language, 'error.offline');
       }
-      return 'Voice recognition could not reach the speech service. Check internet, then tap to speak again.';
+      return uiText(language, 'error.network');
     }
     case 'audio-capture':
-      return 'No microphone found.';
+      return uiText(language, 'error.microphone_missing');
     case 'service-not-allowed':
-      return 'Browser blocked voice input.';
+      return uiText(language, 'error.microphone_blocked');
+    case 'unsupported':
+      return uiText(language, 'error.voice_unsupported');
+    case 'start-failed':
+      return uiText(language, 'error.microphone_start');
     default:
-      return 'Voice input failed. Try again.';
+      return uiText(language, 'error.voice_failed');
   }
 }
 
@@ -70,7 +75,7 @@ export function useSpeechRecognition(
         (win as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition
       : undefined;
     if (!SpeechRecognitionCtor) {
-      onError?.('unsupported', 'Voice input is not supported. Please use Chrome or Edge.');
+      onError?.('unsupported', errorCodeToMessage('unsupported', language));
       return;
     }
 
@@ -84,7 +89,7 @@ export function useSpeechRecognition(
       const transcript = result?.[0]?.transcript?.trim();
       if (transcript) {
         const sent = sendMessageRef.current({ action: 'user_message', text: transcript });
-        if (sent === false) onError?.('network', 'Connection lost. Try again.');
+        if (sent === false) onError?.('network', uiText(language, 'status.connection_lost'));
       } else {
         onEmptyRef.current?.();
       }
@@ -108,7 +113,7 @@ export function useSpeechRecognition(
           timestamp: new Date().toISOString(),
         });
       }
-      const userMessage = errorCodeToMessage(code);
+      const userMessage = errorCodeToMessage(code, language);
       if (userMessage) onError?.(code, userMessage);
       try {
         if (typeof recognition.abort === 'function') recognition.abort();
@@ -144,7 +149,7 @@ export function useSpeechRecognition(
           });
       }
     } catch {
-      onError?.('start-failed', 'Could not start microphone. Try again.');
+      onError?.('start-failed', errorCodeToMessage('start-failed', language));
       recognitionRef.current = null;
       isListeningRef.current = false;
       setIsListening(false);

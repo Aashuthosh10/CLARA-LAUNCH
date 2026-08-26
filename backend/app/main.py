@@ -34,7 +34,7 @@ from backend.clients.provider_clients import (
     sarvam_tts_to_base64,
     warmup_clients,
 )
-from backend.app.error_events import build_error_payload, error_hint
+from backend.app.error_events import build_error_payload
 from backend.app.audio_utils import (
     audio_bytes_len,
     estimate_wav_duration_ms,
@@ -119,6 +119,7 @@ from backend.services.greetings import (
     get_wakeup_language_gate_tts_text,
     greeting_font_family_css,
 )
+from backend.services.ui_localization import ui_text
 from backend.services.faq_answers import get_faq_answer_for_question
 from backend.services.tts_chunking import split_tts_chunks
 from backend.services.tts_orchestrator import (
@@ -127,7 +128,14 @@ from backend.services.tts_orchestrator import (
     plan_response_tts,
     tts_cache_material,
 )
-from backend.services.session_language import resolve_session_language, set_session_language, should_run_auto_detect
+from backend.services.tts_text_contract import build_narration_text_contract
+from backend.core.language_detection import LANGUAGE_KEY_TO_NAME
+from backend.services.session_language import (
+    normalize_application_language,
+    resolve_session_language,
+    set_session_language,
+    should_run_auto_detect,
+)
 from backend.services.conversation import govern_answer_length
 from backend.services.conversation.answer_language import resolve_answer_language
 from backend.services.conversation.intent_confidence import is_card_intent
@@ -190,6 +198,7 @@ from backend.services.answer_generation import (
     get_off_topic_reply,
     get_profile_direct_reply,
     get_unavailable_reply,
+    generated_reply_is_safe_for_language,
     is_narrator_intent,
     locale_file_id_for_lang_key,
     maybe_override_intent_with_executive_profile,
@@ -318,9 +327,10 @@ def _looks_clear_english(text: str) -> bool:
 def _fees_card_direct_reply(language_key: str, department: str | None) -> str:
     dept = (department or "").strip()
     if not dept:
-        return "Please specify the department to view fee structure."
+        return ui_text(language_key, "clarification.fees_department")
+    if language_key == "kn":
+        return ui_text("kn", "action.fees", department=dept)
     mapping = {
-        "kn": f"{dept} ವಿಭಾಗದ ಶುಲ್ಕ ವಿವರಗಳನ್ನು ತೆರುತ್ತಿದ್ದೇನೆ.",
         "hi": f"{dept} विभाग की फीस जानकारी दिखा रही हूँ।",
         "ta": f"{dept} துறைக்கான கட்டண விவரத்தை காட்டுகிறேன்.",
         "te": f"{dept} విభాగానికి ఫీజు వివరాలు చూపిస్తున్నాను.",
@@ -344,16 +354,19 @@ def _documents_card_direct_reply(language_key: str) -> str:
     ]
     spoken_lists: dict[str, list[str]] = {
         "kn": [
-            "10ನೇ ತರಗತಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
-            "12ನೇ ಅಥವಾ ದ್ವಿತೀಯ ಪಿಯುಸಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
-            "ಸಿಇಟಿ ಅಥವಾ ಕೋಮೆಡ್ಕೆ ರ್ಯಾಂಕ್ ಕಾರ್ಡ್ ಮತ್ತು ಅಲಾಟ್ಮೆಂಟ್ ಲೆಟರ್",
-            "ಟ್ರಾನ್ಸ್‌ಫರ್ ಸರ್ಟಿಫಿಕೆಟ್",
-            "ಕಂಡಕ್ಟ್ ಅಥವಾ ಕ್ಯಾರಕ್ಟರ್ ಸರ್ಟಿಫಿಕೆಟ್",
-            "ಜಾತಿ ಅಥವಾ ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ ಅಗತ್ಯವಿದ್ದರೆ",
-            "ಆಧಾರ್ ಕಾರ್ಡ್ ಪ್ರತಿಯೊಂದು",
-            "ಪಾಸ್ಪೋರ್ಟ್ ಸೈಸ್ ಫೋಟೋಗಳು ಆರುರಿಂದ ಹತ್ತು",
-            "ಇತರೆ ಬೋರ್ಡ್ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಮೈಗ್ರೇಶನ್ ಪ್ರಮಾಣಪತ್ರ",
-            "ಅಗತ್ಯವಿದ್ದರೆ ವಿ ಟಿ ಯು ಅರ್ಹತಾ ಪ್ರಮಾಣಪತ್ರ",
+            ui_text("kn", f"documents.items.{key}")
+            for key in (
+                "marks_10",
+                "marks_12",
+                "rank_allotment",
+                "transfer",
+                "conduct",
+                "caste_income",
+                "aadhaar",
+                "photos",
+                "migration",
+                "vtu_eligibility",
+            )
         ],
         "hi": [
             "दसवीं की मार्क्स कार्ड",
@@ -405,10 +418,14 @@ def _documents_card_direct_reply(language_key: str) -> str:
         ],
     }
     items = spoken_lists.get(language_key, docs_en)
+    if language_key == "kn":
+        return ui_text("kn", "action.documents", items="; ".join(items))
     return "Required documents are: " + "; ".join(items) + "."
 
 
 def _location_direct_reply(language_key: str) -> str:
+    if language_key == "kn":
+        return ui_text("kn", "action.location")
     mapping = {
         "en": "SVIT is located in Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064.",
         "hi": "SVIT का स्थान Rajanukunte, Via Yalahanka, Bengaluru, Karnataka 560 064 है।",
@@ -450,27 +467,41 @@ def _apply_response_decision_to_intent(
 def _card_direct_reply(intent: str, language_key: str, department: str | None = None) -> str | None:
     dept = (department or "").strip()
     if intent == INTENT_ADMISSIONS:
+        if language_key == "kn":
+            return ui_text("kn", "action.admissions")
         return {
             "hi": "Admission ki jankari screen par dikha rahi hoon.",
             "kn": "ಪ್ರವೇಶ ಮಾಹಿತಿ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
         }.get(language_key, "Showing admissions information on screen.")
     if intent == INTENT_PLACEMENTS:
+        if language_key == "kn":
+            return ui_text("kn", "action.placements")
         return {
             "hi": "Placement ki jankari screen par dikha rahi hoon.",
             "kn": "ಪ್ಲೇಸ್ಮೆಂಟ್ ಮಾಹಿತಿ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
         }.get(language_key, "Showing placement information on screen.")
     if intent == INTENT_DEPARTMENT_OVERVIEW:
+        if language_key == "kn":
+            return ui_text("kn", "action.department", department=dept or "")
         return f"Showing {dept or 'department'} information on screen."
     if intent == INTENT_HOD_PROFILE and dept:
+        if language_key == "kn":
+            return ui_text("kn", "action.hod", department=dept)
         return f"Showing the HOD information for {dept}."
     if intent in {INTENT_COLLEGE_OVERVIEW, INTENT_TRUSTEES_PROFILE, INTENT_HOD_TRUSTEES_PROFILE}:
+        if language_key == "kn":
+            return ui_text("kn", "action.college")
         return "Showing the requested college information on screen."
     if intent == INTENT_PRINCIPAL_PROFILE:
+        if language_key == "kn":
+            return ui_text("kn", "action.principal")
         return {
             "hi": "Principal profile screen par dikha raha hoon.",
             "kn": "ಪ್ರಾಂಶುಪಾಲರ ಪ್ರೊಫೈಲ್ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
         }.get(language_key, "Showing the Principal profile on screen.")
     if intent == INTENT_VICE_PRINCIPAL_PROFILE:
+        if language_key == "kn":
+            return ui_text("kn", "action.vice_principal")
         return {
             "hi": "Vice principal profile screen par dikha raha hoon.",
             "kn": "ಉಪ ಪ್ರಾಂಶುಪಾಲರ ಪ್ರೊಫೈಲ್ ಪರದೆಯ ಮೇಲೆ ತೋರಿಸುತ್ತಿದ್ದೇನೆ.",
@@ -682,13 +713,26 @@ async def tts_to_base64_cached(
     allow_english_fallback: bool = True,
     metrics: dict[str, Any] | None = None,
 ) -> tuple[str | None, bool]:
-    tts_text = normalize_tts_pronunciation(text)
+    text_contract = build_narration_text_contract(
+        narration_text=normalize_tts_pronunciation(text),
+    )
+    narration_text = text_contract.narration_text
+    sanitized_tts_text = text_contract.sanitized_tts_text
+    if not sanitized_tts_text:
+        logger.warning(
+            "TTS_TEXT_REJECTED turn_id=%s kind=%s lang=%s reason=empty_after_sanitization narration_chars=%d",
+            turn_id or "-",
+            utterance_kind,
+            language_code,
+            len(narration_text),
+        )
+        return None, False
     key_material = tts_cache_material(
         language_code=language_code,
         speaker=SARVAM_TTS_SPEAKER,
         pace=SARVAM_TTS_PACE,
         model="bulbul:v3",
-        text=tts_text,
+        text=sanitized_tts_text,
     )
     key = hashlib.sha256(key_material.encode("utf-8")).hexdigest()
     logger.info(
@@ -696,8 +740,8 @@ async def tts_to_base64_cached(
         turn_id or "-",
         utterance_kind,
         language_code,
-        len(tts_text or ""),
-        text_preview(tts_text),
+        len(sanitized_tts_text),
+        text_preview(sanitized_tts_text),
     )
     cached = TTS_CACHE.get(key)
     if cached:
@@ -733,7 +777,10 @@ async def tts_to_base64_cached(
         logger.info("TTS_HTTP_START turn_id=%s kind=%s", turn_id or "-", utterance_kind)
         used_english_fallback = False
         try:
-            audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, language_code), timeout=provider_timeout_s)
+            audio = await asyncio.wait_for(
+                sarvam_tts_to_base64(sanitized_tts_text, language_code),
+                timeout=provider_timeout_s,
+            )
         except asyncio.TimeoutError:
             logger.warning(
                 "TTS primary language timed out turn_id=%s kind=%s lang=%s timeout_s=%.2f",
@@ -763,7 +810,10 @@ async def tts_to_base64_cached(
             if metrics is not None:
                 metrics["tts_retries_per_turn"] = int(metrics.get("tts_retries_per_turn") or 0) + 1
             try:
-                audio = await asyncio.wait_for(sarvam_tts_to_base64(tts_text, "en-IN"), timeout=provider_timeout_s)
+                audio = await asyncio.wait_for(
+                    sarvam_tts_to_base64(sanitized_tts_text, "en-IN"),
+                    timeout=provider_timeout_s,
+                )
             except asyncio.TimeoutError:
                 logger.warning(
                     "TTS fallback language timed out turn_id=%s kind=%s timeout_s=%.2f",
@@ -1770,10 +1820,10 @@ async def process_user_text_and_reply(
             if is_location_turn:
                 direct_reply = _location_direct_reply(lang_key)
             if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
-                direct_reply = "Please specify the department to know the HOD."
+                direct_reply = ui_text(lang_key, "clarification.hod_department")
         elif auth == ResponseAuthority.CARD_PRESENTATION.value:
             if intent == INTENT_HOD_PROFILE and not entity_map.get("department"):
-                direct_reply = "Please specify the department to know the HOD."
+                direct_reply = ui_text(lang_key, "clarification.hod_department")
             elif intent == INTENT_COURSE_MENU:
                 direct_reply = get_course_menu_spoken_prompt(lang_name)
             elif intent == INTENT_BUS_ROUTES:
@@ -1960,12 +2010,26 @@ async def process_user_text_and_reply(
                     model=RAG_MODEL,
                 )
             except Exception:
-                logger.exception("Reply translation failed; using English output")
+                logger.exception("Reply translation failed; using localized unavailable response")
+                reply_text = get_unavailable_reply(lang_name)
+
+        if (
+            reply_text
+            and not direct_reply
+            and lang_key == "kn"
+            and not generated_reply_is_safe_for_language(reply_text, lang_key)
+        ):
+            logger.warning(
+                "Rejected generated Kannada reply that violated the language contract turn_id=%s",
+                timing.turn_id,
+            )
+            reply_text = get_unavailable_reply(lang_name)
+            first_sentence = ""
 
         if not reply_text:
             if is_narrator_intent(intent):
                 if lang_key == "kn":
-                    reply_text = "ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ."
+                    reply_text = ui_text("kn", "availability.missing_source").replace("\n", " ")
                 elif lang_key == "hi":
                     reply_text = "जानकारी स्क्रीन पर प्रदर्शित हो रही है।"
                 elif lang_key == "te":
@@ -2841,7 +2905,7 @@ async def process_user_text_and_reply(
         try:
             err_payload = build_error_payload(
                 "PROCESS_FAILED",
-                "Something went wrong. Please try again.",
+                ui_text(session.get("language_code_key"), "error.backend"),
                 timing.turn_id,
                 recoverable=True,
             )
@@ -3134,6 +3198,7 @@ async def websocket_clara(websocket: WebSocket):
         "awaiting_guest_name": False,
         "cached_greeting_audio": None,
         "cached_greeting_message": None,
+        "visitor_session_id": None,
     }
 
     try:
@@ -3179,6 +3244,7 @@ async def websocket_clara(websocket: WebSocket):
                         "awaiting_guest_name": False,
                         "cached_greeting_audio": None,
                         "cached_greeting_message": None,
+                        "visitor_session_id": None,
                     }
                 )
                 await _ws_send_json(websocket, 0, session, None)
@@ -3202,7 +3268,44 @@ async def websocket_clara(websocket: WebSocket):
 
             if action == "wake":
                 # Client goes straight to chat; language is chosen inline after the first greeting.
+                # Bind the visitor-session identity so later restore_language calls can be
+                # validated against the active visitor (stale visitors fail closed).
+                visitor_id = msg.get("visitor_session_id")
+                if isinstance(visitor_id, str) and visitor_id.strip():
+                    session["visitor_session_id"] = visitor_id.strip()
                 await _ws_send_json(websocket, 5, session, None)
+                continue
+
+            if action == "restore_language":
+                # K1: re-establish the canonical selected language on a new socket
+                # (reconnect / refresh) without replaying any welcome narration.
+                requested = normalize_application_language(msg.get("language_code_key"))
+                visitor_id = msg.get("visitor_session_id")
+                ui_state = msg.get("ui_state")
+                if ui_state not in (0, 3, 4, 5):
+                    ui_state = 0
+                bound_visitor_id = session.get("visitor_session_id")
+                restore_ok = (
+                    requested is not None
+                    and not is_language_frozen(session)
+                    and isinstance(visitor_id, str)
+                    and bool(visitor_id.strip())
+                    and bound_visitor_id is not None
+                    and visitor_id.strip() == bound_visitor_id
+                )
+                if restore_ok:
+                    set_session_language(session, requested, is_auto=False)
+                    session["language_detection"] = None
+                await _ws_send_json(
+                    websocket,
+                    ui_state,
+                    session,
+                    {
+                        "type": "language_restored",
+                        "restored": bool(restore_ok),
+                        **({"language_code_key": requested} if restore_ok else {}),
+                    },
+                )
                 continue
 
             if action == "language_gate_prompt":
@@ -3228,10 +3331,21 @@ async def websocket_clara(websocket: WebSocket):
                 continue
 
             if action == "language_selected":
+                # K1: canonical application code is authoritative; legacy display
+                # name payload remains accepted for backward compatibility.
+                requested_code = normalize_application_language(msg.get("language_code_key"))
                 language = msg.get("language")
-                if language not in VALID_LANGUAGES:
+                if requested_code is not None:
+                    code_key = requested_code
+                    language = LANGUAGE_KEY_TO_NAME.get(code_key, language)
+                elif language in VALID_LANGUAGES:
+                    code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
+                else:
                     await _ws_send_json(websocket, 5, session, None)
                     continue
+                visitor_id = msg.get("visitor_session_id")
+                if isinstance(visitor_id, str) and visitor_id.strip():
+                    session["visitor_session_id"] = visitor_id.strip()
                 if is_language_frozen(session):
                     log_runtime_event(
                         "LOCALE_CHANGE_BLOCKED",
@@ -3240,7 +3354,6 @@ async def websocket_clara(websocket: WebSocket):
                     )
                     await _ws_send_json(websocket, 5, session, {"error": "language_frozen"})
                     continue
-                code_key = LANGUAGE_NAME_TO_CODE_KEY[language]
                 set_session_language(session, code_key, is_auto=False)
                 session["language_detection"] = None
                 session["awaiting_guest_name"] = True
@@ -3268,7 +3381,7 @@ async def websocket_clara(websocket: WebSocket):
                     payload["audioBase64"] = audio_b64
                     payload["turn_id"] = "name_after_language_pick"
                 else:
-                    payload["error"] = "Could not generate name prompt audio."
+                    payload["error"] = ui_text(code_key, "error.audio_unavailable")
                 await _ws_send_json(websocket, 5, session, payload)
                 continue
 
@@ -3300,39 +3413,39 @@ async def websocket_clara(websocket: WebSocket):
                 if audio_b64:
                     payload["audioBase64"] = audio_b64
                 else:
-                    payload["error"] = "Could not generate campus navigation audio."
+                    payload["error"] = ui_text(code_key, "error.audio_unavailable")
                 await _ws_send_json(websocket, 5, session, payload)
                 continue
 
             if action == "conversation_started":
-                # First visit from sleep: no UI language yet — short English intro only (e.g. Good afternoon… assistant.).
+                # K1: a resumed visitor (refresh within the same visitor session)
+                # must not replay the completed welcome.
+                if msg.get("resumed") and session.get("language_code_key"):
+                    await _ws_send_json(
+                        websocket,
+                        5,
+                        session,
+                        {
+                            "messages": [],
+                            "isSpeaking": False,
+                            "isProcessing": False,
+                            "type": "welcome_resumed",
+                            "language_code_key": session.get("language_code_key"),
+                        },
+                    )
+                    continue
+
+                # First visit from sleep: no UI language yet — visual welcome only.
+                # K1 policy: no English audio may play before an explicit selection.
                 if session.get("language_code_key") is None:
                     opening_display = get_wakeup_language_gate_display_text()
                     opening_message = {"id": "greeting", "role": "clara", "text": opening_display}
-                    en_tts = TARGET_LANGUAGE_CODES["en"]
-                    audio_b64, _ = await tts_to_base64_cached(
-                        get_wakeup_language_gate_tts_text(),
-                        en_tts,
-                        utterance_kind="conversation_started_opening",
-                    )
-                    language_prompt_audio_b64, _ = await tts_to_base64_cached(
-                        get_language_required_nudge_english(),
-                        en_tts,
-                        utterance_kind="language_gate_prompt",
-                    )
                     session["messages"] = [opening_message]
                     payload_open: dict[str, Any] = {
                         "messages": session["messages"],
-                        "isSpeaking": bool(audio_b64),
+                        "isSpeaking": False,
                         "isProcessing": False,
                     }
-                    if audio_b64:
-                        payload_open["audioBase64"] = audio_b64
-                        payload_open["turn_id"] = "greeting_opening"
-                    else:
-                        payload_open["error"] = "Could not generate opening audio."
-                    if language_prompt_audio_b64:
-                        payload_open["languagePromptAudioBase64"] = language_prompt_audio_b64
                     _gff_open = greeting_font_family_css("English")
                     if _gff_open:
                         payload_open["greetingFontFamily"] = _gff_open
@@ -3373,7 +3486,9 @@ async def websocket_clara(websocket: WebSocket):
                         payload["audioBase64"] = audio_b64
                         payload["turn_id"] = "greeting_started"
                     else:
-                        payload["error"] = "Voice service is temporarily unavailable. Text mode is still available."
+                        payload["error"] = ui_text(
+                            session.get("language_code_key"), "error.audio_unavailable"
+                        )
                     _gff2 = greeting_font_family_css(lang_name)
                     if _gff2:
                         payload["greetingFontFamily"] = _gff2
@@ -3396,7 +3511,10 @@ async def websocket_clara(websocket: WebSocket):
 
                 if not text:
                     timing.mark("turn_end")
-                    payload = {"error": "Missing text", "isProcessing": False}
+                    payload = {
+                        "error": ui_text(session.get("language_code_key"), "error.missing_text"),
+                        "isProcessing": False,
+                    }
                     payload.update(debug_payload(timing))
                     await _ws_send_json(websocket, 5, session, payload)
                     log_turn_metrics(timing, error="missing_text")
@@ -3441,6 +3559,21 @@ async def websocket_clara(websocket: WebSocket):
                 )
                 # endregion
                 timing = TurnTiming()
+                # K1: the mic path must not bypass the language gate — without an
+                # explicit selection, voice input must never trigger auto-detect
+                # and silently pin a session language (e.g. latin_fallback → en).
+                if session.get("language_code_key") is None:
+                    timing.mark("turn_end")
+                    nudge = get_language_required_nudge_english()
+                    gate_payload: dict[str, Any] = {
+                        "isProcessing": False,
+                        "messages": [{"id": "lang_gate", "role": "clara", "text": nudge}],
+                        "turn_id": timing.turn_id,
+                    }
+                    gate_payload.update(debug_payload(timing))
+                    await _ws_send_json(websocket, 5, session, gate_payload)
+                    log_turn_metrics(timing, error="language_not_selected_mic")
+                    continue
                 processing_payload = {"isProcessing": True, "turn_id": timing.turn_id}
                 processing_payload.update(debug_payload(timing))
                 await _ws_send_json(websocket, 5, session, processing_payload)
@@ -3479,7 +3612,7 @@ async def websocket_clara(websocket: WebSocket):
                 if not wav_bytes:
                     timing.mark("turn_end")
                     code = capture_error_code or "MIC_CAPTURE_FAILED"
-                    msg = error_hint(code, "No speech heard.")
+                    msg = ui_text(session.get("language_code_key"), "error.no_speech")
                     payload = build_error_payload(code, msg, timing.turn_id)
                     payload.update(debug_payload(timing))
                     await _ws_send_json(websocket, 5, session, payload)
@@ -3504,7 +3637,7 @@ async def websocket_clara(websocket: WebSocket):
                     timing.mark("turn_end")
                     payload = build_error_payload(
                         "STT_FAILED",
-                        "Voice recognition timed out. Please try again or type your question.",
+                        ui_text(session.get("language_code_key"), "error.voice_timeout"),
                         timing.turn_id,
                     )
                     payload.update(debug_payload(timing))
@@ -3517,7 +3650,7 @@ async def websocket_clara(websocket: WebSocket):
                     timing.mark("turn_end")
                     payload = build_error_payload(
                         "STT_FAILED",
-                        "I could not understand the audio. Please try again or type your question.",
+                        ui_text(session.get("language_code_key"), "error.voice_unrecognized"),
                         timing.turn_id,
                     )
                     payload.update(debug_payload(timing))
@@ -3531,7 +3664,7 @@ async def websocket_clara(websocket: WebSocket):
                     logger.warning("STT returned empty for %d-byte WAV", len(wav_bytes))
                     payload = build_error_payload(
                         "STT_EMPTY",
-                        "I could not understand the audio. Please try again or type your question.",
+                        ui_text(session.get("language_code_key"), "error.voice_unrecognized"),
                         timing.turn_id,
                     )
                     payload.update(debug_payload(timing))
@@ -3567,7 +3700,7 @@ async def websocket_clara(websocket: WebSocket):
                 websocket,
                 -1,
                 session,
-                {"error": "Voice service is temporarily unavailable. Text mode is still available."},
+                {"error": ui_text(session.get("language_code_key"), "error.backend")},
             )
         except Exception:
             pass

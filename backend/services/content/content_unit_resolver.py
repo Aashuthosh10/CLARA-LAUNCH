@@ -27,6 +27,18 @@ from backend.services.answer_generation import (
 )
 
 _SOURCE_VERSION = "m5.0"
+_SAMPLE_CONTENT_STATUS = "SAMPLE_REPLACE_WITH_OFFICIAL"
+
+
+def _public_campus_title(title: str) -> str:
+    """Remove editorial sample markers that must never reach kiosk UI or speech."""
+    return (
+        title.replace("(ಮಾದರಿ)", "")
+        .replace("（ಮಾದರಿ）", "")
+        .replace("(sample)", "")
+        .replace("(Sample)", "")
+        .strip()
+    )
 
 
 def resolve_unit(
@@ -278,7 +290,9 @@ def _resolve_campus_unit(
     row = block.get(descriptor.unit_id) if isinstance(block, dict) else None
     if not isinstance(row, dict):
         return None
-    title = str(row.get("title") or descriptor.unit_id).strip()
+    content_status = str(row.get("content_status") or "").strip()
+    raw_title = str(row.get("title") or descriptor.unit_id).strip()
+    title = _public_campus_title(raw_title) if language_code == "kn" else raw_title
     body = str(row.get("body") or "").strip()
     summary = str(row.get("tts_summary") or body or title).strip()
     points = row.get("points") if isinstance(row.get("points"), list) else []
@@ -306,7 +320,7 @@ def _resolve_campus_unit(
         context_id=descriptor.context_id,
         section_id=descriptor.section_id,
         title=title,
-        summary=summary[:200],
+        summary=summary if language_code == "kn" else summary[:200],
         body=body,
         language=display,
         language_code=language_code,
@@ -314,7 +328,7 @@ def _resolve_campus_unit(
         source_version=_SOURCE_VERSION,
         content_hash=unit_hash,
         metadata={
-            "content_status": str(row.get("content_status") or ""),
+            "content_status": content_status,
             "tts_summary": summary,
         },
         keywords=(descriptor.entity_id, descriptor.unit_suffix),

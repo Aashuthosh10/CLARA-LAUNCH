@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from backend.services.answer_generation import SUPPORTED_LANGUAGES
+from backend.services.ui_localization import ui_text
 
 _NO_SPEECH_RETRY: dict[str, str] = {
     "English": (
         "I'm sorry, I didn't quite catch that. Could you please repeat your question?"
     ),
-    "Kannada": "ಕ್ಷಮಿಸಿ, ನನಗೆ ಸರಿಯಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಮತ್ತೆ ಹೇಳಿ.",
+    "Kannada": ui_text("kn", "error.no_speech"),
     "Hindi": "क्षमा कीजिए, मुझे ठीक से सुनाई नहीं दिया। कृपया अपना प्रश्न दोबारा कहें।",
     "Tamil": "மன்னிக்கவும், எனக்கு சரியாக கேட்கவில்லை. தயவுசெய்து உங்கள் கேள்வியை மீண்டும் சொல்லுங்கள்.",
     "Telugu": "క్షమించండి, నాకు సరిగా వినిపించలేదు. దయచేసి మీ ప్రశ్నను మళ్లీ చెప్పండి.",
@@ -21,10 +22,7 @@ _UNKNOWN: dict[str, str] = {
         "However, I can help you with admissions, departments, placements, "
         "fees, facilities, and campus information."
     ),
-    "Kannada": (
-        "ಆ ವಿಷಯದ ಬಗ್ಗೆ ನನ್ನ ಬಳಿ ವಿಶ್ವಾಸಾರ್ಹ ಮಾಹಿತಿ ಇಲ್ಲ. "
-        "ಆದರೆ ಪ್ರವೇಶ, ವಿಭಾಗಗಳು, ಪ್ಲೇಸ್‌ಮೆಂಟ್, ಶುಲ್ಕ, ಸೌಲಭ್ಯಗಳು ಮತ್ತು ಕ್ಯಾಂಪಸ್ ಮಾಹಿತಿಯಲ್ಲಿ ನಾನು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ."
-    ),
+    "Kannada": ui_text("kn", "availability.unknown"),
     "Hindi": (
         "उसके बारे में मेरे पास अभी विश्वसनीय जानकारी नहीं है। "
         "फिर भी मैं प्रवेश, विभागों, प्लेसमेंट, फीस, सुविधाओं और कैंपस जानकारी में मदद कर सकती हूँ।"
@@ -45,7 +43,7 @@ _UNKNOWN: dict[str, str] = {
 
 _CLARIFICATION: dict[str, str] = {
     "English": "Could you please tell me a bit more about what you need help with?",
-    "Kannada": "ನೀವು ಯಾವ ವಿಷಯದಲ್ಲಿ ಸಹಾಯ ಬೇಕು ಎಂದು ಸ್ವಲ್ಪ ಹೆಚ್ಚು ಹೇಳುತ್ತೀರಾ?",
+    "Kannada": ui_text("kn", "clarification.general"),
     "Hindi": "कृपया बताइए कि आपको किस बारे में मदद चाहिए?",
     "Tamil": "நீங்கள் எந்த விஷயத்தில் உதவி வேண்டும் என்று சற்று கூறுவீர்களா?",
     "Telugu": "మీకు దేనిలో సహాయం కావాలో కొంచెం చెప్పగలరా?",
@@ -55,7 +53,7 @@ _CLARIFICATION: dict[str, str] = {
 # Clarification that names the missing slot, instead of the generic "tell me more".
 _CLARIFY_DEPARTMENT: dict[str, str] = {
     "English": "Which department would you like to know about?",
-    "Kannada": "ನೀವು ಯಾವ ವಿಭಾಗದ ಬಗ್ಗೆ ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?",
+    "Kannada": ui_text("kn", "clarification.department"),
     "Hindi": "आप किस विभाग के बारे में जानना चाहेंगे?",
     "Tamil": "நீங்கள் எந்தத் துறையைப் பற்றி அறிய விரும்புகிறீர்கள்?",
     "Telugu": "మీరు ఏ విభాగం గురించి తెలుసుకోవాలనుకుంటున్నారు?",
@@ -64,7 +62,7 @@ _CLARIFY_DEPARTMENT: dict[str, str] = {
 
 _CLARIFY_HOSTEL: dict[str, str] = {
     "English": "Are you asking about the girls hostel or the boys hostel?",
-    "Kannada": "ನೀವು ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಅಥವಾ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ ಬಗ್ಗೆ ಕೇಳುತ್ತಿದ್ದೀರಾ?",
+    "Kannada": ui_text("kn", "clarification.hostel"),
     "Hindi": "क्या आप गर्ल्स हॉस्टल के बारे में पूछ रहे हैं या बॉयज़ हॉस्टल के बारे में?",
     "Tamil": "நீங்கள் பெண்கள் விடுதி பற்றி கேட்கிறீர்களா அல்லது ஆண்கள் விடுதி பற்றி?",
     "Telugu": "మీరు గర్ల్స్ హాస్టల్ గురించా లేక బాయ్స్ హాస్టల్ గురించా అడుగుతున్నారు?",
@@ -73,7 +71,7 @@ _CLARIFY_HOSTEL: dict[str, str] = {
 
 _NAME_ACK: dict[str, str] = {
     "English": "Nice to meet you, {name}.",
-    "Kannada": "ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷ, {name}.",
+    "Kannada": ui_text("kn", "welcome.named_narration"),
     "Hindi": "आपसे मिलकर अच्छा लगा, {name}.",
     "Tamil": "உங்களை சந்தித்ததில் மகிழ்ச்சி, {name}.",
     "Telugu": "మిమ్మల్ని కలవడం సంతోషం, {name}.",
@@ -82,7 +80,7 @@ _NAME_ACK: dict[str, str] = {
 
 _GREETING: dict[str, str] = {
     "English": "Hello. How may I help you today?",
-    "Kannada": "ನಮಸ್ಕಾರ! CLARAಗೆ ಸ್ವಾಗತ. ಇಂದು ನಾನು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+    "Kannada": ui_text("kn", "welcome.general_narration"),
     "Hindi": "नमस्ते। आज मैं आपकी कैसे मदद कर सकती हूँ?",
     "Tamil": "வணக்கம். இன்று நான் எப்படி உதவ முடியும்?",
     "Telugu": "నమస్కారం. ఈరోజు నేను మీకు ఎలా సహాయపడగలను?",
@@ -91,7 +89,7 @@ _GREETING: dict[str, str] = {
 
 _SMALL_TALK: dict[str, str] = {
     "English": "I'm here to help with campus questions. What would you like to know?",
-    "Kannada": "ನಾನು ಕ್ಯಾಂಪಸ್ ಪ್ರಶ್ನೆಗಳಿಗೆ ಸಹಾಯ ಮಾಡಲು ಇಲ್ಲಿದ್ದೇನೆ. ನೀವು ಏನು ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?",
+    "Kannada": ui_text("kn", "clarification.small_talk"),
     "Hindi": "मैं कैंपस से जुड़े प्रश्नों में मदद के लिए यहाँ हूँ। आप क्या जानना चाहेंगे?",
     "Tamil": "நான் வளாகக் கேள்விகளுக்கு உதவ இங்கே இருக்கிறேன். நீங்கள் என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
     "Telugu": "నేను క్యాంపస్ ప్రశ్నలకు సహాయం చేయడానికి ఇక్కడ ఉన్నాను. మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",

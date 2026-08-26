@@ -32,10 +32,6 @@ export default function BusinessSystemsCard({
       name: 'CSE (Business Systems)',
       tagline: 'Bridging technology and enterprise strategy',
     },
-    Kannada: {
-      name: 'ಸಿಎಸ್ಇ (ಬಿಸಿನೆಸ್ ಸಿಸ್ಟಮ್ಸ್)',
-      tagline: 'ತಂತ್ರಜ್ಞಾನ ಮತ್ತು ಎಂಟರ್‌ಪ್ರೈಸ್ ಕಾರ್ಯತಂತ್ರದ ಸೇತುವೆ',
-    },
     Hindi: {
       name: 'सीएसई (बिजनेस सिस्टम्स)',
       tagline: 'प्रौद्योगिकी और उद्यम रणनीति के बीच सेतु',
@@ -75,3 +71,4 @@ export default function BusinessSystemsCard({
     />
   );
 }
+

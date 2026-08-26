@@ -148,7 +148,8 @@ class TestPhase2DLanguagePersistence(unittest.TestCase):
         segs = map_content_units_to_segments(units, lang_key="kn")
         self.assertEqual([s.unit_id for s in segs], list(plan.units))
         spoken = [(s.tts_text or "") for s in segs]
-        self.assertEqual(len(set(spoken)), 3)
+        self.assertTrue(all(SAMPLE_STATUS not in text for text in spoken))
+        self.assertTrue(all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in text for text in spoken))
         for text in spoken:
             self.assertTrue(any(ord(ch) > 127 for ch in text))
             self.assertNotIn("This sample card", text)

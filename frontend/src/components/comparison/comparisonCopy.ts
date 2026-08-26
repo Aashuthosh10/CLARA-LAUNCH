@@ -1,4 +1,5 @@
 import type { Language } from '../../context/LanguageContext';
+import { uiText } from '../../localization/uiCopy';
 
 export type ComparisonChrome = {
   close: string;
@@ -21,13 +22,13 @@ export const comparisonChrome: Record<Language, ComparisonChrome> = {
     highlighted: 'Recommended focus',
   },
   Kannada: {
-    close: 'ಮುಚ್ಚು',
-    addDept: 'ಕಾರ್ಯಕ್ರಮ ಸೇರು',
-    removeDept: 'ತೆಗೆ',
-    compareHeading: 'ಕಾರ್ಯಕ್ರಮ ಹೋಲಿಕೆ',
-    pickDept: 'ಕಾರ್ಯಕ್ರಮ ಆರಿಸಿ',
-    swipeHint: 'ಒಳನೋಟಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮುಂದುವರಿಯುತ್ತವೆ — ಪ್ರತಿ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಒಂದೇ ತಾಳ.',
-    highlighted: 'ಶಿಫಾರಸು',
+    close: uiText('Kannada', 'comparison.close'),
+    addDept: uiText('Kannada', 'comparison.add_program'),
+    removeDept: uiText('Kannada', 'comparison.remove_program'),
+    compareHeading: uiText('Kannada', 'comparison.heading'),
+    pickDept: uiText('Kannada', 'comparison.select_program'),
+    swipeHint: uiText('Kannada', 'comparison.swipe_hint'),
+    highlighted: uiText('Kannada', 'comparison.highlighted'),
   },
   Hindi: {
     close: 'बंद करें',

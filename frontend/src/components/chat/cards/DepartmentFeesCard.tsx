@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useLanguage, type Language } from '../../../context/LanguageContext';
+import { uiText } from '../../../localization/uiCopy';
 
 const DEPT_ALIAS: Record<string, string> = {
   cse: 'cse',
@@ -48,7 +49,7 @@ const MANAGEMENT_QUOTA_FEE_BY_KEY: Record<string, number> = {
   mechanical: 125000,
 };
 
-const DEPARTMENT_DISPLAY_BY_LANGUAGE: Record<Language, Record<string, string>> = {
+const DEPARTMENT_DISPLAY_BY_LANGUAGE: Partial<Record<Language, Record<string, string>>> = {
   English: {
     cse: 'CSE',
     ise: 'ISE',
@@ -61,19 +62,6 @@ const DEPARTMENT_DISPLAY_BY_LANGUAGE: Record<Language, Record<string, string>> =
     mechanical: 'Mechanical',
     mba: 'MBA',
     basic_sciences: 'Basic Sciences',
-  },
-  Kannada: {
-    cse: 'ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ (CSE)',
-    ise: 'ಐಎಸ್‌ಇ (ISE)',
-    cse_aiml: 'CSE (AI & ML)',
-    cse_ds: 'CSE (ಡೇಟಾ ಸೈನ್ಸ್)',
-    cse_cysec: 'CSE (ಸೈಬರ್ ಸೆಕ್ಯುರಿಟಿ)',
-    cse_bs: 'CSE (ಬಿಸಿನೆಸ್ ಸಿಸ್ಟಮ್ಸ್)',
-    ece: 'ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ (ECE)',
-    civil: 'ಸಿವಿಲ್',
-    mechanical: 'ಮೆಕಾನಿಕಲ್',
-    mba: 'ಎಂಬಿಎ (MBA)',
-    basic_sciences: 'ಮೂಲ ವಿಜ್ಞಾನಗಳು',
   },
   Hindi: {
     cse: 'कंप्यूटर साइंस (CSE)',
@@ -139,7 +127,7 @@ type FeesCopy = {
   officeContact: string;
 };
 
-const FEES_COPY_BY_LANGUAGE: Record<Language, FeesCopy> = {
+const FEES_COPY_BY_LANGUAGE: Partial<Record<Language, FeesCopy>> = {
   English: {
     title: 'Fees',
     description: 'Department-wise annual fee reference for the current academic intake.',
@@ -148,15 +136,6 @@ const FEES_COPY_BY_LANGUAGE: Record<Language, FeesCopy> = {
     managementQuotaFee: 'Management Quota Fee',
     otherQuotas: 'Other Quotas',
     officeContact: 'Please contact the admission office for precise information.',
-  },
-  Kannada: {
-    title: 'ಶುಲ್ಕ',
-    description: 'ಪ್ರಸ್ತುತ ಅಕಾಡೆಮಿಕ್ ಪ್ರವೇಶಕ್ಕಾಗಿ ವಿಭಾಗವಾರು ವಾರ್ಷಿಕ ಶುಲ್ಕ ಮಾಹಿತಿ.',
-    selectedDepartment: 'ಆಯ್ಕೆ ಮಾಡಿದ ವಿಭಾಗ',
-    department: 'ವಿಭಾಗ',
-    managementQuotaFee: 'ಮ್ಯಾನೇಜ್ಮೆಂಟ್ ಕೋಟಾ ಶುಲ್ಕ',
-    otherQuotas: 'ಇತರೆ ಕೋಟಾಗಳು',
-    officeContact: 'ನಿಖರ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.',
   },
   Hindi: {
     title: 'फीस',
@@ -214,12 +193,18 @@ function formatInr(value: number | undefined): string {
 export default function DepartmentFeesCard({ departmentId, language: languageProp }: DepartmentFeesCardProps) {
   const { language: contextLanguage } = useLanguage();
   const language = languageProp || contextLanguage;
-  const copy = useMemo(
-    () => FEES_COPY_BY_LANGUAGE[language] ?? FEES_COPY_BY_LANGUAGE.English,
-    [language],
-  );
+  if (language === 'Kannada') {
+    return (
+      <div className="w-full max-w-5xl premium-glass-card p-10" data-testid="department-fees-card">
+        <p className="whitespace-pre-line text-[20px] leading-relaxed text-slate-800">
+          {uiText('Kannada', 'availability.official_fact_blocked')}
+        </p>
+      </div>
+    );
+  }
 
-  const labelsByLanguage = DEPARTMENT_DISPLAY_BY_LANGUAGE[language] ?? DEPARTMENT_DISPLAY_BY_LANGUAGE.English;
+  const copy = (FEES_COPY_BY_LANGUAGE[language] ?? FEES_COPY_BY_LANGUAGE.English) as FeesCopy;
+  const labelsByLanguage = (DEPARTMENT_DISPLAY_BY_LANGUAGE[language] ?? DEPARTMENT_DISPLAY_BY_LANGUAGE.English) as Record<string, string>;
   const selectedKey = normalizeDepartmentKey(departmentId ?? '');
 
   return (
@@ -274,3 +259,4 @@ export default function DepartmentFeesCard({ departmentId, language: languagePro
     </div>
   );
 }
+

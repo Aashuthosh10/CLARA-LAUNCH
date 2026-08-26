@@ -1,6 +1,8 @@
 import type { Language } from '../context/LanguageContext';
 import type { CollegeDepartmentRecord, CollegeLocaleData } from '../types/collegeData';
 import type { CardDataItem } from './cardData';
+import { clipLocalizedText } from '../localization/clipLocalizedText';
+import { uiText } from '../localization/uiCopy';
 
 /** Stable iteration order for kiosk menus and card decks. */
 export const DEPARTMENT_JSON_KEY_ORDER = [
@@ -67,11 +69,11 @@ const ADMISSION_LABELS: Record<
     scholarships: 'Scholarships',
   },
   Kannada: {
-    eligibility: 'ಅರ್ಹತೆ',
-    entrance: 'ಪ್ರವೇಶ ಪರೀಕ್ಷೆಗಳು',
-    ugFees: 'ಯುಜಿ ಶುಲ್ಕ (ಉಲ್ಲೇಖ)',
-    pgFees: 'MBA / ಪಿಜಿ ಶುಲ್ಕ',
-    scholarships: 'ವಿದ್ಯಾರ್ಥಿವೇತನಗಳು',
+    eligibility: uiText('Kannada', 'cards.eligibility'),
+    entrance: uiText('Kannada', 'cards.entrance_exams'),
+    ugFees: uiText('Kannada', 'cards.ug_fees'),
+    pgFees: uiText('Kannada', 'cards.pg_fees'),
+    scholarships: uiText('Kannada', 'cards.scholarships'),
   },
   Hindi: {
     eligibility: 'पात्रता',
@@ -110,9 +112,9 @@ const PLACEMENT_LABELS: Record<Language, { objectives: string; training: string;
     summary: 'Support at a glance',
   },
   Kannada: {
-    objectives: 'ತರಬೇತಿ ಮತ್ತು ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಉದ್ದೇಶಗಳು',
-    training: 'ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮಗಳು',
-    summary: 'ಸಂಕ್ಷಿಪ್ತ ನೋಟ',
+    objectives: uiText('Kannada', 'cards.training_objectives'),
+    training: uiText('Kannada', 'cards.training_programs'),
+    summary: uiText('Kannada', 'cards.summary'),
   },
   Hindi: {
     objectives: 'प्रशिक्षण और प्लेसमेंट उद्देश्य',
@@ -200,14 +202,14 @@ const DEPT_LABELS: Record<Language, {
     unlisted: 'This department is not listed in the campus knowledge file yet.',
   },
   Kannada: {
-    department: 'ವಿಭಾಗ',
-    leadAndVision: 'ನಾಯಕತ್ವ ಮತ್ತು ದೃಷ್ಟಿಕೋನ',
-    hodAndVision: 'HOD ಮತ್ತು ದೃಷ್ಟಿಕೋನ',
-    achievements: 'ಸಾಧನೆಗಳು',
-    placements: 'ಉದ್ಯೋಗಾವಕಾಶಗಳು',
-    fees: 'ಶುಲ್ಕದ ವಿವರಗಳು',
-    notAvail: 'ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ',
-    unlisted: 'ಈ ವಿಭಾಗವು ಕ್ಯಾಂಪಸ್ ಜ್ಞಾನದಲ್ಲಿ ಇನ್ನೂ ಪಟ್ಟಿ ಮಾಡಲಾಗಿಲ್ಲ.',
+    department: uiText('Kannada', 'cards.department'),
+    leadAndVision: uiText('Kannada', 'cards.hod_and_vision'),
+    hodAndVision: uiText('Kannada', 'cards.hod_and_vision'),
+    achievements: uiText('Kannada', 'cards.achievements'),
+    placements: uiText('Kannada', 'cards.placements'),
+    fees: uiText('Kannada', 'cards.fees'),
+    notAvail: uiText('Kannada', 'cards.information_unavailable'),
+    unlisted: uiText('Kannada', 'availability.missing_source'),
   },
   Hindi: {
     department: 'विभाग',
@@ -292,6 +294,28 @@ export function buildAllDepartmentSummaryCardsFromLocale(data: CollegeLocaleData
     });
   }
   return cards;
+}
+
+export function buildInstitutionCardsFromLocale(data: CollegeLocaleData): CardDataItem[] {
+  const overview = data.institution_overview;
+  if (!overview || typeof overview !== 'object') return [];
+  const content = dedupeLines([
+    clean(overview.about),
+    clean(overview.vision_and_mission),
+  ]).join('\n');
+  return content ? [{ title: 'SVIT', content, type: 'college' }] : [];
+}
+
+export function buildTrusteeCardsFromLocale(data: CollegeLocaleData): CardDataItem[] {
+  const trustees = data.role_holders?.trustees;
+  if (!Array.isArray(trustees)) return [];
+  return trustees
+    .map((trustee) => ({
+      title: clean(trustee.display_name) || clean(trustee.name),
+      content: dedupeLines([clean(trustee.designation), clean(trustee.description)]).join('\n'),
+      type: 'trustees' as const,
+    }))
+    .filter((card) => card.title && card.content);
 }
 
 export interface DepartmentStageSlide {
@@ -431,6 +455,14 @@ export function buildAdmissionsCardsFromLocale(data: CollegeLocaleData, language
   }
   if (!pgBody.trim()) pgBody = 'See Admission Block for MBA fee details and payment plans.';
 
+  // The audit found contradictory fee figures across Kannada sources. Keep
+  // the stored evidence unchanged, but fail closed on the user-facing deck.
+  if (language === 'Kannada') {
+    const blocked = uiText(language, 'availability.official_fact_blocked');
+    ugBody = blocked;
+    pgBody = blocked;
+  }
+
   const scholLines: string[] = [];
   const s = clean(rec.scholarships);
   if (s) scholLines.push(s);
@@ -477,7 +509,7 @@ export function buildPlacementCardsFromLocale(data: CollegeLocaleData, language:
   }
 
   const summaryParts = dedupeLines(
-    [objBody && objBody.slice(0, 280) + (objBody.length > 280 ? '…' : ''), trainBody && trainBody.slice(0, 280) + (trainBody.length > 280 ? '…' : '')].filter(
+    [objBody && clipLocalizedText(objBody, 280), trainBody && clipLocalizedText(trainBody, 280)].filter(
       Boolean
     ) as string[]
   );

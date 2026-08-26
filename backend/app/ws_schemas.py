@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 _ALLOWED_ACTIONS = {
     "wake",
@@ -14,6 +14,7 @@ _ALLOWED_ACTIONS = {
     "language_selected",
     "language_gate_prompt",
     "conversation_started",
+    "restore_language",
     "user_message",
     "campus_navigation_tts",
     "toggle_mic",
@@ -44,7 +45,11 @@ class SessionResetMessage(_BaseWsMessage):
 
 
 class ConversationStartedMessage(_BaseWsMessage):
+    # K1: resumed visitors (refresh within the same visitor session) carry
+    # resume + visitor-session metadata beside the action.
+    model_config = ConfigDict(extra="allow")
     action: Literal["conversation_started"]
+    resumed: bool | None = None
 
 
 class LanguageGatePromptMessage(_BaseWsMessage):
@@ -52,8 +57,28 @@ class LanguageGatePromptMessage(_BaseWsMessage):
 
 
 class LanguageSelectedMessage(_BaseWsMessage):
+    # K1: canonical `language_code_key` is authoritative; legacy display-name
+    # `language` remains accepted for backward compatibility.
+    model_config = ConfigDict(extra="allow")
     action: Literal["language_selected"]
-    language: str
+    language: str | None = None
+    language_code_key: str | None = None
+
+    @model_validator(mode="after")
+    def _require_some_language_field(self) -> "LanguageSelectedMessage":
+        if not self.language and not self.language_code_key:
+            raise ValueError("language_selected requires language or language_code_key")
+        return self
+
+
+class RestoreLanguageMessage(BaseModel):
+    """K1: re-bind the canonical selected language on a new socket."""
+
+    model_config = ConfigDict(extra="allow")
+    action: Literal["restore_language"]
+    language_code_key: str | None = None
+    visitor_session_id: str | None = None
+    ui_state: int | None = None
 
 
 class UserMessage(_BaseWsMessage):
@@ -92,6 +117,7 @@ _ACTION_TO_MODEL = {
     "conversation_started": ConversationStartedMessage,
     "language_gate_prompt": LanguageGatePromptMessage,
     "language_selected": LanguageSelectedMessage,
+    "restore_language": RestoreLanguageMessage,
     "user_message": UserMessage,
     "campus_navigation_tts": CampusNavigationTtsMessage,
     "toggle_mic": MicControlMessage,

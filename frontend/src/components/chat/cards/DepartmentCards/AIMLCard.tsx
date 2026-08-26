@@ -33,11 +33,6 @@ export default function AIMLCard({
       tagline: "Building the intelligence of tomorrow",
       hod: "Dr. T G Manjunatha"
     },
-    Kannada: {
-       name: "ಪರಿಗಣಕ ವಿಜ್ಞಾನ ಮತ್ತು ಎಂಜಿನಿಯರಿಂಗ್ (AI & ML)",
-       tagline: "ನಾಳೆಯ ಬುದ್ಧಿವಂತಿಕೆಯನ್ನು ರೂಪಿಸುತ್ತಿದ್ದೇವೆ",
-       hod: "ಡಾ. ಟಿ ಜಿ ಮಂಜುನಾಥ"
-    },
     Hindi: {
        name: "कंप्यूटर विज्ञान और इंजीनियरिंग (AI & ML)",
        tagline: "कल की बुद्धिमत्ता का निर्माण",
@@ -82,3 +77,4 @@ export default function AIMLCard({
     />
   );
 }
+

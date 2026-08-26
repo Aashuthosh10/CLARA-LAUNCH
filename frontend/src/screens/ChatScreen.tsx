@@ -2,6 +2,14 @@
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from 'motion/react';
 import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
+import { uiText } from '../localization/uiCopy';
+import { languageToCode } from '../session/languageCodes';
+import {
+  getVisitorLanguage,
+  getVisitorSessionId,
+  isWelcomeCompleted,
+  markWelcomeCompleted,
+} from '../session/visitorSession';
 import whatsappBgImage from '../assets/whatsapp_bg.png';
 import fullTextBgImage from '../assets/full_text_bg.png';
 import collegeBrochurePdfUrl from '../assets/College brochure/svit_brochure.pdf?url';
@@ -90,6 +98,8 @@ import { getStaticCardsForTrigger, type CardDataItem } from '../lib/cardData';
 import {
   buildAllDepartmentSummaryCardsFromLocale,
   buildAllHodCardsFromLocale,
+  buildInstitutionCardsFromLocale,
+  buildTrusteeCardsFromLocale,
   buildDepartmentSlideForUnit,
   buildDepartmentSlidesFromRecord,
   buildPlacementCardsFromLocale,
@@ -176,11 +186,11 @@ const THINKING_TAGLINES: Record<Language, string[]> = {
     'Almost there... shaping the best possible answer...',
   ],
   Kannada: [
-    'ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಓದಿ ಸರಿಯಾದ ಮಾಹಿತಿಯನ್ನು ಸಂಗ್ರಹಿಸುತ್ತಿದ್ದೇನೆ...',
-    'ಉತ್ತರ ನಿಖರವಾಗಿರಲು ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸುತ್ತಿದ್ದೇನೆ...',
-    'ನಿಮಗಾಗಿ ಸ್ಪಷ್ಟ ಉತ್ತರವನ್ನು ಸಿದ್ಧಪಡಿಸುತ್ತಿದ್ದೇನೆ...',
-    'CLARA ಜ್ಞಾನದಿಂದ ಸರಿಯಾದ ಸಂಪರ್ಕಗಳನ್ನು ಕಟ್ಟುತ್ತಿದ್ದೇನೆ...',
-    'ಇನ್ನೇನು ಸಿದ್ಧ... ಅತ್ಯುತ್ತಮ ಉತ್ತರ ಬರುತ್ತಿದೆ...',
+    uiText('Kannada', 'status.thinking_detail_1'),
+    uiText('Kannada', 'status.thinking_detail_2'),
+    uiText('Kannada', 'status.thinking_detail_3'),
+    uiText('Kannada', 'status.thinking_detail_4'),
+    uiText('Kannada', 'status.thinking_detail_5'),
   ],
   Hindi: [
     'आपके सवाल को पढ़कर सही जानकारी जुटा रही हूँ...',
@@ -214,7 +224,7 @@ const THINKING_TAGLINES: Record<Language, string[]> = {
 
 const THINKING_TITLE: Record<Language, string> = {
   English: 'CLARA is thinking',
-  Kannada: 'CLARA ಯೋಚಿಸುತ್ತಿದೆ',
+  Kannada: uiText('Kannada', 'status.thinking_title'),
   Hindi: 'CLARA सोच रही है',
   Tamil: 'CLARA யோசிக்கிறது',
   Telugu: 'CLARA ఆలోచిస్తోంది',
@@ -276,7 +286,7 @@ const CAMPUS_UNIT_CARD_TYPES = new Set(['hostel', 'canteen', 'event']);
 
 const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
   English: { placements: 'Placements & training' },
-  Kannada: { placements: 'ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ' },
+  Kannada: { placements: uiText('Kannada', 'cards.placements_training') },
   Hindi: { placements: 'प्लेसमेंट और प्रशिक्षण' },
   Tamil: { placements: 'பிளேஸ்மென்ட் மற்றும் பயிற்சி' },
   Telugu: { placements: 'ప్లేస్‌మెంట్ మరియు శిక్షణ' },
@@ -579,7 +589,7 @@ export default function ChatScreen({
   isPayloadStale,
   faceChannel,
 }: ChatScreenProps) {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, selectLanguageCode, t } = useLanguage();
   const presentationLanguage = languageFromPayload(payload) ?? language;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [displayMessages, setDisplayMessages] = useState<ChatMessage[]>(payloadMessages);
@@ -739,7 +749,7 @@ export default function ChatScreen({
   const [isAwaitingReadyPrompt, setIsAwaitingReadyPrompt] = useState(false);
   const hasStartedRef = useRef(false);
   const prevLayoutModeRef = useRef<'FULL_TEXT' | 'SPLIT_CARDS'>('FULL_TEXT');
-  const languagePromptRequestedRef = useRef(false);
+  const languagePickInFlightRef = useRef(false);
   const wasPlayingAudioRef = useRef(false);
   const isPendingListeningRef = useRef(false);
   const deferredMessagesRef = useRef<ChatMessage[] | null>(null);
@@ -1227,7 +1237,7 @@ export default function ChatScreen({
     const errorBubble: ChatMessage = {
       id: `speech-error-${Date.now()}`,
       role: 'clara',
-      text: userMessage || 'Voice input failed. Try again or type your question.',
+      text: userMessage || uiText(language, 'error.voice_failed'),
     };
     setDisplayMessages((prev) => [...prev, errorBubble]);
     setVisuallyFocusedMessage(errorBubble);
@@ -1240,7 +1250,7 @@ export default function ChatScreen({
         );
       }, 4500);
     }
-  }, []);
+  }, [language]);
 
   const { startListening: startSpeechRecognition, stopListening, isListening: speechListening } = useSpeechRecognition(
     interceptAndSendMessage,
@@ -1323,11 +1333,11 @@ export default function ChatScreen({
 
   useEffect(() => {
     setLanguageGateSatisfied(!inlineLanguageGate);
+    languagePickInFlightRef.current = false;
     if (!inlineLanguageGate) {
       setShowLanguageOverlay(false);
     } else {
       setHasGreeted(false);
-      languagePromptRequestedRef.current = false;
     }
   }, [inlineLanguageGate]);
 
@@ -1367,26 +1377,47 @@ export default function ChatScreen({
 
   const handleInlineLanguagePick = useCallback(
     (lang: Language) => {
+      // K1: one tap produces exactly one selection transition; rapid double
+      // taps (or a re-fired callback) must not duplicate state changes or
+      // welcome requests.
+      if (languageGateSatisfied || languagePickInFlightRef.current) return;
+      languagePickInFlightRef.current = true;
       onChatUserActivity?.();
       if (!canChangeLanguageNow()) {
         pushRuntimeEvent('LOCALE_CHANGE_BLOCKED', { language: lang, reason: 'frozen' });
+        languagePickInFlightRef.current = false;
         return;
       }
       presentationRef.current.cancel();
       lastLoadedPresentationTurnRef.current = null;
       setNarrationCaption('');
       releaseLocalizationFreeze();
-      setLanguage(lang);
+      const code = languageToCode(lang);
+      selectLanguageCode(code);
       patchConversationRuntime({ currentLanguage: lang });
+      markWelcomeCompleted();
       setIsAwaitingReadyPrompt(true);
       clearSuggestionLayer();
       setVisuallyFocusedMessage(null);
-      sendMessage({ action: 'language_selected', language: lang });
+      const visitorId = getVisitorSessionId();
+      sendMessage({
+        action: 'language_selected',
+        language: lang,
+        language_code_key: code,
+        ...(visitorId ? { visitor_session_id: visitorId } : {}),
+      });
       setShowLanguageOverlay(false);
       setLanguageGateSatisfied(true);
       onInlineLanguageResolved?.();
     },
-    [clearSuggestionLayer, sendMessage, setLanguage, onInlineLanguageResolved, onChatUserActivity]
+    [
+      clearSuggestionLayer,
+      sendMessage,
+      selectLanguageCode,
+      languageGateSatisfied,
+      onInlineLanguageResolved,
+      onChatUserActivity,
+    ]
   );
 
   const resolveCardsFromTrigger = useCallback((trigger: unknown): CardDataItem[] | null => {
@@ -1398,6 +1429,14 @@ export default function ChatScreen({
       }
       if (n === 'dept' || n === 'department' || n === 'department_overview') {
         const c = buildAllDepartmentSummaryCardsFromLocale(collegeData, language);
+        return c.length ? c : null;
+      }
+      if (['college', 'college_overview', 'overview', 'institution'].includes(n)) {
+        const c = buildInstitutionCardsFromLocale(collegeData);
+        return c.length ? c : null;
+      }
+      if (['trustees', 'trustee', 'trustees_profile', 'trustee_profile'].includes(n)) {
+        const c = buildTrusteeCardsFromLocale(collegeData);
         return c.length ? c : null;
       }
       return getStaticCardsForTrigger(language, key);
@@ -2206,41 +2245,10 @@ export default function ChatScreen({
     playQueuedClipRef.current = playQueuedClip;
   });
 
-  useEffect(() => {
-    if (!showLanguageOverlay || !inlineLanguageGate || languageGateSatisfied) return;
-    if (languagePromptRequestedRef.current) return;
-    if (payload && isPayloadStale?.(payload)) return;
-
-    // Wait until the 3x2 bubbles have completed their staggered entrance, then speak the prompt.
-    const t = window.setTimeout(() => {
-      if (languagePromptRequestedRef.current) return;
-      languagePromptRequestedRef.current = true;
-      const promptAudio = payload?.languagePromptAudioBase64;
-      if (typeof promptAudio === 'string' && promptAudio.length > 0) {
-        const audioSig = `${promptAudio.length}:${promptAudio.slice(0, 24)}`;
-        handleAudioPlayback(
-          promptAudio,
-          `language_gate_prompt|${audioSig}`,
-          false,
-          null,
-          'language_gate_prompt',
-          false,
-          null,
-        );
-      } else {
-        sendMessage({ action: 'language_gate_prompt' });
-      }
-    }, 1300);
-    return () => window.clearTimeout(t);
-  }, [
-    showLanguageOverlay,
-    inlineLanguageGate,
-    languageGateSatisfied,
-    payload?.languagePromptAudioBase64,
-    handleAudioPlayback,
-    sendMessage,
-    isPayloadStale,
-  ]);
+  // K1: the pre-selection language gate is strictly visual — the six options
+  // plus their native labels are the instruction. No English nudge audio is
+  // played or requested before an explicit selection (audio accessibility for
+  // pre-selection visitors is a deferred product decision).
 
   // Sync from payload
   useEffect(() => {
@@ -3921,7 +3929,19 @@ export default function ChatScreen({
   useEffect(() => {
     if (!hasStartedRef.current) {
       hasStartedRef.current = true;
-      sendMessage({ action: 'conversation_started' });
+      // K1: a visitor whose welcome already completed (e.g. accidental refresh
+      // within the same visitor session) resumes instead of replaying the
+      // welcome. A genuinely new visitor gets the full welcome flow.
+      const resumed =
+        Boolean(getVisitorLanguage()) &&
+        isWelcomeCompleted() &&
+        Boolean(getVisitorSessionId());
+      const visitorId = getVisitorSessionId();
+      sendMessage({
+        action: 'conversation_started',
+        ...(resumed ? { resumed: true } : {}),
+        ...(visitorId ? { visitor_session_id: visitorId } : {}),
+      });
     }
   }, [sendMessage]);
 
@@ -4329,7 +4349,8 @@ export default function ChatScreen({
       const res = await getCampusRouteApi({
         destination_room_code: code,
         mode: campusNavigationRouteModeToApi(campusRouteMode),
-        language: language === 'English' ? 'en' : 'en',
+        // K1: propagate the canonical selected code instead of a hardcoded 'en'.
+        language: languageToCode(language),
       });
       if (!cancelled) setCampusRouteResult(res);
     })();
@@ -4537,7 +4558,7 @@ export default function ChatScreen({
   }, [layoutMode, recentPanelMessages, isResponsePending, thinkingIndex]);
 
   return (
-    <div className="light-chat-container" data-testid="chat-screen">
+    <div className={`light-chat-container ${scriptPreset.cssClass}`} data-testid="chat-screen" lang={languageToCode(language)}>
       <AnimatePresence mode="wait" initial={false}>
         {surface === 'bus_routes' ? (
           React.createElement(BusRoutesFullscreen, {
@@ -4565,7 +4586,8 @@ export default function ChatScreen({
         onClick={handleHomeClick}
         data-testid="home-button"
         className="premium-home-button"
-        title="Go Home"
+        title={uiText(language, 'session.home')}
+        aria-label={uiText(language, 'session.home')}
       >
         <Home className="w-6 h-6" />
       </motion.button>
@@ -4603,7 +4625,7 @@ export default function ChatScreen({
           className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
           <FileText className="h-4 w-4 text-[#2a115c]" />
-          College Brochure
+          {uiText(language, 'cards.college_brochure')}
         </motion.button>
       </motion.div>
 
@@ -5054,7 +5076,7 @@ export default function ChatScreen({
                   onChatUserActivity?.();
                   setSurface('chat');
                 }}
-                aria-label="Close college brochure"
+                aria-label={`${uiText(language, 'session.close')} ${uiText(language, 'cards.college_brochure')}`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -5062,13 +5084,13 @@ export default function ChatScreen({
                 <div className="brochure-modal-head-row">
                   <FileText className="brochure-modal-head-icon" aria-hidden />
                   <div className="brochure-modal-head-text">
-                    <h2 id="brochure-title">College Brochure</h2>
+                    <h2 id="brochure-title">{uiText(language, 'cards.college_brochure')}</h2>
                     <p className="brochure-modal-sub">Latest SVIT brochure — use viewer controls to zoom.</p>
                   </div>
                 </div>
               </header>
               <object
-                aria-label="College Brochure PDF Viewer"
+                aria-label={uiText(language, 'cards.college_brochure')}
                 data={`${collegeBrochurePdfUrl}#view=FitH`}
                 type="application/pdf"
                 className="brochure-modal-frame"

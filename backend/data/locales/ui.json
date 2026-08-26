@@ -1,0 +1,254 @@
+{
+  "en": {
+    "welcome": {
+      "general_display": "Welcome.\nWhat information would you like today?",
+      "general_narration": "Welcome. What information would you like today?",
+      "named_display": "{name}, welcome.\nWhat information would you like today?",
+      "named_narration": "{name}, welcome. What information would you like today?",
+      "name_prompt": "Please tell me your preferred name."
+    },
+    "language": {
+      "select": "Select a language.",
+      "required": "Please select a language to continue."
+    },
+    "status": {
+      "listening": "Listening…",
+      "processing": "Processing your request…",
+      "thinking": "CLARA is thinking…",
+      "thinking_title": "CLARA is thinking",
+      "thinking_detail_1": "Reading your question and gathering the right details...",
+      "thinking_detail_2": "Cross-checking campus information so the answer stays accurate...",
+      "thinking_detail_3": "Preparing a clear response for you...",
+      "thinking_detail_4": "Connecting the relevant details from CLARA knowledge...",
+      "thinking_detail_5": "Almost ready... preparing the best possible answer...",
+      "reconnecting": "Reconnecting…",
+      "connection_lost": "Connection lost.",
+      "connectivity_issue": "The system is having connectivity problems.",
+      "returning_to_sleep": "Returning to the sleep screen."
+    },
+    "clarification": {
+      "general": "Please tell me a little more about the information you need.",
+      "department": "Which department would you like to know about?",
+      "hostel": "Would you like information about the girls’ hostel or the boys’ hostel?",
+      "small_talk": "I am here to help with campus questions. What would you like to know?",
+      "hod_department": "Please specify the department whose Head of Department you would like to know about.",
+      "fees_department": "Please specify the department whose fee details you would like to view."
+    },
+    "error": {
+      "retry": "Please try again.",
+      "no_speech": "I could not hear you clearly. Please say your question again.",
+      "microphone_denied": "Microphone access was denied. Please allow microphone access or type your question.",
+      "microphone_missing": "No microphone was found. Please type your question.",
+      "microphone_blocked": "The browser blocked voice input. Please allow microphone access or type your question.",
+      "microphone_start": "The microphone could not be started. Please try again or type your question.",
+      "voice_unsupported": "Voice input is not supported in this browser. Please use Chrome or Edge, or type your question.",
+      "voice_failed": "Voice input failed. Please try again or type your question.",
+      "voice_timeout": "Voice recognition timed out. Please try again or type your question.",
+      "voice_unrecognized": "I could not understand the audio. Please try again or type your question.",
+      "network": "Voice recognition could not reach the speech service. Check the internet connection, then try again.",
+      "offline": "The kiosk is offline. Connect to the internet, then try again.",
+      "backend": "The service is temporarily unavailable. Please try again.",
+      "empty_response": "I could not prepare a response. Please try again.",
+      "invalid_request": "The request could not be processed. Please try again.",
+      "missing_text": "Please type or say a question.",
+      "audio_unavailable": "Voice output is temporarily unavailable. The information remains available on screen."
+    },
+    "availability": {
+      "official_fact_blocked": "This information has not yet been officially confirmed.\nPlease contact the relevant department for more information.",
+      "unknown": "I do not currently have reliable information about that. I can help with admissions, departments, placements, fees, facilities, and campus information.",
+      "missing_source": "This information is not available in the approved source.\nPlease contact the relevant department for more information."
+    },
+    "session": {
+      "thank_you": "Thank you.",
+      "goodbye": "Goodbye.",
+      "timeout": "This session has timed out.",
+      "ending": "This session is ending.",
+      "interrupted": "The previous response was interrupted.",
+      "back": "Back",
+      "home": "Go home",
+      "close": "Close",
+      "retry_connection": "Retry connection"
+      ,"enable_face_display": "Enable face display"
+    },
+    "cards": {
+      "department": "Department",
+      "hod_and_vision": "Head of Department and vision",
+      "achievements": "Achievements",
+      "placements": "Placements",
+      "placements_training": "Placements and training",
+      "fees": "Fee details",
+      "eligibility": "Eligibility",
+      "entrance_exams": "Entrance examinations",
+      "ug_fees": "Undergraduate fee information",
+      "pg_fees": "MBA and postgraduate fee information",
+      "scholarships": "Scholarships",
+      "training_objectives": "Training and placement objectives",
+      "training_programs": "Training programs",
+      "summary": "Summary",
+      "information_unavailable": "Information is not available."
+      ,"college_brochure": "College brochure"
+    },
+    "documents": {
+      "title": "Required documents",
+      "items": {
+        "marks_10": "10th Marks Card",
+        "marks_12": "12th / II PUC Marks Card",
+        "rank_allotment": "CET / COMEDK Rank Card + Allotment Letter",
+        "transfer": "Transfer Certificate (TC)",
+        "conduct": "Conduct / Character Certificate",
+        "caste_income": "Caste / Income Certificate (if applicable)",
+        "aadhaar": "Aadhaar Card Copy",
+        "photos": "Passport Size Photos (6–10)",
+        "migration": "Migration Certificate (for other board students)",
+        "vtu_eligibility": "VTU Eligibility Certificate (if required)"
+      }
+    },
+    "comparison": {
+      "close": "Close",
+      "add_program": "Add program",
+      "remove_program": "Remove",
+      "heading": "Program comparison",
+      "select_program": "Select program",
+      "swipe_hint": "Insights advance automatically — one beat per program, in sync.",
+      "highlighted": "Recommended focus"
+    },
+    "action": {
+      "fees": "Showing fee information for the {department} department.",
+      "documents": "The required documents are: {items}.",
+      "location": "SVIT is located in Rajanukunte, via Yelahanka, Bengaluru, Karnataka 560 064.",
+      "admissions": "Showing admissions information on screen.",
+      "placements": "Showing placement information on screen.",
+      "department": "Showing information about the {department} department on screen.",
+      "hod": "Showing Head of Department information for the {department} department.",
+      "college": "Showing the requested college information on screen.",
+      "principal": "Showing the Principal profile on screen.",
+      "vice_principal": "Showing the Vice Principal profile on screen."
+    }
+  },
+  "kn": {
+    "welcome": {
+      "general_display": "ಸ್ವಾಗತ.\nಇಂದು ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+      "general_narration": "ಸ್ವಾಗತ. ಇಂದು ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+      "named_display": "{name}, ಸ್ವಾಗತ.\nಇಂದು ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+      "named_narration": "{name}, ಸ್ವಾಗತ. ಇಂದು ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+      "name_prompt": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ತಿಳಿಸಿ."
+    },
+    "language": {
+      "select": "ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+      "required": "ಮುಂದುವರಿಯಲು ದಯವಿಟ್ಟು ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ."
+    },
+    "status": {
+      "listening": "ಆಲಿಸುತ್ತಿದ್ದೇನೆ…",
+      "processing": "ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಪರಿಶೀಲಿಸುತ್ತಿದ್ದೇನೆ…",
+      "thinking": "CLARA ಉತ್ತರವನ್ನು ಸಿದ್ಧಪಡಿಸುತ್ತಿದೆ…",
+      "thinking_title": "CLARA ಯೋಚಿಸುತ್ತಿದೆ",
+      "thinking_detail_1": "ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಓದಿ ಸರಿಯಾದ ಮಾಹಿತಿಯನ್ನು ಸಂಗ್ರಹಿಸುತ್ತಿದ್ದೇನೆ...",
+      "thinking_detail_2": "ಉತ್ತರ ನಿಖರವಾಗಿರಲು ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸುತ್ತಿದ್ದೇನೆ...",
+      "thinking_detail_3": "ನಿಮಗಾಗಿ ಸ್ಪಷ್ಟ ಉತ್ತರವನ್ನು ಸಿದ್ಧಪಡಿಸುತ್ತಿದ್ದೇನೆ...",
+      "thinking_detail_4": "CLARA ಜ್ಞಾನದಿಂದ ಸಂಬಂಧಿತ ಮಾಹಿತಿಯನ್ನು ಜೋಡಿಸುತ್ತಿದ್ದೇನೆ...",
+      "thinking_detail_5": "ಇನ್ನೇನು ಸಿದ್ಧ... ಅತ್ಯುತ್ತಮ ಉತ್ತರವನ್ನು ಸಿದ್ಧಪಡಿಸುತ್ತಿದ್ದೇನೆ...",
+      "reconnecting": "ಮರುಸಂಪರ್ಕಿಸಲಾಗುತ್ತಿದೆ…",
+      "connection_lost": "ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ.",
+      "connectivity_issue": "ವ್ಯವಸ್ಥೆಯಲ್ಲಿ ಸಂಪರ್ಕ ಸಮಸ್ಯೆಯಾಗಿದೆ.",
+      "returning_to_sleep": "ನಿದ್ರಾ ಪರದೆಗೆ ಹಿಂತಿರುಗಲಾಗುತ್ತಿದೆ."
+    },
+    "clarification": {
+      "general": "ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು ಎಂಬುದನ್ನು ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ವಿವರಿಸಿ.",
+      "department": "ನೀವು ಯಾವ ವಿಭಾಗದ ಬಗ್ಗೆ ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?",
+      "hostel": "ನಿಮಗೆ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಮಾಹಿತಿ ಬೇಕೇ ಅಥವಾ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ ಮಾಹಿತಿ ಬೇಕೇ?",
+      "small_talk": "ಕ್ಯಾಂಪಸ್‌ಗೆ ಸಂಬಂಧಿಸಿದ ಪ್ರಶ್ನೆಗಳಿಗೆ ಸಹಾಯ ಮಾಡಲು ನಾನು ಇಲ್ಲಿದ್ದೇನೆ. ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+      "hod_department": "ಯಾವ ವಿಭಾಗದ ವಿಭಾಗ ಮುಖ್ಯಸ್ಥರ ಬಗ್ಗೆ ತಿಳಿಯಬೇಕು ಎಂಬುದನ್ನು ದಯವಿಟ್ಟು ತಿಳಿಸಿ.",
+      "fees_department": "ಯಾವ ವಿಭಾಗದ ಶುಲ್ಕದ ವಿವರಗಳನ್ನು ನೋಡಬೇಕು ಎಂಬುದನ್ನು ದಯವಿಟ್ಟು ತಿಳಿಸಿ."
+    },
+    "error": {
+      "retry": "ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "no_speech": "ನಿಮ್ಮ ಮಾತು ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಪ್ರಶ್ನೆಯನ್ನು ಮತ್ತೆ ಹೇಳಿ.",
+      "microphone_denied": "ಮೈಕ್ರೊಫೋನ್ ಬಳಸಲು ಅನುಮತಿ ದೊರೆತಿಲ್ಲ. ದಯವಿಟ್ಟು ಅನುಮತಿ ನೀಡಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "microphone_missing": "ಮೈಕ್ರೊಫೋನ್ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "microphone_blocked": "ಬ್ರೌಸರ್ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಅನ್ನು ನಿರ್ಬಂಧಿಸಿದೆ. ದಯವಿಟ್ಟು ಮೈಕ್ರೊಫೋನ್‌ಗೆ ಅನುಮತಿ ನೀಡಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "microphone_start": "ಮೈಕ್ರೊಫೋನ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "voice_unsupported": "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು Chrome ಅಥವಾ Edge ಬಳಸಿ, ಇಲ್ಲವೇ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "voice_failed": "ಧ್ವನಿ ಇನ್‌ಪುಟ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "voice_timeout": "ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಸಮಯ ಮೀರಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "voice_unrecognized": "ಧ್ವನಿಯನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ.",
+      "network": "ಧ್ವನಿ ಸೇವೆಯನ್ನು ಸಂಪರ್ಕಿಸಲಾಗಲಿಲ್ಲ. ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "offline": "ಕಿಯೋಸ್ಕ್ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ. ಇಂಟರ್ನೆಟ್‌ಗೆ ಸಂಪರ್ಕಿಸಿದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "backend": "ಕ್ಷಮಿಸಿ, ಸೇವೆ ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "empty_response": "ಉತ್ತರವನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "invalid_request": "ವಿನಂತಿಯನ್ನು ಪ್ರಕ್ರಿಯೆಗೊಳಿಸಲಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+      "missing_text": "ದಯವಿಟ್ಟು ಪ್ರಶ್ನೆಯನ್ನು ಹೇಳಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ.",
+      "audio_unavailable": "ಧ್ವನಿ ಸೇವೆ ತಾತ್ಕಾಲಿಕವಾಗಿ ಲಭ್ಯವಿಲ್ಲ. ಮಾಹಿತಿ ಪರದೆಯಲ್ಲಿ ಲಭ್ಯವಿದೆ."
+    },
+    "availability": {
+      "official_fact_blocked": "ಈ ಮಾಹಿತಿಯನ್ನು ಇನ್ನೂ ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ.\nಹೆಚ್ಚಿನ ಮಾಹಿತಿಗಾಗಿ ಸಂಬಂಧಿತ ವಿಭಾಗವನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+      "unknown": "ಆ ವಿಷಯದ ಬಗ್ಗೆ ವಿಶ್ವಾಸಾರ್ಹ ಮಾಹಿತಿ ಈಗ ಲಭ್ಯವಿಲ್ಲ. ಪ್ರವೇಶಾತಿ, ವಿಭಾಗಗಳು, ಪ್ಲೇಸ್‌ಮೆಂಟ್, ಶುಲ್ಕ, ಸೌಲಭ್ಯಗಳು ಮತ್ತು ಕ್ಯಾಂಪಸ್ ಮಾಹಿತಿಯಲ್ಲಿ ನಾನು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ.",
+      "missing_source": "ಅನುಮೋದಿತ ಮೂಲದಲ್ಲಿ ಈ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ.\nಹೆಚ್ಚಿನ ಮಾಹಿತಿಗಾಗಿ ಸಂಬಂಧಿತ ವಿಭಾಗವನ್ನು ಸಂಪರ್ಕಿಸಿ."
+    },
+    "session": {
+      "thank_you": "ಧನ್ಯವಾದಗಳು.",
+      "goodbye": "ವಿದಾಯ.",
+      "timeout": "ಈ ಅಧಿವೇಶನದ ಸಮಯ ಮೀರಿದೆ.",
+      "ending": "ಈ ಅಧಿವೇಶನ ಮುಕ್ತಾಯಗೊಳ್ಳುತ್ತಿದೆ.",
+      "interrupted": "ಹಿಂದಿನ ಉತ್ತರವನ್ನು ನಿಲ್ಲಿಸಲಾಗಿದೆ.",
+      "back": "ಹಿಂದೆ",
+      "home": "ಮುಖಪುಟಕ್ಕೆ ಹೋಗಿ",
+      "close": "ಮುಚ್ಚಿ",
+      "retry_connection": "ಮತ್ತೆ ಸಂಪರ್ಕಿಸಿ"
+      ,"enable_face_display": "ಮುಖ ಪ್ರದರ್ಶನವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
+    },
+    "cards": {
+      "department": "ವಿಭಾಗ",
+      "hod_and_vision": "ವಿಭಾಗ ಮುಖ್ಯಸ್ಥರು ಮತ್ತು ದೃಷ್ಟಿಕೋನ",
+      "achievements": "ಸಾಧನೆಗಳು",
+      "placements": "ಪ್ಲೇಸ್‌ಮೆಂಟ್‌ಗಳು",
+      "placements_training": "ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮತ್ತು ತರಬೇತಿ",
+      "fees": "ಶುಲ್ಕದ ವಿವರಗಳು",
+      "eligibility": "ಅರ್ಹತೆ",
+      "entrance_exams": "ಪ್ರವೇಶ ಪರೀಕ್ಷೆಗಳು",
+      "ug_fees": "ಪದವಿಪೂರ್ವ ಶುಲ್ಕದ ಮಾಹಿತಿ",
+      "pg_fees": "MBA ಮತ್ತು ಸ್ನಾತಕೋತ್ತರ ಶುಲ್ಕದ ಮಾಹಿತಿ",
+      "scholarships": "ವಿದ್ಯಾರ್ಥಿವೇತನಗಳು",
+      "training_objectives": "ತರಬೇತಿ ಮತ್ತು ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಉದ್ದೇಶಗಳು",
+      "training_programs": "ತರಬೇತಿ ಕಾರ್ಯಕ್ರಮಗಳು",
+      "summary": "ಸಂಕ್ಷಿಪ್ತ ಮಾಹಿತಿ",
+      "information_unavailable": "ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ."
+      ,"college_brochure": "ಕಾಲೇಜಿನ ಮಾಹಿತಿ ಕೈಪಿಡಿ"
+    },
+    "documents": {
+      "title": "ಅಗತ್ಯ ದಾಖಲೆಗಳು",
+      "items": {
+        "marks_10": "10ನೇ ತರಗತಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
+        "marks_12": "12ನೇ ಅಥವಾ ದ್ವಿತೀಯ ಪಿಯುಸಿ ಮಾರ್ಕ್ಸ್ ಕಾರ್ಡ್",
+        "rank_allotment": "CET ಅಥವಾ COMEDK ರ‍್ಯಾಂಕ್ ಕಾರ್ಡ್ ಮತ್ತು ಅಲಾಟ್‌ಮೆಂಟ್ ಲೆಟರ್",
+        "transfer": "ಟ್ರಾನ್ಸ್‌ಫರ್ ಸರ್ಟಿಫಿಕೇಟ್ (TC)",
+        "conduct": "ಕಂಡಕ್ಟ್ ಅಥವಾ ಕ್ಯಾರಕ್ಟರ್ ಸರ್ಟಿಫಿಕೇಟ್",
+        "caste_income": "ಅಗತ್ಯವಿದ್ದರೆ ಜಾತಿ ಅಥವಾ ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ",
+        "aadhaar": "ಆಧಾರ್ ಕಾರ್ಡ್ ಪ್ರತಿ",
+        "photos": "ಪಾಸ್‌ಪೋರ್ಟ್ ಗಾತ್ರದ ಫೋಟೋಗಳು (6–10)",
+        "migration": "ಇತರೆ ಬೋರ್ಡ್ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಮೈಗ್ರೇಶನ್ ಪ್ರಮಾಣಪತ್ರ",
+        "vtu_eligibility": "ಅಗತ್ಯವಿದ್ದರೆ VTU ಅರ್ಹತಾ ಪ್ರಮಾಣಪತ್ರ"
+      }
+    },
+    "comparison": {
+      "close": "ಮುಚ್ಚು",
+      "add_program": "ಕಾರ್ಯಕ್ರಮ ಸೇರಿಸಿ",
+      "remove_program": "ತೆಗೆದುಹಾಕಿ",
+      "heading": "ಕಾರ್ಯಕ್ರಮಗಳ ಹೋಲಿಕೆ",
+      "select_program": "ಕಾರ್ಯಕ್ರಮವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+      "swipe_hint": "ಒಳನೋಟಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮುಂದುವರಿಯುತ್ತವೆ — ಪ್ರತಿ ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಒಂದೊಂದು ಹಂತ.",
+      "highlighted": "ಶಿಫಾರಸು ಮಾಡಿದ ಆಯ್ಕೆ"
+    },
+    "action": {
+      "fees": "{department} ವಿಭಾಗದ ಶುಲ್ಕದ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "documents": "ಅಗತ್ಯವಿರುವ ದಾಖಲೆಗಳು: {items}.",
+      "location": "SVIT ಬೆಂಗಳೂರಿನ ಯಲಹಂಕ ಮಾರ್ಗದ ರಾಜಾನುಕುಂಟೆ, ಕರ್ನಾಟಕ 560 064ರಲ್ಲಿ ಇದೆ.",
+      "admissions": "ಪ್ರವೇಶಾತಿಯ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "placements": "ಪ್ಲೇಸ್‌ಮೆಂಟ್ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "department": "{department} ವಿಭಾಗದ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "hod": "{department} ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "college": "ಕೋರಿದ ಕಾಲೇಜಿನ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "principal": "ಪ್ರಾಂಶುಪಾಲರ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+      "vice_principal": "ಉಪ ಪ್ರಾಂಶುಪಾಲರ ಮಾಹಿತಿಯನ್ನು ಪರದೆಯ ಮೇಲೆ ತೋರಿಸಲಾಗುತ್ತಿದೆ."
+    }
+  }
+}

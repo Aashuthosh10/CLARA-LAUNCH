@@ -135,7 +135,7 @@ export default function VoiceConversation({
             animate={{ opacity: isListening ? 1 : 0.5 }}
             className="mt-6 text-sm tracking-[0.4em] uppercase font-medium text-stone-400"
           >
-            {isListening ? t('listening') : 'Tap Mic to Speak'}
+            {isListening ? t('listening') : t('tapToSpeak')}
           </motion.div>
         </div>
       </div>

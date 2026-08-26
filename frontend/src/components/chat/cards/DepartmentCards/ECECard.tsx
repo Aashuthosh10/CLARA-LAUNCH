@@ -33,11 +33,6 @@ export default function ECECard({
       tagline: "Connecting the world through signals",
       hod: "Dr. Venkatesha M"
     },
-    Kannada: {
-       name: "ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಮತ್ತು ಕಮ್ಯುನಿಕೇಶನ್ ಎಂಜಿನಿಯರಿಂಗ್",
-       tagline: "ಸಿಗ್ನಲ್‌ಗಳ ಮೂಲಕ ವಿಶ್ವವನ್ನು ಸಂಪರ್ಕಿಸುತ್ತಿದ್ದೇವೆ",
-       hod: "ಡಾ. ವೆಂಕಟೇಶ ಎಂ"
-    },
     Hindi: {
        name: "इलेक्ट्रॉनिक्स और कम्युनिकेशन इंजीनियरिंग",
        tagline: "सिग्नल के माध्यम से दुनिया को जोड़ना",
@@ -82,3 +77,4 @@ export default function ECECard({
     />
   );
 }
+
