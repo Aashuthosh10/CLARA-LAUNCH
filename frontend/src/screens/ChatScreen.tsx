@@ -2245,10 +2245,8 @@ export default function ChatScreen({
     playQueuedClipRef.current = playQueuedClip;
   });
 
-  // K1: the pre-selection language gate is strictly visual — the six options
-  // plus their native labels are the instruction. No English nudge audio is
-  // played or requested before an explicit selection (audio accessibility for
-  // pre-selection visitors is a deferred product decision).
+  // The opening wake greeting includes a short English instruction to choose
+  // a language; the picker remains available after that audio completes.
 
   // Sync from payload
   useEffect(() => {

@@ -67,12 +67,12 @@ def get_wakeup_opening_tts_text(now: datetime | None = None) -> str:
 
 
 def get_wakeup_language_gate_display_text(now: datetime | None = None) -> str:
-    """Opening greeting shown before the picker fades in."""
-    return get_wakeup_opening_display_text(now)
+    """Opening greeting and the spoken instruction shown before language pick."""
+    return f"{get_wakeup_opening_display_text(now)}\n{get_language_required_nudge_english()}"
 
 
 def get_wakeup_language_gate_tts_text(now: datetime | None = None) -> str:
-    """Wake TTS that exactly matches the displayed wake greeting."""
+    """Wake TTS that exactly matches the displayed greeting and language instruction."""
     return get_wakeup_language_gate_display_text(now)
 
 
