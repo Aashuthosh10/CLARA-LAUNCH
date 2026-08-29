@@ -3435,17 +3435,32 @@ async def websocket_clara(websocket: WebSocket):
                     )
                     continue
 
-                # First visit from sleep: no UI language yet — visual welcome only.
-                # K1 policy: no English audio may play before an explicit selection.
+                # First visit from sleep: speak the short English wake greeting, then
+                # reveal the language selector. The visitor has not selected an
+                # application language yet, so this opening turn is deliberately
+                # language-neutral and does not bind session language state.
                 if session.get("language_code_key") is None:
                     opening_display = get_wakeup_language_gate_display_text()
+                    opening_audio_b64 = None
+                    try:
+                        opening_audio_b64, _ = await tts_to_base64_cached(
+                            get_wakeup_language_gate_tts_text(),
+                            TARGET_LANGUAGE_CODES["en"],
+                            utterance_kind="greeting_opening",
+                        )
+                    except Exception as exc:
+                        logger.exception("Opening greeting TTS failed: %s", exc)
                     opening_message = {"id": "greeting", "role": "clara", "text": opening_display}
                     session["messages"] = [opening_message]
                     payload_open: dict[str, Any] = {
                         "messages": session["messages"],
-                        "isSpeaking": False,
+                        "isSpeaking": bool(opening_audio_b64),
                         "isProcessing": False,
+                        "turn_id": "greeting_opening",
+                        "audioUnavailable": not bool(opening_audio_b64),
                     }
+                    if opening_audio_b64:
+                        payload_open["audioBase64"] = opening_audio_b64
                     _gff_open = greeting_font_family_css("English")
                     if _gff_open:
                         payload_open["greetingFontFamily"] = _gff_open

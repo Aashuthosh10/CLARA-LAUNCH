@@ -5,7 +5,7 @@ Covers the visitor-session lifecycle contract:
 - explicit selection overriding auto-detection,
 - WebSocket language binding / restore on reconnect,
 - deterministic reset so a new visitor never inherits a language,
-- visual-only pre-selection welcome (no spoken English before selection).
+- spoken pre-selection wake greeting followed by language selection.
 """
 
 import unittest
@@ -167,10 +167,14 @@ class TestWebSocketLanguageLifecycle(unittest.TestCase):
                     # Rejected selection: no messages / no activated language.
                     self.assertNotIn("messages", ack.get("payload") or {})
                     # Session language is still unset: conversation_started
-                    # takes the pre-selection (visual-only) branch, proving the
-                    # invalid value never became the active session language.
-                    self._send(ws, {"action": "conversation_started"})
-                    gate = ws.receive_json()
+                    # takes the pre-selection branch, proving the invalid value
+                    # never became the active session language. TTS is mocked
+                    # unavailable here because this test checks language state.
+                    with patch(
+                        "backend.app.main.tts_to_base64_cached", return_value=(None, {})
+                    ):
+                        self._send(ws, {"action": "conversation_started"})
+                        gate = ws.receive_json()
                     gate_payload = gate.get("payload") or {}
                     self.assertNotEqual(gate_payload.get("type"), "welcome_resumed")
                     self.assertIs(gate_payload.get("isSpeaking"), False)
@@ -224,20 +228,28 @@ class TestWebSocketLanguageLifecycle(unittest.TestCase):
                     ack = ws.receive_json()
                     self.assertIsNotNone(ack.get("payload"))
 
-    def test_pre_selection_welcome_is_visual_only(self) -> None:
+    def test_pre_selection_welcome_speaks_then_allows_language_selection(self) -> None:
         with _auth_context():
             with TestClient(app).websocket_connect(self.URL, headers=self.ORIGIN) as ws:
                 ws.receive_json()
                 self._send(ws, {"action": "wake"})
                 ws.receive_json()
-                self._send(ws, {"action": "conversation_started"})
-                greeting = ws.receive_json()
+                fake_audio = "d2FrZS1ncmVldGluZw=="
+                with patch(
+                    "backend.app.main.tts_to_base64_cached",
+                    return_value=(fake_audio, {"cache_hit": False}),
+                ) as tts_mock:
+                    self._send(ws, {"action": "conversation_started"})
+                    greeting = ws.receive_json()
                 payload = greeting.get("payload") or {}
                 self.assertEqual(greeting.get("state"), 5)
                 self.assertTrue(payload.get("messages"))
-                self.assertIs(payload.get("isSpeaking"), False)
-                self.assertNotIn("audioBase64", payload)
-                self.assertNotIn("languagePromptAudioBase64", payload)
+                self.assertIs(payload.get("isSpeaking"), True)
+                self.assertEqual(payload.get("turn_id"), "greeting_opening")
+                self.assertEqual(payload.get("audioBase64"), fake_audio)
+                self.assertIs(payload.get("audioUnavailable"), False)
+                tts_mock.assert_called_once()
+                self.assertEqual(tts_mock.call_args.args[1], "en-IN")
 
     def test_resumed_visitor_does_not_replay_welcome(self) -> None:
         with _auth_context():
