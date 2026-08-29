@@ -38,6 +38,7 @@ import { RuntimeDashboard } from './runtime/RuntimeDashboard';
 // Screens
 import SleepScreen from './screens/SleepScreen';
 import ChatScreen from './screens/ChatScreen';
+import AboutMeScreen from './features/about/AboutMeScreen';
 
 const WS_BASE_URL =
   import.meta.env.VITE_WS_URL ||
@@ -105,6 +106,7 @@ function ClaraKioskRuntime({
   } = useWebSocket(WS_URL);
   const [urlOverrideState, setUrlOverrideState] = React.useState<number | null>(null);
   const [showChatLanguageGate, setShowChatLanguageGate] = useState(false);
+  const [showAboutMe, setShowAboutMe] = useState(false);
   const [lastHardResetAt, setLastHardResetAt] = useState<number | null>(null);
 
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
@@ -345,11 +347,20 @@ function ClaraKioskRuntime({
   );
 
   const renderState = () => {
+    if (showAboutMe) {
+      return (
+        <motion.div key="about-me" className="w-full h-full">
+          <AboutMeScreen onExit={() => setShowAboutMe(false)} />
+        </motion.div>
+      );
+    }
+
     switch (effectiveState) {
       case 0:
         return (
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
+              onAboutMe={() => setShowAboutMe(true)}
               onWake={() => {
                 // K1: waking begins a visitor session; the id is bound to the
                 // backend session so language restoration can be validated.

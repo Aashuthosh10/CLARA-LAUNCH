@@ -1,0 +1,206 @@
+@layer base {
+  :root {
+    --bg-base: #FAF9FF;
+    --bg-subtle: #F5F3FC;
+    --lavender-light: #E7E0FA;
+    --lavender-mid: #D8CDF7;
+    --violet-accent: #8066D9;
+    --violet-deep: #49358F;
+    --icy-blue: #B9E8FF;
+    --soft-pink: #F1D9FA;
+    --text-primary: #24213A;
+    --text-secondary: #65627A;
+    --text-muted: #9692AA;
+  }
+
+  .about-me-root {
+    background-color: #FAF9FF;
+    color: #24213A;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .font-display {
+    font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom soft scrollbar */
+.about-me-root::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.about-me-root::-webkit-scrollbar-track {
+  background: #F5F3FC;
+}
+
+.about-me-root::-webkit-scrollbar-thumb {
+  background: #D8CDF7;
+  border-radius: 9999px;
+  border: 2px solid #F5F3FC;
+}
+
+.about-me-root::-webkit-scrollbar-thumb:hover {
+  background: #8066D9;
+}
+
+/* Glassmorphism surfaces */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 35px -5px rgba(128, 102, 217, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.glass-panel-subtle {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(231, 224, 250, 0.6);
+  box-shadow: 0 8px 24px -4px rgba(128, 102, 217, 0.05);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(216, 205, 247, 0.5);
+  box-shadow: 0 4px 15px rgba(128, 102, 217, 0.06);
+}
+
+/* Aurora & light gradients */
+.bg-aurora {
+  background: radial-gradient(circle at 50% 30%, rgba(216, 205, 247, 0.45) 0%, rgba(185, 232, 255, 0.3) 35%, rgba(241, 217, 250, 0.25) 60%, rgba(250, 249, 255, 0) 80%);
+}
+
+.bg-dot-subtle {
+  background-image: radial-gradient(rgba(128, 102, 217, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.bg-dot-fine {
+  background-image: radial-gradient(rgba(128, 102, 217, 0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Glowing text & soft blooms */
+.text-gradient-violet {
+  background: linear-gradient(135deg, #49358F 0%, #7254C7 50%, #8066D9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-ethereal {
+  background: linear-gradient(135deg, #24213A 0%, #6247B5 60%, #8066D9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-orb-violet {
+  box-shadow: 0 0 60px 10px rgba(128, 102, 217, 0.25), 0 0 100px 30px rgba(185, 232, 255, 0.2);
+}
+
+.glow-orb-intense {
+  box-shadow: 0 0 80px 20px rgba(128, 102, 217, 0.35), 0 0 140px 50px rgba(216, 205, 247, 0.3);
+}
+
+/* Animations */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+@keyframes pulseGently {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.animate-pulse-gently {
+  animation: pulseGently 4s ease-in-out infinite;
+}
+
+@keyframes waveExpand {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.animate-wave-ripple {
+  animation: waveExpand 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+/* Neon laser perimeter beam animations */
+@keyframes laserCircuit {
+  0% {
+    stroke-dashoffset: 1580;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-laser-circuit {
+  animation: laserCircuit 4.5s linear infinite;
+}
+
+.animate-laser-circuit-delayed {
+  animation: laserCircuit 4.5s linear infinite;
+  animation-delay: -2.25s;
+}
+
+@keyframes sparklePulse {
+  0%, 100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.3) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+.animate-sparkle-pulse {
+  animation: sparklePulse 3s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+@keyframes glintGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.animate-glint-glow {
+  animation: glintGlow 2.5s ease-in-out infinite;
+}
+
