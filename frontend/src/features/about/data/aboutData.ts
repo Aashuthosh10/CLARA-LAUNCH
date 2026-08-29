@@ -1,4 +1,9 @@
 import { Capability, PipelineStage, TechLayer, EcosystemRole, Creator, QuerySimulation } from '../types';
+import aashuthoshImage from '../assets/images/creators/a-n-aashuthosh.png';
+import dhanushImage from '../assets/images/creators/dhanush-s-babu.png';
+import naveenImage from '../assets/images/creators/m-naveen-kumar.png';
+import chinmayiImage from '../assets/images/creators/chinmayi-shastry-l.png';
+import adithyaImage from '../assets/images/creators/adithya-nc.png';
 
 export const CAPABILITIES: Capability[] = [
   {
@@ -444,6 +449,7 @@ export interface CreatorMember {
   specialization: string[];
   bio: string;
   avatarSeed: string;
+  image: string;
   github?: string;
   linkedin?: string;
   email?: string;
@@ -457,6 +463,7 @@ export const CREATORS_FIVE: CreatorMember[] = [
     specialization: ['Natural Language Processing', 'Intent Extraction', 'Multimodal Dialogue', 'Vector Indexing'],
     bio: 'Researched and built the semantic understanding engine, designing intent classification pipelines and contextual disambiguation models for natural student-institution conversations.',
     avatarSeed: 'aashuthosh',
+    image: aashuthoshImage,
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:aashuthosh@clara-ai.edu',
@@ -468,6 +475,7 @@ export const CREATORS_FIVE: CreatorMember[] = [
     specialization: ['Interactive Web Systems', 'Component Architecture', 'Client State Machines', 'Responsive UX'],
     bio: 'Crafted the front-end kiosk and web client interface architecture, implementing smooth spatial rendering, real-time UI components, and accessible interaction models.',
     avatarSeed: 'adithya',
+    image: adithyaImage,
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:adithya@clara-ai.edu',
@@ -479,6 +487,7 @@ export const CREATORS_FIVE: CreatorMember[] = [
     specialization: ['Retrieval-Augmented Generation', 'Document Ingestion', 'Knowledge Graphs', 'Database Schemas'],
     bio: 'Engineered the zero-hallucination institutional RAG framework, structuring institutional bylaws, faculty rosters, and campus timetables into low-latency semantic embeddings.',
     avatarSeed: 'chinmayi',
+    image: chinmayiImage,
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:chinmayi@clara-ai.edu',
@@ -490,6 +499,7 @@ export const CREATORS_FIVE: CreatorMember[] = [
     specialization: ['WebSocket Protocols', 'WebRTC Kiosk Streaming', 'Speech-to-Text Pipeline', 'Audio Latency Tuning'],
     bio: 'Architected the streaming bi-directional WebSocket and WebRTC layer, powering live receptionist video escalation and high-speed streaming neural voice synthesis.',
     avatarSeed: 'dhanush',
+    image: dhanushImage,
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:dhanush@clara-ai.edu',
@@ -501,6 +511,7 @@ export const CREATORS_FIVE: CreatorMember[] = [
     specialization: ['Full-Stack AI Architecture', 'Multi-Agent Orchestration', 'Institutional Integration', 'System Performance'],
     bio: 'Led the overarching system design, cognitive architecture, and end-to-end integration connecting campus infrastructure, appointment management, and conversational intelligence.',
     avatarSeed: 'naveen',
+    image: naveenImage,
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:naveen@clara-ai.edu',

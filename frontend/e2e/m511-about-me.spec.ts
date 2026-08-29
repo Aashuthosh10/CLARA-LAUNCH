@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('M5.11 About Me integration', () => {
   test('opens the integrated About Me experience and returns to SleepScreen', async ({ page }) => {
+    test.setTimeout(45000);
     await page.goto('/');
 
     const sleepScreen = page.getByTestId('sleep-screen');
@@ -26,6 +27,24 @@ test.describe('M5.11 About Me integration', () => {
     await expect(page.getByRole('heading', { name: 'WHAT CLARA CAN DO', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Creators', exact: true }).click();
     await expect(page.getByRole('heading', { name: /THE PEOPLE BEHIND/i })).toBeVisible();
+
+    const creatorNames = [
+      'A N AASHUTHOSH',
+      'ADITHYA N C',
+      'CHINMAYI SHASTRY L',
+      'DHANUSH S BABU',
+      'M NAVEEN KUMAR',
+    ];
+    await expect(page.locator('#creators-card img[alt$="portrait"]')).toHaveCount(5);
+    for (const name of creatorNames) {
+      await page.getByRole('button', { name: `Open profile for ${name}` }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.getByRole('dialog').getByRole('heading', { name })).toBeVisible();
+      await expect(page.getByRole('dialog').getByAltText(`${name} portrait`)).toBeVisible();
+      await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    }
+
     await page.getByRole('button', { name: 'Our Guide', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'OUR GUIDE', exact: true })).toBeVisible();
 

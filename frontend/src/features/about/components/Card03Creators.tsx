@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { CREATORS_FIVE, CreatorMember } from '../data/aboutData';
-import { Github, Linkedin, Mail, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { playHoverChime, playNodeSelectChime } from '../utils/audio';
 
 interface Card03Props {
@@ -15,6 +15,14 @@ export const Card03Creators: React.FC<Card03Props> = ({
   onNextCard,
   onSelectCreator,
 }) => {
+  const displayName = (name: string) =>
+    name
+      .toLowerCase()
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => (part.length <= 2 ? part.toUpperCase() : `${part[0].toUpperCase()}${part.slice(1)}`))
+      .join(' ');
+
   return (
     <section
       id="creators-card"
@@ -57,92 +65,42 @@ export const Card03Creators: React.FC<Card03Props> = ({
       {/* 5 COMPACT PROFILE CARDS IN A SINGLE HORIZONTAL LINE ON DESKTOP            */}
       {/* ========================================================================= */}
       <div className="relative z-10 w-full max-w-[1580px] mx-auto my-auto py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 xl:gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 xl:gap-7 items-stretch">
           {CREATORS_FIVE.map((creator, idx) => {
             return (
               <motion.div
                 key={creator.id}
-                onClick={() => {
-                  playNodeSelectChime();
-                  onSelectCreator(creator);
-                }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.08 }}
                 onMouseEnter={playHoverChime}
                 whileHover={{ y: -6 }}
-                className="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 border-2 border-[#E9D5FF] hover:border-[#7C3AED] shadow-md hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 flex flex-col items-center text-center justify-between group cursor-pointer"
+                className="relative aspect-[0.64] rounded-[22px] border border-[#E9D5FF] hover:border-[#A78BFA] shadow-[0_8px_22px_rgba(76,29,149,0.12)] hover:shadow-[0_16px_34px_rgba(76,29,149,0.2)] transition-all duration-300 group overflow-hidden"
               >
-                {/* 1. Portrait Container */}
-                <div className="relative mb-4">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#7C3AED] via-[#9333EA] to-[#C084FC] p-1 shadow-lg group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
-                    <div className="w-full h-full rounded-3xl bg-[#FAF9FF] flex flex-col items-center justify-center overflow-hidden relative">
-                      <span className="font-display font-black text-3xl sm:text-4xl text-[#7C3AED]">
-                        {creator.name
-                          .split(' ')
-                          .filter((w) => w.length > 0)
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </span>
-                      <span className="absolute bottom-1.5 text-[10px] font-mono uppercase tracking-widest text-[#71717A] font-bold">
-                        DEV 0{idx + 1}
-                      </span>
-                    </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playNodeSelectChime();
+                    onSelectCreator(creator);
+                  }}
+                  className="absolute inset-0 w-full h-full text-left cursor-pointer focus:outline-none focus:ring-4 focus:ring-inset focus:ring-[#A78BFA]"
+                  aria-label={`Open profile for ${creator.name}`}
+                >
+                  <img
+                    src={creator.image}
+                    alt={`${creator.name} portrait`}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent pointer-events-none" />
+                  <div className="absolute inset-x-3 bottom-4 px-2 text-center text-white">
+                    <h3 className="font-display font-black text-lg sm:text-xl xl:text-[21px] leading-tight mb-2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                    {displayName(creator.name)}
+                    </h3>
+                    <p className="font-mono text-xs sm:text-sm font-bold text-white leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      {creator.role}
+                    </p>
                   </div>
-                </div>
-
-                {/* 2. Name - Big & Bold */}
-                <h3 className="font-display font-black text-lg sm:text-xl xl:text-2xl text-[#09090B] group-hover:text-[#7C3AED] transition-colors leading-tight mb-2">
-                  {creator.name}
-                </h3>
-
-                {/* 3. Role - High contrast */}
-                <p className="font-mono text-sm sm:text-base font-bold text-[#6D28D9] mb-5 leading-snug px-1">
-                  {creator.role}
-                </p>
-
-                {/* 4. Social/Link Icon Row */}
-                <div className="flex items-center justify-center gap-3.5 pt-3.5 border-t border-[#F4F4F5] w-full mt-auto">
-                  {creator.github && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(creator.github, '_blank');
-                      }}
-                      className="p-2 rounded-xl text-[#71717A] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors"
-                      title="GitHub"
-                    >
-                      <Github className="w-5 h-5" />
-                    </span>
-                  )}
-
-                  {creator.linkedin && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(creator.linkedin, '_blank');
-                      }}
-                      className="p-2 rounded-xl text-[#71717A] hover:text-[#0A66C2] hover:bg-[#F4F4F5] transition-colors"
-                      title="LinkedIn"
-                    >
-                      <Linkedin className="w-5 h-5" />
-                    </span>
-                  )}
-
-                  {creator.email && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = creator.email;
-                      }}
-                      className="p-2 rounded-xl text-[#71717A] hover:text-[#7C3AED] hover:bg-[#F4F4F5] transition-colors"
-                      title="Email Contact"
-                    >
-                      <Mail className="w-5 h-5" />
-                    </span>
-                  )}
-                </div>
+                </button>
               </motion.div>
             );
           })}

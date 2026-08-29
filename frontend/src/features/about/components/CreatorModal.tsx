@@ -13,7 +13,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
   return (
     <AnimatePresence>
       {creator && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none" role="dialog" aria-modal="true" aria-labelledby="creator-profile-name">
           {/* 1. Frosted Glass Blurred Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -35,7 +35,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
               damping: 28,
               mass: 0.8,
             }}
-            className="relative z-10 w-full max-w-[640px] bg-white rounded-3xl p-7 sm:p-9 shadow-2xl shadow-purple-950/30 border-2 border-[#DDD6FE] overflow-hidden flex flex-col pointer-events-auto"
+            className="relative z-10 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-white rounded-3xl p-7 sm:p-9 shadow-2xl shadow-purple-950/30 border-2 border-[#DDD6FE] flex flex-col pointer-events-auto"
           >
             {/* Top macOS-style control bar with Red/Yellow/Green Traffic Lights */}
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#F4F4F5]">
@@ -45,6 +45,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
                   onClick={onClose}
                   className="w-4 h-4 rounded-full bg-[#EF4444] hover:opacity-80 transition-opacity cursor-pointer inline-block"
                   title="Close"
+                  aria-label="Close creator profile"
                 />
                 <span className="w-4 h-4 rounded-full bg-[#F59E0B] inline-block opacity-80" />
                 <span className="w-4 h-4 rounded-full bg-[#10B981] inline-block opacity-80" />
@@ -58,28 +59,24 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
                 onClick={onClose}
                 onMouseEnter={playHoverChime}
                 className="p-2 rounded-full text-[#71717A] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors cursor-pointer"
+                aria-label="Close creator profile"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Creator Profile Header */}
-            <div className="flex items-center gap-6 mb-6">
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-[#7C3AED] via-[#9333EA] to-[#C084FC] p-1 shadow-lg flex items-center justify-center shrink-0">
-                <div className="w-full h-full rounded-3xl bg-[#FAF9FF] flex flex-col items-center justify-center overflow-hidden">
-                  <span className="font-display font-black text-3xl sm:text-4xl text-[#7C3AED]">
-                    {creator.name
-                      .split(' ')
-                      .filter((w) => w.length > 0)
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join('')}
-                  </span>
-                </div>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl bg-gradient-to-tr from-[#7C3AED] via-[#9333EA] to-[#C084FC] p-1 shadow-lg flex items-center justify-center shrink-0">
+                <img
+                  src={creator.image}
+                  alt={`${creator.name} portrait`}
+                  className="w-full h-full rounded-3xl object-cover"
+                />
               </div>
 
-              <div className="flex flex-col text-left">
-                <h3 className="font-display font-black text-2xl sm:text-3xl text-[#09090B] tracking-tight">
+              <div className="flex flex-col text-center sm:text-left">
+                <h3 id="creator-profile-name" className="font-display font-black text-2xl sm:text-3xl text-[#09090B] tracking-tight">
                   {creator.name}
                 </h3>
                 <p className="font-mono text-base sm:text-lg font-bold text-[#7C3AED] mt-1">
