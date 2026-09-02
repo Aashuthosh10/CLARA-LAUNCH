@@ -35,68 +35,49 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
               damping: 28,
               mass: 0.8,
             }}
-            className="relative z-10 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-white rounded-3xl p-7 sm:p-9 shadow-2xl shadow-purple-950/30 border-2 border-[#DDD6FE] flex flex-col pointer-events-auto"
+            className="relative z-10 w-full max-w-[1080px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-[#FAF9FF] to-[#EDE9FE] rounded-[30px] shadow-2xl shadow-purple-950/30 border-2 border-[#DDD6FE] flex flex-col pointer-events-auto"
           >
-            {/* Top macOS-style control bar with Red/Yellow/Green Traffic Lights */}
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#F4F4F5]">
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-4 h-4 rounded-full bg-[#EF4444] hover:opacity-80 transition-opacity cursor-pointer inline-block"
-                  title="Close"
-                  aria-label="Close creator profile"
-                />
-                <span className="w-4 h-4 rounded-full bg-[#F59E0B] inline-block opacity-80" />
-                <span className="w-4 h-4 rounded-full bg-[#10B981] inline-block opacity-80" />
-                <span className="font-mono text-xs sm:text-sm font-bold text-[#71717A] ml-2.5 uppercase tracking-wider">
-                  CREATOR PROFILE
-                </span>
-              </div>
+            <button
+              type="button"
+              onClick={onClose}
+              onMouseEnter={playHoverChime}
+              className="absolute top-5 right-5 z-20 p-2 rounded-full text-[#71717A] hover:text-[#09090B] hover:bg-white/70 transition-colors cursor-pointer"
+              aria-label="Close creator profile"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
-              <button
-                type="button"
-                onClick={onClose}
-                onMouseEnter={playHoverChime}
-                className="p-2 rounded-full text-[#71717A] hover:text-[#09090B] hover:bg-[#F4F4F5] transition-colors cursor-pointer"
-                aria-label="Close creator profile"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Creator Profile Header */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
-              <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl bg-gradient-to-tr from-[#7C3AED] via-[#9333EA] to-[#C084FC] p-1 shadow-lg flex items-center justify-center shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-[60%_40%] min-h-[520px]">
+              {/* Portrait: blended into the card with a left-edge vignette */}
+              <div className="relative order-1 sm:order-2 min-h-[300px] sm:min-h-full overflow-hidden">
                 <img
                   src={creator.image}
                   alt={`${creator.name} portrait`}
-                  className="w-full h-full rounded-3xl object-cover"
+                  className="absolute inset-0 w-full h-full object-cover object-top"
                 />
               </div>
 
-              <div className="flex flex-col text-center sm:text-left">
-                <h3 id="creator-profile-name" className="font-display font-black text-2xl sm:text-3xl text-[#09090B] tracking-tight">
+              <div className="relative order-2 sm:order-1 flex flex-col text-left px-7 sm:px-10 py-10 sm:py-12 overflow-hidden">
+                <h3 id="creator-profile-name" className="font-display font-black text-4xl sm:text-6xl leading-[0.98] text-[#11102B] tracking-[-0.04em]">
                   {creator.name}
                 </h3>
-                <p className="font-mono text-base sm:text-lg font-bold text-[#7C3AED] mt-1">
+                <div className="mt-5 mb-8 h-1 w-24 bg-gradient-to-r from-[#7C3AED] to-[#C084FC]" />
+                <p className="font-mono text-sm sm:text-base font-bold uppercase tracking-[0.18em] text-[#6D28D9]">
                   {creator.role}
                 </p>
-              </div>
-            </div>
 
-            {/* Bio Narrative */}
-            <div className="text-left mb-6">
+                {/* Bio Narrative */}
+                <div className="text-left mt-9 mb-7 max-w-xl">
               <h4 className="text-xs sm:text-sm font-mono font-bold text-[#71717A] uppercase tracking-wider mb-2">
                 About & Contributions
               </h4>
               <p className="text-base sm:text-lg text-[#27272A] font-medium leading-relaxed">
                 {creator.bio}
               </p>
-            </div>
+                </div>
 
-            {/* Specializations Tags */}
-            <div className="text-left mb-7">
+                {/* Specializations Tags */}
+                <div className="text-left mb-7">
               <h4 className="text-xs sm:text-sm font-mono font-bold text-[#71717A] uppercase tracking-wider mb-2.5">
                 Specializations
               </h4>
@@ -111,10 +92,10 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
                   </span>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Social Links Row & Action Button */}
-            <div className="flex items-center justify-between pt-5 border-t border-[#F4F4F5] mt-auto">
+                {/* Social Links Row & Action Button */}
+                <div className="flex items-center justify-between pt-5 border-t border-[#F4F4F5] mt-auto">
               <div className="flex items-center gap-3.5">
                 {creator.github && (
                   <a
@@ -151,13 +132,8 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-7 py-3 rounded-full text-sm sm:text-base font-black text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-all cursor-pointer shadow-lg shadow-purple-600/30 active:scale-95"
-              >
-                Done
-              </button>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>

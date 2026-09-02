@@ -189,7 +189,7 @@ export default function SleepScreen({
           onAboutMe();
         }}
         data-testid="about-me-entry"
-        className="absolute bottom-10 left-10 z-40 inline-flex items-center gap-3 rounded-full border-2 border-violet-300/80 bg-white/95 px-8 py-4 text-sm font-black tracking-[0.18em] text-violet-900 uppercase shadow-[0_8px_30px_rgba(124,58,237,0.35)] backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-violet-200 hover:bg-white hover:text-violet-700 focus:outline-none focus:ring-4 focus:ring-violet-300/70"
+        className="group absolute bottom-10 left-10 z-40 inline-flex items-center gap-3 overflow-hidden rounded-full border border-white/60 bg-white/20 px-8 py-4 text-sm font-black tracking-[0.18em] text-white uppercase shadow-[0_8px_32px_rgba(76,29,149,0.32),inset_0_1px_0_rgba(255,255,255,0.7),inset_0_-1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl transition-all duration-300 hover:scale-105 hover:border-white/90 hover:bg-white/30 hover:shadow-[0_12px_40px_rgba(124,58,237,0.45),inset_0_1px_0_rgba(255,255,255,0.85)] focus:outline-none focus:ring-4 focus:ring-white/40"
       >
         <span className="flex h-3 w-3 rounded-full bg-violet-600 shadow-[0_0_14px_rgba(124,58,237,0.9)]" aria-hidden="true" />
         About Me

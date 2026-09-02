@@ -67,13 +67,17 @@ def get_wakeup_opening_tts_text(now: datetime | None = None) -> str:
 
 
 def get_wakeup_language_gate_display_text(now: datetime | None = None) -> str:
-    """Opening greeting and the spoken instruction shown before language pick."""
-    return f"{get_wakeup_opening_display_text(now)}\n{get_language_required_nudge_english()}"
+    """Only the opening greeting is displayed before language pick.
+
+    The language instruction is intentionally TTS-only.  The frontend reveals
+    the picker after the greeting clip ends and then plays that instruction.
+    """
+    return get_wakeup_opening_display_text(now)
 
 
 def get_wakeup_language_gate_tts_text(now: datetime | None = None) -> str:
-    """Wake TTS that exactly matches the displayed greeting and language instruction."""
-    return get_wakeup_language_gate_display_text(now)
+    """TTS for the first wake clip; the language nudge is a second clip."""
+    return get_wakeup_opening_tts_text(now)
 
 
 def get_language_required_nudge_english() -> str:

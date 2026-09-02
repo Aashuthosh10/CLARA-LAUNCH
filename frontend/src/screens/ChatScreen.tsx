@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from 'motion/react';
 import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
@@ -640,6 +640,7 @@ export default function ChatScreen({
   presentationRef.current = presentation;
   const [showLanguageOverlay, setShowLanguageOverlay] = useState(false);
   const [languageGateSatisfied, setLanguageGateSatisfied] = useState(() => !inlineLanguageGate);
+  const openingLanguageNudgePlayedRef = useRef<string | null>(null);
   const isE2EFlow = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).has('e2e');
@@ -1212,7 +1213,8 @@ export default function ChatScreen({
 
 
   // Intent Classifier & Speech Hooks
-  const voiceAnalyser = useVoiceFrequencyAnalyser(orbState === 'listening');
+  const isMicListening = orbState === 'listening' || Boolean(propIsListening);
+  const voiceAnalyser = useVoiceFrequencyAnalyser(isMicListening);
   // Browser Speech Rec fallback (used if not relying on backend voice activity detection)
   const handleEmptyTranscript = useCallback(() => {
     if (isCampusNavigationStage) return;
@@ -1361,8 +1363,7 @@ export default function ChatScreen({
     const shouldRevealPicker = isE2EFlow || hasGreeted || (openingTurn && !hasOpeningAudio);
     if (!shouldRevealPicker) return;
 
-    const t = window.setTimeout(() => setShowLanguageOverlay(true), hasOpeningAudio ? 850 : 2200);
-    return () => window.clearTimeout(t);
+    setShowLanguageOverlay(true);
   }, [
     inlineLanguageGate,
     languageGateSatisfied,
@@ -1372,6 +1373,42 @@ export default function ChatScreen({
     isE2EFlow,
     payload?.turn_id,
     payload?.audioBase64,
+    isPayloadStale,
+  ]);
+
+  // The language instruction is spoken only after the greeting clip has ended.
+  // It is never added to displayMessages, so the visible opening remains the
+  // greeting while the picker is shown separately.
+  useEffect(() => {
+    if (payload && isPayloadStale?.(payload)) return;
+    if (!inlineLanguageGate || languageGateSatisfied) return;
+    if (payload?.turn_id !== 'greeting_opening') return;
+    const nudgeAudio = payload?.languageGateNudgeAudioBase64;
+    if (typeof nudgeAudio !== 'string' || nudgeAudio.length === 0) return;
+    const hasOpeningAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+    const greetingComplete = hasGreeted || !hasOpeningAudio;
+    if (!greetingComplete) return;
+    const key = `${payload.turn_id}:${nudgeAudio.slice(0, 24)}:${nudgeAudio.length}`;
+    if (openingLanguageNudgePlayedRef.current === key) return;
+    openingLanguageNudgePlayedRef.current = key;
+    const audio = new Audio(`data:audio/wav;base64,${nudgeAudio}`);
+    audio.dataset.claraChannel = 'legacy';
+    audio.dataset.turnId = 'language_gate_nudge';
+    audio.play().catch((error) => {
+      console.warn('[CLARA_TTS] language gate nudge playback failed', error);
+    });
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [
+    payload,
+    payload?.turn_id,
+    payload?.audioBase64,
+    payload?.languageGateNudgeAudioBase64,
+    hasGreeted,
+    inlineLanguageGate,
+    languageGateSatisfied,
     isPayloadStale,
   ]);
 
@@ -3875,8 +3912,8 @@ export default function ChatScreen({
       setOrbState('processing');
     } else if (isProcessing) {
       setOrbState('processing');
-    } else if (propIsListening || isPendingListeningRef.current) {
-      // User started speaking or explicitly tapped the orb (optimistic listening)
+    } else if (speechListening || propIsListening || isPendingListeningRef.current) {
+      // User started speaking, browser mic active, or explicitly tapped the orb
       setOrbState('listening');
     } else if (wasSpeaking && !isPlayingBackendAudio && !backendSaysSpeaking) {
       // CLARA just finished speaking → show 'completed' with "Tap to Speak"
@@ -3889,6 +3926,7 @@ export default function ChatScreen({
       else setOrbState('idle');
     }
   }, [
+    speechListening,
     propIsListening,
     propIsSpeaking,
     payload?.audioPending,
@@ -4010,8 +4048,8 @@ export default function ChatScreen({
     // Safety fallback: if mic fails to engage, drop optimistic state
     setTimeout(() => {
       isPendingListeningRef.current = false;
-      // Force a re-render to evaluating state
-      setOrbState(prev => prev === 'listening' && !propIsListening ? 'idle' : prev);
+      // Force a re-render evaluating state; keep listening if browser speech recognition is active
+      setOrbState(prev => prev === 'listening' && !propIsListening && !speechListening ? 'idle' : prev);
     }, 3000);
 
     if (voiceInputMode === 'backend') onOrbTap();
@@ -4799,6 +4837,7 @@ export default function ChatScreen({
                         orbState={orbState}
                         isProcessing={isResponsePending}
                         amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+                        frequencyDataRef={voiceAnalyser.frequencyDataRef}
                         onTap={handleOrbTap}
                         bottomClassName="mt-2 mb-5 w-full text-center"
                       />
@@ -5011,6 +5050,7 @@ export default function ChatScreen({
                       orbState={orbState}
                       isProcessing={isResponsePending}
                       amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+                      frequencyDataRef={voiceAnalyser.frequencyDataRef}
                       onTap={handleOrbTap}
                       bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
                     />
@@ -5033,6 +5073,7 @@ export default function ChatScreen({
               orbState={orbState}
               isProcessing={isResponsePending}
               amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+              frequencyDataRef={voiceAnalyser.frequencyDataRef}
               onTap={handleOrbTap}
               comparisonMode
               bottomClassName="pointer-events-none mt-1 w-full text-center"

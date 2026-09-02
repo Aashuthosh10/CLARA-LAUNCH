@@ -41,7 +41,7 @@ test.describe('M5.11 About Me integration', () => {
       await expect(page.getByRole('dialog')).toBeVisible();
       await expect(page.getByRole('dialog').getByRole('heading', { name })).toBeVisible();
       await expect(page.getByRole('dialog').getByAltText(`${name} portrait`)).toBeVisible();
-      await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Close creator profile' }).click();
       await expect(page.getByRole('dialog')).toHaveCount(0);
     }
 

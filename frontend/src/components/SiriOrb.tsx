@@ -11,9 +11,15 @@ export function getActiveOrbLoops(): number {
 interface SiriOrbProps {
   amplitude?: number;
   isListening?: boolean;
+  /** Visual state only; speaking is represented by the face/mouth channel. */
+  state?: 'idle' | 'listening' | 'processing';
 }
 
-const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false }) => {
+const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false, state }) => {
+  const visualState = state ?? (isListening ? 'listening' : 'idle');
+  const isListeningState = visualState === 'listening';
+  const isProcessing = visualState === 'processing';
+  const isActive = isListeningState || isProcessing;
   useEffect(() => {
     siriOrbMountCount += 1;
     return () => {
@@ -21,23 +27,25 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
     };
   }, []);
   // Dynamically control speed via inline animationDuration — no class toggling needed
-  const idlePulseDur   = isListening ? '1.4s' : '3.5s';
-  const flow1Dur       = isListening ? '4s'   : '10s';
-  const flow2Dur       = isListening ? '5.5s' : '13s';
-  const flow3Dur       = isListening ? '3.5s' : '9s';
-  const coreDur        = isListening ? '1.2s' : '2.8s';
-  const waveDur        = isListening ? '1.0s' : '2.4s';
-  const ambientDur     = isListening ? '1.5s' : '3.2s';
+  const idlePulseDur   = isListeningState ? '1.4s' : isProcessing ? '2.2s' : '3.5s';
+  const flow1Dur       = isListeningState ? '4s'   : isProcessing ? '7s' : '10s';
+  const flow2Dur       = isListeningState ? '5.5s' : isProcessing ? '8s' : '13s';
+  const flow3Dur       = isListeningState ? '3.5s' : isProcessing ? '6s' : '9s';
+  const coreDur        = isListeningState ? '1.2s' : isProcessing ? '2s' : '2.8s';
+  const waveDur        = isListeningState ? '1.0s' : isProcessing ? '1.8s' : '2.4s';
+  const ambientDur     = isListeningState ? '1.5s' : isProcessing ? '2.4s' : '3.2s';
 
   const extraAmp = amplitude * 0.12;
-  const glowScale = 1 + (isListening ? 0.06 : 0) + extraAmp;
+  const glowScale = 1 + (isListeningState ? 0.06 : isProcessing ? 0.025 : 0) + extraAmp;
 
   // Glow spreads tightened ~12% so halo does not compete with FAQ pills; alphas unchanged.
-  const outerGlow = isListening
+  const outerGlow = isListeningState
     ? `0 0 0 2px rgba(216,70,164,0.35),
        0 0 35px  rgba(99,102,241,0.75),
        0 0 70px  rgba(59,130,246,0.55),
        0 0 114px rgba(139,92,246,0.35)`
+    : isProcessing
+    ? `0 0 0 2px rgba(167,139,250,0.28), 0 0 30px rgba(99,102,241,0.62), 0 0 72px rgba(79,70,229,0.38), 0 0 104px rgba(139,92,246,0.24)`
     : `0 0 0 2px rgba(216,70,164,0.2),
        0 0 24px  rgba(99,102,241,0.48),
        0 0 51px  rgba(59,130,246,0.28),
@@ -97,17 +105,25 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
           0%,100% { opacity: 0.17; }
           50%      { opacity: 0.36; }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+          .clara-siri-orb *, .clara-siri-orb svg * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
       `}</style>
 
       {/* ══ Root wrapper ══ */}
-      <div style={{ position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="clara-siri-orb" data-orb-visual-state={visualState} style={{ position: 'relative', width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
         {/* ── AMBIENT HALO ── */}
         <div style={{
           position: 'absolute', width: 280, height: 280, borderRadius: '50%',
           background: `radial-gradient(circle at 50% 50%,
-            rgba(139,92,246,${isListening ? 0.3 : 0.2})  0%,
-            rgba(99,102,241,${isListening ? 0.18 : 0.12}) 40%,
+            rgba(139,92,246,${isActive ? 0.3 : 0.2})  0%,
+            rgba(99,102,241,${isActive ? 0.18 : 0.12}) 40%,
             transparent 72%)`,
           filter: 'blur(26px)',
           animation: `_so_ambient ${ambientDur} ease-in-out infinite`,
@@ -120,7 +136,7 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
             position: 'absolute',
             width: d, height: d,
             borderRadius: '50%',
-            border: `1px dotted rgba(${isListening ? '180,160,240' : '160,150,210'},0.26)`,
+            border: `1px dotted rgba(${isActive ? '180,160,240' : '160,150,210'},0.26)`,
             left: '50%', top: '50%',
             transform: 'translate(-50%,-50%)',
             animation: `_so_rings ${ambientDur} ease-in-out infinite`,
@@ -138,9 +154,9 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
           transform: `scale(${glowScale})`,
           transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.5s ease',
           boxShadow: outerGlow,
-          animation: isListening
+          animation: isListeningState
             ? `_so_listen_pulse ${idlePulseDur} ease-in-out infinite`
-            : `_so_idle_pulse   ${idlePulseDur} ease-in-out infinite`,
+            : `_so_idle_pulse ${idlePulseDur} ease-in-out infinite`,
         }}>
 
           {/* ── 1. DEEP DARK BASE ── */}
@@ -218,11 +234,11 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
               <motion.g
                 animate={{
                   rotate: 360,
-                  scale: isListening ? [1, 1.2, 1] : 1,
+                  scale: isActive ? [1, isListeningState ? 1.2 : 1.05, 1] : 1,
                   opacity: [0.9, 1, 0.9],
                 }}
                 transition={{
-                  rotate: { duration: isListening ? 4 : 10, repeat: Infinity, ease: 'linear' },
+                  rotate: { duration: isListeningState ? 4 : isProcessing ? 7 : 10, repeat: Infinity, ease: 'linear' },
                   scale: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
                   opacity: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
                 }}
@@ -238,11 +254,11 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
               <motion.g
                 animate={{
                   rotate: -360,
-                  scale: isListening ? [1, 1.15, 1] : 1,
+                  scale: isActive ? [1, isListeningState ? 1.15 : 1.04, 1] : 1,
                   opacity: [0.8, 1, 0.8],
                 }}
                 transition={{
-                  rotate: { duration: isListening ? 6 : 14, repeat: Infinity, ease: 'linear' },
+                  rotate: { duration: isListeningState ? 6 : isProcessing ? 8 : 14, repeat: Infinity, ease: 'linear' },
                   scale: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
                   opacity: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' },
                 }}
@@ -261,7 +277,7 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
                   opacity: [0.5, 0.9, 0.5],
                 }}
                 transition={{
-                  rotate: { duration: isListening ? 3 : 8, repeat: Infinity, ease: 'linear' },
+                  rotate: { duration: isListeningState ? 3 : isProcessing ? 6 : 8, repeat: Infinity, ease: 'linear' },
                   opacity: { duration: 1, repeat: Infinity, ease: 'easeInOut' },
                 }}
                 style={{ transformOrigin: '50px 50px' }}
@@ -326,10 +342,10 @@ const SiriOrb: React.FC<SiriOrbProps> = ({ amplitude = 0, isListening = false })
           <div style={{
             position: 'absolute', inset: 0,
             background: `
-              radial-gradient(circle at 50%   0%,  rgba(255,255,255,${isListening ? 0.9 : 0.75}) 0%, transparent 20%),
-              radial-gradient(circle at 100% 30%,  rgba(34,211,238,${isListening ? 0.85 : 0.7}) 0%, transparent 22%),
+              radial-gradient(circle at 50%   0%,  rgba(255,255,255,${isActive ? 0.9 : 0.75}) 0%, transparent 20%),
+              radial-gradient(circle at 100% 30%,  rgba(34,211,238,${isActive ? 0.85 : 0.7}) 0%, transparent 22%),
               radial-gradient(circle at 88%  82%,  rgba(59,130,246,0.55)  0%, transparent 20%),
-              radial-gradient(circle at 5%   75%,  rgba(236,72,153,${isListening ? 0.88 : 0.72}) 0%, transparent 22%),
+              radial-gradient(circle at 5%   75%,  rgba(236,72,153,${isActive ? 0.88 : 0.72}) 0%, transparent 22%),
               radial-gradient(circle at 42%  100%, rgba(167,139,250,0.55) 0%, transparent 20%)
             `,
             WebkitMask: 'radial-gradient(circle at center, transparent 38%, black 43%, black 50%, transparent 56%)',

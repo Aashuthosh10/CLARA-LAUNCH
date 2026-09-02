@@ -116,6 +116,10 @@ export default function Trustees({ onNarrateTrustee, language }: TrusteesProps) 
           ))}
         </div>
 
+        <span className="trustee-nav-count" data-testid="trustee-card-indicator" aria-label="Trustee card position">
+          {String(index + 1).padStart(2, '0')} / {String(trustees.length).padStart(2, '0')}
+        </span>
+
         <button
           type="button"
           className="trustee-nav-btn"

@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import rawBusData from '../../data/collegeBusRoutes.json';
 import type { CollegeBusRoute, CollegeBusRoutesData } from '../../data/collegeBusRoutes.types';
-import { findBestBusStopHighlight, visibleRouteStartIndex } from '../../lib/busRoutesMatch';
+import { findBestBusStopHighlight } from '../../lib/busRoutesMatch';
+import { clampRouteIndex, routeIndicator } from './busRouteNavigation';
 
 const DATA = rawBusData as CollegeBusRoutesData;
 const ROUTE_LIST = DATA.routes;
@@ -23,71 +24,32 @@ export default function BusRoutesFullscreen({ highlightQuery, onClose }: Props) 
   const routes = ROUTE_LIST as CollegeBusRoute[];
   const routeCount = routes.length;
 
-  const [focusedRouteNum, setFocusedRouteNum] = useState<number>(routes[0]?.route_number ?? 1);
+  const [focusedRouteIndex, setFocusedRouteIndex] = useState(0);
   const [highlightStop, setHighlightStop] = useState<{ routeNum: number; name: string } | null>(
     null,
   );
-  const [tripletSlide, setTripletSlide] = useState<'left' | 'right' | 'none'>('none');
-
-  const prevStartRef = useRef(0);
-  const tripletOpenedRef = useRef(false);
-
-  const pillRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
   const highlightMatch = useMemo(
     () => findBestBusStopHighlight(typeof highlightQuery === 'string' ? highlightQuery : '', routes),
     [highlightQuery, routes],
   );
 
-  const startIndex = useMemo(
-    () => visibleRouteStartIndex(routeCount, focusedRouteNum, routes),
-    [routeCount, focusedRouteNum, routes],
-  );
-
-  const visibleTriple = useMemo(() => routes.slice(startIndex, startIndex + 3), [routes, startIndex]);
-
   useEffect(() => {
     if (highlightMatch) {
-      setFocusedRouteNum(highlightMatch.routeNumber);
+      const highlightedIndex = routes.findIndex((route) => route.route_number === highlightMatch.routeNumber);
+      setFocusedRouteIndex(Math.max(0, highlightedIndex));
       setHighlightStop({
         routeNum: highlightMatch.routeNumber,
         name: highlightMatch.stopName,
       });
       return;
     }
-    const firstNum = routes[0]?.route_number ?? 1;
-    setFocusedRouteNum(firstNum);
+    setFocusedRouteIndex(0);
     setHighlightStop(null);
   }, [highlightMatch, routes]);
-
-  useEffect(() => {
-    if (!tripletOpenedRef.current) {
-      tripletOpenedRef.current = true;
-      prevStartRef.current = startIndex;
-      setTripletSlide('none');
-      return;
-    }
-    const prev = prevStartRef.current;
-    if (prev !== startIndex) {
-      setTripletSlide(startIndex > prev ? 'left' : 'right');
-      prevStartRef.current = startIndex;
-      const timer = window.setTimeout(() => setTripletSlide('none'), 420);
-      return () => window.clearTimeout(timer);
-    }
-    return undefined;
-  }, [startIndex]);
-
-  const scrollRouteIntoView = useCallback((rn: number) => {
-    const el = pillRefs.current.get(rn);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, []);
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => scrollRouteIntoView(focusedRouteNum));
-    return () => cancelAnimationFrame(id);
-  }, [focusedRouteNum, scrollRouteIntoView]);
-
-  const pillKeys = `${startIndex}-${focusedRouteNum}`;
+  const focusedRoute = routes[focusedRouteIndex] ?? routes[0];
+  const canGoPrevious = focusedRouteIndex > 0;
+  const canGoNext = focusedRouteIndex < routeCount - 1;
 
   return (
     <motion.div
@@ -147,19 +109,14 @@ export default function BusRoutesFullscreen({ highlightQuery, onClose }: Props) 
                 scrollbarColor: 'rgba(147,119,237,0.55) transparent',
               }}
             >
-              {routes.map((r) => {
-                const active = focusedRouteNum === r.route_number;
+              {routes.map((r, routeIndex) => {
+                const active = focusedRouteIndex === routeIndex;
                 return (
                   <button
                     key={r.route_number}
-                    ref={(el) => {
-                      if (el) pillRefs.current.set(r.route_number, el);
-                      else pillRefs.current.delete(r.route_number);
-                    }}
                     type="button"
                     onClick={() => {
-                      setFocusedRouteNum(r.route_number);
-                      scrollRouteIntoView(r.route_number);
+                      setFocusedRouteIndex(routeIndex);
                     }}
                     className={`snap-center shrink-0 rounded-[1.35rem] border-2 px-[1.35rem] py-[0.82rem] text-[15px] font-semibold tracking-tight transition-[box-shadow,transform,border-color,background-color] duration-300 min-h-[48px] ${
                       active
@@ -177,29 +134,29 @@ export default function BusRoutesFullscreen({ highlightQuery, onClose }: Props) 
           <div className="relative z-[1] mx-auto mb-8 w-full max-w-[1860px] shrink-0 px-4 pb-8 sm:mb-10 sm:px-10">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                key={pillKeys}
+                key={focusedRouteIndex}
                 initial={{
                   opacity: 0,
-                  x: tripletSlide === 'left' ? 36 : tripletSlide === 'right' ? -36 : 0,
+                  x: 28,
                   filter: 'blur(10px)',
                 }}
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                 exit={{
                   opacity: 0,
-                  x: tripletSlide === 'left' ? -28 : tripletSlide === 'right' ? 28 : 0,
+                  x: -28,
                   filter: 'blur(8px)',
                 }}
                 transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                className="mx-auto grid w-full grid-cols-1 items-stretch gap-4 md:grid-cols-2 md:gap-5 xl:grid-cols-3 xl:justify-center"
+                className="mx-auto grid w-full grid-cols-1 items-stretch"
               >
-                {visibleTriple.map((route, cardIdx) => (
+                {focusedRoute ? [focusedRoute].map((route) => (
                   <motion.article
-                    key={`${pillKeys}-${route.route_number}`}
+                    key={route.route_number}
                     initial={{ opacity: 0, y: 18 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
                       duration: 0.45,
-                      delay: 0.05 + cardIdx * 0.08,
+                      delay: 0.05,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                     className="flex h-full max-w-xl w-full flex-col overflow-visible rounded-[1.85rem] border border-[#5b4494]/52 bg-[linear-gradient(180deg,#fffffffb_8%,rgba(248,243,255,0.98)_92%)] shadow-[0_26px_64px_-16px_rgba(55,24,112,0.28),inset_0_1px_0_rgba(255,255,255,1)] mx-auto xl:mx-0"
@@ -267,9 +224,32 @@ export default function BusRoutesFullscreen({ highlightQuery, onClose }: Props) 
                       })}
                     </ul>
                   </motion.article>
-                ))}
+                )) : null}
               </motion.div>
             </AnimatePresence>
+            <div className="mt-5 flex items-center justify-center gap-4" aria-label="Bus route navigation">
+              <button
+                type="button"
+                onClick={() => setFocusedRouteIndex((index) => clampRouteIndex(index - 1, routeCount))}
+                disabled={!canGoPrevious}
+                aria-label="Previous bus route"
+                className="rounded-full border border-[#6b5285]/55 bg-white/80 px-4 py-2 text-sm font-semibold text-[#2d1b54] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                ← Previous
+              </button>
+              <span className="min-w-[76px] text-center text-sm font-bold tabular-nums text-[#3b0764]" data-testid="bus-route-indicator">
+                {routeIndicator(focusedRouteIndex, routeCount)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setFocusedRouteIndex((index) => clampRouteIndex(index + 1, routeCount))}
+                disabled={!canGoNext}
+                aria-label="Next bus route"
+                className="rounded-full border border-[#6b5285]/55 bg-white/80 px-4 py-2 text-sm font-semibold text-[#2d1b54] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                Next →
+              </button>
+            </div>
           </div>
         </motion.div>
   );

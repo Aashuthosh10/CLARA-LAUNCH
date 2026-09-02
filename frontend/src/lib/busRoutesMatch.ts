@@ -100,23 +100,3 @@ export function findBestBusStopHighlight(
 
   return best;
 }
-
-/** First index among ordered routes for route_number. */
-export function routeIndexByNumber(routes: CollegeBusRoute[], routeNumber: number): number {
-  const i = routes.findIndex((r) => r.route_number === routeNumber);
-  return Math.max(0, i);
-}
-
-/** Triplet windows: centered on focused route when possible. */
-export function visibleRouteStartIndex(
-  routesLen: number,
-  focusedRouteNumber: number,
-  routesSorted: CollegeBusRoute[],
-): number {
-  if (routesLen <= 3) return 0;
-  const idx = routesSorted.findIndex((r) => r.route_number === focusedRouteNumber);
-  const fi = idx < 0 ? 0 : idx;
-  let start = Math.max(0, fi - 1);
-  start = Math.min(start, routesLen - 3);
-  return start;
-}

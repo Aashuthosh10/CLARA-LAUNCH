@@ -3442,6 +3442,7 @@ async def websocket_clara(websocket: WebSocket):
                 if session.get("language_code_key") is None:
                     opening_display = get_wakeup_language_gate_display_text()
                     opening_audio_b64 = None
+                    language_gate_audio_b64 = None
                     try:
                         opening_audio_b64, _ = await tts_to_base64_cached(
                             get_wakeup_language_gate_tts_text(),
@@ -3450,6 +3451,14 @@ async def websocket_clara(websocket: WebSocket):
                         )
                     except Exception as exc:
                         logger.exception("Opening greeting TTS failed: %s", exc)
+                    try:
+                        language_gate_audio_b64, _ = await tts_to_base64_cached(
+                            get_language_required_nudge_english(),
+                            TARGET_LANGUAGE_CODES["en"],
+                            utterance_kind="language_gate_nudge",
+                        )
+                    except Exception as exc:
+                        logger.exception("Language gate nudge TTS failed: %s", exc)
                     opening_message = {"id": "greeting", "role": "clara", "text": opening_display}
                     session["messages"] = [opening_message]
                     payload_open: dict[str, Any] = {
@@ -3461,6 +3470,11 @@ async def websocket_clara(websocket: WebSocket):
                     }
                     if opening_audio_b64:
                         payload_open["audioBase64"] = opening_audio_b64
+                    if language_gate_audio_b64:
+                        # This is deliberately not a message/text field.  The
+                        # browser speaks it after the greeting ends, while the
+                        # language picker is visible.
+                        payload_open["languageGateNudgeAudioBase64"] = language_gate_audio_b64
                     _gff_open = greeting_font_family_css("English")
                     if _gff_open:
                         payload_open["greetingFontFamily"] = _gff_open

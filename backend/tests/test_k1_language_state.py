@@ -247,8 +247,15 @@ class TestWebSocketLanguageLifecycle(unittest.TestCase):
                 self.assertIs(payload.get("isSpeaking"), True)
                 self.assertEqual(payload.get("turn_id"), "greeting_opening")
                 self.assertEqual(payload.get("audioBase64"), fake_audio)
+                self.assertEqual(
+                    payload["messages"][0]["text"],
+                    "Good afternoon. I am CLARA, your campus assistant.",
+                )
+                self.assertEqual(payload.get("languageGateNudgeAudioBase64"), fake_audio)
                 self.assertIs(payload.get("audioUnavailable"), False)
-                tts_mock.assert_called_once()
+                self.assertEqual(tts_mock.call_count, 2)
+                self.assertEqual(tts_mock.call_args_list[0].kwargs["utterance_kind"], "greeting_opening")
+                self.assertEqual(tts_mock.call_args_list[1].kwargs["utterance_kind"], "language_gate_nudge")
                 self.assertEqual(tts_mock.call_args.args[1], "en-IN")
 
     def test_resumed_visitor_does_not_replay_welcome(self) -> None:
