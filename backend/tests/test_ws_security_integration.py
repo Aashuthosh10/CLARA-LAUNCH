@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from backend.app import main
+from backend.app.ws_schemas import WS_MESSAGE_MAX_BYTES
 from backend.security import ws_auth
 from backend.security.rate_limit import BoundedKeyedRateLimiter
 
@@ -63,6 +64,26 @@ class TestWsSecurityIntegration(unittest.TestCase):
         self.assertEqual(tts.await_count, 1)
         self.assertEqual(rejected["payload"]["errorCode"], "RATE_LIMITED")
         self.assertTrue(rejected["payload"]["recoverable"])
+
+    def test_oversized_message_returns_structured_error_without_disconnect(self) -> None:
+        with patch.object(ws_auth, "WS_ALLOWED_ORIGINS", ["http://localhost:5176"]), patch.object(
+            ws_auth, "WS_AUTH_REQUIRED", False
+        ), patch.object(main, "_ip_connect_limiter", _limiter()), patch.object(
+            main, "_ip_message_limiter", _limiter()
+        ):
+            with TestClient(main.app).websocket_connect(
+                "/ws/clara", headers={"origin": "http://localhost:5176"}
+            ) as websocket:
+                websocket.receive_json()
+                websocket.send_text(" " * (WS_MESSAGE_MAX_BYTES + 1))
+                rejected = websocket.receive_json()
+                websocket.send_json({"action": "wake"})
+                accepted = websocket.receive_json()
+
+        self.assertEqual(rejected["payload"]["errorCode"], "MESSAGE_TOO_LARGE")
+        self.assertTrue(rejected["payload"]["recoverable"])
+        self.assertIn("state", accepted)
+        self.assertNotEqual(accepted.get("payload", {}).get("errorCode"), "MESSAGE_TOO_LARGE")
 
 
 if __name__ == "__main__":

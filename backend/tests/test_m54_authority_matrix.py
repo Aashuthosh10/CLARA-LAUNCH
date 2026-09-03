@@ -214,9 +214,9 @@ class TestLInstitutionalAnswer(unittest.TestCase):
 
 
 class TestMNFallback(unittest.TestCase):
-    """M/N — genuinely out of scope, and comparison against another college."""
+    """M/N — general knowledge has no card; external comparison is controlled."""
 
-    def test_off_domain_is_fallback(self) -> None:
+    def test_general_knowledge_is_redirected(self) -> None:
         self.assertIs(decide("What is the capital of France?"), ResponseMode.FALLBACK)
 
     def test_off_domain_never_becomes_a_course_menu(self) -> None:

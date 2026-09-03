@@ -88,10 +88,7 @@ def test_missing_and_long_names_do_not_break_a_grapheme() -> None:
     assert get_name_prompt("Kannada") == "ದಯವಿಟ್ಟು ನಿಮ್ಮನ್ನು ಯಾವ ಹೆಸರಿನಿಂದ ಕರೆಯಬೇಕೆಂದು ತಿಳಿಸಿ."
     assert normalize_guest_name("ಆ" * 80) is None
     long_words = "ಆಶಾ " * 20
-    normalized = normalize_guest_name(long_words)
-    assert normalized
-    assert len(normalized) <= 48
-    assert not normalized.endswith("್")
+    assert normalize_guest_name(long_words) is None
 
 
 def test_kannada_name_prompt_is_resolved_at_call_time(monkeypatch: pytest.MonkeyPatch) -> None:

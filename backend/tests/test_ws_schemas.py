@@ -1,6 +1,12 @@
 import unittest
+from unittest.mock import patch
 
-from backend.app.ws_schemas import parse_inbound_ws_message
+from backend.app.ws_schemas import (
+    WS_AUXILIARY_TEXT_MAX_CHARS,
+    WS_MESSAGE_MAX_BYTES,
+    WS_USER_TEXT_MAX_CHARS,
+    parse_inbound_ws_message,
+)
 
 
 class TestWsSchemas(unittest.TestCase):
@@ -58,6 +64,48 @@ class TestWsSchemas(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(msg["action"], "campus_navigation_tts")
         self.assertEqual(msg["text"], "Go straight")
+
+    def test_message_below_and_at_byte_limit_are_accepted(self) -> None:
+        base = '{"action":"wake"}'
+        for size in (WS_MESSAGE_MAX_BYTES - 1, WS_MESSAGE_MAX_BYTES):
+            raw = base + (" " * (size - len(base)))
+            msg, err = parse_inbound_ws_message(raw)
+            self.assertIsNone(err)
+            self.assertEqual(msg["action"], "wake")
+
+    def test_oversized_message_is_rejected_before_json_parsing(self) -> None:
+        raw = " " * (WS_MESSAGE_MAX_BYTES + 1)
+        with patch("backend.app.ws_schemas.json.loads") as loads:
+            msg, err = parse_inbound_ws_message(raw)
+        self.assertIsNone(msg)
+        self.assertEqual(err, "message_too_large")
+        loads.assert_not_called()
+
+    def test_user_text_limit_and_multilingual_text(self) -> None:
+        exact = "ನ" * WS_USER_TEXT_MAX_CHARS
+        msg, err = parse_inbound_ws_message(
+            '{"action":"user_message","text":"' + exact + '"}'
+        )
+        self.assertIsNone(err)
+        self.assertEqual(msg["text"], exact)
+
+        _, err = parse_inbound_ws_message(
+            '{"action":"user_message","text":"' + ("x" * (WS_USER_TEXT_MAX_CHARS + 1)) + '"}'
+        )
+        self.assertEqual(err, "invalid_payload")
+
+    def test_navigation_text_and_local_intent_are_bounded(self) -> None:
+        _, err = parse_inbound_ws_message(
+            '{"action":"campus_navigation_tts","text":"'
+            + ("x" * (WS_AUXILIARY_TEXT_MAX_CHARS + 1))
+            + '"}'
+        )
+        self.assertEqual(err, "invalid_payload")
+
+        _, err = parse_inbound_ws_message(
+            '{"action":"user_message","text":"CSE","localIntent":{"nodes":[]}}'
+        )
+        self.assertEqual(err, "invalid_payload")
 
 
 if __name__ == "__main__":

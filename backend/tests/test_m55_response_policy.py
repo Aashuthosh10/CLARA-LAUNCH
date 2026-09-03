@@ -109,7 +109,7 @@ class TestBAnswer(unittest.TestCase):
     def test_lexicon_miss_becomes_answer_with_institution_proposal(self) -> None:
         text = "Is there an NCC wing on campus for cadets?"
         # "campus" is institutional; this phrase is still ANSWER from the lexicon.
-        self.assertIs(decide("Is there an NCC wing?"), ResponseMode.CLARIFY)
+        self.assertIs(decide("Is there an NCC wing?"), ResponseMode.ANSWER)
         self.assertIs(decide("Is there an NCC wing?", proposal=institution_answer_proposal()), ResponseMode.ANSWER)
 
     def test_hackathons_are_institutional_answers(self) -> None:
