@@ -105,7 +105,10 @@ VITE_WS_URL=ws://localhost:6969/ws/clara
 
 `WS_AUTH_TOKEN` is retained only for explicitly non-production development or
 test clients. `PRODUCTION_STRICT_READY=true` always rejects it. Rate limits are
-in-memory and process-local; multi-worker deployments need a shared limiter.
+in-memory and process-local. The checked-in `python -m backend.main` launcher
+starts one Uvicorn worker, where these limits apply as configured. Starting
+multiple workers or replicas multiplies the effective limits; horizontal or
+multi-worker deployments require shared limiter storage such as Redis.
 
 ## Backend Setup
 
