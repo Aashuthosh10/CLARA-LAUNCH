@@ -20,6 +20,7 @@ from backend.services.conversation.types import (
     PolicyDecision,
     TranscriptAssessment,
 )
+from backend.services.ui_localization import ui_text
 
 _GREETING_RE_WORDS = frozenset(
     {
@@ -33,9 +34,20 @@ _GREETING_RE_WORDS = frozenset(
         "good morning",
         "good afternoon",
         "good evening",
+        "ನಮಸ್ಕಾರ",
+        "नमस्ते",
+        "నమస్కారం",
+        "வணக்கம்",
+        "നമസ്കാരം",
     }
 )
-_SMALL_TALK_HINTS = frozenset({"how are you", "how's it going", "whats up", "what's up", "thank you", "thanks", "bye", "goodbye"})
+_SOCIAL_CUES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("status", ("how are you", "how's it going", "whats up", "what's up", "ಹೇಗಿದ್ದೀರಿ", "कैसे हैं", "ఎలా ఉన్నారు", "எப்படி இருக்கிறீர்கள்", "സുഖമാണോ")),
+    ("thanks", ("thank you", "thanks", "ಧನ್ಯವಾದ", "शुक्रिया", "धन्यवाद", "ధన్యవాదాలు", "நன்றி", "നന്ദി")),
+    ("goodbye", ("bye", "goodbye", "see you", "ವಿದಾಯ", "अलविदा", "వీడ్కోలు", "பிரியாவிடை", "വിട")),
+    ("identity", ("what's your name", "what is your name", "who are you", "ನಿಮ್ಮ ಹೆಸರೇನು", "आप कौन हैं", "మీరు ఎవరు", "நீங்கள் யார்", "നിങ്ങൾ ആരാണ്")),
+    ("acknowledgement", ("okay", "ok", "ಸರಿ", "ठीक है", "సరే", "சரி", "ശരി")),
+)
 
 
 def route_policy(
@@ -90,10 +102,14 @@ def route_policy(
             length_kind="clarification",
         )
 
-    if any(h in text for h in _SMALL_TALK_HINTS):
+    social_kind = next(
+        (kind for kind, cues in _SOCIAL_CUES if any(cue in text for cue in cues)),
+        None,
+    )
+    if social_kind:
         return PolicyDecision(
             action=PolicyAction.SMALL_TALK,
-            reply_text=small_talk_reply(language),
+            reply_text=small_talk_reply(language, social_kind),
             answer_source="policy_small_talk",
             passthrough=False,
             length_kind="clarification",
@@ -171,7 +187,22 @@ def _project_response_decision(
             length_kind="clarification",
         )
 
-    # FALLBACK — genuinely out of scope. Distinct copy from "answer unavailable".
+    reason = getattr(response_decision, "clarification_reason", None)
+    if reason in {"payment", "private_contact", "official_confirmation"}:
+        language_key = {
+            "English": "en", "Kannada": "kn", "Hindi": "hi",
+            "Telugu": "te", "Tamil": "ta", "Malayalam": "ml",
+        }.get(language or "", "en")
+        return PolicyDecision(
+            action=PolicyAction.UNKNOWN,
+            reply_text=ui_text(language_key, "availability.official_fact_blocked").replace("\n", " "),
+            answer_source=f"controlled_{reason}",
+            unknown_fallback=True,
+            passthrough=False,
+            length_kind="clarification",
+        )
+
+    # FALLBACK — unsafe or explicitly unsupported.
     return PolicyDecision(
         action=PolicyAction.UNKNOWN,
         reply_text=get_off_topic_reply(language),

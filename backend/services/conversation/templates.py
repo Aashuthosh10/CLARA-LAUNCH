@@ -96,6 +96,49 @@ _SMALL_TALK: dict[str, str] = {
     "Malayalam": "ക്യാമ്പസ് ചോദ്യങ്ങൾക്ക് സഹായിക്കാൻ ഞാൻ ഇവിടെയുണ്ട്. നിങ്ങൾക്ക് എന്താണ് അറിയേണ്ടത്?",
 }
 
+_SOCIAL_RESPONSES: dict[str, dict[str, str]] = {
+    "status": {
+        "English": "I'm doing well, thank you. How can I help you at SVIT?",
+        "Kannada": "ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ, ಧನ್ಯವಾದಗಳು. SVIT ನಲ್ಲಿ ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
+        "Hindi": "मैं ठीक हूँ, धन्यवाद। SVIT में मैं आपकी कैसे मदद कर सकती हूँ?",
+        "Telugu": "నేను బాగున్నాను, ధన్యవాదాలు. SVITలో మీకు ఎలా సహాయం చేయగలను?",
+        "Tamil": "நான் நலமாக இருக்கிறேன், நன்றி. SVIT-ல் உங்களுக்கு எப்படி உதவலாம்?",
+        "Malayalam": "എനിക്ക് സുഖമാണ്, നന്ദി. SVIT-ൽ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+    },
+    "thanks": {
+        "English": "You're welcome.",
+        "Kannada": "ಪರವಾಗಿಲ್ಲ.",
+        "Hindi": "आपका स्वागत है।",
+        "Telugu": "మీకు స్వాగతం.",
+        "Tamil": "வரவேற்கிறேன்.",
+        "Malayalam": "സ്വാഗതം.",
+    },
+    "goodbye": {
+        "English": "Goodbye. Have a great day.",
+        "Kannada": "ವಿದಾಯ. ನಿಮ್ಮ ದಿನ ಶುಭವಾಗಲಿ.",
+        "Hindi": "अलविदा। आपका दिन शुभ हो।",
+        "Telugu": "వీడ్కోలు. మీ రోజు శుభంగా ఉండాలి.",
+        "Tamil": "விடைபெறுகிறேன். உங்கள் நாள் இனிதாக அமையட்டும்.",
+        "Malayalam": "വിട. നിങ്ങളുടെ ദിവസം നല്ലതാകട്ടെ.",
+    },
+    "identity": {
+        "English": "I'm CLARA, the AI receptionist for SVIT. How can I help you?",
+        "Kannada": "ನಾನು CLARA, SVIT ನ AI ಸ್ವಾಗತಕಾರ್ತಿ. ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
+        "Hindi": "मैं CLARA हूँ, SVIT की AI रिसेप्शनिस्ट। मैं आपकी कैसे मदद कर सकती हूँ?",
+        "Telugu": "నేను CLARA, SVIT AI రిసెప్షనిస్ట్‌ని. మీకు ఎలా సహాయం చేయగలను?",
+        "Tamil": "நான் CLARA, SVIT-ன் AI வரவேற்பாளர். உங்களுக்கு எப்படி உதவலாம்?",
+        "Malayalam": "ഞാൻ CLARA, SVIT-ന്റെ AI റിസപ്ഷനിസ്റ്റാണ്. നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+    },
+    "acknowledgement": {
+        "English": "Sure. What else can I help you with?",
+        "Kannada": "ಸರಿ. ಇನ್ನೇನು ಸಹಾಯ ಬೇಕು?",
+        "Hindi": "ठीक है। मैं और किस तरह मदद कर सकती हूँ?",
+        "Telugu": "సరే. ఇంకేమైనా సహాయం కావాలా?",
+        "Tamil": "சரி. வேறு என்ன உதவி வேண்டும்?",
+        "Malayalam": "ശരി. മറ്റെന്തെങ്കിലും സഹായം വേണോ?",
+    },
+}
+
 
 def _pick(mapping: dict[str, str], language: str | None) -> str:
     lang = language if language in SUPPORTED_LANGUAGES else "English"
@@ -129,7 +172,9 @@ def greeting_reply(language: str | None) -> str:
     return _pick(_GREETING, language)
 
 
-def small_talk_reply(language: str | None) -> str:
+def small_talk_reply(language: str | None, kind: str | None = None) -> str:
+    if kind and kind in _SOCIAL_RESPONSES:
+        return _pick(_SOCIAL_RESPONSES[kind], language)
     return _pick(_SMALL_TALK, language)
 
 
@@ -147,6 +192,10 @@ def _assert_parity() -> None:
         missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
         if missing:
             raise RuntimeError(f"{name} missing translations: {', '.join(missing)}")
+    for name, mapping in _SOCIAL_RESPONSES.items():
+        missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
+        if missing:
+            raise RuntimeError(f"social.{name} missing translations: {', '.join(missing)}")
 
 
 _assert_parity()

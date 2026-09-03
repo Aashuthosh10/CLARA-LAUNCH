@@ -40,6 +40,7 @@ async def run_conversation_intelligence(
     skip_faq_probe: bool = False,
     last_semantic_entities: tuple[str, ...] | None = None,
     last_person_unit_id: str | None = None,
+    contextual_follow_up: bool = False,
 ) -> ConversationIntelligenceResult:
     """
     Evaluate transcript → entities → intent confidence → policy.
@@ -136,6 +137,7 @@ async def run_conversation_intelligence(
         local_intent=local_intent if force_local else None,
         validated_proposal=proposal_result.proposal,
         proposal_diagnostics=proposal_diagnostics,
+        contextual_follow_up=contextual_follow_up,
     )
 
     decision = route_policy(

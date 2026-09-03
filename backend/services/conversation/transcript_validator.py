@@ -57,6 +57,17 @@ GREETING_WORDS = frozenset(
         "good morning",
         "good afternoon",
         "good evening",
+        "ನಮಸ್ಕಾರ",
+        "नमस्ते",
+        "నమస్కారం",
+        "வணக்கம்",
+        "നമസ്കാരം",
+        "okay",
+        "ok",
+        "thanks",
+        "thank you",
+        "bye",
+        "goodbye",
     }
 )
 

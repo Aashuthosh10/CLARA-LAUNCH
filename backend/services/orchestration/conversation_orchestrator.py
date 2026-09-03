@@ -32,6 +32,7 @@ from backend.services.narration_plan import finalize_segment_list
 from backend.services.runtime import freeze_localization, release_localization, sync_runtime_from_session
 from backend.services.runtime.presentation_integrity import validate_before_narration_plan
 from backend.services.session_language import resolve_session_language
+from backend.services.conversation.context_resolver import update_active_svit_context
 
 
 def _session_last_semantic_entities(session: dict[str, Any]) -> tuple[str, ...] | None:
@@ -58,6 +59,7 @@ class ConversationOrchestrator:
         groq_client: Any | None = None,
         model: str | None = None,
         defer_narration: bool = False,
+        contextual_follow_up: bool = False,
     ) -> OrchestratorResult:
         orch_event("TURN_STARTED", turn_id=turn_id)
         resolution = ConversationResolution()
@@ -77,6 +79,7 @@ class ConversationOrchestrator:
             turn_id=turn_id,
             last_semantic_entities=_session_last_semantic_entities(session),
             last_person_unit_id=str(session.get("last_person_unit_id") or "").strip() or None,
+            contextual_follow_up=contextual_follow_up,
         )
 
         orch_event(
@@ -130,9 +133,8 @@ class ConversationOrchestrator:
         entities_for_pres = dict(ent_dict)
         if intel.entities.person_name:
             entities_for_pres["person_name"] = intel.entities.person_name
-        guest = str(session.get("guest_name") or "").strip()
-        if guest:
-            entities_for_pres["guest_name"] = guest
+        # Card narration stays purely authoritative and deterministic. Natural
+        # name use belongs to Groq response realization, not card construction.
         if isinstance(local_intent, dict):
             dept_label = str(local_intent.get("departmentLabel") or "").strip()
             if dept_label and not entities_for_pres.get("department"):
@@ -143,6 +145,9 @@ class ConversationOrchestrator:
         if response_decision is not None:
             mode = getattr(response_decision, "mode", None)
             resolution.response_mode = str(getattr(mode, "value", mode) or "")
+            resolution.authority_domain = str(
+                getattr(response_decision, "authority_domain", "unknown") or "unknown"
+            )
             resolution.clarification_target = getattr(
                 response_decision, "clarification_target", None
             )
@@ -169,6 +174,7 @@ class ConversationOrchestrator:
             elif getattr(response_decision, "items", ()):
                 session["last_person_unit_id"] = None
                 session_updates["last_person_unit_id"] = None
+            update_active_svit_context(session, response_decision)
 
         # M5.4: FOOD / ENVIRONMENT are no longer forced to UNKNOWN here. "How is the
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;

@@ -276,7 +276,7 @@ def resolve_presentation(
     resolution.presentation_mode = PresentationMode.NORMAL_REPLY.value
     resolution.response_type = "answer"
     resolution.should_call_groq = True
-    resolution.should_call_rag = True
+    resolution.should_call_rag = resolution.authority_domain != "general"
     resolution.should_generate_presentation = False
     return resolution
 
