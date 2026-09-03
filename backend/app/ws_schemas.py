@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+
+WS_MESSAGE_MAX_BYTES = 64 * 1024
+WS_USER_TEXT_MAX_CHARS = 4096
+WS_VISITOR_SESSION_ID_MAX_CHARS = 256
+WS_AUXILIARY_TEXT_MAX_CHARS = 1024
+WS_LOCAL_INTENT_TEXT_MAX_CHARS = 128
 
 _ALLOWED_ACTIONS = {
     "wake",
@@ -36,12 +42,16 @@ class WakeMessage(BaseModel):
 
     model_config = ConfigDict(extra="allow")
     action: Literal["wake"]
+    visitor_session_id: str | None = Field(
+        default=None, max_length=WS_VISITOR_SESSION_ID_MAX_CHARS
+    )
 
 
 class SessionResetMessage(_BaseWsMessage):
     # Allow kiosk clients to include diagnostic/meta keys.
     model_config = ConfigDict(extra="allow")
     action: Literal["reset_session", "home"]
+    type: str | None = Field(default=None, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
 
 
 class ConversationStartedMessage(_BaseWsMessage):
@@ -50,6 +60,9 @@ class ConversationStartedMessage(_BaseWsMessage):
     model_config = ConfigDict(extra="allow")
     action: Literal["conversation_started"]
     resumed: bool | None = None
+    visitor_session_id: str | None = Field(
+        default=None, max_length=WS_VISITOR_SESSION_ID_MAX_CHARS
+    )
 
 
 class LanguageGatePromptMessage(_BaseWsMessage):
@@ -61,8 +74,8 @@ class LanguageSelectedMessage(_BaseWsMessage):
     # `language` remains accepted for backward compatibility.
     model_config = ConfigDict(extra="allow")
     action: Literal["language_selected"]
-    language: str | None = None
-    language_code_key: str | None = None
+    language: str | None = Field(default=None, max_length=64)
+    language_code_key: str | None = Field(default=None, max_length=16)
 
     @model_validator(mode="after")
     def _require_some_language_field(self) -> "LanguageSelectedMessage":
@@ -76,15 +89,29 @@ class RestoreLanguageMessage(BaseModel):
 
     model_config = ConfigDict(extra="allow")
     action: Literal["restore_language"]
-    language_code_key: str | None = None
-    visitor_session_id: str | None = None
+    language_code_key: str | None = Field(default=None, max_length=16)
+    visitor_session_id: str | None = Field(
+        default=None, max_length=WS_VISITOR_SESSION_ID_MAX_CHARS
+    )
     ui_state: int | None = None
+
+
+class LocalIntentMessage(BaseModel):
+    """Bounded frontend navigation hint; it is never an open-ended object."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
+    departmentLabel: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
+    requested_card: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
+    trigger: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
+    intent: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
+    showCard: str | None = Field(default=None, max_length=WS_LOCAL_INTENT_TEXT_MAX_CHARS)
 
 
 class UserMessage(_BaseWsMessage):
     action: Literal["user_message"]
-    text: str | None = None
-    localIntent: dict[str, Any] | None = None
+    text: str | None = Field(default=None, max_length=WS_USER_TEXT_MAX_CHARS)
+    localIntent: LocalIntentMessage | None = None
 
 
 class MicControlMessage(_BaseWsMessage):
@@ -102,12 +129,19 @@ class MenuSelectMessage(_BaseWsMessage):
     # Keep extra fields because frontend may include menu metadata.
     model_config = ConfigDict(extra="allow")
     action: Literal["menu_select"]
+    text: str | None = Field(default=None, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
+    label: str | None = Field(default=None, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
+    value: str | None = Field(default=None, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
+    departmentLabel: str | None = Field(default=None, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
 
 
 class CampusNavigationTtsMessage(_BaseWsMessage):
     # Keep extra fields because frontend includes text/language/turn_id metadata.
     model_config = ConfigDict(extra="allow")
     action: Literal["campus_navigation_tts"]
+    text: str = Field(min_length=1, max_length=WS_AUXILIARY_TEXT_MAX_CHARS)
+    language: str | None = Field(default=None, max_length=64)
+    turn_id: str | None = Field(default=None, max_length=WS_VISITOR_SESSION_ID_MAX_CHARS)
 
 
 _ACTION_TO_MODEL = {
@@ -134,6 +168,13 @@ def parse_inbound_ws_message(raw_text: str) -> tuple[dict[str, Any] | None, str 
     Parse and validate one inbound websocket JSON message.
     Returns (message, None) on success, (None, reason) on failure.
     """
+    # UTF-8 is at least one byte per Python character. The character check
+    # avoids allocating another large byte string for obviously huge frames.
+    if (
+        len(raw_text) > WS_MESSAGE_MAX_BYTES
+        or len(raw_text.encode("utf-8")) > WS_MESSAGE_MAX_BYTES
+    ):
+        return None, "message_too_large"
     try:
         payload = json.loads(raw_text) if raw_text else {}
     except json.JSONDecodeError:
