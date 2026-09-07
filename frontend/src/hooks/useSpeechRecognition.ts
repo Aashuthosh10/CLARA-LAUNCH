@@ -11,6 +11,13 @@ const LANGUAGE_TO_BCP47: Record<Language, string> = {
   Malayalam: 'ml-IN',
 };
 
+/** Prefer browser AEC/NS/AGC when the OS/browser supports them. */
+export const PREFERRED_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
+
 export function errorCodeToMessage(code: string, language: Language): string {
   switch (code) {
     case 'not-allowed':
@@ -39,11 +46,24 @@ export function errorCodeToMessage(code: string, language: Language): string {
   }
 }
 
+export type SpeechRecognitionHandlers = {
+  /**
+   * When true, no-speech / empty results are soft (auto-listen restart path).
+   * Hard permission/network errors still surface.
+   */
+  softNoSpeech?: () => boolean;
+  /** Called when a recognition session ends without a final transcript. */
+  onEndedWithoutSpeech?: () => void;
+  /** Reject stale onresult after session reset / turn start. */
+  acceptResult?: () => boolean;
+};
+
 export function useSpeechRecognition(
   sendMessage: (msg: object) => boolean | void,
   language: Language,
   onError?: (errorCode: string, userMessage: string) => void,
-  onEmptyTranscript?: () => void
+  onEmptyTranscript?: () => void,
+  handlers?: SpeechRecognitionHandlers,
 ) {
   const recognitionRef = useRef<{ stop: () => void; abort?: () => void } | null>(null);
   const isListeningRef = useRef(false);
@@ -53,6 +73,16 @@ export function useSpeechRecognition(
   sendMessageRef.current = sendMessage;
   const onEmptyRef = useRef(onEmptyTranscript);
   onEmptyRef.current = onEmptyTranscript;
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+  const gotResultRef = useRef(false);
+  const endedWithoutSpeechNotifiedRef = useRef(false);
+
+  const notifyEndedWithoutSpeech = useCallback(() => {
+    if (endedWithoutSpeechNotifiedRef.current) return;
+    endedWithoutSpeechNotifiedRef.current = true;
+    handlersRef.current?.onEndedWithoutSpeech?.();
+  }, []);
 
   const releaseMicStream = useCallback(() => {
     if (!mediaStreamRef.current) return;
@@ -83,13 +113,21 @@ export function useSpeechRecognition(
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = LANGUAGE_TO_BCP47[language] || 'en-IN';
+    gotResultRef.current = false;
+    endedWithoutSpeechNotifiedRef.current = false;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      if (handlersRef.current?.acceptResult && !handlersRef.current.acceptResult()) {
+        return;
+      }
       const result = event.results[event.resultIndex];
       const transcript = result?.[0]?.transcript?.trim();
       if (transcript) {
+        gotResultRef.current = true;
         const sent = sendMessageRef.current({ action: 'user_message', text: transcript });
         if (sent === false) onError?.('network', uiText(language, 'status.connection_lost'));
+      } else if (handlersRef.current?.softNoSpeech?.()) {
+        notifyEndedWithoutSpeech();
       } else {
         onEmptyRef.current?.();
       }
@@ -102,9 +140,10 @@ export function useSpeechRecognition(
       setIsListening(false);
       releaseMicStream();
       if (code === 'aborted') return;
-      // Keep the browser-owned failure layer visible in Chrome DevTools. The
-      // UI callback intentionally remains user-friendly, while this trace
-      // preserves the actual Web Speech error and requested regional locale.
+      if (code === 'no-speech' && handlersRef.current?.softNoSpeech?.()) {
+        notifyEndedWithoutSpeech();
+        return;
+      }
       if (typeof console !== 'undefined') {
         console.warn('[CLARA_SPEECH] browser speech error', {
           errorCode: code,
@@ -127,6 +166,9 @@ export function useSpeechRecognition(
       isListeningRef.current = false;
       setIsListening(false);
       releaseMicStream();
+      if (!gotResultRef.current) {
+        notifyEndedWithoutSpeech();
+      }
     };
 
     try {
@@ -136,7 +178,7 @@ export function useSpeechRecognition(
       setIsListening(true);
       if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
         void navigator.mediaDevices
-          .getUserMedia({ audio: true })
+          .getUserMedia({ audio: PREFERRED_AUDIO_CONSTRAINTS })
           .then((stream) => {
             if (!isListeningRef.current) {
               stream.getTracks().forEach((track) => track.stop());
@@ -155,7 +197,7 @@ export function useSpeechRecognition(
       setIsListening(false);
       releaseMicStream();
     }
-  }, [language, onError, onEmptyTranscript, releaseMicStream]);
+  }, [language, onError, onEmptyTranscript, releaseMicStream, notifyEndedWithoutSpeech]);
 
   const stopListening = useCallback(() => {
     const recognition = recognitionRef.current;

@@ -1,5 +1,6 @@
 /**
  * Dual-mode face: SPEAKING (TTS lip sync, eyes fixed / soft smile) vs IDLE (alive loops — never overlap).
+ * Bright expressive face: curvy eyebrows + no sad idle variant.
  */
 import { motion, type MotionValue } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -21,39 +22,69 @@ function buildTalkingPillPath(talkPulse: number): string {
 
 const EYE_PATHS: Record<IdleEyeVariant | 'speaking', { left: string; right: string }> = {
   happy: {
-    left: 'M 0,-18 H 100 A 52,52 0 0 1 152,34 V 106 A 52,52 0 0 1 100,158 H 0 A 52,52 0 0 1 -52,106 V 34 A 52,52 0 0 1 0,-18 Z',
-    right: 'M 0,-18 H 100 A 52,52 0 0 1 152,34 V 106 A 52,52 0 0 1 100,158 H 0 A 52,52 0 0 1 -52,106 V 34 A 52,52 0 0 1 0,-18 Z',
+    left: 'M -8,-30 H 108 A 60,60 0 0 1 168,30 V 110 A 60,60 0 0 1 108,170 H -8 A 60,60 0 0 1 -68,110 V 30 A 60,60 0 0 1 -8,-30 Z',
+    right: 'M -8,-30 H 108 A 60,60 0 0 1 168,30 V 110 A 60,60 0 0 1 108,170 H -8 A 60,60 0 0 1 -68,110 V 30 A 60,60 0 0 1 -8,-30 Z',
   },
   curious: {
-    left: 'M 10,4 H 90 A 44,44 0 0 1 134,48 V 92 A 44,44 0 0 1 90,136 H 10 A 44,44 0 0 1 -34,92 V 48 A 44,44 0 0 1 10,4 Z',
-    right: 'M 2,-20 H 98 A 54,54 0 0 1 152,34 V 108 A 54,54 0 0 1 98,162 H 2 A 54,54 0 0 1 -52,108 V 34 A 54,54 0 0 1 2,-20 Z',
+    left: 'M 4,-4 H 96 A 50,50 0 0 1 146,46 V 98 A 50,50 0 0 1 96,148 H 4 A 50,50 0 0 1 -46,98 V 46 A 50,50 0 0 1 4,-4 Z',
+    right: 'M -6,-28 H 106 A 62,62 0 0 1 168,34 V 110 A 62,62 0 0 1 106,172 H -6 A 62,62 0 0 1 -68,110 V 34 A 62,62 0 0 1 -6,-28 Z',
   },
   heart: {
-    left: 'M 50,90 C 50,90 -10,60 -10,20 C -10,0 10,-10 30,-10 C 40,-10 45,-5 50,10 C 55,-5 60,-10 70,-10 C 90,-10 110,0 110,20 C 110,60 50,90 50,90 Z',
-    right: 'M 50,90 C 50,90 -10,60 -10,20 C -10,0 10,-10 30,-10 C 40,-10 45,-5 50,10 C 55,-5 60,-10 70,-10 C 90,-10 110,0 110,20 C 110,60 50,90 50,90 Z',
-  },
-  sad: {
-    left: 'M 0,-6 H 100 A 58,58 0 0 1 158,52 V 114 A 58,58 0 0 1 100,172 H 0 A 58,58 0 0 1 -58,114 V 52 A 58,58 0 0 1 0,-6 Z',
-    right: 'M 0,-6 H 100 A 58,58 0 0 1 158,52 V 114 A 58,58 0 0 1 100,172 H 0 A 58,58 0 0 1 -58,114 V 52 A 58,58 0 0 1 0,-6 Z',
-  },
-  sleep: {
-    left: 'M 12,46 H 88 Q 94,46 94,50 Q 94,54 88,54 H 12 Q 6,54 6,50 Q 6,46 12,46 Z',
-    right: 'M 12,46 H 88 Q 94,46 94,50 Q 94,54 88,54 H 12 Q 6,54 6,50 Q 6,46 12,46 Z',
+    left: 'M 50,108 C 50,108 -22,72 -22,18 C -22,-8 6,-22 32,-22 C 44,-22 48,-14 50,6 C 52,-14 56,-22 68,-22 C 94,-22 122,-8 122,18 C 122,72 50,108 50,108 Z',
+    right: 'M 50,108 C 50,108 -22,72 -22,18 C -22,-8 6,-22 32,-22 C 44,-22 48,-14 50,6 C 52,-14 56,-22 68,-22 C 94,-22 122,-8 122,18 C 122,72 50,108 50,108 Z',
   },
   speaking: {
-    left: 'M 0,-14 H 100 A 54,54 0 0 1 154,40 V 100 A 54,54 0 0 1 100,154 H 0 A 54,54 0 0 1 -54,100 V 40 A 54,54 0 0 1 0,-14 Z',
-    right: 'M 0,-14 H 100 A 54,54 0 0 1 154,40 V 100 A 54,54 0 0 1 100,154 H 0 A 54,54 0 0 1 -54,100 V 40 A 54,54 0 0 1 0,-14 Z',
+    left: 'M -8,-26 H 108 A 62,62 0 0 1 170,36 V 104 A 62,62 0 0 1 108,166 H -8 A 62,62 0 0 1 -70,104 V 36 A 62,62 0 0 1 -8,-26 Z',
+    right: 'M -8,-26 H 108 A 62,62 0 0 1 170,36 V 104 A 62,62 0 0 1 108,166 H -8 A 62,62 0 0 1 -70,104 V 36 A 62,62 0 0 1 -8,-26 Z',
+  },
+};
+
+/**
+ * Tapered crescent brows: thick nasal side, narrow outer tips.
+ * Kept low enough that upward gaze never pushes them past the screen top.
+ */
+type BrowPack = { left: string; right: string };
+
+const BROW_PATHS: Record<string, BrowPack> = {
+  happy: {
+    left:
+      'M -68,-76 C -70,-81 -52,-96 -16,-104 C 8,-109 32,-96 40,-82 C 43,-76 38,-72 29,-73 C 5,-85 -20,-81 -60,-71 C -69,-73 -68,-76 -68,-76 Z',
+    right:
+      'M 168,-76 C 170,-81 152,-96 116,-104 C 92,-109 68,-96 60,-82 C 57,-76 62,-72 71,-73 C 95,-85 120,-81 160,-71 C 169,-73 168,-76 168,-76 Z',
+  },
+  speaking: {
+    left:
+      'M -66,-70 C -68,-75 -50,-90 -14,-98 C 10,-103 34,-90 42,-76 C 45,-70 40,-66 31,-67 C 7,-79 -18,-75 -58,-63 C -67,-65 -66,-70 -66,-70 Z',
+    right:
+      'M 166,-70 C 168,-75 150,-90 114,-98 C 90,-103 66,-90 58,-76 C 55,-70 60,-66 69,-67 C 93,-79 118,-75 158,-63 C 167,-65 166,-70 166,-70 Z',
+  },
+  listening: {
+    left:
+      'M -64,-66 C -66,-71 -48,-86 -12,-94 C 12,-99 36,-86 44,-72 C 47,-66 42,-62 33,-63 C 9,-75 -16,-71 -56,-59 C -65,-61 -64,-66 -64,-66 Z',
+    right:
+      'M 164,-66 C 166,-71 148,-86 112,-94 C 88,-99 64,-86 56,-72 C 53,-66 58,-62 67,-63 C 91,-75 116,-71 156,-59 C 165,-61 164,-66 164,-66 Z',
+  },
+  curious: {
+    left:
+      'M -72,-86 C -74,-93 -54,-108 -16,-116 C 8,-121 34,-106 42,-90 C 45,-84 40,-79 31,-80 C 5,-94 -24,-88 -64,-75 C -73,-77 -72,-86 -72,-86 Z',
+    right:
+      'M 162,-64 C 164,-69 148,-84 114,-92 C 92,-97 70,-84 62,-72 C 59,-66 64,-61 73,-62 C 95,-72 120,-69 154,-59 C 163,-61 162,-64 162,-64 Z',
+  },
+  thinking: {
+    left:
+      'M -70,-80 C -72,-87 -52,-102 -14,-110 C 10,-115 34,-100 42,-86 C 45,-80 40,-75 31,-76 C 5,-88 -22,-84 -62,-71 C -71,-73 -70,-80 -70,-80 Z',
+    right:
+      'M 164,-66 C 166,-71 150,-86 116,-94 C 94,-99 72,-86 64,-74 C 61,-68 66,-63 75,-64 C 97,-74 122,-71 156,-61 C 165,-63 164,-66 164,-66 Z',
   },
 };
 
 const BLINK_PATH = 'M 5,35 Q 50,15 95,35 L 95,38 Q 50,18 5,38 Z';
 
 const IDLE_MOUTH: Record<IdleEyeVariant, string> = {
-  happy: 'M 5,15 Q 25,35 45,15 Q 25,48 5,15 Z',
-  curious: 'M 10,18 Q 25,30 40,18 Q 25,42 10,18 Z',
-  heart: 'M 8,12 Q 25,45 42,12 Q 25,35 8,12 Z',
-  sad: 'M 5,38 Q 25,12 45,38 Q 25,25 5,38 Z',
-  sleep: 'M 14,26 H 36 V 31 H 14 Z',
+  // Bright upturned smile (was previously shared with sad downturn)
+  happy: 'M 5,15 Q 25,38 45,15 Q 25,52 5,15 Z',
+  curious: 'M 10,16 Q 25,34 40,16 Q 25,44 10,16 Z',
+  heart: 'M 6,10 Q 25,48 44,10 Q 25,38 6,10 Z',
 };
 
 const GAZE_EASE: [number, number, number, number] = [0.42, 0, 0.58, 1];
@@ -120,9 +151,19 @@ export default function RobotFace({
         ? EYE_PATHS.curious
         : EYE_PATHS[idleVariant];
 
+  const browKey = isSpeaking
+    ? 'speaking'
+    : isListening
+      ? 'listening'
+      : isThinking
+        ? 'thinking'
+        : idleVariant;
+
+  const browPack = BROW_PATHS[browKey] ?? BROW_PATHS.happy;
+  // No brows while blinking or on heart eyes
+  const showBrows = !(idle.blinkShut && !isSpeaking) && idleVariant !== 'heart';
+
   const curiousTilt = !isSpeaking && !isThinking && !isListening && idleVariant === 'curious' ? 3.2 : 0;
-  const sadTilt = !isSpeaking && !isThinking && !isListening && idleVariant === 'sad' ? 6 : 0;
-  const sleepBreathMs = !isSpeaking && !isThinking && idleVariant === 'sleep' ? 5.5 : 4.2;
 
   function eyePathForSide(side: 'left' | 'right'): string {
     if (idle.blinkShut && !isSpeaking) return BLINK_PATH;
@@ -130,9 +171,10 @@ export default function RobotFace({
   }
 
   function restingMouthPath(): string {
-    if (isListening) return 'M 10,15 Q 25,28 40,15 Q 25,38 10,15 Z';
+    if (isListening) return 'M 10,14 Q 25,32 40,14 Q 25,42 10,14 Z';
     if (isSpeaking && !externalMouth) return buildTalkingPillPath(talkPulse);
-    if (isThinking) return 'M 15,25 H 35 V 32 H 15 Z';
+    // Soft smile while thinking (not a flat bar)
+    if (isThinking) return 'M 12,18 Q 25,30 38,18 Q 25,36 12,18 Z';
     if (!isSpeaking) return IDLE_MOUTH[idleVariant];
     return IDLE_MOUTH.happy;
   }
@@ -141,7 +183,7 @@ export default function RobotFace({
   const accentWhite = '#ffffff';
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black overflow-hidden select-none pt-[3vh]">
       <svg style={{ visibility: 'hidden', position: 'absolute' }}>
         <defs>
           <radialGradient id="orbGradient" cx="30%" cy="30%" r="70%">
@@ -149,6 +191,11 @@ export default function RobotFace({
             <stop offset="45%" stopColor={accentWhite} stopOpacity="0.6" />
             <stop offset="100%" stopColor={vibrancePurple} />
           </radialGradient>
+          <linearGradient id="browGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={accentWhite} stopOpacity="1" />
+            <stop offset="50%" stopColor={accentWhite} stopOpacity="1" />
+            <stop offset="100%" stopColor={accentWhite} stopOpacity="0.95" />
+          </linearGradient>
           <radialGradient id="idleEyeGlow" cx="50%" cy="45%" r="55%">
             <stop offset="0%" stopColor="white" stopOpacity="0.35" />
             <stop offset="70%" stopColor="transparent" stopOpacity="0" />
@@ -157,9 +204,9 @@ export default function RobotFace({
       </svg>
 
       <motion.div
-        className="w-full h-[60%] flex items-center justify-center space-x-[1.5vw]"
+        className="relative z-10 w-full h-[60%] flex items-center justify-center space-x-[1.5vw] overflow-visible"
         animate={{
-          rotateX: isSpeaking ? 0 : -(macroDriftY * 0.35 + sadTilt * 0.15),
+          rotateX: isSpeaking ? 0 : -(macroDriftY * 0.35),
           rotateY: isSpeaking ? 0 : macroDriftX * 0.22,
           rotateZ: isSpeaking ? 0 : curiousTilt,
           scale: isSpeaking ? 1 : [1, 1.018, 1],
@@ -168,9 +215,9 @@ export default function RobotFace({
           rotateX: isSpeaking ? { duration: 0.28, ease: SNAP_EASE } : { duration: 0.58, ease: GAZE_EASE },
           rotateY: isSpeaking ? { duration: 0.28, ease: SNAP_EASE } : { duration: 0.58, ease: GAZE_EASE },
           rotateZ: { duration: 0.48, ease: GAZE_EASE },
-          scale: isSpeaking ? { duration: 0.25 } : { duration: sleepBreathMs, repeat: Infinity, ease: 'easeInOut' },
+          scale: isSpeaking ? { duration: 0.25 } : { duration: 4.2, repeat: Infinity, ease: 'easeInOut' },
         }}
-        style={{ perspective: 1200 }}
+        style={{ perspective: 1200, overflow: 'visible' }}
       >
         {(['left', 'right'] as const).map((side) => {
           const isLeft = side === 'left';
@@ -184,14 +231,14 @@ export default function RobotFace({
               xOffset = isLeft ? macroDriftX * trailMultiplier : macroDriftX * leadMultiplier;
             }
           }
-          const yOffset = !isSpeaking ? (isLeft ? macroDriftY * 1.02 : macroDriftY * 0.98) : 0;
+          const yOffset = !isSpeaking ? Math.max(isLeft ? macroDriftY * 1.02 : macroDriftY * 0.98, -12) : 0;
 
           const curiousScale = !isSpeaking && idleVariant === 'curious' ? (isLeft ? 1 : 0.9) : 1;
 
           return (
             <motion.div
               key={side}
-              className="relative w-[56vw] h-[56vw] max-w-[980px] max-h-[980px] min-w-[360px] min-h-[360px]"
+              className="relative w-[62vw] h-[62vw] max-w-[1100px] max-h-[1100px] min-w-[400px] min-h-[400px] overflow-visible"
               animate={{
                 x: xOffset,
                 y: yOffset,
@@ -210,15 +257,38 @@ export default function RobotFace({
                 rotateZ: { duration: 0.48, ease: GAZE_EASE },
                 scaleY: { duration: 0.52, ease: GAZE_EASE },
               }}
+              style={{ overflow: 'visible' }}
             >
-              {/* Center viewBox around x≈50 so oversized eyes don't drift left in the container. */}
-              <svg viewBox="-140 -140 380 380" className="w-full h-full overflow-visible">
-                <filter id={`glow-${side}`}>
+              {/* Tall viewBox so raised/flared brows are never clipped */}
+              <svg
+                viewBox="-180 -260 460 500"
+                className="w-full h-full overflow-visible"
+                style={{ overflow: 'visible' }}
+              >
+                <filter
+                  id={`glow-${side}`}
+                  x="-50%"
+                  y="-50%"
+                  width="200%"
+                  height="200%"
+                  filterUnits="objectBoundingBox"
+                >
                   <feGaussianBlur stdDeviation={isSpeaking ? 3 : 4} result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
+                <filter
+                  id={`brow-glow-${side}`}
+                  x="-80%"
+                  y="-120%"
+                  width="260%"
+                  height="340%"
+                  filterUnits="objectBoundingBox"
+                >
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
                 {!isSpeaking && idleVariant === 'happy' && (
-                  <ellipse cx="50" cy="58" rx="74" ry="56" fill="url(#idleEyeGlow)" opacity={0.45} />
+                  <ellipse cx="50" cy="58" rx="86" ry="66" fill="url(#idleEyeGlow)" opacity={0.45} />
                 )}
                 <motion.path
                   animate={{ d: eyePathForSide(side) }}
@@ -232,15 +302,15 @@ export default function RobotFace({
                   strokeLinecap="round"
                   style={{ filter: `url(#glow-${side})` }}
                 />
-                {!isSpeaking && idleVariant === 'sad' && side === 'left' && (
-                  <motion.circle
-                    cx="42"
-                    cy="118"
-                    r="3"
-                    fill="rgba(147,197,253,0.45)"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.15, 0.55, 0.2], cy: [118, 124, 130] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                {/* Brows painted AFTER eyes so heart shapes never cover them */}
+                {showBrows && (
+                  <motion.path
+                    animate={{ d: browPack[side] }}
+                    transition={{ duration: isSpeaking ? 0.28 : 0.45, ease: 'easeInOut' }}
+                    fill="url(#browGradient)"
+                    stroke="none"
+                    opacity={1}
+                    style={{ filter: `url(#brow-glow-${side})` }}
                   />
                 )}
               </svg>

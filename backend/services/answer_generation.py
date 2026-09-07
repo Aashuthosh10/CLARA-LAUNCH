@@ -2043,6 +2043,20 @@ EXPLICIT_ADMISSIONS_PHRASES: tuple[str, ...] = (
     "scholarships",
     "how to join",
     "how to get admission",
+    # Native + loanword realizations (substring-safe for Indic in _contains_phrase).
+    "प्रवेश",
+    "एडमिशन",
+    "एड्मिशन",
+    "ಪ್ರವೇಶ",
+    "ಅಡ್ಮಿಷನ್",
+    "ಆಡ್ಮಿಷನ್",
+    "சேர்க்கை",
+    "அட்மிஷன்",
+    "అడ్మిషన్",
+    "ప్రవేశ",
+    "అడ్మిషన్లు",
+    "അഡ്മിഷൻ",
+    "പ്രവേശന",
 )
 
 

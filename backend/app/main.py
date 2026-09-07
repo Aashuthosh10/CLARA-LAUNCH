@@ -127,7 +127,12 @@ from backend.services.greetings import (
     get_language_required_nudge_english,
     get_name_prompt,
     get_ready_prompt,
+    get_closing_prompt,
+    get_continue_listening_prompt,
+    get_session_farewell,
+    get_no_input_warning,
     guest_name_reply_is_skip,
+    is_plausible_guest_name_utterance,
     normalize_guest_name,
     get_wakeup_language_gate_display_text,
     get_wakeup_language_gate_tts_text,
@@ -1148,16 +1153,25 @@ async def _complete_guest_name_turn(
         await _ws_send_json(websocket, 5, session, processing_payload)
     except Exception as exc:
         logger.warning("Could not send isProcessing for guest name: %s", exc)
+        # Do not leave the name gate armed after a failed send when this turn
+        # is already stale — a newer turn owns the session.
+        if _turn_stale(session, turn_gen_marker):
+            return
         return
 
     if _turn_stale(session, turn_gen_marker):
+        # Newer user_message / cancel advanced session_generation. Leave
+        # awaiting_guest_name alone so the active turn can decide; that turn
+        # must not treat campus questions as names (see process_user_text gate).
         logger.info("Stale guest name turn dropped")
         return
 
     _, lang_name, lang_code = resolve_session_language(session)
     language_display = session.get("language_name") or lang_name
 
+    # Atomic name-gate close: once this turn owns capture, never leave awaiting true.
     session["awaiting_guest_name"] = False
+    session["guest_name_collected"] = True
     if guest_name_reply_is_skip(text):
         session["guest_name"] = None
     else:
@@ -1239,6 +1253,8 @@ async def _emit_direct_conversation_reply(
     *,
     utterance_kind: str = "conversation_policy_direct",
     length_kind: str = "clarification",
+    omit_user_message: bool = False,
+    payload_extra: dict[str, Any] | None = None,
 ) -> None:
     """Emit a policy short-circuit reply using the existing WS payload shape (no new fields)."""
     _, lang_name, lang_code = resolve_session_language(session)
@@ -1251,12 +1267,16 @@ async def _emit_direct_conversation_reply(
             session, reply_text=spoken, answer_source="direct_template"
         )
 
-    append_session_history(session, "user", text, max_turns=3)
+    if not omit_user_message:
+        append_session_history(session, "user", text, max_turns=3)
     append_session_history(session, "assistant", spoken, max_turns=3)
 
-    user_msg = {"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()}
+    msgs = list(session.get("messages") or [])
+    if not omit_user_message and (text or "").strip():
+        msgs.append({"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()})
     assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": spoken}
-    session["messages"] = session.get("messages", []) + [user_msg, assistant_msg]
+    msgs.append(assistant_msg)
+    session["messages"] = msgs
 
     try:
         processing_payload: dict[str, Any] = {"isProcessing": True, "turn_id": timing.turn_id}
@@ -1284,12 +1304,18 @@ async def _emit_direct_conversation_reply(
     timing.mark("turn_end")
 
     outbound = build_template_outbound(text=spoken, resolution=res, utterance_kind=utterance_kind)
+    extra = {
+        "tts_cache_hit": tts_cache_hit,
+        "audioUnavailable": not bool(audio_b64),
+    }
+    if payload_extra:
+        extra.update(payload_extra)
     payload = outbound.to_ws_payload(
         messages=session["messages"],
         turn_id=timing.turn_id,
         debug=debug_payload(timing),
         audio_b64=audio_b64,
-        extra={"tts_cache_hit": tts_cache_hit, "audioUnavailable": not bool(audio_b64)},
+        extra=extra,
     )
     if audio_b64 and not timing.has("play_start"):
         timing.mark("play_start")
@@ -1319,6 +1345,140 @@ async def _emit_direct_conversation_reply(
         logger.warning("Policy direct outbound failed: %s", exc)
 
 
+async def _handle_session_no_input_warning(
+    session: dict[str, Any],
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+    *,
+    attempt: int,
+) -> None:
+    """Localized no-input warning TTS — zero LLM."""
+    language_display = session.get("language_name")
+    reply = get_no_input_warning(language_display, attempt)
+    await _emit_direct_conversation_reply(
+        session,
+        "",
+        reply,
+        websocket,
+        timing,
+        turn_gen_marker,
+        utterance_kind="session_no_input_warning",
+        omit_user_message=True,
+        payload_extra={
+            "no_input_warning_attempt": int(attempt),
+            "awaiting_manual_listen": int(attempt) >= 2,
+        },
+    )
+
+
+async def _handle_session_closing_prompt(
+    session: dict[str, Any],
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+) -> None:
+    """Speak one closing question; arm awaiting_closing_reply (no LLM)."""
+    if session.get("closing_prompt_issued"):
+        # One graceful attempt only — end without repeating.
+        session["awaiting_closing_reply"] = False
+        farewell = get_session_farewell(session.get("language_name"))
+        await _emit_direct_conversation_reply(
+            session,
+            "",
+            farewell,
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="session_farewell",
+            omit_user_message=True,
+            payload_extra={"session_should_end": True},
+        )
+        return
+
+    language_display = session.get("language_name")
+    reply = get_closing_prompt(language_display, session.get("guest_name"))
+    session["closing_prompt_issued"] = True
+    session["awaiting_closing_reply"] = True
+    await _emit_direct_conversation_reply(
+        session,
+        "",
+        reply,
+        websocket,
+        timing,
+        turn_gen_marker,
+        utterance_kind="session_closing_prompt",
+        omit_user_message=True,
+        payload_extra={"awaiting_closing_reply": True},
+    )
+
+
+async def _handle_closing_reply_gate(
+    session: dict[str, Any],
+    text: str,
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+) -> bool:
+    """
+    Return True if the turn was fully handled as a closing-reply outcome.
+    """
+    from backend.services.conversation.closing_reply import (
+        classify_closing_reply,
+        strip_leading_continue,
+    )
+
+    decision = classify_closing_reply(text)
+    language_display = session.get("language_name")
+
+    if decision == "CLOSE":
+        session["awaiting_closing_reply"] = False
+        farewell = get_session_farewell(language_display)
+        await _emit_direct_conversation_reply(
+            session,
+            text,
+            farewell,
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="session_farewell",
+            payload_extra={"session_should_end": True},
+        )
+        return True
+
+    if decision == "CONTINUE":
+        session["awaiting_closing_reply"] = False
+        residual = strip_leading_continue(text)
+        if residual:
+            # Fall through to normal pipeline with the residual request.
+            return False
+        prompt = get_continue_listening_prompt(language_display)
+        await _emit_direct_conversation_reply(
+            session,
+            text,
+            prompt,
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="session_continue",
+        )
+        return True
+
+    # AMBIGUOUS — one soft clarification; stay in closing wait.
+    clarify = get_closing_prompt(language_display, session.get("guest_name"))
+    await _emit_direct_conversation_reply(
+        session,
+        text,
+        clarify,
+        websocket,
+        timing,
+        turn_gen_marker,
+        utterance_kind="session_closing_clarify",
+        payload_extra={"awaiting_closing_reply": True},
+    )
+    return True
+
+
 async def _send_thinking_interlude_text(
     session: dict[str, Any],
     text: str,
@@ -1327,6 +1487,8 @@ async def _send_thinking_interlude_text(
     turn_gen_marker: int,
     *,
     semantic_request: Any | None = None,
+    conversational_action: str = "answer",
+    clarification_target: str | None = None,
 ) -> str | None:
     """Emit the thinking sentence immediately. Returns the sentence, or None on skip/fail."""
     try:
@@ -1340,7 +1502,11 @@ async def _send_thinking_interlude_text(
             guest,
             semantic_request=semantic_request,
             session=session,
+            conversational_action=conversational_action,
+            clarification_target=clarification_target,
         )
+        if not sentence:
+            return None
         session["_thinking_bridge_sentence"] = sentence
         session["_thinking_bridge_lang_code"] = lang_code
         interlude = {
@@ -1350,6 +1516,7 @@ async def _send_thinking_interlude_text(
             "isProcessing": True,
             "guest_name": guest,
             "language_code_key": lang_key,
+            "conversational_action": conversational_action,
         }
         interlude.update(debug_payload(timing))
         await _ws_send_json(websocket, 5, session, interlude)
@@ -1432,49 +1599,63 @@ async def process_user_text_and_reply(
 ) -> None:
     """Shared flow: RAG context, Groq reply, TTS, send state 5 payload. Assumes text is non-empty."""
     turn_gen_marker = int(session.get("session_generation", 0))
-    if session.get("awaiting_guest_name"):
-        await _complete_guest_name_turn(session, text, websocket, timing, turn_gen_marker)
+    li = local_intent if isinstance(local_intent, dict) else {}
+    li_type = str(li.get("type") or "").strip().lower()
+
+    if li_type == "session_closing_prompt" or text.strip() == "__CLARA_SESSION_CLOSING_PROMPT__":
+        await _handle_session_closing_prompt(session, websocket, timing, turn_gen_marker)
         return
+
+    if li_type == "session_no_input_warning" or text.strip().startswith("__CLARA_NO_INPUT_WARNING_"):
+        attempt_raw = li.get("attempt")
+        try:
+            attempt = int(attempt_raw) if attempt_raw is not None else 1
+        except (TypeError, ValueError):
+            attempt = 1
+        if "__CLARA_NO_INPUT_WARNING_2__" in text:
+            attempt = 2
+        await _handle_session_no_input_warning(
+            session, websocket, timing, turn_gen_marker, attempt=attempt
+        )
+        return
+
+    if session.get("awaiting_closing_reply") and li_type not in {
+        "session_closing_prompt",
+        "department_click",
+    }:
+        from backend.services.conversation.closing_reply import strip_leading_continue
+
+        handled = await _handle_closing_reply_gate(
+            session, text, websocket, timing, turn_gen_marker
+        )
+        if handled:
+            return
+        residual = strip_leading_continue(text)
+        if residual:
+            text = residual
+        session["awaiting_closing_reply"] = False
+
+    if session.get("awaiting_guest_name"):
+        # Name gate: only consume as a name when the utterance is plausibly a
+        # name (or skip). Campus questions must fall through to normal CI and
+        # permanently disarm the gate so a stale cancelled name task cannot
+        # force the next prompt into guest_name.
+        if is_plausible_guest_name_utterance(text) or guest_name_reply_is_skip(text):
+            await _complete_guest_name_turn(session, text, websocket, timing, turn_gen_marker)
+            return
+        session["awaiting_guest_name"] = False
+        session["guest_name_collected"] = True
+        if session.get("guest_name") is None:
+            session["guest_name"] = None
 
     # Detect language before orchestration so CARD localization and ANSWER
     # routing see the same language as TTS. Narration is still deferred.
     await maybe_auto_detect_session_language(session, text, websocket, timing, stt_meta=stt_meta)
 
-    # Fast semantic pass (same parser as CARD/ANSWER — no LLM). Thinking bridge
-    # must see this BEFORE templates; RAG/orchestrator still run in parallel after.
-    lang_key_for_think, _, _ = resolve_session_language(session)
-    thinking_semantic = None
-    try:
-        from backend.services.conversation.thinking_bridge import build_thinking_semantic_request
+    # Decide first (CI + ResponseMode), then action-aware thinking, then RAG
+    # in parallel with thinking TTS. Thinking must never contradict the next act.
+    from backend.services.conversation.thinking_bridge import conversational_action_for_turn
 
-        thinking_semantic = build_thinking_semantic_request(
-            text or "",
-            lang_key_for_think,
-            session,
-        )
-    except Exception:
-        logger.exception("Thinking semantic parse failed turn_id=%s", timing.turn_id)
-        thinking_semantic = None
-
-    thinking_sentence = await _send_thinking_interlude_text(
-        session,
-        text,
-        websocket,
-        timing,
-        turn_gen_marker,
-        semantic_request=thinking_semantic,
-    )
-    if thinking_sentence:
-        try:
-            session["_thinking_tts_task"] = asyncio.create_task(
-                _send_thinking_interlude_audio(
-                    session, websocket, timing, turn_gen_marker, thinking_sentence
-                )
-            )
-        except Exception:
-            logger.exception("Could not start thinking TTS task")
-
-    # Milestone 3: ConversationOrchestrator (M1 CI + localization/presentation + flags).
     conv_intel_length_kind = "normal"
     conversation_resolution = None
     orch_result = None
@@ -1498,6 +1679,8 @@ async def process_user_text_and_reply(
         session["_conversation_resolution"] = conversation_resolution
         conv_intel_length_kind = conversation_resolution.length_kind or "normal"
         semantic_request = getattr(conversation_resolution, "semantic_request", None)
+        if semantic_request is None and orch_result.intel is not None:
+            semantic_request = getattr(orch_result.intel, "semantic_request", None)
         logger.info(
             "[CANONICAL_REQUEST] raw=%r language=%s mode=%s items=%s cards=%s fallback=%s",
             text,
@@ -1507,6 +1690,35 @@ async def process_user_text_and_reply(
             getattr(semantic_request, "requested_card_ids", None),
             getattr(conversation_resolution, "degrade_reason", None),
         )
+
+        policy_action_obj = getattr(getattr(orch_result.intel, "decision", None), "action", None)
+        policy_action_str = getattr(policy_action_obj, "value", policy_action_obj)
+        think_action = conversational_action_for_turn(
+            response_mode=getattr(conversation_resolution, "response_mode", None),
+            policy_action=str(policy_action_str or ""),
+        )
+        clarify_target = getattr(conversation_resolution, "clarification_target", None)
+        think_text = str(session.get("_effective_user_text") or text or "")
+        thinking_sentence = await _send_thinking_interlude_text(
+            session,
+            think_text,
+            websocket,
+            timing,
+            turn_gen_marker,
+            semantic_request=semantic_request,
+            conversational_action=think_action,
+            clarification_target=clarify_target,
+        )
+        if thinking_sentence:
+            try:
+                session["_thinking_tts_task"] = asyncio.create_task(
+                    _send_thinking_interlude_audio(
+                        session, websocket, timing, turn_gen_marker, thinking_sentence
+                    )
+                )
+            except Exception:
+                logger.exception("Could not start thinking TTS task")
+
         if should_short_circuit(orch_result) and conversation_resolution.short_circuit_reply:
             await _emit_direct_conversation_reply(
                 session,
@@ -1554,6 +1766,7 @@ async def process_user_text_and_reply(
             await _ws_send_json(websocket, 5, session, early_partial_payload)
         # ACK must not race with thinking TTS (second Audio clips the bridge start).
         # When a thinking sentence is active for this turn, skip the earcon entirely.
+        thinking_sentence = session.get("_thinking_bridge_sentence")
         if ENABLE_ACK_EARCON and not thinking_sentence:
             ack_audio_b64 = _get_ack_earcon_base64()
             if not timing.has("play_start"):
@@ -3445,6 +3658,7 @@ async def websocket_clara(websocket: WebSocket):
         "history": [],
         "guest_name": None,
         "awaiting_guest_name": False,
+        "guest_name_collected": False,
         "cached_greeting_audio": None,
         "cached_greeting_message": None,
         "visitor_session_id": None,
@@ -3518,11 +3732,18 @@ async def websocket_clara(websocket: WebSocket):
                         "history": [],
                         "guest_name": None,
                         "awaiting_guest_name": False,
+                        "guest_name_collected": False,
                         "cached_greeting_audio": None,
                         "cached_greeting_message": None,
                         "visitor_session_id": None,
+                        "last_semantic_entities": None,
+                        "pending_clarification": None,
+                        "awaiting_closing_reply": False,
+                        "closing_prompt_issued": False,
                     }
                 )
+                session.pop("last_semantic_entities", None)
+                session.pop("pending_clarification", None)
                 await _ws_send_json(websocket, 0, session, None)
                 continue
 
@@ -3632,33 +3853,48 @@ async def websocket_clara(websocket: WebSocket):
                     continue
                 set_session_language(session, code_key, is_auto=False)
                 session["language_detection"] = None
-                session["awaiting_guest_name"] = True
-                session["guest_name"] = None
-                name_prompt_text = get_name_prompt(language)
-                name_prompt_msg = {"id": "name_prompt", "role": "clara", "text": name_prompt_text}
-                audio_b64 = None
-                try:
-                    audio_b64, _ = await tts_to_base64_cached(
-                        name_prompt_text,
-                        session["language_code"],
-                        utterance_kind="language_selected_name_prompt",
-                    )
-                except Exception as exc:
-                    logger.exception("Language name prompt TTS failed: %s", exc)
-                session["messages"] = [name_prompt_msg]
-                session["cached_greeting_audio"] = None
-                session["cached_greeting_message"] = None
-                payload: dict[str, Any] = {
-                    "messages": session["messages"],
-                    "isSpeaking": bool(audio_b64),
-                    "isProcessing": False,
-                }
-                if audio_b64:
-                    payload["audioBase64"] = audio_b64
-                    payload["turn_id"] = "name_after_language_pick"
+                # Arm name capture only for the first-time onboarding path.
+                # Do not wipe an already-collected name or re-open the gate on
+                # ordinary language / session events after collection.
+                if not session.get("guest_name_collected"):
+                    session["awaiting_guest_name"] = True
+                    session["guest_name"] = None
+                    name_prompt_text = get_name_prompt(language)
+                    name_prompt_msg = {"id": "name_prompt", "role": "clara", "text": name_prompt_text}
+                    audio_b64 = None
+                    try:
+                        audio_b64, _ = await tts_to_base64_cached(
+                            name_prompt_text,
+                            session["language_code"],
+                            utterance_kind="language_selected_name_prompt",
+                        )
+                    except Exception as exc:
+                        logger.exception("Language name prompt TTS failed: %s", exc)
+                    session["messages"] = [name_prompt_msg]
+                    session["cached_greeting_audio"] = None
+                    session["cached_greeting_message"] = None
+                    payload: dict[str, Any] = {
+                        "messages": session["messages"],
+                        "isSpeaking": bool(audio_b64),
+                        "isProcessing": False,
+                    }
+                    if audio_b64:
+                        payload["audioBase64"] = audio_b64
+                        payload["turn_id"] = "name_after_language_pick"
+                    else:
+                        payload["error"] = ui_text(code_key, "error.audio_unavailable")
+                    await _ws_send_json(websocket, 5, session, payload)
                 else:
-                    payload["error"] = ui_text(code_key, "error.audio_unavailable")
-                await _ws_send_json(websocket, 5, session, payload)
+                    await _ws_send_json(
+                        websocket,
+                        5,
+                        session,
+                        {
+                            "type": "language_updated",
+                            "language_code_key": code_key,
+                            "isProcessing": False,
+                        },
+                    )
                 continue
 
             if action == "campus_navigation_tts":
@@ -3815,14 +4051,31 @@ async def websocket_clara(websocket: WebSocket):
                 timing.mark("transcript_ready")
 
                 if not text:
-                    timing.mark("turn_end")
-                    payload = {
-                        "error": ui_text(session.get("language_code_key"), "error.missing_text"),
-                        "isProcessing": False,
-                    }
-                    payload.update(debug_payload(timing))
-                    await _ws_send_json(websocket, 5, session, payload)
-                    log_turn_metrics(timing, error="missing_text")
+                    li = local_intent if isinstance(local_intent, dict) else None
+                    li_type = str((li or {}).get("type") or "").strip().lower()
+                    if li_type in {"session_closing_prompt", "session_no_input_warning"}:
+                        if li_type == "session_closing_prompt":
+                            text = "__CLARA_SESSION_CLOSING_PROMPT__"
+                        else:
+                            attempt = (li or {}).get("attempt") or 1
+                            text = f"__CLARA_NO_INPUT_WARNING_{attempt}__"
+                        _schedule_process_user_text_reply(
+                            session,
+                            text,
+                            websocket,
+                            timing,
+                            stt_meta=None,
+                            local_intent=local_intent,
+                        )
+                    else:
+                        timing.mark("turn_end")
+                        payload = {
+                            "error": ui_text(session.get("language_code_key"), "error.missing_text"),
+                            "isProcessing": False,
+                        }
+                        payload.update(debug_payload(timing))
+                        await _ws_send_json(websocket, 5, session, payload)
+                        log_turn_metrics(timing, error="missing_text")
                 elif session.get("language_code_key") is None:
                     timing.mark("turn_end")
                     if "BACKGROUND_NOISE" in text or "**BACKGROUND_NOISE**" in text:

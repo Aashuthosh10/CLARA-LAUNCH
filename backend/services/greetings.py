@@ -207,6 +207,75 @@ def guest_name_reply_is_skip(text: str | None) -> bool:
     return key in _SKIP_GUEST_NAME_PHRASES
 
 
+def looks_like_campus_query(text: str | None) -> bool:
+    """
+    Conservative sanity check: true when the utterance is institutional Q&A,
+    not a personal name. Uses existing semantic detectors (lazy imports).
+    """
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    # Lazy imports keep greetings importable during early startup.
+    from backend.services.answer_generation import has_explicit_admissions_cue
+    from backend.services.content.department_identity import match_department_spans_exclusive
+    from backend.services.content.leadership_units import detect_leadership_spans
+    from backend.services.content.semantic_topics import detect_atomic_topics
+    from backend.services.conversation.restricted_requests import restricted_evidence
+
+    if detect_leadership_spans(raw) or detect_atomic_topics(raw):
+        return True
+    if match_department_spans_exclusive(raw):
+        return True
+    if has_explicit_admissions_cue(raw):
+        return True
+    if restricted_evidence(raw):
+        return True
+    folded = " ".join(raw.lower().split())
+    for cue in (
+        "tell me",
+        "what about",
+        "what is",
+        "what's",
+        "who is",
+        "where is",
+        "how much",
+        "how about",
+        "bagge",
+        "heli",
+        "eshtu",
+        "yaaru",
+        "ke bare",
+        "के बारे",
+        "कौन",
+        "कितनी",
+        "ಬಗ್ಗೆ",
+        "ಯಾರು",
+        "ಎಷ್ಟು",
+        "பற்றி",
+        "யார்",
+        "గురించి",
+        "ఎవరు",
+        "കുറിച്ച്",
+        "ആരാണ്",
+    ):
+        if cue in folded or cue in raw:
+            return True
+    tokens = raw.split()
+    # Long free-form utterances without a name-prefix are not names.
+    if len(tokens) >= 5 and not _GUEST_NAME_PREFIX_RE.match(raw):
+        return True
+    return False
+
+
+def is_plausible_guest_name_utterance(text: str | None) -> bool:
+    """True when the onboarding name turn can confidently treat this as a name/skip."""
+    if guest_name_reply_is_skip(text):
+        return True
+    if looks_like_campus_query(text):
+        return False
+    return normalize_guest_name(text) is not None
+
+
 def normalize_guest_name(raw: str | None) -> str | None:
     """Strip fillers and return a safe display name, or None if unusable."""
     if not raw:
@@ -216,12 +285,18 @@ def normalize_guest_name(raw: str | None) -> str | None:
         return None
     if guest_name_reply_is_skip(s):
         return None
+    # Never store campus questions as a preferred name.
+    if looks_like_campus_query(s):
+        return None
     s = _GUEST_NAME_PREFIX_RE.sub("", s)
     s = s.strip(" \t\r\n.,!?\"'")
     s = " ".join(s.split())
     if guest_name_reply_is_skip(s):
         return None
     if not s:
+        return None
+    # Re-check after prefix strip (e.g. "My name is Tell me about fees").
+    if looks_like_campus_query(s):
         return None
     if len(s) > _GUEST_NAME_MAX_LEN:
         # Never cut an Indic grapheme cluster. Prefer complete name words; an
@@ -264,6 +339,12 @@ def _validate_language_parity() -> None:
     missing_ready_named = [lang for lang in SUPPORTED_LANGUAGES if lang not in _READY_PROMPTS_WITH_NAME_BY_LANGUAGE]
     if missing_ready_named:
         raise RuntimeError(f"Missing personalized ready prompt translations: {', '.join(missing_ready_named)}")
+    missing_no_input_1 = [lang for lang in SUPPORTED_LANGUAGES if lang not in _NO_INPUT_FIRST_BY_LANGUAGE]
+    if missing_no_input_1:
+        raise RuntimeError(f"Missing no-input warning #1 translations: {', '.join(missing_no_input_1)}")
+    missing_no_input_2 = [lang for lang in SUPPORTED_LANGUAGES if lang not in _NO_INPUT_SECOND_BY_LANGUAGE]
+    if missing_no_input_2:
+        raise RuntimeError(f"Missing no-input warning #2 translations: {', '.join(missing_no_input_2)}")
     for period, mapping in _GREETINGS_BY_PERIOD.items():
         missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
         if missing:
@@ -286,6 +367,100 @@ def get_ready_prompt(language: str | None, preferred_name: str | None = None) ->
     name = str(preferred_name).strip()
     template = _READY_PROMPTS_WITH_NAME_BY_LANGUAGE.get(lang, _READY_PROMPTS_WITH_NAME_BY_LANGUAGE["English"])
     return template.replace("{name}", name)
+
+
+_CLOSING_PROMPTS_BY_LANGUAGE: dict[str, str] = {
+    "English": "Is there anything else I could help you with?",
+    "Kannada": "ನಾನು ನಿಮಗೆ ಇನ್ನೇನಾದರೂ ಸಹಾಯ ಮಾಡಬಹುದೇ?",
+    "Hindi": "क्या मैं आपकी और कोई मदद कर सकती हूँ?",
+    "Tamil": "நான் உங்களுக்கு வேறு ஏதேனும் உதவட்டுமா?",
+    "Telugu": "నేను మీకు ఇంకేమైనా సహాయం చేయవచ్చా?",
+    "Malayalam": "ഞാൻ നിങ്ങളെ കൂടുതൽ സഹായിക്കട്ടെ?",
+}
+
+_CLOSING_PROMPTS_WITH_NAME_BY_LANGUAGE: dict[str, str] = {
+    "English": "Is there anything else I could help you with, {name}?",
+    "Kannada": "{name}, ನಾನು ನಿಮಗೆ ಇನ್ನೇನಾದರೂ ಸಹಾಯ ಮಾಡಬಹುದೇ?",
+    "Hindi": "{name}, क्या मैं आपकी और कोई मदद कर सकती हूँ?",
+    "Tamil": "{name}, நான் உங்களுக்கு வேறு ஏதேனும் உதவட்டுமா?",
+    "Telugu": "{name}, నేను మీకు ఇంకేమైనా సహాయం చేయవచ్చా?",
+    "Malayalam": "{name}, ഞാൻ നിങ്ങളെ കൂടുതൽ സഹായിക്കട്ടെ?",
+}
+
+_CONTINUE_LISTENING_BY_LANGUAGE: dict[str, str] = {
+    "English": "Of course. What would you like to know?",
+    "Kannada": "ಖಂಡಿತ. ನೀವು ಏನು ತಿಳಿಯಲು ಬಯಸುತ್ತೀರಿ?",
+    "Hindi": "ज़रूर। आप क्या जानना चाहेंगे?",
+    "Tamil": "நிச்சயமாக. நீங்கள் என்ன தெரிந்துகொள்ள விரும்புகிறீர்கள்?",
+    "Telugu": "తప్పకుండా. మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
+    "Malayalam": "തീർച്ചയായും. നിങ്ങൾക്ക് എന്തറിയണം?",
+}
+
+
+def get_closing_prompt(language: str | None, preferred_name: str | None = None) -> str:
+    """One-shot 'anything else?' prompt; uses guest name when known."""
+    lang = language if language in _CLOSING_PROMPTS_BY_LANGUAGE else "English"
+    name = (preferred_name or "").strip()
+    if name:
+        template = _CLOSING_PROMPTS_WITH_NAME_BY_LANGUAGE.get(
+            lang, _CLOSING_PROMPTS_WITH_NAME_BY_LANGUAGE["English"]
+        )
+        return template.replace("{name}", name)
+    return _CLOSING_PROMPTS_BY_LANGUAGE.get(lang, _CLOSING_PROMPTS_BY_LANGUAGE["English"])
+
+
+def get_continue_listening_prompt(language: str | None) -> str:
+    lang = language if language in _CONTINUE_LISTENING_BY_LANGUAGE else "English"
+    return _CONTINUE_LISTENING_BY_LANGUAGE.get(lang, _CONTINUE_LISTENING_BY_LANGUAGE["English"])
+
+
+def get_session_farewell(language: str | None) -> str:
+    try:
+        return ui_text(ui_language_key(language), "session.goodbye")
+    except Exception:
+        return "Goodbye."
+
+
+_NO_INPUT_FIRST_BY_LANGUAGE: dict[str, str] = {
+    "English": "I didn't quite hear you. Whenever you're ready, you can speak.",
+    "Kannada": "ನಿಮ್ಮ ಮಾತು ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ನೀವು ಸಿದ್ಧರಾದಾಗ ಮಾತನಾಡಬಹುದು.",
+    "Hindi": "मैं आपकी बात ठीक से नहीं सुन पाई। जब आप तैयार हों, बोल सकते हैं।",
+    "Tamil": "உங்கள் பேச்சு தெளிவாகக் கேட்கவில்லை. தயாரானதும் பேசலாம்.",
+    "Telugu": "మీ మాట సరిగా వినిపించలేదు. సిద్ధంగా ఉన్నప్పుడు మాట్లాడవచ్చు.",
+    "Malayalam": "നിങ്ങളുടെ ശബ്ദം വ്യക്തമായി കേട്ടില്ല. തയ്യാറാകുമ്പോൾ സംസാരിക്കാം.",
+}
+
+_NO_INPUT_SECOND_BY_LANGUAGE: dict[str, str] = {
+    "English": (
+        "I still couldn't hear you. Please tap the orb and start speaking whenever you're ready."
+    ),
+    "Kannada": (
+        "ಇನ್ನೂ ನಿಮ್ಮ ಮಾತು ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಆರ್ಬ್ ಅನ್ನು ಸ್ಪರ್ಶಿಸಿ, "
+        "ನೀವು ಸಿದ್ಧರಾದಾಗ ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ."
+    ),
+    "Hindi": (
+        "मैं अभी भी आपको नहीं सुन पाई। कृपया ऑर्ब पर टैप करें और जब आप तैयार हों तब बोलना शुरू करें।"
+    ),
+    "Tamil": (
+        "இன்னும் உங்கள் பேச்சு கேட்கவில்லை. தயவுசெய்து ஆர்பைத் தொட்டு, "
+        "தயாரானதும் பேசத் தொடங்குங்கள்."
+    ),
+    "Telugu": (
+        "ఇంకా మీ మాట వినిపించలేదు. దయచేసి ఆర్బ్‌ను తాకి, "
+        "సిద్ధంగా ఉన్నప్పుడు మాట్లాడడం ప్రారంభించండి."
+    ),
+    "Malayalam": (
+        "ഇപ്പോഴും നിങ്ങളുടെ ശബ്ദം കേട്ടില്ല. ദയവായി ഓർബ് തൊട്ട്, "
+        "തയ്യാറാകുമ്പോൾ സംസാരിക്കാൻ തുടങ്ങുക."
+    ),
+}
+
+
+def get_no_input_warning(language: str | None, attempt: int) -> str:
+    lang = language if language in _NO_INPUT_FIRST_BY_LANGUAGE else "English"
+    if int(attempt) >= 2:
+        return _NO_INPUT_SECOND_BY_LANGUAGE.get(lang, _NO_INPUT_SECOND_BY_LANGUAGE["English"])
+    return _NO_INPUT_FIRST_BY_LANGUAGE.get(lang, _NO_INPUT_FIRST_BY_LANGUAGE["English"])
 
 
 # Backward-compatible default snapshot (evening English).

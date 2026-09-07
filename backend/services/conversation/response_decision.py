@@ -12,8 +12,9 @@ Hard constraints:
 - An LLM may propose a SemanticProposal. This function remains the only writer of
   ResponseDecision.mode. The LLM never writes unitIds.
 - Token count is not evidence. A short institutional question is still a question.
-- Absence of a card is not FALLBACK. FALLBACK is only off-domain, unsafe, or
-  external-college comparison.
+- Absence of a card is not FALLBACK. FALLBACK is off-domain, unsafe,
+  external-college comparison, or a clear but restricted/unsupported action
+  (personal contact numbers, payment scanner) — never a substitute for CLARIFY.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ from backend.services.answer_generation import (
     maybe_override_intent_with_executive_profile,
 )
 from backend.services.content.campus_units import is_bare_hostel_request, is_campus_entity
-from backend.services.content.global_units import is_global_entity
+from backend.services.content.global_units import TOPIC_ADMISSIONS, is_global_entity
 from backend.services.content.semantic_composition import detect_topic_spans
 from backend.services.content.semantic_request import SemanticRequest
 from backend.services.content.semantic_topics import cue_in_hay, detect_atomic_topics, is_full_department_scope
@@ -240,6 +241,83 @@ def is_external_comparison(text: str) -> bool:
     return any(p.search(raw) for p in _EXTERNAL_INSTITUTION_CUES)
 
 
+_ADMISSIONS_SPECIFIC_CUES: tuple[str, ...] = (
+    "documents",
+    "document",
+    "docs",
+    "doc",
+    "eligibility",
+    "eligible",
+    "criteria",
+    "cutoff",
+    "cut-off",
+    "cut off",
+    "steps",
+    "step",
+    "process",
+    "procedure",
+    "how to apply",
+    "application",
+    "fee",
+    "fees",
+    "tuition",
+    "dates",
+    "date",
+    "deadline",
+    "office",
+    "admission block",
+    "ದಾಖಲೆ",
+    "ಅರ್ಹತೆ",
+    "ಶುಲ್ಕ",
+    "ಪ್ರಕ್ರಿಯೆ",
+    "दस्तावेज",
+    "दस्तावेज़",
+    "पात्रता",
+    "फीस",
+    "प्रक्रिया",
+    "ஆவண",
+    "தகுதி",
+    "கட்டணம்",
+    "செயல்முறை",
+    "పత్ర",
+    "అర్హత",
+    "ఫీజు",
+    "ప్రక్రియ",
+    "രേഖ",
+    "യോഗ്യത",
+    "ഫീസ്",
+    "പ്രക്രിയ",
+)
+
+
+def has_specific_admissions_slot(text: str) -> bool:
+    """True when the user already named which admission information they want."""
+    hay = _hay(text)
+    return any(cue_in_hay(hay, cue) for cue in _ADMISSIONS_SPECIFIC_CUES)
+
+def is_ambiguous_admissions_request(
+    text: str,
+    semantic_request: SemanticRequest | None,
+) -> bool:
+    """
+    Topic=admissions is clear, but the information slot is not.
+
+    Bare 'I want to do admissions' must CLARIFY, not open a card.
+    """
+    if has_specific_admissions_slot(text):
+        return False
+    if semantic_request is not None:
+        topics = {topic for _, topic in semantic_request.unit_items}
+        if topics == {TOPIC_ADMISSIONS} or (
+            (semantic_request.topic or "").strip().lower() == TOPIC_ADMISSIONS
+            and (not topics or topics == {TOPIC_ADMISSIONS})
+        ):
+            return True
+    if has_explicit_admissions_cue(text or "") and not has_specific_admissions_slot(text):
+        return True
+    return False
+
+
 def has_card_topic_cue(text: str) -> bool:
     """A department-scoped topic word (hod / fees / placements / achievements / overview)."""
     return bool(detect_topic_spans(text or ""))
@@ -355,7 +433,22 @@ def resolve_response_decision(
             )
         )
 
-    # LLM FALLBACK is ignored here: only steps 2–3 may emit FALLBACK.
+    # 3a. Clear intent that the kiosk must not fulfill (not ambiguity).
+    from backend.services.conversation.restricted_requests import restricted_evidence
+
+    restricted = restricted_evidence(raw)
+    if restricted:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.FALLBACK,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.93,
+                evidence=restricted,
+                clarification_reason="restricted_action",
+            )
+        )
+
+    # LLM FALLBACK is ignored here: only steps 2–3/3a may emit FALLBACK.
     atomic = _has_atomic_card_topic(semantic_request, proposal)
     institution_proposal = (
         proposal is not None and proposal.domain is DomainRelevance.INSTITUTION
@@ -470,7 +563,20 @@ def resolve_response_decision(
         )
 
     # 4. A resolved semantic request is the strongest card evidence there is.
+    # Bare admissions (topic clear, slot unclear) must CLARIFY before any card.
     if semantic_request is not None:
+        if is_ambiguous_admissions_request(raw, semantic_request):
+            return _done(
+                ResponseDecision(
+                    mode=ResponseMode.CLARIFY,
+                    topic=TOPIC_ADMISSIONS,
+                    clarification_target="admissions_info",
+                    clarification_reason="ambiguous_admissions_slot",
+                    domain_relevance=DomainRelevance.INSTITUTION,
+                    confidence=0.88,
+                    evidence="admissions_topic_without_slot",
+                )
+            )
         items = semantic_request.unit_items
         return _done(
             ResponseDecision(
@@ -544,8 +650,21 @@ def resolve_response_decision(
         )
 
     # Preserve the narrow case where both explicit admissions language and the
-    # existing legacy Admissions owner agree. Do not promote NORMAL_QUERY text.
+    # existing legacy Admissions owner agree — but only when the slot is specific.
+    # Bare "I want admissions" clarifies; "admission documents" may CARD.
     if has_explicit_admissions_cue(raw) and intent == INTENT_ADMISSIONS:
+        if is_ambiguous_admissions_request(raw, None):
+            return _done(
+                ResponseDecision(
+                    mode=ResponseMode.CLARIFY,
+                    topic=TOPIC_ADMISSIONS,
+                    clarification_target="admissions_info",
+                    clarification_reason="ambiguous_admissions_slot",
+                    domain_relevance=DomainRelevance.INSTITUTION,
+                    confidence=0.86,
+                    evidence="explicit_admissions_cue_needs_slot",
+                )
+            )
         return _done(
             ResponseDecision(
                 mode=ResponseMode.CARD,

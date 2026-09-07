@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 
-export type IdleEyeVariant = 'happy' | 'curious' | 'heart' | 'sad' | 'sleep';
+export type IdleEyeVariant = 'happy' | 'curious' | 'heart';
 
 type MacroGaze = { x: number; y: number };
 type MicroDrift = { x: number; y: number };
@@ -9,7 +9,8 @@ const POSITIONS: Record<'center' | 'left' | 'right' | 'up' | 'down', MacroGaze> 
   center: { x: 0, y: 0 },
   left: { x: -68, y: 6 },
   right: { x: 68, y: 6 },
-  up: { x: 0, y: -42 },
+  // Keep upward glance mild so brows never leave the top of the screen
+  up: { x: 0, y: -14 },
   down: { x: 0, y: 38 },
 };
 
@@ -35,7 +36,6 @@ function scheduleIdle(
 export function useDualModeIdle(isSpeaking: boolean) {
   const isSpeakingRef = useRef(isSpeaking);
   const timersRef = useRef<number[]>([]);
-  const idleSinceRef = useRef(Date.now());
   const heartLockUntilRef = useRef(0);
 
   const [macroGaze, setMacroGaze] = useState<MacroGaze>({ x: 0, y: 0 });
@@ -63,17 +63,14 @@ export function useDualModeIdle(isSpeaking: boolean) {
       return;
     }
 
-    idleSinceRef.current = Date.now();
     heartLockUntilRef.current = 0;
 
     const guard = () => isSpeakingRef.current;
 
     function pickIdleVariant(): IdleEyeVariant {
-      const idleMs = Date.now() - idleSinceRef.current;
-      if (idleMs >= 22000 && Math.random() < 0.48) return 'sleep';
-      if (idleMs >= 10000 && Math.random() < 0.28) return 'sad';
-      if (Math.random() < 0.1) return 'heart';
-      if (Math.random() < 0.26) return 'curious';
+      // Bright expressions only — no straight-line sleep slit
+      if (Math.random() < 0.14) return 'heart';
+      if (Math.random() < 0.34) return 'curious';
       return 'happy';
     }
 

@@ -40,6 +40,20 @@ def history_for_llm(session: dict) -> list[dict[str, str]]:
     return out
 
 
+def prior_user_texts(session: dict, *, limit: int = 3) -> tuple[str, ...]:
+    """Recent user utterances from session history (oldest→newest within the window)."""
+    users: list[str] = []
+    for item in session.get("history") or []:
+        if item.get("role") != "user":
+            continue
+        text = (item.get("text") or "").strip()
+        if text:
+            users.append(text)
+    if limit > 0:
+        users = users[-limit:]
+    return tuple(users)
+
+
 def text_contains_guest_name_token(text: str, name: str) -> bool:
     """
     True if `text` contains `name` as a whole word or whole multi-word phrase.

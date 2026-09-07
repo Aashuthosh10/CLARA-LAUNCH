@@ -69,6 +69,82 @@ _CLARIFY_HOSTEL: dict[str, str] = {
     "Malayalam": "നിങ്ങൾ ഗേൾസ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ബോയ്സ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ചോദിക്കുന്നത്?",
 }
 
+_CLARIFY_ADMISSIONS_INFO: dict[str, str] = {
+    "English": (
+        "Would you like the admission steps, eligibility details, or the documents required?"
+    ),
+    "Kannada": (
+        "ನಿಮಗೆ ಪ್ರವೇಶದ ಹಂತಗಳು, ಅರ್ಹತೆ ವಿವರಗಳು ಅಥವಾ ಅಗತ್ಯ ದಾಖಲೆಗಳ ಬಗ್ಗೆ ತಿಳಿಯಬೇಕೇ?"
+    ),
+    "Hindi": (
+        "क्या आप प्रवेश की प्रक्रिया, पात्रता विवरण, या आवश्यक दस्तावेज़ जानना चाहेंगे?"
+    ),
+    "Tamil": (
+        "சேர்க்கை படிகள், தகுதி விவரங்கள் அல்லது தேவையான ஆவணங்கள் — எதை அறிய விரும்புகிறீர்கள்?"
+    ),
+    "Telugu": (
+        "మీకు ప్రవేశ దశలు, అర్హత వివరాలు లేదా అవసరమైన పత్రాలు తెలుసుకోవాలనుకుంటున్నారా?"
+    ),
+    "Malayalam": (
+        "അഡ്മിഷൻ ഘട്ടങ്ങൾ, യോഗ്യത വിവരങ്ങൾ, അതോ ആവശ്യമായ രേഖകൾ — ഏതാണ് അറിയേണ്ടത്?"
+    ),
+}
+
+# Clear intent, cannot fulfill at the kiosk — not "tell me more".
+_RESTRICTED_PERSONAL_CONTACT: dict[str, str] = {
+    "English": (
+        "I'm sorry, I can't provide personal contact numbers here. "
+        "Please meet the admission block and they'll guide you with the appropriate contact details."
+    ),
+    "Kannada": (
+        "ಕ್ಷಮಿಸಿ, ನಾನು ಇಲ್ಲಿ ವೈಯಕ್ತಿಕ ಸಂಪರ್ಕ ಸಂಖ್ಯೆಗಳನ್ನು ನೀಡಲಾಗುವುದಿಲ್ಲ. "
+        "ದಯವಿಟ್ಟು ಅಡ್ಮಿಷನ್ ಬ್ಲಾಕ್‌ಗೆ ಭೇಟಿ ನೀಡಿ, ಅವರು ಸೂಕ್ತ ಸಂಪರ್ಕ ವಿವರಗಳೊಂದಿಗೆ ಮಾರ್ಗದರ್ಶನ ನೀಡುತ್ತಾರೆ."
+    ),
+    "Hindi": (
+        "माफ़ कीजिए, मैं यहाँ व्यक्तिगत संपर्क नंबर नहीं दे सकती। "
+        "कृपया एडमिशन ब्लॉक में मिलें, वे सही संपर्क विवरण बताएंगे।"
+    ),
+    "Tamil": (
+        "மன்னிக்கவும், இங்கே தனிப்பட்ட தொடர்பு எண்களை என்னால் வழங்க முடியாது. "
+        "சேர்க்கை பிரிவை அணுகுங்கள்; அவர்கள் சரியான தொடர்பு விவரங்களை வழிகாட்டுவார்கள்."
+    ),
+    "Telugu": (
+        "క్షమించండి, ఇక్కడ వ్యక్తిగత సంప్రదింపు నంబర్లు ఇవ్వలేను. "
+        "దయచేసి అడ్మిషన్ బ్లాక్‌ను కలవండి; వారు సరైన సంప్రదింపు వివరాలు చెబుతారు."
+    ),
+    "Malayalam": (
+        "ക്ഷമിക്കണം, ഇവിടെ വ്യക്തിഗത കോൺടാക്ട് നമ്പറുകൾ നൽകാൻ കഴിയില്ല. "
+        "അഡ്മിഷൻ ബ്ലോക്കിൽ പോയി കാണുക; അവർ ശരിയായ ബന്ധപ്പെടാനുള്ള വിവരങ്ങൾ നൽകും."
+    ),
+}
+
+_RESTRICTED_PAYMENT: dict[str, str] = {
+    "English": (
+        "For payment assistance, please meet the admission block "
+        "and they'll guide you through the process."
+    ),
+    "Kannada": (
+        "ಪಾವತಿ ಸಹಾಯಕ್ಕಾಗಿ ದಯವಿಟ್ಟು ಅಡ್ಮಿಷನ್ ಬ್ಲಾಕ್‌ಗೆ ಭೇಟಿ ನೀಡಿ, "
+        "ಅವರು ಪ್ರಕ್ರಿಯೆಯ ಮೂಲಕ ಮಾರ್ಗದರ್ಶನ ನೀಡುತ್ತಾರೆ."
+    ),
+    "Hindi": (
+        "भुगतान सहायता के लिए कृपया एडमिशन ब्लॉक में मिलें, "
+        "वे पूरी प्रक्रिया में आपकी मदद करेंगे।"
+    ),
+    "Tamil": (
+        "கட்டண உதவிக்கு சேர்க்கை பிரிவை அணுகுங்கள்; "
+        "அவர்கள் செயல்முறையில் வழிகாட்டுவார்கள்."
+    ),
+    "Telugu": (
+        "చెల్లింపు సహాయం కోసం దయచేసి అడ్మిషన్ బ్లాక్‌ను కలవండి; "
+        "వారు ప్రక్రియలో మార్గనిర్దేశం చేస్తారు."
+    ),
+    "Malayalam": (
+        "പേയ്‌മെന്റ് സഹായത്തിന് അഡ്മിഷൻ ബ്ലോക്കിൽ പോയി കാണുക; "
+        "അവർ നടപടിക്രമത്തിൽ നിങ്ങളെ സഹായിക്കും."
+    ),
+}
+
 _NAME_ACK: dict[str, str] = {
     "English": "Nice to meet you, {name}.",
     "Kannada": ui_text("kn", "welcome.named_narration"),
@@ -117,7 +193,17 @@ def clarification_reply(language: str | None, target: str | None = None) -> str:
         return _pick(_CLARIFY_DEPARTMENT, language)
     if slot == "hostel":
         return _pick(_CLARIFY_HOSTEL, language)
+    if slot == "admissions_info":
+        return _pick(_CLARIFY_ADMISSIONS_INFO, language)
     return _pick(_CLARIFICATION, language)
+
+
+def restricted_fallback_reply(language: str | None, evidence: str | None = None) -> str:
+    """Human-receptionist fallback for clear but unsupported/restricted asks."""
+    kind = (evidence or "").strip().lower()
+    if kind == "restricted_payment":
+        return _pick(_RESTRICTED_PAYMENT, language)
+    return _pick(_RESTRICTED_PERSONAL_CONTACT, language)
 
 
 def name_ack_reply(language: str | None, name: str) -> str:
@@ -140,6 +226,9 @@ def _assert_parity() -> None:
         ("_CLARIFICATION", _CLARIFICATION),
         ("_CLARIFY_DEPARTMENT", _CLARIFY_DEPARTMENT),
         ("_CLARIFY_HOSTEL", _CLARIFY_HOSTEL),
+        ("_CLARIFY_ADMISSIONS_INFO", _CLARIFY_ADMISSIONS_INFO),
+        ("_RESTRICTED_PERSONAL_CONTACT", _RESTRICTED_PERSONAL_CONTACT),
+        ("_RESTRICTED_PAYMENT", _RESTRICTED_PAYMENT),
         ("_NAME_ACK", _NAME_ACK),
         ("_GREETING", _GREETING),
         ("_SMALL_TALK", _SMALL_TALK),

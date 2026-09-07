@@ -21,6 +21,43 @@ _FALLBACK = {
     "ml": "അത് നിങ്ങൾക്കായി ഒരുമിച്ച് ശേഖരിക്കാം.",
 }
 
+# Action-aware bridges — must match the next spoken act (never lie).
+_CLARIFY_BRIDGE = {
+    "en": "Let me make sure I understand what you're looking for.",
+    "kn": "ನೀವು ಏನು ಹುಡುಕುತ್ತಿದ್ದೀರಿ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳುತ್ತೇನೆ.",
+    "hi": "मैं सुनिश्चित कर लेती हूँ कि आप क्या जानना चाहते हैं।",
+    "ta": "நீங்கள் எதை தேடுகிறீர்கள் என்பதை உறுதி செய்கிறேன்.",
+    "te": "మీరు ఏమి కోరుకుంటున్నారో నిర్ధారించుకుంటాను.",
+    "ml": "നിങ്ങൾ എന്താണ് അന്വേഷിക്കുന്നതെന്ന് ഉറപ്പാക്കാം.",
+}
+
+_CLARIFY_ADMISSIONS_BRIDGE = {
+    "en": "Let me make sure I understand which admission details you need.",
+    "kn": "ನಿಮಗೆ ಯಾವ ಪ್ರವೇಶ ವಿವರಗಳು ಬೇಕು ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳುತ್ತೇನೆ.",
+    "hi": "मैं सुनिश्चित कर लेती हूँ कि आपको प्रवेश की कौन-सी जानकारी चाहिए।",
+    "ta": "எந்த சேர்க்கை விவரங்கள் வேண்டும் என்பதை உறுதி செய்கிறேன்.",
+    "te": "మీకు ఏ ప్రవేశ వివరాలు కావాలో నిర్ధారించుకుంటాను.",
+    "ml": "നിങ്ങൾക്ക് ഏത് അഡ്മിഷൻ വിവരങ്ങളാണ് വേണ്ടതെന്ന് ഉറപ്പാക്കാം.",
+}
+
+_CLARIFY_DEPARTMENT_BRIDGE = {
+    "en": "Let me make sure I get the right details for you.",
+    "kn": "ಸರಿಯಾದ ವಿವರಗಳನ್ನು ಪಡೆಯುವುದನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳುತ್ತೇನೆ.",
+    "hi": "मैं सही जानकारी लेने के लिए थोड़ा स्पष्ट कर लेती हूँ।",
+    "ta": "சரியான விவரங்களை பெற உறுதி செய்கிறேன்.",
+    "te": "సరైన వివరాలు తెలుసుకునేలా నిర్ధారించుకుంటాను.",
+    "ml": "ശരിയായ വിവരങ്ങൾ ലഭിക്കാൻ ഉറപ്പാക്കാം.",
+}
+
+_FALLBACK_BRIDGE = {
+    "en": "Let me point you to the right place for that.",
+    "kn": "ಅದಕ್ಕೆ ಸರಿಯಾದ ಸ್ಥಳಕ್ಕೆ ನಿಮ್ಮನ್ನು ಮಾರ್ಗದರ್ಶನ ಮಾಡುತ್ತೇನೆ.",
+    "hi": "मैं आपको इसके लिए सही जगह बताती हूँ।",
+    "ta": "அதற்கு சரியான இடத்திற்கு வழிகாட்டுகிறேன்.",
+    "te": "దానికి సరైన చోటుకు మిమ్మల్ని నిర్దేశిస్తాను.",
+    "ml": "അതിന് ശരിയായ സ്ഥലത്തേക്ക് നിങ്ങളെ നയിക്കാം.",
+}
+
 # Human-readable topic phrases (not category templates that invent wrong roles).
 _TOPIC_NOUN: dict[str, dict[str, str]] = {
     "principal": {
@@ -289,13 +326,58 @@ def build_thinking_semantic_request(
     )
 
 
+def conversational_action_for_turn(
+    *,
+    response_mode: str | None = None,
+    policy_action: str | None = None,
+) -> str:
+    """
+    Map sealed turn decision → thinking action.
+
+    answer | clarify | fallback | repeat
+    """
+    policy = (policy_action or "").strip().upper()
+    mode = (response_mode or "").strip().upper()
+    if policy in {"NO_SPEECH_RETRY"} or mode == "RETRY":
+        return "repeat"
+    if mode == "CLARIFY" or policy == "ASK_CLARIFICATION":
+        return "clarify"
+    if mode == "FALLBACK" or policy == "UNKNOWN":
+        return "fallback"
+    return "answer"
+
+
 def compose_thinking_bridge_from_semantic(
     semantic: SemanticRequest | None,
     lang_key: str,
     guest_name: str | None = None,
-) -> str:
-    """Render a short natural bridge from SemanticRequest items."""
+    *,
+    conversational_action: str = "answer",
+    clarification_target: str | None = None,
+) -> str | None:
+    """
+    Render a short natural bridge.
+
+    Returns None when thinking should be skipped (repeat / empty).
+    """
     lang = _lang(lang_key)
+    action = (conversational_action or "answer").strip().lower()
+
+    if action == "repeat":
+        return None
+
+    if action == "clarify":
+        target = (clarification_target or "").strip().lower()
+        if target == "admissions_info":
+            return _CLARIFY_ADMISSIONS_BRIDGE.get(lang) or _CLARIFY_ADMISSIONS_BRIDGE["en"]
+        if target == "department":
+            return _CLARIFY_DEPARTMENT_BRIDGE.get(lang) or _CLARIFY_DEPARTMENT_BRIDGE["en"]
+        return _CLARIFY_BRIDGE.get(lang) or _CLARIFY_BRIDGE["en"]
+
+    if action == "fallback":
+        return _FALLBACK_BRIDGE.get(lang) or _FALLBACK_BRIDGE["en"]
+
+    # ANSWER / CARD — contextual gather bridge from semantic items.
     if semantic is None or not semantic.unit_items:
         return _FALLBACK[lang]
 
@@ -309,7 +391,6 @@ def compose_thinking_bridge_from_semantic(
 
     primary_topic = (semantic.unit_items[0][1] or semantic.topic or "").strip().lower()
     allow_name = primary_topic in _WARM_TOPICS or primary_topic in {"", "overview"}
-    # Prefer name on college/overview warm turns only when a guest name exists.
     name_tail = _name_tail(lang, guest_name, allow=allow_name and primary_topic != "fees")
 
     joiner = _AND.get(lang) or _AND["en"]
@@ -317,7 +398,6 @@ def compose_thinking_bridge_from_semantic(
     frames = _frame_for_topic(primary_topic)
     template = frames.get(lang) or frames["en"]
     sentence = template.format(subject=subject, name_tail=name_tail).strip()
-    # Guard extreme length; prefer first subject only.
     if len(sentence.split()) > 18 and len(subjects) > 1:
         sentence = template.format(subject=subjects[0], name_tail=name_tail).strip()
     return sentence
@@ -330,18 +410,34 @@ def compose_thinking_bridge(
     *,
     semantic_request: SemanticRequest | None = None,
     session: dict[str, Any] | None = None,
-) -> str:
+    conversational_action: str = "answer",
+    clarification_target: str | None = None,
+) -> str | None:
     """
-    Compose thinking bridge from existing semantic understanding.
-
-    Prefer an already-parsed SemanticRequest. Otherwise parse once with the
-    same parser the CARD/ANSWER path uses (including session carry-over).
+    Compose thinking bridge from existing semantic understanding + turn action.
     """
     lang = _lang(lang_key)
+    action = (conversational_action or "answer").strip().lower()
+    if action == "repeat":
+        return None
+    if action in {"clarify", "fallback"}:
+        return compose_thinking_bridge_from_semantic(
+            None,
+            lang,
+            guest_name,
+            conversational_action=action,
+            clarification_target=clarification_target,
+        )
     semantic = semantic_request
     if semantic is None and (raw_text or "").strip():
         semantic = build_thinking_semantic_request(raw_text, lang, session)
-    return compose_thinking_bridge_from_semantic(semantic, lang, guest_name)
+    return compose_thinking_bridge_from_semantic(
+        semantic,
+        lang,
+        guest_name,
+        conversational_action="answer",
+        clarification_target=clarification_target,
+    )
 
 
 # Back-compat for older tests that imported infer_thinking_topic.

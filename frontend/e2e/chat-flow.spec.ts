@@ -185,19 +185,22 @@ test.describe('CLARA chat flow', () => {
     await installMockClaraSocket(page);
   });
 
-  test('Sleep -> Language -> Chat (no menu) shows greeting and orb', async ({ page }) => {
+  test('Sleep -> Language -> Chat (no menu) shows greeting then orb after language', async ({ page }) => {
     await page.goto('http://localhost:5176/?e2e=1');
 
     await wakeFromSleep(page);
 
     await expect(page.getByTestId('chat-screen')).toBeVisible({ timeout: 15000 });
+    // Orb stays hidden through greeting / language picker.
+    await expect(page.getByTestId('chat-orb')).toHaveCount(0);
     await selectInlineLanguage(page, 'english');
     await completeInlineGuestNameGate(page);
 
+    await expect(page.getByTestId('chat-orb')).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible();
   });
 
-  test('URL ?state=5 shows chat screen with greeting and orb', async ({ page }) => {
+  test('URL ?state=5 shows chat screen with greeting (no language gate)', async ({ page }) => {
     await page.goto('http://localhost:5176/?state=5&e2e=1', { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
 
@@ -205,7 +208,7 @@ test.describe('CLARA chat flow', () => {
     await expect(
       page.getByText(/Good (morning|afternoon|evening)|I am CLARA|selectLanguage|Select Language/i)
     ).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('button', { name: /Voice input|Tap to speak/i })).toBeVisible();
+    await expect(page.getByTestId('chat-orb')).toBeVisible({ timeout: 15000 });
     await page.screenshot({ path: 'test-results/chat-screen-verified.png', fullPage: true });
   });
 

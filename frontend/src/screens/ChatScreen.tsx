@@ -21,6 +21,20 @@ import {
 } from '../types/chat';
 import { useVoiceFrequencyAnalyser } from '../hooks/useVoiceAnalyser';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useAutoListenLifecycle } from '../hooks/useAutoListenLifecycle';
+import type { AutoListenWaitMode } from '../lib/voice/autoListenConfig';
+import { AUTO_LISTEN_CONFIG } from '../lib/voice/autoListenConfig';
+import {
+  isClaraBusyForAutoListen,
+  isClaraLocallySpeaking,
+  shouldScheduleAutoListenArm,
+} from '../lib/voice/autoListenSpeakingGate';
+import { resolveOrbVisualState } from '../lib/voice/orbVisualState';
+import {
+  createDuplicateTranscriptGuard,
+  validateFinalTranscript,
+} from '../lib/voice/transcriptGate';
+import { createAmbientBaselineTracker } from '../lib/voice/ambientSpeechGate';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
@@ -741,6 +755,8 @@ export default function ChatScreen({
     return isResponsePending;
   })();
   const [hasGreeted, setHasGreeted] = useState(false);
+  /** Language picker finished entrance — speak the language nudge only after this. */
+  const [languageMenuReady, setLanguageMenuReady] = useState(false);
   const [showUnmuteHint, setShowUnmuteHint] = useState(false);
   const [pendingAudio, setPendingAudio] = useState<PendingAudio | null>(null);
   const [visuallyFocusedMessage, setVisuallyFocusedMessage] = useState<ChatMessage | null>(null);
@@ -1403,24 +1419,38 @@ export default function ChatScreen({
   // Intent Classifier & Speech Hooks
   const isMicListening = orbState === 'listening' || Boolean(propIsListening);
   const voiceAnalyser = useVoiceFrequencyAnalyser(isMicListening);
-  // Browser Speech Rec fallback (used if not relying on backend voice activity detection)
+  const duplicateGuardRef = useRef(createDuplicateTranscriptGuard(2500));
+  const ambientTrackerRef = useRef(createAmbientBaselineTracker());
+  const continuationTimerRef = useRef<number | null>(null);
+  const pendingNoInputReArmRef = useRef<AutoListenWaitMode | null>(null);
+  const pendingContinuationAfterWarning2Ref = useRef(false);
+
+  const clearContinuationTimer = useCallback(() => {
+    if (continuationTimerRef.current !== null) {
+      window.clearTimeout(continuationTimerRef.current);
+      continuationTimerRef.current = null;
+    }
+  }, []);
+
+  // Browser Speech Rec — NO_INPUT must never invent a backend turn.
   const handleEmptyTranscript = useCallback(() => {
     if (isCampusNavigationStage) return;
-    setShowUnmuteHint(false);
-    setIsDepartmentOverviewStage(false);
-    setActiveDepartmentId(null);
-    interceptAndSendMessage({
-      action: 'user_message',
-      text: '**BACKGROUND_NOISE** No words detected, returning to idle state.',
-    });
-  }, [interceptAndSendMessage, isCampusNavigationStage]);
+    if (autoListenApiRef.current?.isArmed()) {
+      autoListenApiRef.current.notifyRecognitionEndedWithoutSpeech();
+      return;
+    }
+    // Manual listen with empty result: stay silent locally (no BACKGROUND_NOISE LLM).
+  }, [isCampusNavigationStage]);
 
   const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
     if (errorCode === 'aborted' || !userMessage?.trim()) return;
+    // Soft no-speech while auto-armed is handled by onEndedWithoutSpeech — not an error bubble.
+    if (errorCode === 'no-speech' && autoListenApiRef.current?.isArmed()) {
+      return;
+    }
     if (import.meta.env.DEV) {
       console.warn('[CLARA_SPEECH] browser speech error', { errorCode, userMessage });
     }
-    // Ensure UI can recover immediately from browser speech failures.
     setIsCampusSpeaking(false);
     setIsPlayingBackendAudio(false);
     setHasGreeted(true);
@@ -1432,7 +1462,6 @@ export default function ChatScreen({
     setDisplayMessages((prev) => [...prev, errorBubble]);
     setVisuallyFocusedMessage(errorBubble);
 
-    // Transient browser-STT failures should not permanently own the kiosk answer stage.
     if (errorCode === 'network' || errorCode === 'no-speech') {
       window.setTimeout(() => {
         setVisuallyFocusedMessage((current) =>
@@ -1442,12 +1471,193 @@ export default function ChatScreen({
     }
   }, [language]);
 
-  const { startListening: startSpeechRecognition, stopListening, isListening: speechListening } = useSpeechRecognition(
-    interceptAndSendMessage,
-    language,
-    handleSpeechError,
-    handleEmptyTranscript
+  const autoListenApiRef = useRef<{
+    isArmed: () => boolean;
+    isAwaitingManual: () => boolean;
+    notifyRecognitionEndedWithoutSpeech: () => void;
+    notifyMeaningfulSpeech: () => void;
+    notifyManualResume: () => void;
+    disarm: (opts?: { stopMic?: boolean; clearNoInput?: boolean }) => void;
+    scheduleArmAfterTts: (mode: AutoListenWaitMode) => void;
+    currentMode: () => AutoListenWaitMode | null;
+  } | null>(null);
+
+  const speechHandlers = useMemo(
+    () => ({
+      softNoSpeech: () => Boolean(autoListenApiRef.current?.isArmed()),
+      onEndedWithoutSpeech: () => {
+        autoListenApiRef.current?.notifyRecognitionEndedWithoutSpeech();
+      },
+      acceptResult: () => !autoListenApiRef.current?.isAwaitingManual?.(),
+    }),
+    [],
   );
+
+  const deliverVoiceUserMessage = useCallback(
+    (msg: object) => {
+      if (!msg || typeof msg !== 'object') return;
+      const m = msg as { action?: string; text?: string; localIntent?: unknown };
+      if (m.action !== 'user_message') {
+        return interceptAndSendMessage(msg);
+      }
+      // Lifecycle nudges (closing / no-input warnings) are not user speech.
+      const liType =
+        m.localIntent && typeof m.localIntent === 'object'
+          ? String((m.localIntent as { type?: string }).type || '')
+          : '';
+      if (liType.startsWith('session_')) {
+        return interceptAndSendMessage(msg, 'UI');
+      }
+
+      const raw = typeof m.text === 'string' ? m.text : '';
+      const gated = validateFinalTranscript(raw);
+      if (!gated.ok) {
+        // Treat rejected transcript as NO_INPUT when auto-armed.
+        if (autoListenApiRef.current?.isArmed()) {
+          autoListenApiRef.current.notifyRecognitionEndedWithoutSpeech();
+        }
+        return;
+      }
+      if (ambientTrackerRef.current.looksLikeAmbientOnly()) {
+        if (autoListenApiRef.current?.isArmed()) {
+          autoListenApiRef.current.notifyRecognitionEndedWithoutSpeech();
+        }
+        return;
+      }
+      if (duplicateGuardRef.current.isDuplicate(gated.text)) {
+        return;
+      }
+
+      autoListenApiRef.current?.notifyMeaningfulSpeech();
+      clearContinuationTimer();
+      ambientTrackerRef.current.resetListenPeak();
+      return interceptAndSendMessage({ ...m, text: gated.text }, 'VOICE');
+    },
+    [clearContinuationTimer, interceptAndSendMessage],
+  );
+
+  const { startListening: startSpeechRecognition, stopListening, isListening: speechListening } =
+    useSpeechRecognition(
+      deliverVoiceUserMessage,
+      language,
+      handleSpeechError,
+      handleEmptyTranscript,
+      speechHandlers,
+    );
+
+  const endSessionToSleep = useCallback(() => {
+    clearContinuationTimer();
+    pendingContinuationAfterWarning2Ref.current = false;
+    autoListenApiRef.current?.disarm({ stopMic: true, clearNoInput: true });
+    stopListening();
+    if (onHome) onHome();
+    else onBack();
+  }, [clearContinuationTimer, onBack, onHome, stopListening]);
+
+  const startContinuationTimer = useCallback(() => {
+    clearContinuationTimer();
+    pendingContinuationAfterWarning2Ref.current = false;
+    continuationTimerRef.current = window.setTimeout(() => {
+      continuationTimerRef.current = null;
+      endSessionToSleep();
+    }, AUTO_LISTEN_CONFIG.continuationWaitMs);
+  }, [clearContinuationTimer, endSessionToSleep]);
+
+  const requestClosingPrompt = useCallback(() => {
+    autoListenApiRef.current?.disarm({ stopMic: true });
+    interceptAndSendMessage(
+      {
+        action: 'user_message',
+        text: '__CLARA_SESSION_CLOSING_PROMPT__',
+        localIntent: { type: 'session_closing_prompt' },
+      },
+      'UI',
+    );
+  }, [interceptAndSendMessage]);
+
+  const emitNoInputWarning = useCallback(
+    (attempt: 1 | 2) => {
+      stopListening();
+      const fire = () => {
+        if (attempt === 1) {
+          pendingNoInputReArmRef.current =
+            autoListenApiRef.current?.currentMode() || 'normal';
+        } else {
+          // Continuation timer starts AFTER warning #2 TTS locally ends.
+          pendingNoInputReArmRef.current = null;
+          clearContinuationTimer();
+          pendingContinuationAfterWarning2Ref.current = true;
+          // Fallback if warning #2 never produces local TTS playback.
+          window.setTimeout(() => {
+            if (!pendingContinuationAfterWarning2Ref.current) return;
+            if (!autoListenApiRef.current?.isAwaitingManual?.()) return;
+            if (continuationTimerRef.current !== null) return;
+            startContinuationTimer();
+          }, Math.max(3_000, AUTO_LISTEN_CONFIG.postTtsSettleMs + 2_000));
+        }
+        interceptAndSendMessage(
+          {
+            action: 'user_message',
+            text: `__CLARA_NO_INPUT_WARNING_${attempt}__`,
+            localIntent: { type: 'session_no_input_warning', attempt },
+          },
+          'UI',
+        );
+      };
+      const delay = AUTO_LISTEN_CONFIG.warningDelayMs;
+      if (delay > 0) {
+        window.setTimeout(fire, delay);
+      } else {
+        fire();
+      }
+    },
+    [clearContinuationTimer, interceptAndSendMessage, startContinuationTimer, stopListening],
+  );
+
+  const claraBusyForAutoListen = isClaraBusyForAutoListen({
+    isProcessing: Boolean(isProcessing),
+    audioPending: Boolean(payload?.audioPending),
+    isPlayingBackendAudio: Boolean(isPlayingBackendAudio),
+    isCampusSpeaking: Boolean(isCampusSpeaking),
+    thinkingPlaying: Boolean(thinkingPlayerRef.current?.playing?.()),
+  });
+
+  const autoListen = useAutoListenLifecycle({
+    startListening: startSpeechRecognition,
+    stopListening,
+    isListening: speechListening,
+    claraBusy: claraBusyForAutoListen,
+    suppressed:
+      Boolean(isCampusNavigationStage) ||
+      voiceInputMode !== 'browser' ||
+      (Boolean(inlineLanguageGate) && !languageGateSatisfied),
+    onNameTimeout: endSessionToSleep,
+    onNormalInactivity: requestClosingPrompt,
+    onClosingTimeout: endSessionToSleep,
+    onNoInputFailure: emitNoInputWarning,
+  });
+  autoListenApiRef.current = autoListen;
+
+  // Feed ambient baseline / listen peak while orb is in listening state.
+  useEffect(() => {
+    if (!isMicListening) return;
+    const sample = {
+      smoothedRms: voiceAnalyser.smoothedRms,
+      isSilent: voiceAnalyser.isSilent,
+    };
+    // Build room floor from quiet frames; always track listen peak.
+    if (voiceAnalyser.isSilent || !ambientTrackerRef.current.snapshot().calibrated) {
+      ambientTrackerRef.current.observeAmbient(sample);
+    }
+    ambientTrackerRef.current.observeListen(sample);
+  }, [isMicListening, voiceAnalyser.isSilent, voiceAnalyser.smoothedRms]);
+
+  // Cancel continuation timeout on unmount / leave chat.
+  useEffect(() => {
+    return () => {
+      clearContinuationTimer();
+    };
+  }, [clearContinuationTimer]);
 
   // Keep chat history stable when backend emits partial payloads without `messages`.
   useEffect(() => {
@@ -1514,6 +1724,7 @@ export default function ChatScreen({
   useEffect(() => {
     setLanguageGateSatisfied(!inlineLanguageGate);
     languagePickInFlightRef.current = false;
+    setLanguageMenuReady(false);
     if (!inlineLanguageGate) {
       setShowLanguageOverlay(false);
     } else {
@@ -1554,13 +1765,24 @@ export default function ChatScreen({
     isPayloadStale,
   ]);
 
-  // The language instruction is spoken only after the greeting clip has ended.
-  // It is never added to displayMessages, so the visible opening remains the
-  // greeting while the picker is shown separately.
+  // Mark the language menu ready only after it is on screen (not while greeting TTS ends).
+  useEffect(() => {
+    if (!showLanguageOverlay || languageGateSatisfied) {
+      setLanguageMenuReady(false);
+      return;
+    }
+    // Match the panel entrance (~0.85s) so nudge TTS starts after the menu is visible.
+    const readyMs = isE2EFlow ? 0 : 900;
+    const timer = window.setTimeout(() => setLanguageMenuReady(true), readyMs);
+    return () => window.clearTimeout(timer);
+  }, [showLanguageOverlay, languageGateSatisfied, isE2EFlow]);
+
+  // Language-instruction TTS only after greeting has ended AND the language menu is shown.
   useEffect(() => {
     if (payload && isPayloadStale?.(payload)) return;
     if (!inlineLanguageGate || languageGateSatisfied) return;
     if (payload?.turn_id !== 'greeting_opening') return;
+    if (!showLanguageOverlay || !languageMenuReady) return;
     const nudgeAudio = payload?.languageGateNudgeAudioBase64;
     if (typeof nudgeAudio !== 'string' || nudgeAudio.length === 0) return;
     const hasOpeningAudio = typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
@@ -1587,6 +1809,8 @@ export default function ChatScreen({
     hasGreeted,
     inlineLanguageGate,
     languageGateSatisfied,
+    showLanguageOverlay,
+    languageMenuReady,
     isPayloadStale,
   ]);
 
@@ -1788,6 +2012,7 @@ export default function ChatScreen({
     setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
     abortThinkingInterlude();
+    autoListenApiRef.current?.disarm({ stopMic: true });
     setSurface('chat');
     comparisonLayoutSnapRef.current = null;
     busRoutesDismissedTurnIdRef.current = null;
@@ -4227,38 +4452,31 @@ export default function ChatScreen({
 
   // Time-based reset UI behavior removed to enforce persistent screen state.
 
-  // Orb State — with persistent 'completed' state for post-response guidance
-  // "Tap to Speak" stays visible FOREVER until user taps orb or listening starts.
+  // Orb State — manual tap and auto-listen share the same resolveOrbVisualState path.
+  // Sticky payload.isSpeaking must NOT block speechListening → listening.
   useEffect(() => {
-    // Detect speaking → finished transition
-    const wasSpeaking = wasPlayingAudioRef.current;
-    const audioPending = Boolean(payload?.audioPending);
-    const backendSaysSpeaking = Boolean(propIsSpeaking) && !audioPending;
-    wasPlayingAudioRef.current = isPlayingBackendAudio || backendSaysSpeaking;
-
-    if (isPlayingBackendAudio || isCampusSpeaking || backendSaysSpeaking) {
-      setOrbState('speaking');
-    } else if (audioPending && !audioPendingTimedOut) {
-      setOrbState('processing');
-    } else if (isProcessing) {
-      setOrbState('processing');
-    } else if (speechListening || propIsListening || isPendingListeningRef.current) {
-      // User started speaking, browser mic active, or explicitly tapped the orb
-      setOrbState('listening');
-    } else if (wasSpeaking && !isPlayingBackendAudio && !backendSaysSpeaking) {
-      // CLARA just finished speaking → show 'completed' with "Tap to Speak"
-      // This state persists indefinitely — NO auto-timeout.
-      // Only cleared when: user taps orb OR listening begins.
-      setOrbState('completed');
-    } else if (orbState !== 'completed') {
-      // Normal idle/ready — never override a persistent completed state
-      if (hasGreeted && !showUnmuteHint) setOrbState('ready');
-      else setOrbState('idle');
+    const wasLocallySpeaking = wasPlayingAudioRef.current;
+    const { next, nowLocallySpeaking } = resolveOrbVisualState({
+      isPlayingBackendAudio: Boolean(isPlayingBackendAudio),
+      isCampusSpeaking: Boolean(isCampusSpeaking),
+      audioPending: Boolean(payload?.audioPending),
+      audioPendingTimedOut,
+      isProcessing: Boolean(isProcessing),
+      speechListening: Boolean(speechListening),
+      propIsListening: Boolean(propIsListening),
+      pendingListening: Boolean(isPendingListeningRef.current),
+      wasLocallySpeaking,
+      currentOrbState: orbState,
+      hasGreeted,
+      showUnmuteHint,
+    });
+    wasPlayingAudioRef.current = nowLocallySpeaking;
+    if (next !== orbState) {
+      setOrbState(next);
     }
   }, [
     speechListening,
     propIsListening,
-    propIsSpeaking,
     payload?.audioPending,
     audioPendingTimedOut,
     isProcessing,
@@ -4267,6 +4485,103 @@ export default function ChatScreen({
     hasGreeted,
     showUnmuteHint,
     orbState,
+  ]);
+
+  // Auto-listen: when LOCAL TTS finishes, settle then arm mic (no orb click).
+  // Do not use sticky payload.isSpeaking — it outlives HTMLAudioElement playback.
+  const autoListenWasSpeakingRef = useRef(false);
+  useEffect(() => {
+    const audioPending = Boolean(payload?.audioPending);
+    const speakingNow = isClaraLocallySpeaking({
+      isPlayingBackendAudio: Boolean(isPlayingBackendAudio),
+      isCampusSpeaking: Boolean(isCampusSpeaking),
+    });
+    const wasSpeaking = autoListenWasSpeakingRef.current;
+    autoListenWasSpeakingRef.current = speakingNow;
+
+    const suppressed =
+      voiceInputMode !== 'browser' ||
+      (Boolean(inlineLanguageGate) && !languageGateSatisfied) ||
+      Boolean(isCampusNavigationStage);
+
+    if (
+      !shouldScheduleAutoListenArm({
+        wasLocallySpeaking: wasSpeaking,
+        isPlayingBackendAudio: Boolean(isPlayingBackendAudio),
+        isCampusSpeaking: Boolean(isCampusSpeaking),
+        isProcessing: Boolean(isProcessing),
+        audioPending,
+        suppressed,
+      })
+    ) {
+      return;
+    }
+
+    // After second no-input warning, never auto-rearm until orb tap.
+    // Start continuation inactivity only after warning #2 TTS locally ends.
+    if (autoListenApiRef.current?.isAwaitingManual?.()) {
+      if (wasSpeaking && !speakingNow) {
+        startContinuationTimer();
+      }
+      return;
+    }
+
+    // After warning #1 TTS, prefer pending re-arm mode; else infer from messages.
+    const msgs = displayMessagesRef.current || [];
+    const hasNamePrompt = msgs.some((m: any) => m?.id === 'name_prompt');
+    const hasReadyPrompt = msgs.some((m: any) => m?.id === 'ready_prompt');
+    const awaitingClosing = Boolean(payload?.awaiting_closing_reply);
+    const pendingMode = pendingNoInputReArmRef.current;
+    pendingNoInputReArmRef.current = null;
+    let mode: AutoListenWaitMode = pendingMode || 'normal';
+    if (!pendingMode) {
+      if (awaitingClosing) mode = 'closing';
+      else if (hasNamePrompt && !hasReadyPrompt) mode = 'name';
+      else mode = 'normal';
+    }
+
+    ambientTrackerRef.current.resetListenPeak();
+    autoListenApiRef.current?.scheduleArmAfterTts(mode);
+  }, [
+    clearContinuationTimer,
+    endSessionToSleep,
+    isCampusNavigationStage,
+    isCampusSpeaking,
+    isPlayingBackendAudio,
+    isProcessing,
+    inlineLanguageGate,
+    languageGateSatisfied,
+    payload?.audioPending,
+    payload?.awaiting_closing_reply,
+    startContinuationTimer,
+    voiceInputMode,
+  ]);
+
+  // Farewell / closing timeout path: backend asks client to return to sleep after TTS.
+  const sessionEndArmedRef = useRef(false);
+  useEffect(() => {
+    if (payload?.session_should_end === true) {
+      sessionEndArmedRef.current = true;
+    }
+  }, [payload?.session_should_end, payload?.turn_id]);
+
+  useEffect(() => {
+    if (!sessionEndArmedRef.current) return;
+    const audioPending = Boolean(payload?.audioPending);
+    const speaking =
+      Boolean(isPlayingBackendAudio) ||
+      Boolean(isCampusSpeaking) ||
+      (Boolean(propIsSpeaking) && !audioPending);
+    if (speaking || isProcessing || audioPending) return;
+    sessionEndArmedRef.current = false;
+    endSessionToSleep();
+  }, [
+    endSessionToSleep,
+    isCampusSpeaking,
+    isPlayingBackendAudio,
+    isProcessing,
+    payload?.audioPending,
+    propIsSpeaking,
   ]);
 
   useEffect(() => {
@@ -4329,6 +4644,12 @@ export default function ChatScreen({
       isProcessing,
     });
     // #endregion
+    clearContinuationTimer();
+    pendingContinuationAfterWarning2Ref.current = false;
+    autoListen.notifyManualResume();
+    autoListen.disarm({ stopMic: false });
+    ambientTrackerRef.current.reset();
+    ambientTrackerRef.current.resetListenPeak();
     const browserListening = speechListening || isPendingListeningRef.current;
     const backendListening = voiceInputMode === 'backend' && propIsListening;
     const shouldStopMic = browserListening || backendListening;
@@ -5151,7 +5472,7 @@ export default function ChatScreen({
                   </AnimatePresence>
                 </div>
 
-                {!departmentComparisonOpen && !showThinkingStage ? (
+                {!departmentComparisonOpen && !showThinkingStage && !isLanguageGateOpen ? (
                   <div
                     className="full-text-orb-zone"
                     onPointerDownCapture={(ev) => {
@@ -5381,7 +5702,7 @@ export default function ChatScreen({
                 </div>
                 {!showThinkingStage && renderFaqCarousel('panel')}
                 
-                {!isCampusNavigationStage && !showThinkingStage && (
+                {!isCampusNavigationStage && !showThinkingStage && !isLanguageGateOpen && (
                   <motion.div className="chat-orb-stack-below-faq w-full flex justify-center pb-12">
                     <ChatOrbControl
                       orbState={orbState}
@@ -5400,7 +5721,10 @@ export default function ChatScreen({
 
       {/* Comparison mode: orb lives outside the FULL_TEXT motion wrapper so position:fixed is viewport-anchored
           (transform on layoutId/main would otherwise trap fixed positioning and overlap the panel). */}
-      {layoutMode === 'FULL_TEXT' && departmentComparisonOpen && !showThinkingStage ? (
+      {layoutMode === 'FULL_TEXT' &&
+      departmentComparisonOpen &&
+      !showThinkingStage &&
+      !isLanguageGateOpen ? (
         <>
           <div className="full-text-comparison-faq-layer">
             {renderFaqCarousel('full')}

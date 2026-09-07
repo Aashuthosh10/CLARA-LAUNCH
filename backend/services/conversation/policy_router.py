@@ -5,11 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from backend.services.answer_generation import INTENT_NORMAL_QUERY, get_off_topic_reply
+from backend.services.conversation.restricted_requests import is_restricted_evidence
 from backend.services.conversation.templates import (
     clarification_reply,
     greeting_reply,
     name_ack_reply,
     no_speech_retry_reply,
+    restricted_fallback_reply,
     small_talk_reply,
 )
 from backend.services.conversation.transcript_validator import needs_speech_retry
@@ -171,7 +173,18 @@ def _project_response_decision(
             length_kind="clarification",
         )
 
-    # FALLBACK — genuinely out of scope. Distinct copy from "answer unavailable".
+    # FALLBACK — off-topic OR clear-but-restricted. Distinct copy; never "tell me more".
+    evidence = getattr(response_decision, "evidence", None)
+    if is_restricted_evidence(evidence):
+        return PolicyDecision(
+            action=PolicyAction.UNKNOWN,
+            reply_text=restricted_fallback_reply(language, evidence),
+            answer_source="policy_restricted",
+            unknown_fallback=True,
+            passthrough=False,
+            length_kind="unknown",
+        )
+
     return PolicyDecision(
         action=PolicyAction.UNKNOWN,
         reply_text=get_off_topic_reply(language),

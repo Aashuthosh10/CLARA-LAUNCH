@@ -6,6 +6,11 @@ from dataclasses import replace
 from typing import Any
 
 from backend.services.conversation import is_short_circuit, run_conversation_intelligence
+from backend.services.conversation.pending_clarification import (
+    PendingClarification,
+    build_pending_for_decision,
+    try_resolve_pending,
+)
 from backend.services.conversation.templates import unknown_reply
 from backend.services.conversation.types import PolicyAction
 from backend.services.orchestration.card_localization import localize_card_segments
@@ -36,10 +41,18 @@ from backend.services.session_language import resolve_session_language
 
 def _session_last_semantic_entities(session: dict[str, Any]) -> tuple[str, ...] | None:
     raw = session.get("last_semantic_entities")
-    if not isinstance(raw, (list, tuple)):
-        return None
-    keys = tuple(str(k).strip() for k in raw if str(k).strip())
-    return keys or None
+    if isinstance(raw, (list, tuple)):
+        keys = tuple(str(k).strip() for k in raw if str(k).strip())
+        if keys:
+            return keys
+    # History is the durable three-turn store. When sticky entities were cleared
+    # or never written, recover department identity from recent user turns so
+    # contextual follow-ups still resolve (storage → consumption).
+    from backend.services.conversation.department_history import department_keys_from_history
+
+    lang_key, _, _ = resolve_session_language(session)
+    hist_keys = department_keys_from_history(session, language_code_key=lang_key or "en")
+    return hist_keys or None
 
 
 class ConversationOrchestrator:
@@ -66,11 +79,31 @@ class ConversationOrchestrator:
         lang_key, lang_name, _ = resolve_session_language(session)
         language_for_ci = session.get("language_name") or lang_name
 
+        working_text = text or ""
+        working_local = local_intent if isinstance(local_intent, dict) else None
+        pending = PendingClarification.from_session(session)
+        pending_resolution = try_resolve_pending(working_text, pending)
+        if pending_resolution is not None:
+            if pending_resolution.clear_pending or pending_resolution.expired_new_topic:
+                session.pop("pending_clarification", None)
+                session_updates["pending_clarification"] = None
+            if pending_resolution.expired_new_topic:
+                # Fresh topic — keep original utterance.
+                working_text = text or ""
+            elif pending_resolution.rewritten_text:
+                working_text = pending_resolution.rewritten_text
+            if pending_resolution.local_intent and not working_local:
+                working_local = pending_resolution.local_intent
+
+        # Expose the text CI actually used (may be clarification rewrite).
+        session["_effective_user_text"] = working_text
+        session_updates["_effective_user_text"] = working_text
+
         intel = await run_conversation_intelligence(
-            text,
+            working_text,
             language_name=language_for_ci,
             language_code_key=lang_key,
-            local_intent=local_intent if isinstance(local_intent, dict) else None,
+            local_intent=working_local,
             department_hint=None,
             groq_client=groq_client,
             groq_model=model,
@@ -133,8 +166,8 @@ class ConversationOrchestrator:
         guest = str(session.get("guest_name") or "").strip()
         if guest:
             entities_for_pres["guest_name"] = guest
-        if isinstance(local_intent, dict):
-            dept_label = str(local_intent.get("departmentLabel") or "").strip()
+        if isinstance(working_local, dict):
+            dept_label = str(working_local.get("departmentLabel") or "").strip()
             if dept_label and not entities_for_pres.get("department"):
                 entities_for_pres["department"] = dept_label
                 entities_for_pres["from_menu"] = True
@@ -170,6 +203,25 @@ class ConversationOrchestrator:
                 session["last_person_unit_id"] = None
                 session_updates["last_person_unit_id"] = None
 
+            # Sticky clarification slot — only while CLARIFY is the sealed mode.
+            mode_value = str(getattr(mode, "value", mode) or "")
+            if mode_value == "CLARIFY":
+                pending_obj = build_pending_for_decision(
+                    text=text or "",
+                    clarification_target=getattr(
+                        response_decision, "clarification_target", None
+                    ),
+                    topic=getattr(response_decision, "topic", None),
+                    language_code_key=lang_key,
+                )
+                if pending_obj is not None:
+                    session["pending_clarification"] = pending_obj.as_dict()
+                    session_updates["pending_clarification"] = pending_obj.as_dict()
+            elif mode_value in {"CARD", "ANSWER", "FALLBACK"}:
+                if session.get("pending_clarification") is not None:
+                    session.pop("pending_clarification", None)
+                    session_updates["pending_clarification"] = None
+
         # M5.4: FOOD / ENVIRONMENT are no longer forced to UNKNOWN here. "How is the
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;
         # the response decision routes genuine off-domain food requests to FALLBACK.
@@ -181,12 +233,12 @@ class ConversationOrchestrator:
             intent=intent,
             semantic_topic=intel.semantic_topic,
             entities=entities_for_pres,
-            local_intent=local_intent if isinstance(local_intent, dict) else None,
+            local_intent=working_local,
             faq_matched=bool(
                 getattr(intel.decision, "answer_source", None) == "faq"
                 or intel.decision.action == PolicyAction.DIRECT_RESPONSE
             ),
-            user_text=text or "",
+            user_text=working_text or "",
             semantic_request=getattr(intel, "semantic_request", None),
         )
         orch_event(

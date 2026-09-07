@@ -66,7 +66,57 @@ _FOLLOWUP_JOINERS = frozenset(
     {
         "also", "too", "and", "ಮತ್ತು", "ಕೂಡ", "भी", "और",
         "కూడా", "மற்றும்", "கூட", "കൂടി", "आणि", "सुद्धा",
+        "bagge", "bare", "barein", "gurinchi", "patri",
     }
+)
+
+# Language-aware continuation cues. Indic cues are substrings (agglutination);
+# Latin cues go through cue_in_hay word boundaries.
+_CONTEXTUAL_FOLLOWUP_CUES: tuple[str, ...] = (
+    # English / Romanized
+    "what about",
+    "how about",
+    "and the",
+    "what is the",
+    "what's the",
+    "what are the",
+    "tell me about the fee",
+    "tell me about the fees",
+    "tell me about the placement",
+    "tell me about the placements",
+    "tell me about fees",
+    "tell me about placements",
+    "tell me more",
+    "and what about",
+    "bagge",
+    "eshtu",
+    "elli",
+    # Kannada
+    "ಬಗ್ಗೆ",
+    "ಎಷ್ಟು",
+    "ಹೇಗಿದೆ",
+    "ಹೇಗಿವೆ",
+    # Hindi
+    "के बारे में",
+    "कितनी",
+    "कितना",
+    "क्या है",
+    "कैसा",
+    "कैसी",
+    # Tamil
+    "பற்றி",
+    "என்ன",
+    "எப்படி",
+    "எவ்வளவு",
+    # Telugu
+    "గురించి",
+    "ఎంత",
+    "ఎలా",
+    # Malayalam
+    "കുറിച്ച്",
+    "എത്ര",
+    "എങ്ങനെ",
+    "എന്താണ്",
 )
 
 
@@ -79,6 +129,26 @@ def _is_concise_topic_followup(raw_text: str, topics: frozenset[str]) -> bool:
         return False
     return len(tokens) <= 2 or any(token in _FOLLOWUP_JOINERS for token in tokens)
 
+
+def _is_contextual_topic_followup(raw_text: str, topics: frozenset[str]) -> bool:
+    """
+    Allow department carry-over for natural follow-ups when a single topic is clear.
+
+    Examples with last department context:
+      'What about placements?' / 'What is the fee?' / multilingual equivalents.
+    Still requires exactly one atomic topic so mixed asks do not silently bind.
+    """
+    from backend.services.content.semantic_topics import cue_in_hay
+
+    if _is_concise_topic_followup(raw_text, topics):
+        return True
+    if len(topics) != 1:
+        return False
+    tokens = casefold_keep_scripts(raw_text).split()
+    if not tokens or len(tokens) > 10:
+        return False
+    hay = casefold_keep_scripts(raw_text or "")
+    return any(cue_in_hay(hay, cue) for cue in _CONTEXTUAL_FOLLOWUP_CUES)
 
 def parse_semantic_request(
     *,
@@ -112,7 +182,7 @@ def parse_semantic_request(
         entity_spans = _entity_spans_from_hint(
             ci_entities=ci_entities,
             language_code_key=language_code_key,
-            allow_carry_over=has_anaphora(raw_text) or _is_concise_topic_followup(raw_text, atomic),
+            allow_carry_over=has_anaphora(raw_text) or _is_contextual_topic_followup(raw_text, atomic),
         )
     if entity_spans:
         entity_spans = _validate_entity_spans(
