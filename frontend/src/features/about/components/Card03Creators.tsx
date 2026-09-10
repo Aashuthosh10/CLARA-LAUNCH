@@ -62,10 +62,10 @@ export const Card03Creators: React.FC<Card03Props> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 5 COMPACT PROFILE CARDS IN A SINGLE HORIZONTAL LINE ON DESKTOP            */}
+      {/* 4 CREATOR PROFILE CARDS — centered as a group                            */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full max-w-[1580px] mx-auto my-auto py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 xl:gap-7 items-stretch">
+      <div className="relative z-10 w-full flex justify-center my-auto py-6 px-2">
+        <div className="grid w-full max-w-[1180px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 xl:gap-7 items-stretch justify-items-center mx-auto">
           {CREATORS_FIVE.map((creator, idx) => {
             return (
               <motion.div
@@ -75,7 +75,7 @@ export const Card03Creators: React.FC<Card03Props> = ({
                 transition={{ duration: 0.5, delay: idx * 0.08 }}
                 onMouseEnter={playHoverChime}
                 whileHover={{ y: -6 }}
-                className="relative aspect-[0.64] rounded-[22px] border border-[#E9D5FF] hover:border-[#A78BFA] shadow-[0_8px_22px_rgba(76,29,149,0.12)] hover:shadow-[0_16px_34px_rgba(76,29,149,0.2)] transition-all duration-300 group overflow-hidden"
+                className="relative w-full max-w-[280px] aspect-[0.64] rounded-[22px] border border-[#E9D5FF] hover:border-[#A78BFA] shadow-[0_8px_22px_rgba(76,29,149,0.12)] hover:shadow-[0_16px_34px_rgba(76,29,149,0.2)] transition-all duration-300 group overflow-hidden"
               >
                 <button
                   type="button"

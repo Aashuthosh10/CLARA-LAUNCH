@@ -4,10 +4,12 @@ import './index.css';
 
 type AboutMeScreenProps = {
   onExit: () => void;
+  /** Same canonical start flow as SleepScreen tap. */
+  onEnterClara: () => void;
 };
 
 /** Embeds the complete About Me application inside the CLARA screen model. */
-export default function AboutMeScreen({ onExit }: AboutMeScreenProps) {
+export default function AboutMeScreen({ onExit, onEnterClara }: AboutMeScreenProps) {
   return (
     <div className="about-me-root relative w-full h-full overflow-y-auto">
       <button
@@ -20,7 +22,7 @@ export default function AboutMeScreen({ onExit }: AboutMeScreenProps) {
         <ArrowLeft className="h-4 w-4" />
         Back to CLARA
       </button>
-      <AboutApp />
+      <AboutApp onEnterClara={onEnterClara} />
     </div>
   );
 }

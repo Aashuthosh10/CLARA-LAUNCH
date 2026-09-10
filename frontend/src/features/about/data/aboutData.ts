@@ -2,7 +2,6 @@ import { Capability, PipelineStage, TechLayer, EcosystemRole, Creator, QuerySimu
 import aashuthoshImage from '../assets/images/creators/a-n-aashuthosh.png';
 import dhanushImage from '../assets/images/creators/dhanush-s-babu.png';
 import naveenImage from '../assets/images/creators/m-naveen-kumar.png';
-import chinmayiImage from '../assets/images/creators/chinmayi-shastry-l.png';
 import adithyaImage from '../assets/images/creators/adithya-nc.png';
 
 export const CAPABILITIES: Capability[] = [
@@ -479,18 +478,6 @@ export const CREATORS_FIVE: CreatorMember[] = [
     github: 'https://github.com',
     linkedin: 'https://linkedin.com',
     email: 'mailto:adithya@clara-ai.edu',
-  },
-  {
-    id: 'c3',
-    name: 'CHINMAYI SHASTRY L',
-    role: 'Knowledge RAG & Data Systems',
-    specialization: ['Retrieval-Augmented Generation', 'Document Ingestion', 'Knowledge Graphs', 'Database Schemas'],
-    bio: 'Engineered the zero-hallucination institutional RAG framework, structuring institutional bylaws, faculty rosters, and campus timetables into low-latency semantic embeddings.',
-    avatarSeed: 'chinmayi',
-    image: chinmayiImage,
-    github: 'https://github.com',
-    linkedin: 'https://linkedin.com',
-    email: 'mailto:chinmayi@clara-ai.edu',
   },
   {
     id: 'c4',

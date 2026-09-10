@@ -134,6 +134,7 @@ export const Card04OurGuide: React.FC<Card04Props> = ({
 
           <button
             onClick={onOpenLiveDemo}
+            data-testid="enter-clara"
             className="flex items-center gap-2.5 px-6 py-2.5 rounded-full text-sm sm:text-base font-black text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-lg shadow-purple-500/30 transition-all cursor-pointer"
           >
             <span>ENTER CLARA</span>

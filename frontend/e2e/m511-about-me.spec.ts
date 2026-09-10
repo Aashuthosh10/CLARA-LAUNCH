@@ -31,11 +31,11 @@ test.describe('M5.11 About Me integration', () => {
     const creatorNames = [
       'A N AASHUTHOSH',
       'ADITHYA N C',
-      'CHINMAYI SHASTRY L',
       'DHANUSH S BABU',
       'M NAVEEN KUMAR',
     ];
-    await expect(page.locator('#creators-card img[alt$="portrait"]')).toHaveCount(5);
+    await expect(page.locator('#creators-card img[alt$="portrait"]')).toHaveCount(4);
+    await expect(page.getByRole('button', { name: /Chinmayi/i })).toHaveCount(0);
     for (const name of creatorNames) {
       await page.getByRole('button', { name: `Open profile for ${name}` }).click();
       await expect(page.getByRole('dialog')).toBeVisible();

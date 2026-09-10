@@ -158,6 +158,22 @@ function ClaraKioskRuntime({
     resetClaraSession();
   }, [resetClaraSession]);
 
+  /**
+   * Canonical "start CLARA" — SleepScreen tap and About Me → Enter CLARA
+   * must both use this exact wake + language-gate sequence.
+   */
+  const startClaraSession = useCallback(() => {
+    const visitorId = beginVisitorSession();
+    sendMessage({ action: 'wake', visitor_session_id: visitorId });
+    setManualState(5);
+    setShowChatLanguageGate(true);
+  }, [sendMessage, setManualState]);
+
+  const enterClaraFromAbout = useCallback(() => {
+    setShowAboutMe(false);
+    startClaraSession();
+  }, [startClaraSession]);
+
   // K1: on every (re)connect, re-register the active visitor session and its
   // canonical selected language so a new backend socket rebinds to `kn` etc.
   // without replaying any welcome. Runs only when a selection is stored; after
@@ -347,7 +363,10 @@ function ClaraKioskRuntime({
     if (showAboutMe) {
       return (
         <motion.div key="about-me" className="w-full h-full">
-          <AboutMeScreen onExit={() => setShowAboutMe(false)} />
+          <AboutMeScreen
+            onExit={() => setShowAboutMe(false)}
+            onEnterClara={enterClaraFromAbout}
+          />
         </motion.div>
       );
     }
@@ -358,14 +377,7 @@ function ClaraKioskRuntime({
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
               onAboutMe={() => setShowAboutMe(true)}
-              onWake={() => {
-                // K1: waking begins a visitor session; the id is bound to the
-                // backend session so language restoration can be validated.
-                const visitorId = beginVisitorSession();
-                sendMessage({ action: 'wake', visitor_session_id: visitorId });
-                setManualState(5);
-                setShowChatLanguageGate(true);
-              }}
+              onWake={startClaraSession}
             />
           </motion.div>
         );

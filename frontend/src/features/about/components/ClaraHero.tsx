@@ -206,6 +206,7 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
               <button
                 onClick={onOpenLiveDemo}
                 onMouseEnter={playHoverChime}
+                data-testid="enter-clara"
                 className="hero-btn w-full sm:w-[260px] h-[70px] rounded-full font-black text-[20px] sm:text-[22px] text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-2xl shadow-purple-600/40 hover:shadow-purple-600/60 transition-all duration-300 hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-3 cursor-pointer border-2 border-[#6D28D9]"
               >
                 <Sparkles className="w-6 h-6 text-white" />

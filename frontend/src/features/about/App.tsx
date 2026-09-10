@@ -13,7 +13,12 @@ import { CreatorMember } from './data/aboutData';
 const TOTAL_CARDS = 4;
 const AUTO_TRANSITION_DELAY_MS = 10000; // 10 seconds of inactivity
 
-export default function App() {
+type AboutAppProps = {
+  /** Canonical CLARA start — same path as SleepScreen wake. Required in kiosk embed. */
+  onEnterClara?: () => void;
+};
+
+export default function App({ onEnterClara }: AboutAppProps) {
   const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
   const [selectedCreator, setSelectedCreator] = useState<CreatorMember | null>(null);
   const [hasInteracted, setHasInteracted] = useState<boolean>(false);
@@ -193,7 +198,7 @@ export default function App() {
         {/* CARD 01 — HERO */}
         <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
           <ClaraHero
-            onOpenLiveDemo={() => goToCard(1)}
+            onOpenLiveDemo={() => onEnterClara?.()}
             onExploreCapabilities={() => goToCard(1)}
             showSwipeHint={!hasInteracted && currentCardIndex === 0}
           />
@@ -206,7 +211,7 @@ export default function App() {
           />
         </div>
 
-        {/* CARD 03 — THE PEOPLE BEHIND CLARA (5 Compact Cards) */}
+        {/* CARD 03 — THE PEOPLE BEHIND CLARA */}
         <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
           <Card03Creators
             onPrevCard={() => goToCard(1)}
@@ -220,7 +225,7 @@ export default function App() {
           <Card04OurGuide
             onPrevCard={() => goToCard(2)}
             onGoToOverview={() => goToCard(0)}
-            onOpenLiveDemo={() => goToCard(0)}
+            onOpenLiveDemo={() => onEnterClara?.()}
           />
         </div>
       </motion.div>
