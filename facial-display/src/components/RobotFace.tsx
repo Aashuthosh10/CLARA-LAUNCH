@@ -179,26 +179,26 @@ export default function RobotFace({
     return IDLE_MOUTH.happy;
   }
 
-  const vibrancePurple = '#a855f7';
-  const accentWhite = '#ffffff';
+  const peakWhite = '#FFFFFF';
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-black overflow-hidden select-none pt-[3vh]">
       <svg style={{ visibility: 'hidden', position: 'absolute' }}>
         <defs>
-          <radialGradient id="orbGradient" cx="30%" cy="30%" r="70%">
-            <stop offset="0%" stopColor={accentWhite} stopOpacity="0.95" />
-            <stop offset="45%" stopColor={accentWhite} stopOpacity="0.6" />
-            <stop offset="100%" stopColor={vibrancePurple} />
+          {/* Peak-white expression fill — no purple tint, no alpha attenuation. */}
+          <radialGradient id="orbGradient" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor={peakWhite} stopOpacity="1" />
+            <stop offset="55%" stopColor={peakWhite} stopOpacity="1" />
+            <stop offset="100%" stopColor={peakWhite} stopOpacity="1" />
           </radialGradient>
           <linearGradient id="browGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={accentWhite} stopOpacity="1" />
-            <stop offset="50%" stopColor={accentWhite} stopOpacity="1" />
-            <stop offset="100%" stopColor={accentWhite} stopOpacity="0.95" />
+            <stop offset="0%" stopColor={peakWhite} stopOpacity="1" />
+            <stop offset="50%" stopColor={peakWhite} stopOpacity="1" />
+            <stop offset="100%" stopColor={peakWhite} stopOpacity="1" />
           </linearGradient>
           <radialGradient id="idleEyeGlow" cx="50%" cy="45%" r="55%">
-            <stop offset="0%" stopColor="white" stopOpacity="0.35" />
-            <stop offset="70%" stopColor="transparent" stopOpacity="0" />
+            <stop offset="0%" stopColor={peakWhite} stopOpacity="0.55" />
+            <stop offset="70%" stopColor={peakWhite} stopOpacity="0" />
           </radialGradient>
         </defs>
       </svg>
@@ -273,8 +273,13 @@ export default function RobotFace({
                   height="200%"
                   filterUnits="objectBoundingBox"
                 >
-                  <feGaussianBlur stdDeviation={isSpeaking ? 3 : 4} result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  <feGaussianBlur stdDeviation={isSpeaking ? 2.5 : 3.5} result="blur" />
+                  <feFlood floodColor="#FFFFFF" floodOpacity="0.85" result="whiteFlood" />
+                  <feComposite in="whiteFlood" in2="blur" operator="in" result="whiteBlur" />
+                  <feMerge>
+                    <feMergeNode in="whiteBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
                 </filter>
                 <filter
                   id={`brow-glow-${side}`}
@@ -284,11 +289,16 @@ export default function RobotFace({
                   height="340%"
                   filterUnits="objectBoundingBox"
                 >
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
+                  <feFlood floodColor="#FFFFFF" floodOpacity="0.9" result="whiteFlood" />
+                  <feComposite in="whiteFlood" in2="blur" operator="in" result="whiteBlur" />
+                  <feMerge>
+                    <feMergeNode in="whiteBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
                 </filter>
                 {!isSpeaking && idleVariant === 'happy' && (
-                  <ellipse cx="50" cy="58" rx="86" ry="66" fill="url(#idleEyeGlow)" opacity={0.45} />
+                  <ellipse cx="50" cy="58" rx="86" ry="66" fill="url(#idleEyeGlow)" opacity={0.55} />
                 )}
                 <motion.path
                   animate={{ d: eyePathForSide(side) }}
@@ -341,7 +351,7 @@ export default function RobotFace({
                 stroke="transparent"
                 strokeWidth="0"
                 strokeLinecap="round"
-                style={{ filter: 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.4))' }}
+                style={{ filter: 'drop-shadow(0 0 12px rgba(255, 255, 255, 0.55))' }}
               />
             ) : (
               <motion.path
@@ -354,7 +364,7 @@ export default function RobotFace({
                 stroke="transparent"
                 strokeWidth="0"
                 strokeLinecap="round"
-                style={{ filter: 'drop-shadow(0 0 10px rgba(168, 85, 247, 0.4))' }}
+                style={{ filter: 'drop-shadow(0 0 12px rgba(255, 255, 255, 0.55))' }}
               />
             )}
           </svg>
@@ -364,14 +374,14 @@ export default function RobotFace({
       <motion.div
         className="absolute inset-0 pointer-events-none opacity-[0.2]"
         animate={{
-          opacity: isSpeaking ? [0.14, 0.14] : [0.08, 0.18, 0.08],
+          opacity: isSpeaking ? [0.1, 0.1] : [0.06, 0.12, 0.06],
         }}
         transition={{
           duration: isSpeaking ? 0.3 : 4,
           repeat: isSpeaking ? 0 : Infinity,
           ease: 'easeInOut',
         }}
-        style={{ background: `radial-gradient(circle at center, ${vibrancePurple}33 0%, transparent 80%)` }}
+        style={{ background: 'radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 80%)' }}
       />
     </div>
   );
