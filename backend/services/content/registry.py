@@ -19,6 +19,7 @@ from backend.services.content.types import (
     SURFACE_HOD,
     SURFACE_HOSTEL,
     SURFACE_CANTEEN,
+    SURFACE_NCC,
     SURFACE_EVENT,
     SURFACE_PLACEMENTS,
     SURFACE_PRINCIPAL,
@@ -166,7 +167,7 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         adapter_key="campus_unit",
         content_type=ContentType.HOSTEL.value,
         canonical_source="backend/data/locales/*.json#campus_units",
-        notes="SAMPLE_REPLACE_WITH_OFFICIAL hostel units. Independently selectable.",
+        notes="Official hostel units (gendered overview + facilities/mess/safety).",
     ),
     SURFACE_CANTEEN: ContentOwnerDescriptor(
         surface=SURFACE_CANTEEN,
@@ -175,6 +176,14 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         content_type=ContentType.CANTEEN.value,
         canonical_source="backend/data/locales/*.json#campus_units",
         notes="SAMPLE_REPLACE_WITH_OFFICIAL canteen units. Independently selectable.",
+    ),
+    SURFACE_NCC: ContentOwnerDescriptor(
+        surface=SURFACE_NCC,
+        owner_id="locales.campus_units.ncc",
+        adapter_key="campus_unit",
+        content_type=ContentType.NCC.value,
+        canonical_source="backend/data/locales/*.json#campus_units",
+        notes="Official NCC units (overview, training, benefits).",
     ),
     SURFACE_EVENT: ContentOwnerDescriptor(
         surface=SURFACE_EVENT,
