@@ -34,13 +34,15 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
     >
       <div className="premium-stage-border-outer" />
       <div className="premium-stage-border-inner" />
+      <div className="campus-unit-card__vignette" data-testid="campus-unit-vignette" />
+      <div className="campus-unit-card__glow" aria-hidden />
       <motion.div
         key={card.unitId}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 campus-unit-card__layout"
+        className="campus-unit-card__layout"
       >
         <div className="campus-unit-card__text">
           {showTypeChip ? <div className="premium-stage-chip">{typeChip}</div> : null}

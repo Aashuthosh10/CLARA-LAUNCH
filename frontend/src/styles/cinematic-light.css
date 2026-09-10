@@ -122,20 +122,56 @@
   max-width: 90%;
 }
 
+/* Match HOD/trustee stage: flush right image panel + shared gold vignette */
+.campus-unit-card.premium-stage-container {
+  padding: 0;
+  overflow: hidden;
+  max-width: 1150px;
+  height: 600px;
+  min-height: 520px;
+  aspect-ratio: auto;
+  justify-content: stretch;
+}
+
+.campus-unit-card__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 60%, rgba(212, 175, 55, 0.05) 100%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.campus-unit-card__glow {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+  filter: blur(40px);
+  z-index: 1;
+  pointer-events: none;
+}
+
 .campus-unit-card__layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(160px, 0.85fr);
-  gap: 2rem;
-  align-items: stretch;
+  display: flex;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  align-items: stretch;
 }
 
 .campus-unit-card__text {
+  width: 62%;
+  min-width: 0;
+  height: 100%;
+  padding: 3.5rem 2.5rem 3.5rem 3.5rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-width: 0;
+  justify-content: center;
+  position: relative;
 }
 
 .campus-unit-card__title {
@@ -170,31 +206,60 @@
 }
 
 .campus-unit-card__image {
-  width: 100%;
-  min-height: 220px;
-  border-radius: 1.25rem;
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  width: 38%;
+  height: 100%;
+  position: relative;
   overflow: hidden;
+  background: #f8f6f0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
 }
 
 .campus-unit-card__image-el {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: top center;
   display: block;
+  mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+}
+
+@media (max-width: 1280px) {
+  .campus-unit-card.premium-stage-container {
+    height: 520px;
+  }
 }
 
 @media (max-width: 900px) {
+  .campus-unit-card.premium-stage-container {
+    height: auto;
+    min-height: 520px;
+  }
+
   .campus-unit-card__layout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .campus-unit-card__text {
+    width: 100%;
+    height: auto;
+    padding: 2.5rem 2rem 1.5rem;
   }
 
   .campus-unit-card__image {
-    min-height: 160px;
+    width: 100%;
+    height: 220px;
+    min-height: 180px;
+  }
+
+  .campus-unit-card__image-el {
+    mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0) 100%);
   }
 }
 

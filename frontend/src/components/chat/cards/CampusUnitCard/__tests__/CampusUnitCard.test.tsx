@@ -22,8 +22,26 @@ describe('CampusUnitCard layout', () => {
     );
     expect(markup).toContain('data-testid="campus-unit-image"');
     expect(markup).toContain('data-has-image="0"');
+    expect(markup).toContain('data-testid="campus-unit-vignette"');
     expect(markup).toContain('data-testid="campus-unit-facts"');
     expect(markup).toContain('data-testid="campus-unit-supporting"');
     expect(markup).not.toContain('<img');
+  });
+
+  it('keeps the same vignette + image container for ncc cards', () => {
+    const nccCard: PresentationCardModel = {
+      ...hostelCard,
+      unitId: 'ncc.overview',
+      cardType: 'ncc',
+      cardId: 'ncc',
+      title: 'NCC',
+      departmentId: 'ncc',
+    };
+    const markup = renderToStaticMarkup(
+      <CampusUnitCard card={nccCard} language="English" />,
+    );
+    expect(markup).toContain('data-card-type="ncc"');
+    expect(markup).toContain('data-testid="campus-unit-vignette"');
+    expect(markup).toContain('data-testid="campus-unit-image"');
   });
 });
