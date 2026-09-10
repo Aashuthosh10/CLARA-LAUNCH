@@ -182,7 +182,7 @@ export default function RobotFace({
   const peakWhite = '#FFFFFF';
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black overflow-hidden select-none pt-[3vh]">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black overflow-hidden select-none pt-0">
       <svg style={{ visibility: 'hidden', position: 'absolute' }}>
         <defs>
           {/* Peak-white expression fill — no purple tint, no alpha attenuation. */}
@@ -204,7 +204,7 @@ export default function RobotFace({
       </svg>
 
       <motion.div
-        className="relative z-10 w-full h-[60%] flex items-center justify-center space-x-[1.5vw] overflow-visible"
+        className="absolute inset-0 z-10 pointer-events-none overflow-visible"
         animate={{
           rotateX: isSpeaking ? 0 : -(macroDriftY * 0.35),
           rotateY: isSpeaking ? 0 : macroDriftX * 0.22,
@@ -238,7 +238,7 @@ export default function RobotFace({
           return (
             <motion.div
               key={side}
-              className="relative w-[62vw] h-[62vw] max-w-[1100px] max-h-[1100px] min-w-[400px] min-h-[400px] overflow-visible"
+              className={`absolute top-[1.5vh] ${isLeft ? 'left-[0.2vw]' : 'right-[0.2vw]'} w-[calc(min(46vw,52vh)+6cm)] h-[calc(min(46vw,52vh)+6cm)] overflow-visible`}
               animate={{
                 x: xOffset,
                 y: yOffset,
@@ -259,11 +259,12 @@ export default function RobotFace({
               }}
               style={{ overflow: 'visible' }}
             >
-              {/* Tall viewBox so raised/flared brows are never clipped */}
+              {/* Cropped viewBox so eyes+brows fill the top-corner tile (no empty headroom). */}
               <svg
-                viewBox="-180 -260 460 500"
+                viewBox="-90 -130 280 340"
                 className="w-full h-full overflow-visible"
                 style={{ overflow: 'visible' }}
+                preserveAspectRatio="xMidYMin meet"
               >
                 <filter
                   id={`glow-${side}`}
@@ -330,7 +331,7 @@ export default function RobotFace({
       </motion.div>
 
       <motion.div
-        className="w-full h-[40%] flex items-center justify-center"
+        className="absolute inset-x-0 bottom-[3vh] z-10 w-full flex items-end justify-center pointer-events-none"
         animate={{
           rotateX: isSpeaking ? 0 : macroDriftY * 0.08,
           scale: isSpeaking ? 1 : [1, 1.04, 1],
@@ -341,8 +342,8 @@ export default function RobotFace({
         }}
         style={{ perspective: 1200 }}
       >
-        {/* Scale mouth with oversized eyes; keep centered between them. */}
-        <div className="relative -mt-[2vh] w-[46vw] h-[20vw] max-w-[760px] max-h-[320px] min-w-[320px] min-h-[160px]">
+        {/* Bottom-center mouth, independent of raised/oversized eyes. */}
+        <div className="relative w-[46vw] h-[18vw] max-w-[760px] max-h-[300px] min-w-[320px] min-h-[140px]">
           <svg viewBox="0 0 50 50" className="w-full h-full overflow-visible">
             {isSpeaking && externalMouth ? (
               <path

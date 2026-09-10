@@ -88,23 +88,22 @@ export default function SleepScreen({
           <img
             src={CAMPUS_IMAGES[currentIndex]}
             alt=""
-            className="w-full h-full object-cover scale-105 transition-transform duration-[8s] ease-linear brightness-[0.45] contrast-[1.05]"
+            className="w-full h-full object-cover scale-105 transition-transform duration-[8s] ease-linear brightness-100 contrast-[1.02]"
             draggable={false}
           />
         </motion.div>
       </AnimatePresence>
 
-      {/* Cinematic vignette + contrast (reference atmosphere) */}
+      {/* Light cinematic edge only — keep campus photo near full opacity */}
       <div
         className="absolute inset-0 z-10 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse at center, transparent 28%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0.88) 100%)',
+            'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.18) 82%, rgba(0,0,0,0.38) 100%)',
         }}
         data-testid="sleep-vignette"
       />
-      <div className="absolute inset-x-0 bottom-0 h-[45%] z-10 pointer-events-none bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
-      <div className="absolute inset-0 z-10 pointer-events-none bg-black/25" />
+      <div className="absolute inset-x-0 bottom-0 h-[28%] z-10 pointer-events-none bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
 
       {/* Top-left: SVIT branding */}
       <div className="absolute top-[min(4vh,2.75rem)] left-[min(4vw,3.5rem)] z-30 pointer-events-none">
