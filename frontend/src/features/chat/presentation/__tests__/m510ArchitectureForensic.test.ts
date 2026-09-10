@@ -33,13 +33,13 @@ const requestedSequences: Array<{ name: string; units: string[] }> = [
   },
   {
     name: 'three-unrelated-campus',
-    units: ['hostel.girls.rooms', 'canteen.hygiene', 'events.techvidya'],
+    units: ['hostel.girls.overview', 'canteen.hygiene', 'events.techvidya'],
   },
   {
     name: 'five-unit',
     units: [
-      'hostel.girls.rooms',
-      'hostel.boys.fees',
+      'hostel.girls.overview',
+      'hostel.boys.overview',
       'canteen.timings',
       'events.sanchalana',
       'events.techvidya',

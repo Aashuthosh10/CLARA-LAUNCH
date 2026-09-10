@@ -12,23 +12,25 @@ type CampusUnitCardProps = {
 export default function CampusUnitCard({ card, language }: CampusUnitCardProps) {
   const locale = campusUnitFromLocale(card.unitId, language);
   const title = (locale?.title || card.title || card.unitId).trim();
-  const body = (locale?.body || card.content || '').trim();
+  const supportingLine = (locale?.supporting_line || '').trim();
   const points = Array.isArray(locale?.points) ? locale!.points!.filter(Boolean) : [];
   const sample = (locale?.content_status || '').trim();
   const showStatus = Boolean(sample && sample !== SAMPLE_CONTENT_STATUS);
+  const imageSrc = (locale?.imageSrc ?? locale?.image ?? null) || null;
   const showTypeChip = !['faculty', 'location', 'global_placements', 'admissions'].includes(card.cardType);
-  const typeChip = ['hostel', 'canteen', 'event'].includes(card.cardType)
+  const typeChip = ['hostel', 'canteen', 'ncc', 'event'].includes(card.cardType)
     ? uiText(language, `cards.${card.cardType}`)
     : card.cardType;
 
   return (
     <div
-      className="premium-stage-container"
+      className="premium-stage-container campus-unit-card"
       data-testid="campus-unit-card"
       data-unit-id={card.unitId}
       data-card-type={card.cardType}
       data-card-language={language || ''}
       data-content-status={sample}
+      data-has-image={imageSrc ? '1' : '0'}
     >
       <div className="premium-stage-border-outer" />
       <div className="premium-stage-border-inner" />
@@ -38,21 +40,36 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 flex flex-col items-start w-full"
+        className="relative z-10 campus-unit-card__layout"
       >
-        {showTypeChip ? <div className="premium-stage-chip">{typeChip}</div> : null}
-        {showStatus ? <div className="premium-stage-chip mt-2">{sample}</div> : null}
-        <h2 className="premium-stage-title" style={{ fontSize: '2.4rem' }}>
-          {title}
-        </h2>
-        {body ? <p className="premium-stage-body">{body}</p> : null}
-        {points.length > 0 ? (
-          <ul className="premium-stage-body mt-3 list-disc pl-6">
-            {points.map((point) => (
-              <li key={point}>{point}</li>
-            ))}
-          </ul>
-        ) : null}
+        <div className="campus-unit-card__text">
+          {showTypeChip ? <div className="premium-stage-chip">{typeChip}</div> : null}
+          {showStatus ? <div className="premium-stage-chip mt-2">{sample}</div> : null}
+          <h2 className="premium-stage-title campus-unit-card__title">{title}</h2>
+          {points.length > 0 ? (
+            <ul className="campus-unit-card__facts" data-testid="campus-unit-facts">
+              {points.map((point) => (
+                <li key={point} className="campus-unit-card__fact">
+                  {point}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {supportingLine ? (
+            <p className="premium-stage-body campus-unit-card__supporting" data-testid="campus-unit-supporting">
+              {supportingLine}
+            </p>
+          ) : null}
+        </div>
+        <div
+          className="campus-unit-card__image"
+          data-testid="campus-unit-image"
+          aria-hidden={imageSrc ? undefined : true}
+        >
+          {imageSrc ? (
+            <img src={imageSrc} alt="" className="campus-unit-card__image-el" />
+          ) : null}
+        </div>
       </motion.div>
     </div>
   );

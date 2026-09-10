@@ -35,6 +35,7 @@ from backend.services.content.types import (
     SURFACE_EVENT,
     SURFACE_FACULTY,
     SURFACE_HOSTEL,
+    SURFACE_NCC,
     SURFACE_PRINCIPAL,
     SURFACE_PLACEMENTS,
     SURFACE_TRUSTEES,
@@ -249,8 +250,13 @@ def _campus_descriptor(unit_id: str) -> ContentUnitDescriptor:
     uid = unit_id.strip().lower()
     if uid.startswith("hostel."):
         parts = uid.split(".")
-        entity_id = ".".join(parts[:2])
-        suffix = parts[-1]
+        # hostel.facilities|mess|safety → entity hostel; hostel.boys.overview → hostel.boys
+        if len(parts) == 2:
+            entity_id = "hostel"
+            suffix = parts[1]
+        else:
+            entity_id = ".".join(parts[:2])
+            suffix = parts[-1]
         return ContentUnitDescriptor(
             unit_id=uid,
             surface=SURFACE_HOSTEL,
@@ -275,6 +281,22 @@ def _campus_descriptor(unit_id: str) -> ContentUnitDescriptor:
             entity_id="canteen",
             context="canteen",
             context_id="canteen",
+            section_id=suffix,
+            unit_suffix=suffix,
+            canonical_source=_CAMPUS_CANONICAL_SOURCE,
+            adapter_key="campus_unit",
+            presentation_role=suffix,
+        )
+    if uid.startswith("ncc."):
+        suffix = uid.split(".", 1)[1]
+        return ContentUnitDescriptor(
+            unit_id=uid,
+            surface=SURFACE_NCC,
+            content_type=ContentType.NCC.value,
+            entity_type="ncc",
+            entity_id="ncc",
+            context="ncc",
+            context_id="ncc",
             section_id=suffix,
             unit_suffix=suffix,
             canonical_source=_CAMPUS_CANONICAL_SOURCE,

@@ -40,6 +40,8 @@ async def run_conversation_intelligence(
     skip_faq_probe: bool = False,
     last_semantic_entities: tuple[str, ...] | None = None,
     last_person_unit_id: str | None = None,
+    last_hostel_gender: str | None = None,
+    last_ncc_active: bool = False,
 ) -> ConversationIntelligenceResult:
     """
     Evaluate transcript → entities → intent confidence → policy.
@@ -110,6 +112,15 @@ async def run_conversation_intelligence(
         ci_entities["department_keys"] = list(last_semantic_entities)
     if last_person_unit_id:
         ci_entities["last_person_unit_id"] = last_person_unit_id
+    if last_hostel_gender:
+        ci_entities["last_hostel_gender"] = last_hostel_gender
+    if last_ncc_active:
+        ci_entities["last_ncc_active"] = True
+    # Clarification may carry hostel gender before sticky session is updated.
+    if isinstance(local_intent, dict):
+        g = str(local_intent.get("hostel_gender") or "").strip().lower()
+        if g in {"boys", "girls"}:
+            ci_entities["last_hostel_gender"] = g
     semantic_request = parse_semantic_request(
         raw_text=text or "",
         language_code_key=language_code_key or "en",

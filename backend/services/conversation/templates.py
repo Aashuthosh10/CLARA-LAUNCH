@@ -61,12 +61,28 @@ _CLARIFY_DEPARTMENT: dict[str, str] = {
 }
 
 _CLARIFY_HOSTEL: dict[str, str] = {
-    "English": "Are you asking about the girls hostel or the boys hostel?",
+    "English": "Sure. Are you asking about the boys' hostel or the girls' hostel?",
     "Kannada": ui_text("kn", "clarification.hostel"),
-    "Hindi": "क्या आप गर्ल्स हॉस्टल के बारे में पूछ रहे हैं या बॉयज़ हॉस्टल के बारे में?",
-    "Tamil": "நீங்கள் பெண்கள் விடுதி பற்றி கேட்கிறீர்களா அல்லது ஆண்கள் விடுதி பற்றி?",
-    "Telugu": "మీరు గర్ల్స్ హాస్టల్ గురించా లేక బాయ్స్ హాస్టల్ గురించా అడుగుతున్నారు?",
-    "Malayalam": "നിങ്ങൾ ഗേൾസ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ബോയ്സ് ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ചോദിക്കുന്നത്?",
+    "Hindi": ui_text("hi", "clarification.hostel"),
+    "Tamil": "நிச்சயமாக. ஆண்கள் விடுதியைப் பற்றியா, அல்லது பெண்கள் விடுதியைப் பற்றியா கேட்கிறீர்கள்?",
+    "Telugu": ui_text("te", "clarification.hostel"),
+    "Malayalam": ui_text("ml", "clarification.hostel"),
+}
+
+_NCC_ENROLLMENT: dict[str, str] = {
+    "English": (
+        "Students can contact the NCC Caretaker or Associate NCC Officer "
+        "through the campus administration office, or check the bulletin board "
+        "under the Sports & NCC Department."
+    ),
+    "Kannada": ui_text("kn", "ncc.enrollment"),
+    "Hindi": ui_text("hi", "ncc.enrollment"),
+    "Tamil": (
+        "மாணவர்கள் வளாக நிர்வாக அலுவலகம் மூலம் NCC கேரேட்டகர் அல்லது Associate NCC Officer (ANO) "
+        "ஐ அணுகலாம், அல்லது Sports & NCC Department அறிவிப்புப் பலகையைப் பார்க்கலாம்."
+    ),
+    "Telugu": ui_text("te", "ncc.enrollment"),
+    "Malayalam": ui_text("ml", "ncc.enrollment"),
 }
 
 _CLARIFY_ADMISSIONS_INFO: dict[str, str] = {
@@ -198,6 +214,11 @@ def clarification_reply(language: str | None, target: str | None = None) -> str:
     return _pick(_CLARIFICATION, language)
 
 
+def ncc_enrollment_reply(language: str | None) -> str:
+    """Supplied enrollment/contact guidance only — no invented names or phones."""
+    return _pick(_NCC_ENROLLMENT, language)
+
+
 def restricted_fallback_reply(language: str | None, evidence: str | None = None) -> str:
     """Human-receptionist fallback for clear but unsupported/restricted asks."""
     kind = (evidence or "").strip().lower()
@@ -226,6 +247,7 @@ def _assert_parity() -> None:
         ("_CLARIFICATION", _CLARIFICATION),
         ("_CLARIFY_DEPARTMENT", _CLARIFY_DEPARTMENT),
         ("_CLARIFY_HOSTEL", _CLARIFY_HOSTEL),
+        ("_NCC_ENROLLMENT", _NCC_ENROLLMENT),
         ("_CLARIFY_ADMISSIONS_INFO", _CLARIFY_ADMISSIONS_INFO),
         ("_RESTRICTED_PERSONAL_CONTACT", _RESTRICTED_PERSONAL_CONTACT),
         ("_RESTRICTED_PAYMENT", _RESTRICTED_PAYMENT),

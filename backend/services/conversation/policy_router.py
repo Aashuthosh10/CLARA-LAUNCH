@@ -10,6 +10,7 @@ from backend.services.conversation.templates import (
     clarification_reply,
     greeting_reply,
     name_ack_reply,
+    ncc_enrollment_reply,
     no_speech_retry_reply,
     restricted_fallback_reply,
     small_talk_reply,
@@ -153,6 +154,16 @@ def _project_response_decision(
         )
 
     if mode_value == "ANSWER":
+        evidence = getattr(response_decision, "evidence", None)
+        if evidence == "ncc_enrollment_guidance":
+            return PolicyDecision(
+                action=PolicyAction.ANSWER,
+                reply_text=ncc_enrollment_reply(language),
+                answer_source="policy_ncc_enrollment",
+                passthrough=False,
+                intent_hint=intent_hint or INTENT_NORMAL_QUERY,
+                length_kind="normal",
+            )
         return PolicyDecision(
             action=PolicyAction.ANSWER,
             passthrough=True,

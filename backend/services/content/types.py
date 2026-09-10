@@ -26,6 +26,7 @@ class ContentType(str, Enum):
     FAQ = "faq"
     HOSTEL = "hostel"
     CANTEEN = "canteen"
+    NCC = "ncc"
     EVENT = "event"
 
 
@@ -47,6 +48,7 @@ SURFACE_COURSE_MENU = "course_menu"
 SURFACE_FAQ = "faq"
 SURFACE_HOSTEL = "hostel"
 SURFACE_CANTEEN = "canteen"
+SURFACE_NCC = "ncc"
 SURFACE_EVENT = "event"
 
 ALL_SURFACES: frozenset[str] = frozenset(
@@ -68,6 +70,7 @@ ALL_SURFACES: frozenset[str] = frozenset(
         SURFACE_FAQ,
         SURFACE_HOSTEL,
         SURFACE_CANTEEN,
+        SURFACE_NCC,
         SURFACE_EVENT,
     }
 )

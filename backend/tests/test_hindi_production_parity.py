@@ -278,7 +278,7 @@ def test_departmentless_hod_reports_missing_department_and_hindi_clarification()
         ("कॉलेज कहाँ है?", "college.location", "location"),
         ("प्रवेश की जानकारी बताइए", "college.admissions", "admissions"),
         ("प्लेसमेंट की जानकारी दिखाइए", "college.placements", "placements"),
-        ("लड़कियों के हॉस्टल की फीस बताओ", "hostel.girls.fees", "hostel"),
+        ("लड़कियों के हॉस्टल के कमरे बताओ", "hostel.girls.overview", "hostel"),
         ("कैंटीन का समय बताओ", "canteen.timings", "canteen"),
     ),
 )

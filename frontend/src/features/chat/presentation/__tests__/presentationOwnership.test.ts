@@ -84,7 +84,7 @@ describe('presentation ownership helpers', () => {
       shouldLoadUnitPlan({
         incomingTurnId: 't2',
         lastLoadedTurnId: 't1',
-        incomingUnitIds: ['hostel.girls.rooms', 'canteen.hygiene'],
+        incomingUnitIds: ['hostel.girls.overview', 'canteen.hygiene'],
         loadedSceneUnitIds: ['stage'],
       }),
     ).toBe(true);
@@ -128,7 +128,7 @@ describe('presentation ownership helpers', () => {
 
 describe('N-unit activateByUnitId + snapshot.cardIndex', () => {
   it('switches visible unit A → B → C for mixed campus cards', () => {
-    const units = ['hostel.girls.rooms', 'canteen.hygiene', 'events.techvidya'];
+    const units = ['hostel.girls.overview', 'canteen.hygiene', 'events.techvidya'];
     const eng = new PresentationEngine();
     eng.setSceneAdvanceMode('per_clip');
     eng.loadPresentation({ kind: 'plan', plan: campusPlan('t-campus-3', units) });
@@ -153,7 +153,7 @@ describe('N-unit activateByUnitId + snapshot.cardIndex', () => {
   });
 
   it('switches mixed department + campus without collapsing identity', () => {
-    const units = ['cse_ds.hod', 'hostel.girls.rooms'];
+    const units = ['cse_ds.hod', 'hostel.girls.overview'];
     const eng = new PresentationEngine();
     eng.setSceneAdvanceMode('per_clip');
     eng.loadPresentation({ kind: 'plan', plan: campusPlan('t-mixed', units) });
@@ -169,7 +169,7 @@ describe('N-unit activateByUnitId + snapshot.cardIndex', () => {
   });
 
   it('rejects out-of-order TTS arrival and keeps the visible card', () => {
-    const units = ['hostel.girls.rooms', 'canteen.hygiene', 'events.techvidya'];
+    const units = ['hostel.girls.overview', 'canteen.hygiene', 'events.techvidya'];
     const eng = new PresentationEngine();
     eng.setSceneAdvanceMode('per_clip');
     eng.loadPresentation({ kind: 'plan', plan: campusPlan('t-ooo', units) });
@@ -177,7 +177,7 @@ describe('N-unit activateByUnitId + snapshot.cardIndex', () => {
     expect(eng.snapshot().cardIndex).toBe(0);
     expect(eng.activateByUnitId('events.techvidya')).toBe(false);
     expect(eng.snapshot().cardIndex).toBe(0);
-    expect(eng.snapshot().activeScene?.unitId).toBe('hostel.girls.rooms');
+    expect(eng.snapshot().activeScene?.unitId).toBe('hostel.girls.overview');
   });
 
   it('replaces a legacy single presentation with the N-unit plan on the same turn', () => {
@@ -229,18 +229,18 @@ describe('N-unit activateByUnitId + snapshot.cardIndex', () => {
   });
 
   it('preserves unitId on plan scenes and cardsToScenes', () => {
-    const plan = campusPlan('t-kn', ['hostel.girls.rooms', 'canteen.hygiene']);
+    const plan = campusPlan('t-kn', ['hostel.girls.overview', 'canteen.hygiene']);
     const scenes = planToScenes(plan, 'pres-1');
-    expect(scenes.map((s) => s.unitId)).toEqual(['hostel.girls.rooms', 'canteen.hygiene']);
+    expect(scenes.map((s) => s.unitId)).toEqual(['hostel.girls.overview', 'canteen.hygiene']);
     const cardScenes = cardsToScenes(
       [
-        { title: 'Rooms', content: 'A', type: 'hostel', unitId: 'hostel.girls.rooms' },
+        { title: 'Rooms', content: 'A', type: 'hostel', unitId: 'hostel.girls.overview' },
         { title: 'Hygiene', content: 'B', type: 'canteen', unitId: 'canteen.hygiene' },
       ],
       'pres-2',
       't-cards',
     );
-    expect(cardScenes.map((s) => s.unitId)).toEqual(['hostel.girls.rooms', 'canteen.hygiene']);
+    expect(cardScenes.map((s) => s.unitId)).toEqual(['hostel.girls.overview', 'canteen.hygiene']);
   });
 
   it('spoken summaries stay bound to the same unit as the visible scene', () => {

@@ -42,7 +42,11 @@ from backend.services.answer_generation import (
     has_explicit_admissions_cue,
     maybe_override_intent_with_executive_profile,
 )
-from backend.services.content.campus_units import is_bare_hostel_request, is_campus_entity
+from backend.services.content.campus_units import (
+    is_bare_hostel_request,
+    is_campus_entity,
+    is_ncc_enrollment_items,
+)
 from backend.services.content.global_units import TOPIC_ADMISSIONS, is_global_entity
 from backend.services.content.semantic_composition import detect_topic_spans
 from backend.services.content.semantic_request import SemanticRequest
@@ -134,6 +138,7 @@ _INSTITUTION_LEXICON: tuple[str, ...] = (
     "student", "students", "class", "classes", "classroom", "classrooms",
     "lab", "labs", "laboratory", "laboratories", "library", "hostel", "canteen",
     "cafeteria", "mess", "food", "sports", "gym", "auditorium", "wifi", "internet",
+    "ncc", "cadet", "cadets",
     "infrastructure", "facility", "facilities", "amenities", "transport", "bus",
     "admission", "admissions", "apply", "application", "eligibility", "cutoff",
     "seat", "seats", "quota", "scholarship", "scholarships", "fee", "fees", "tuition",
@@ -578,6 +583,19 @@ def resolve_response_decision(
                 )
             )
         items = semantic_request.unit_items
+        if is_ncc_enrollment_items(items):
+            return _done(
+                ResponseDecision(
+                    mode=ResponseMode.ANSWER,
+                    topic="enrollment",
+                    items=items,
+                    entities=semantic_request.entities,
+                    scope=semantic_request.requested_scope,
+                    confidence=0.92,
+                    domain_relevance=DomainRelevance.INSTITUTION,
+                    evidence="ncc_enrollment_guidance",
+                )
+            )
         return _done(
             ResponseDecision(
                 mode=ResponseMode.CARD,

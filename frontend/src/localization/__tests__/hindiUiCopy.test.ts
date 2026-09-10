@@ -35,5 +35,6 @@ describe('Hindi shared UI copy', () => {
     for (const path of ['cards.hostel', 'cards.canteen', 'cards.event']) {
       expect(uiText('Hindi', path)).toMatch(/[\u0900-\u097f]/u);
     }
+    expect(uiText('Hindi', 'cards.ncc')).toBe('NCC');
   });
 });

@@ -102,9 +102,24 @@ def test_kannada_name_prompt_is_resolved_at_call_time(monkeypatch: pytest.Monkey
     assert greetings.get_name_prompt("kn-IN") == "ನವೀಕರಿಸಿದ ಪಠ್ಯ"
 
 
-def test_kannada_placeholder_is_internal_only_and_never_narrated() -> None:
+def test_kannada_hostel_official_content_is_narrated() -> None:
     unit = resolve_unit(
-        unit_id="hostel.girls.rooms",
+        unit_id="hostel.girls.overview",
+        language="Kannada",
+        language_code="kn",
+    )
+    assert unit is not None
+    assert unit.metadata.get("content_status") != SAMPLE_STATUS
+    spoken = narrate_unit(unit, "kn")
+    assert SAMPLE_STATUS not in spoken
+    assert "ಮಾದರಿ" not in unit.title
+    assert any(ord(ch) > 127 for ch in spoken)
+    assert BLOCKED_KN.replace("\n", " ") not in spoken
+
+
+def test_kannada_canteen_sample_is_blocked_and_never_narrated() -> None:
+    unit = resolve_unit(
+        unit_id="canteen.hygiene",
         language="Kannada",
         language_code="kn",
     )

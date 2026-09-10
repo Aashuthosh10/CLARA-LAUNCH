@@ -14,7 +14,12 @@ from backend.services.content.content_unit_registry import (
 from backend.services.content.content_unit_resolver import resolve_unit
 from backend.services.content.content_unit import ContentUnit
 from backend.services.content.campus_units import (
+    hostel_deck_unit_ids,
+    hostel_gender_from_entity,
     is_campus_entity,
+    is_hostel_overview_unit_id,
+    is_ncc_overview_unit_id,
+    ncc_deck_unit_ids,
     unit_id_for_campus_item,
 )
 from backend.services.content.leadership_units import (
@@ -143,15 +148,55 @@ def select_content_units(
     else:
         # N compatible (entity, topic) pairs → N independently addressable units,
         # in user order. No first-only, no family lock, no arbitrary cap.
+        # Hostel gendered overview expands to the fixed 4-card deck once.
+        # NCC overview expands to overview → training → benefits once.
         seen: set[str] = set()
         unresolved_items: list[tuple[str, str]] = []
+        hostel_deck_expanded = False
+        ncc_deck_expanded = False
         for entity, topic in items:
             uid = _unit_id_for_item(entity=entity, topic=topic)
             if not uid:
-                # Preserve every valid requested unit.  A malformed or
-                # unsupported pair must not discard valid cards from the same
-                # turn, and no replacement entity is invented here.
                 unresolved_items.append((entity, topic))
+                continue
+            if (
+                not hostel_deck_expanded
+                and is_hostel_overview_unit_id(uid)
+                and (topic or "").strip().lower() in {"overview", "warden", "rooms", ""}
+                and len(items) == 1
+            ):
+                gender = hostel_gender_from_entity(entity) or (
+                    "boys" if uid.startswith("hostel.boys.") else "girls"
+                )
+                # Warden/rooms follow-ups stay on overview only (not full deck).
+                if (topic or "").strip().lower() in {"warden", "rooms"}:
+                    if uid not in seen:
+                        seen.add(uid)
+                        unit_ids.append(uid)
+                    continue
+                for deck_uid in hostel_deck_unit_ids(gender):
+                    if deck_uid in seen:
+                        continue
+                    if get_unit_descriptor(deck_uid) is None:
+                        continue
+                    seen.add(deck_uid)
+                    unit_ids.append(deck_uid)
+                hostel_deck_expanded = True
+                continue
+            if (
+                not ncc_deck_expanded
+                and is_ncc_overview_unit_id(uid)
+                and (topic or "").strip().lower() in {"overview", ""}
+                and len(items) == 1
+            ):
+                for deck_uid in ncc_deck_unit_ids():
+                    if deck_uid in seen:
+                        continue
+                    if get_unit_descriptor(deck_uid) is None:
+                        continue
+                    seen.add(deck_uid)
+                    unit_ids.append(deck_uid)
+                ncc_deck_expanded = True
                 continue
             if uid in seen:
                 continue

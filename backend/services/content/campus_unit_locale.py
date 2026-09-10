@@ -11,6 +11,7 @@ from backend.services.content.campus_units import (
     CANTEEN_UNIT_IDS,
     EVENT_UNIT_IDS,
     HOSTEL_UNIT_IDS,
+    NCC_UNIT_IDS,
     SAMPLE_STATUS,
 )
 
@@ -284,13 +285,21 @@ def _split_unit(unit_id: str) -> tuple[str, str]:
         return unit_id, "event"
     if unit_id in CANTEEN_UNIT_IDS:
         return "canteen", unit_id.split(".", 1)[1]
-    if unit_id in HOSTEL_UNIT_IDS:
+    # Hostel/NCC units are official locale rows — SAMPLE builder must not rewrite them.
+    if unit_id in HOSTEL_UNIT_IDS or unit_id in NCC_UNIT_IDS:
+        if unit_id in {"hostel.facilities", "hostel.mess", "hostel.safety"}:
+            return "hostel", unit_id.split(".", 1)[1]
+        if unit_id.startswith("ncc."):
+            return "ncc", unit_id.split(".", 1)[1]
         entity, topic = unit_id.rsplit(".", 1)
         return entity, topic
     return unit_id, "overview"
 
 
 def build_campus_unit_record(unit_id: str, lang: str) -> dict[str, Any]:
+    """SAMPLE record for canteen/events only. Hostel/NCC content lives in locale JSON."""
+    if unit_id in HOSTEL_UNIT_IDS or unit_id in NCC_UNIT_IDS:
+        raise ValueError(f"official campus unit {unit_id}; do not SAMPLE-generate")
     entity, topic = _split_unit(unit_id)
     labels = _ENTITY_LABEL[lang]
     topics = _TOPIC_LABEL[lang]
@@ -321,15 +330,29 @@ def build_campus_unit_record(unit_id: str, lang: str) -> dict[str, Any]:
 
 
 def build_campus_units_block(lang: str) -> dict[str, Any]:
-    return {uid: build_campus_unit_record(uid, lang) for uid in CAMPUS_UNIT_IDS}
+    """SAMPLE canteen/events only. Callers must merge preserved hostel/NCC rows."""
+    sample_ids = [
+        uid for uid in CAMPUS_UNIT_IDS if uid not in HOSTEL_UNIT_IDS and uid not in NCC_UNIT_IDS
+    ]
+    return {uid: build_campus_unit_record(uid, lang) for uid in sample_ids}
 
 
 def write_campus_units_into_locales() -> dict[str, int]:
+    """Regenerate SAMPLE canteen/events; preserve existing official hostel/NCC rows."""
     counts: dict[str, int] = {}
     for lang in LANGS:
         path = LOCALES_DIR / f"{lang}.json"
         data = json.loads(path.read_text(encoding="utf-8"))
-        data["campus_units"] = build_campus_units_block(lang)
+        existing = data.get("campus_units") if isinstance(data.get("campus_units"), dict) else {}
+        official_ids = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS)
+        preserved = {
+            k: v
+            for k, v in existing.items()
+            if isinstance(k, str) and k in official_ids
+        }
+        merged = dict(preserved)
+        merged.update(build_campus_units_block(lang))
+        data["campus_units"] = merged
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         counts[lang] = len(data["campus_units"])
     return counts

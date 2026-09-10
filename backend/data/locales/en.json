@@ -470,146 +470,6 @@
     }
   },
   "campus_units": {
-    "hostel.girls.overview": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — overview",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. general facilities and daily life.",
-      "tts_summary": "Girls hostel — overview currently has only sample information about general facilities and daily life. Official details are not confirmed yet.",
-      "points": [
-        "general facilities and daily life — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.rooms": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — rooms",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. room type, occupancy, and furnishings.",
-      "tts_summary": "Girls hostel — rooms currently has only sample information about room type, occupancy, and furnishings. Official details are not confirmed yet.",
-      "points": [
-        "room type, occupancy, and furnishings — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.timings": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — entry and exit timings",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. entry, exit, and in-campus hours.",
-      "tts_summary": "Girls hostel — entry and exit timings currently has only sample information about entry, exit, and in-campus hours. Official details are not confirmed yet.",
-      "points": [
-        "entry, exit, and in-campus hours — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.food": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — food",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. mess food quality, freshness, and hygiene.",
-      "tts_summary": "Girls hostel — food currently has only sample information about mess food quality, freshness, and hygiene. Official details are not confirmed yet.",
-      "points": [
-        "mess food quality, freshness, and hygiene — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.safety": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — safety",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. secure entry, supervision, and anti-ragging policy.",
-      "tts_summary": "Girls hostel — safety currently has only sample information about secure entry, supervision, and anti-ragging policy. Official details are not confirmed yet.",
-      "points": [
-        "secure entry, supervision, and anti-ragging policy — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.activities": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — activities",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel activities and student life.",
-      "tts_summary": "Girls hostel — activities currently has only sample information about hostel activities and student life. Official details are not confirmed yet.",
-      "points": [
-        "hostel activities and student life — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.girls.fees": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Girls hostel — fees",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel fee range and what is included.",
-      "tts_summary": "Girls hostel — fees currently has only sample information about hostel fee range and what is included. Official details are not confirmed yet.",
-      "points": [
-        "hostel fee range and what is included — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.overview": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — overview",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. general facilities and daily life.",
-      "tts_summary": "Boys hostel — overview currently has only sample information about general facilities and daily life. Official details are not confirmed yet.",
-      "points": [
-        "general facilities and daily life — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.rooms": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — rooms",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. room type, occupancy, and furnishings.",
-      "tts_summary": "Boys hostel — rooms currently has only sample information about room type, occupancy, and furnishings. Official details are not confirmed yet.",
-      "points": [
-        "room type, occupancy, and furnishings — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.timings": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — entry and exit timings",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. entry, exit, and in-campus hours.",
-      "tts_summary": "Boys hostel — entry and exit timings currently has only sample information about entry, exit, and in-campus hours. Official details are not confirmed yet.",
-      "points": [
-        "entry, exit, and in-campus hours — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.food": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — food",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. mess food quality, freshness, and hygiene.",
-      "tts_summary": "Boys hostel — food currently has only sample information about mess food quality, freshness, and hygiene. Official details are not confirmed yet.",
-      "points": [
-        "mess food quality, freshness, and hygiene — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.safety": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — safety",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. secure entry, supervision, and anti-ragging policy.",
-      "tts_summary": "Boys hostel — safety currently has only sample information about secure entry, supervision, and anti-ragging policy. Official details are not confirmed yet.",
-      "points": [
-        "secure entry, supervision, and anti-ragging policy — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.activities": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — activities",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel activities and student life.",
-      "tts_summary": "Boys hostel — activities currently has only sample information about hostel activities and student life. Official details are not confirmed yet.",
-      "points": [
-        "hostel activities and student life — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "hostel.boys.fees": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Boys hostel — fees",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. hostel fee range and what is included.",
-      "tts_summary": "Boys hostel — fees currently has only sample information about hostel fee range and what is included. Official details are not confirmed yet.",
-      "points": [
-        "hostel fee range and what is included — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
     "canteen.overview": {
       "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
       "title": "Canteen — overview",
@@ -749,6 +609,122 @@
         "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
         "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
       ]
+    },
+    "hostel.boys.overview": {
+      "title": "BOYS' HOSTEL",
+      "supporting_line": "Comfortable, furnished accommodation on campus.",
+      "points": [
+        "4 Floors",
+        "100 Rooms",
+        "~300 Students"
+      ],
+      "body": "The boys' hostel is a four-storey residence with around 100 rooms and accommodation for approximately 300 students. The rooms include beds, tables, chairs and cupboards.",
+      "tts_summary": "The boys' hostel is a four-storey residence with around 100 rooms and accommodation for approximately 300 students. The rooms include beds, tables, chairs and cupboards.",
+      "warden": {
+        "name": "Mr. Pavan Kumar R",
+        "role": "HOD & Assistant Professor, Department of Management",
+        "phone": "+91-9900034082",
+        "email": "pavankumar.r@saividya.ac.in"
+      },
+      "image": null
+    },
+    "hostel.girls.overview": {
+      "title": "GIRLS' HOSTEL",
+      "supporting_line": "Comfortable accommodation with faculty-supervised care.",
+      "points": [
+        "3 Floors",
+        "~50 Rooms",
+        "Triple Sharing"
+      ],
+      "body": "The girls' hostel is a three-floor building with around 50 rooms, typically arranged for triple sharing. Residential wardens are college faculty, and the hostel has an independent kitchen and dining area.",
+      "tts_summary": "The girls' hostel is a three-floor building with around 50 rooms, typically arranged for triple sharing. Residential wardens are college faculty, and the hostel has an independent kitchen and dining area.",
+      "warden": {
+        "name": "Ms. Pooja S S",
+        "role": "Residential Warden",
+        "phone": "+91-9066471096",
+        "email": "pooja.ss@saividya.ac.in"
+      },
+      "image": null
+    },
+    "hostel.facilities": {
+      "title": "HOSTEL FACILITIES",
+      "supporting_line": "Everyday comforts are close at hand.",
+      "points": [
+        "Wi-Fi",
+        "Solar Hot Water",
+        "Filtered Drinking Water",
+        "Common Spaces"
+      ],
+      "body": "Hostel facilities include solar water heaters, floor-wise drinking water filters, Wi-Fi, common spaces and maintenance support.",
+      "tts_summary": "Hostel facilities include solar water heaters, floor-wise drinking water filters, Wi-Fi, common spaces and maintenance support.",
+      "image": null
+    },
+    "hostel.mess": {
+      "title": "MESS & DINING",
+      "supporting_line": "Meals are planned together with students.",
+      "points": [
+        "Vegetarian Meals",
+        "Student-Planned Menu",
+        "Daily Refreshments"
+      ],
+      "body": "The hostel has an independent kitchen and dining area. Students help plan the menu, with vegetarian options and refreshments available throughout the day. Breakfast: 7:30–8:30 AM. Lunch: 12:30–1:45 PM. Snacks: 4:30–5:30 PM. Dinner: 7:30–8:30 PM.",
+      "tts_summary": "The hostel has an independent kitchen and dining area. Students help plan the menu, with vegetarian options and refreshments available throughout the day. Breakfast is from 7:30 to 8:30 AM, lunch from 12:30 to 1:45 PM, snacks from 4:30 to 5:30 PM, and dinner from 7:30 to 8:30 PM.",
+      "timings": {
+        "breakfast": "7:30–8:30 AM",
+        "lunch": "12:30–1:45 PM",
+        "snacks": "4:30–5:30 PM",
+        "dinner": "7:30–8:30 PM"
+      },
+      "image": null
+    },
+    "hostel.safety": {
+      "title": "SAFETY & CARE",
+      "supporting_line": "Student safety and discipline are closely looked after.",
+      "points": [
+        "Strict Supervision",
+        "Hostel Committee",
+        "Parent Notifications"
+      ],
+      "body": "The hostel follows strict supervision and safety practices. Late arrivals and leaving campus without authorized permission are restricted, and parents are notified when required. Discipline is overseen by a hostel committee consisting of the Principal and senior professors.",
+      "tts_summary": "The hostel follows strict supervision and safety practices. Late arrivals and leaving campus without authorized permission are restricted, and parents are notified when required. Discipline is overseen by a hostel committee consisting of the Principal and senior professors.",
+      "image": null
+    },
+    "ncc.overview": {
+      "title": "NCC AT SVIT",
+      "supporting_line": "Build confidence, discipline and a spirit of service.",
+      "points": [
+        "Voluntary Student Program",
+        "Character & Discipline",
+        "Leadership & Service"
+      ],
+      "body": "SVIT has an active National Cadet Corps unit under its Campus Life and Student Care programs. The NCC is open to students voluntarily and focuses on character building, discipline, leadership and selfless service.",
+      "tts_summary": "SVIT has an active National Cadet Corps unit under its Campus Life and Student Care programs. The NCC is open to students voluntarily and focuses on character building, discipline, leadership and selfless service.",
+      "image": null
+    },
+    "ncc.training": {
+      "title": "TRAINING & ACTIVITIES",
+      "supporting_line": "Learn, lead and take part in experiences beyond the classroom.",
+      "points": [
+        "Drill & Parade",
+        "Training Camps",
+        "Community Service",
+        "National Events"
+      ],
+      "body": "NCC cadets receive foundational military training including drill, parade practice and basic small arms training. They can also participate in annual training camps, national integration camps, social service and community outreach activities. Cadets may represent the institute at university-level and national-level parades and events.",
+      "tts_summary": "NCC cadets receive foundational military training including drill, parade practice and basic small arms training. They can also participate in annual training camps, national integration camps, social service and community outreach activities. Cadets may represent the institute at university-level and national-level parades and events.",
+      "image": null
+    },
+    "ncc.benefits": {
+      "title": "WHY JOIN NCC?",
+      "supporting_line": "Grow through leadership, teamwork and service.",
+      "points": [
+        "B & C Certificates",
+        "Leadership Experience",
+        "Teamwork & Fitness"
+      ],
+      "body": "NCC gives students the opportunity to earn B and C Certificates. The supplied information states that these can provide reserved quotas and preferences in direct SSB interviews for military officer entries in the Army, Navy and Air Force. Students can also gain leadership, team management and physical fitness experience, along with stated opportunities related to higher education admissions and public sector jobs.",
+      "tts_summary": "NCC gives students the opportunity to earn B and C Certificates. The supplied information states that these can provide reserved quotas and preferences in direct SSB interviews for military officer entries in the Army, Navy and Air Force. Students can also gain leadership, team management and physical fitness experience, along with stated opportunities related to higher education admissions and public sector jobs.",
+      "image": null
     }
   }
 }

@@ -203,6 +203,8 @@ def build_pending_for_decision(
         options = ("steps", "eligibility", "documents", "fees", "office")
     elif target == "department":
         options = ()
+    elif target == "hostel":
+        options = ("boys", "girls")
     return PendingClarification(
         original_query=(text or "").strip(),
         clarification_target=target,
@@ -210,6 +212,36 @@ def build_pending_for_decision(
         language_code_key=language_code_key or "en",
         options=options,
     )
+
+
+def _hostel_gender_intent(gender: str, pending: PendingClarification) -> dict[str, Any]:
+    return {
+        "trigger": "hostel",
+        "from_clarification": True,
+        "hostel_gender": gender,
+        "clarification_target": pending.clarification_target,
+        "original_query": pending.original_query,
+        "language_code_key": pending.language_code_key,
+    }
+
+
+def _rewrite_hostel_clarification(gender: str, pending: PendingClarification) -> str:
+    """Combine original ask with resolved gender for the semantic parser."""
+    from backend.services.content.campus_units import detect_campus_topic_spans
+
+    orig = (pending.original_query or "").strip()
+    topics = detect_campus_topic_spans(orig)
+    shared = None
+    for ts in topics:
+        t = (ts.topic or "").strip().lower()
+        if t in {"facilities", "mess", "safety", "food", "warden", "rooms"}:
+            shared = "mess" if t in {"food", "timings"} else t
+            if shared in {"warden", "rooms"}:
+                shared = None
+            break
+    if shared:
+        return f"{gender} hostel {shared}"
+    return f"{gender} hostel"
 
 
 def _admissions_slot_intent(slot: str, pending: PendingClarification) -> dict[str, Any]:
@@ -229,6 +261,22 @@ def _admissions_slot_intent(slot: str, pending: PendingClarification) -> dict[st
         "original_topic": pending.topic or "admissions",
         "language_code_key": pending.language_code_key,
     }
+
+
+_HOSTEL_TOPIC_SWITCH_CUES: tuple[str, ...] = (
+    "bus",
+    "buses",
+    "transport",
+    "principal",
+    "hod",
+    "placement",
+    "placements",
+    "admission",
+    "admissions",
+    "department",
+    "canteen",
+    "fees",
+)
 
 
 def try_resolve_pending(text: str, pending: PendingClarification | None) -> PendingResolution | None:
@@ -297,5 +345,21 @@ def try_resolve_pending(text: str, pending: PendingClarification | None) -> Pend
         if _has_any(hay, _NEW_TOPIC_CUES) and not _has_any(hay, _DEPARTMENT_ANSWER_CUES):
             return PendingResolution(clear_pending=True, expired_new_topic=True)
         return PendingResolution(clear_pending=True)
+
+    if target == "hostel":
+        from backend.services.content.campus_units import detect_hostel_gender_answer
+
+        gender = detect_hostel_gender_answer(raw)
+        if gender:
+            return PendingResolution(
+                clear_pending=True,
+                rewritten_text=_rewrite_hostel_clarification(gender, pending),
+                local_intent=_hostel_gender_intent(gender, pending),
+                selected_option=gender,
+            )
+        # Topic switch (buses etc.) — do not treat bare "hostel" as a switch.
+        if _has_any(hay, _HOSTEL_TOPIC_SWITCH_CUES) and not gender:
+            return PendingResolution(clear_pending=True, expired_new_topic=True)
+        return PendingResolution(clear_pending=False)
 
     return PendingResolution(clear_pending=True)

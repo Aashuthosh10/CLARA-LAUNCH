@@ -30,7 +30,7 @@
     "clarification": {
       "general": "Please tell me a little more about the information you need.",
       "department": "Which department would you like to know about?",
-      "hostel": "Would you like information about the girls’ hostel or the boys’ hostel?",
+      "hostel": "Sure. Are you asking about the boys' hostel or the girls' hostel?",
       "small_talk": "I am here to help with campus questions. What would you like to know?",
       "hod_department": "Please specify the department whose Head of Department you would like to know about.",
       "fees_department": "Please specify the department whose fee details you would like to view.",
@@ -111,7 +111,8 @@
       "selected_department": "Selected department",
       "management_quota_fee": "Management quota fee",
       "other_quotas": "Other quotas",
-      "admission_office_contact": "Please contact the admission office for precise information."
+      "admission_office_contact": "Please contact the admission office for precise information.",
+      "ncc": "NCC"
     },
     "documents": {
       "title": "Required documents",
@@ -155,6 +156,9 @@
       "hod": "{hod} is the Head of Department.",
       "trustees": "Trustee names: {trustees}.",
       "hod_and_trustees": "{hod} is the Head of Department. Trustee names: {trustees}."
+    },
+    "ncc": {
+      "enrollment": "Students can contact the NCC Caretaker or Associate NCC Officer through the campus administration office, or check the bulletin board under the Sports & NCC Department."
     }
   },
   "hi": {
@@ -188,7 +192,7 @@
     "clarification": {
       "general": "कृपया अपनी आवश्यक जानकारी के बारे में थोड़ा और बताइए।",
       "department": "आप किस विभाग के बारे में जानना चाहेंगे?",
-      "hostel": "क्या आपको छात्रावास या छात्रा छात्रावास की जानकारी चाहिए?",
+      "hostel": "ज़रूर। क्या आप बॉयज़ हॉस्टल के बारे में पूछ रहे हैं या गर्ल्स हॉस्टल के बारे में?",
       "small_talk": "मैं परिसर से जुड़े प्रश्नों में सहायता के लिए यहाँ हूँ। आप क्या जानना चाहेंगे?",
       "hod_department": "कृपया बताइए कि आप किस विभाग के विभागाध्यक्ष के बारे में जानना चाहते हैं।",
       "fees_department": "कृपया बताइए कि आप किस विभाग की फीस देखना चाहते हैं।",
@@ -269,7 +273,8 @@
       "selected_department": "चुना हुआ विभाग",
       "management_quota_fee": "मैनेजमेंट कोटा फीस",
       "other_quotas": "अन्य कोटा",
-      "admission_office_contact": "सटीक जानकारी के लिए प्रवेश कार्यालय से संपर्क करें।"
+      "admission_office_contact": "सटीक जानकारी के लिए प्रवेश कार्यालय से संपर्क करें।",
+      "ncc": "NCC"
     },
     "documents": {
       "title": "आवश्यक दस्तावेज़",
@@ -313,6 +318,9 @@
       "hod": "{hod} विभागाध्यक्ष हैं।",
       "trustees": "ट्रस्टी के नाम: {trustees}।",
       "hod_and_trustees": "{hod} विभागाध्यक्ष हैं। ट्रस्टी के नाम: {trustees}।"
+    },
+    "ncc": {
+      "enrollment": "छात्र परिसर प्रशासन कार्यालय के माध्यम से NCC केयरटेकर या Associate NCC Officer (ANO) से संपर्क कर सकते हैं, अथवा Sports & NCC Department के बुलेटिन बोर्ड को देख सकते हैं।"
     }
   },
   "kn": {
@@ -346,7 +354,7 @@
     "clarification": {
       "general": "ನಿಮಗೆ ಬೇಕಾದ ಮಾಹಿತಿಯ ಬಗ್ಗೆ ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಹೆಚ್ಚು ವಿವರಿಸಿ.",
       "department": "ನೀವು ಯಾವ ವಿಭಾಗದ ಬಗ್ಗೆ ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
-      "hostel": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಅಥವಾ ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ ಕುರಿತು ನಿಮಗೆ ಮಾಹಿತಿ ಬೇಕೇ?",
+      "hostel": "ಖಂಡಿತ. ನೀವು ಹುಡುಗರ ಹಾಸ್ಟೆಲ್ ಬಗ್ಗೆ ಕೇಳುತ್ತಿದ್ದೀರಾ ಅಥವಾ ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಬಗ್ಗೆ?",
       "small_talk": "ಕ್ಯಾಂಪಸ್‌ಗೆ ಸಂಬಂಧಿಸಿದ ಪ್ರಶ್ನೆಗಳಿಗೆ ಸಹಾಯ ಮಾಡಲು ನಾನು ಇಲ್ಲಿದ್ದೇನೆ. ನೀವು ಏನನ್ನು ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
       "hod_department": "ನೀವು ಯಾವ ವಿಭಾಗದ ವಿಭಾಗ ಮುಖ್ಯಸ್ಥರ ಬಗ್ಗೆ ತಿಳಿದುಕೊಳ್ಳಲು ಬಯಸುತ್ತೀರಿ?",
       "fees_department": "ನೀವು ಯಾವ ವಿಭಾಗದ ಶುಲ್ಕದ ವಿವರಗಳನ್ನು ನೋಡಲು ಬಯಸುತ್ತೀರಿ?",
@@ -427,7 +435,8 @@
       "selected_department": "ಆಯ್ಕೆಮಾಡಿದ ವಿಭಾಗ",
       "management_quota_fee": "ಮ್ಯಾನೇಜ್‌ಮೆಂಟ್ ಕೋಟಾ ಶುಲ್ಕ",
       "other_quotas": "ಇತರೆ ಕೋಟಾಗಳು",
-      "admission_office_contact": "ನಿಖರವಾದ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶಾತಿ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ."
+      "admission_office_contact": "ನಿಖರವಾದ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶಾತಿ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.",
+      "ncc": "NCC"
     },
     "documents": {
       "title": "ಅಗತ್ಯ ದಾಖಲೆಗಳು",
@@ -471,6 +480,9 @@
       "hod": "{hod} ಅವರು ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು.",
       "trustees": "ಟ್ರಸ್ಟಿಗಳ ಹೆಸರುಗಳು: {trustees}.",
       "hod_and_trustees": "{hod} ಅವರು ವಿಭಾಗದ ಮುಖ್ಯಸ್ಥರು. ಟ್ರಸ್ಟಿಗಳ ಹೆಸರುಗಳು: {trustees}."
+    },
+    "ncc": {
+      "enrollment": "ವಿದ್ಯಾರ್ಥಿಗಳು ಕ್ಯಾಂಪಸ್ ಆಡಳಿತ ಕಚೇರಿ ಮೂಲಕ NCC ಕೇರ್‌ಟೇಕರ್ ಅಥವಾ Associate NCC Officer (ANO) ಅವರನ್ನು ಸಂಪರ್ಕಿಸಬಹುದು, ಅಥವಾ Sports & NCC Department ಅಡಿಯಲ್ಲಿನ ಬುಲೆಟಿನ್ ಬೋರ್ಡ್ ನೋಡಬಹುದು."
     }
   },
   "te": {
@@ -504,7 +516,7 @@
     "clarification": {
       "general": "మీకు కావలసిన సమాచారం గురించి కొంచెం వివరంగా చెప్పండి.",
       "department": "మీరు ఏ విభాగం గురించి తెలుసుకోవాలనుకుంటున్నారు?",
-      "hostel": "మీకు బాలికల హాస్టల్ గురించా లేక బాలుర హాస్టల్ గురించా సమాచారం కావాలి?",
+      "hostel": "ఖచ్చితంగా. మీరు బాయ్స్ హాస్టల్ గురించా అడుగుతున్నారా లేక గర్ల్స్ హాస్టల్ గురించా?",
       "small_talk": "క్యాంపస్ ప్రశ్నలకు సహాయం చేయడానికి నేను ఇక్కడ ఉన్నాను. మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
       "hod_department": "మీరు ఏ విభాగం అధిపతి గురించి తెలుసుకోవాలనుకుంటున్నారో చెప్పండి.",
       "fees_department": "మీరు ఏ విభాగం ఫీజు వివరాలు చూడాలనుకుంటున్నారో చెప్పండి.",
@@ -585,7 +597,8 @@
       "selected_department": "ఎంచుకున్న విభాగం",
       "management_quota_fee": "మేనేజ్‌మెంట్ కోటా ఫీజు",
       "other_quotas": "ఇతర కోటాలు",
-      "admission_office_contact": "ఖచ్చితమైన సమాచారం కోసం దయచేసి ప్రవేశ కార్యాలయాన్ని సంప్రదించండి."
+      "admission_office_contact": "ఖచ్చితమైన సమాచారం కోసం దయచేసి ప్రవేశ కార్యాలయాన్ని సంప్రదించండి.",
+      "ncc": "NCC"
     },
     "documents": {
       "title": "అవసరమైన పత్రాలు",
@@ -629,6 +642,9 @@
       "hod": "{hod} విభాగం అధిపతి.",
       "trustees": "ట్రస్టీల పేర్లు: {trustees}.",
       "hod_and_trustees": "{hod} విభాగం అధిపతి. ట్రస్టీల పేర్లు: {trustees}."
+    },
+    "ncc": {
+      "enrollment": "విద్యార్థులు క్యాంపస్ అడ్మినిస్ట్రేషన్ ఆఫీస్ ద్వారా NCC కేర్‌టేకర్ లేదా Associate NCC Officer (ANO)ని సంప్రదించవచ్చు, లేదా Sports & NCC Department కింద బులెటిన్ బోర్డ్ చూడవచ్చు."
     }
   },
   "ml": {
@@ -662,7 +678,7 @@
     "clarification": {
       "general": "നിങ്ങൾക്ക് വേണ്ട വിവരത്തെക്കുറിച്ച് കുറച്ചുകൂടി പറയാമോ?",
       "department": "നിങ്ങൾക്ക് ഏത് ഡിപ്പാർട്ട്മെന്റിനെക്കുറിച്ചാണ് അറിയേണ്ടത്?",
-      "hostel": "പെൺകുട്ടികളുടെ ഹോസ്റ്റലിനെക്കുറിച്ചോ ആൺകുട്ടികളുടെ ഹോസ്റ്റലിനെക്കുറിച്ചോ വിവരമാണോ വേണ്ടത്?",
+      "hostel": "തീർച്ചയായും. ആൺകുട്ടികളുടെ ഹോസ്റ്റലിനെക്കുറിച്ചാണോ പെൺകുട്ടികളുടെ ഹോസ്റ്റലിനെക്കുറിച്ചാണോ ചോദിക്കുന്നത്?",
       "small_talk": "ക്യാമ്പസ് ചോദ്യങ്ങൾക്ക് സഹായിക്കാനാണ് ഞാൻ ഇവിടെ. നിങ്ങൾക്ക് എന്താണ് അറിയേണ്ടത്?",
       "hod_department": "ഏത് ഡിപ്പാർട്ട്മെന്റിന്റെ മേധാവിയെക്കുറിച്ചാണ് അറിയേണ്ടതെന്ന് പറയുക.",
       "fees_department": "ഏത് ഡിപ്പാർട്ട്മെന്റിന്റെ ഫീസ് വിവരമാണ് കാണേണ്ടതെന്ന് പറയുക.",
@@ -743,7 +759,8 @@
       "selected_department": "തിരഞ്ഞെടുത്ത ഡിപ്പാർട്ട്മെന്റ്",
       "management_quota_fee": "മാനേജ്മെന്റ് ക്വാട്ട ഫീസ്",
       "other_quotas": "മറ്റ് ക്വാട്ടകൾ",
-      "admission_office_contact": "കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസുമായി ബന്ധപ്പെടുക."
+      "admission_office_contact": "കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസുമായി ബന്ധപ്പെടുക.",
+      "ncc": "NCC"
     },
     "documents": {
       "title": "ആവശ്യമായ രേഖകൾ",
@@ -787,6 +804,9 @@
       "hod": "{hod} ഡിപ്പാർട്ട്മെന്റ് മേധാവിയാണ്.",
       "trustees": "ട്രസ്റ്റിമാരുടെ പേരുകൾ: {trustees}.",
       "hod_and_trustees": "{hod} ഡിപ്പാർട്ട്മെന്റ് മേധാവിയാണ്. ട്രസ്റ്റിമാരുടെ പേരുകൾ: {trustees}."
+    },
+    "ncc": {
+      "enrollment": "വിദ്യാർഥികൾക്ക് കാമ്പസ് അഡ്മിനിസ്ട്രേഷൻ ഓഫീസ് വഴി NCC കെയർടേക്കറെയോ Associate NCC Officer (ANO)നെയോ ബന്ധപ്പെടാം, അല്ലെങ്കിൽ Sports & NCC Department-നു കീഴിലുള്ള ബുള്ളറ്റിൻ ബോർഡ് പരിശോധിക്കാം."
     }
   }
 }

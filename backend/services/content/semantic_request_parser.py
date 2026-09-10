@@ -18,6 +18,8 @@ from backend.services.content.person_context import semantic_item_for_person_uni
 from backend.services.content.campus_units import (
     campus_items_from_text,
     detect_campus_entity_spans,
+    hostel_followup_items_from_sticky,
+    ncc_followup_items_from_sticky,
 )
 from backend.services.content.leadership_units import (
     LEADERSHIP_ENTITY,
@@ -199,6 +201,18 @@ def parse_semantic_request(
 
     campus_spans = detect_campus_entity_spans(raw_text)
     campus_items = campus_items_from_text(raw_text) if campus_spans else ()
+    if not campus_items and isinstance(ci_entities, dict):
+        sticky_gender = str(ci_entities.get("last_hostel_gender") or "").strip().lower()
+        campus_items = hostel_followup_items_from_sticky(
+            raw_text, last_hostel_gender=sticky_gender or None
+        )
+        if not campus_items:
+            sticky_ncc = bool(ci_entities.get("last_ncc_active"))
+            campus_items = ncc_followup_items_from_sticky(
+                raw_text, last_ncc_active=sticky_ncc
+            )
+        if campus_items:
+            campus_spans = ()  # synthetic follow-up; no raw spans required
     global_spans = detect_global_spans(raw_text)
     if entity_spans:
         global_spans = tuple(span for span in global_spans if span.topic == "location")
@@ -311,6 +325,7 @@ def parse_semantic_request(
     has_leadership = any(item.entity == LEADERSHIP_ENTITY for item in items)
     has_campus = any(
         item.entity == "canteen"
+        or item.entity == "ncc"
         or item.entity.startswith("hostel.")
         or item.entity.startswith("events.")
         for item in items

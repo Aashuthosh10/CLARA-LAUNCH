@@ -47,11 +47,18 @@ class TestPhase2DRegistryForensics(unittest.TestCase):
                     self.assertEqual(segs[0].unit_id, desc.unit_id)
 
     def test_campus_sample_metadata_is_never_exposed(self) -> None:
+        from backend.services.content.campus_units import HOSTEL_UNIT_IDS, NCC_UNIT_IDS
+
+        official = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS)
         for uid in CAMPUS_UNIT_IDS:
             unit = resolve_unit(unit_id=uid, language="en", language_code="en")
             assert unit is not None
             self.assertNotIn(SAMPLE_STATUS, unit.body)
-            self.assertIn("officially confirmed", unit.body)
+            if uid in official:
+                self.assertTrue(unit.title)
+                self.assertTrue(unit.body)
+            else:
+                self.assertIn("officially confirmed", unit.body)
 
 
 class TestPhase2DCombinations(unittest.TestCase):
@@ -62,12 +69,12 @@ class TestPhase2DCombinations(unittest.TestCase):
             ("cse_ds.hod", "leadership.principal"),
         ),
         ("Tell me about the principal and trustees.", ("leadership.principal", "leadership.trustees")),
-        ("Tell me about girls hostel rooms and fees", ("hostel.girls.rooms", "hostel.girls.fees")),
-        ("Tell me about boys hostel safety and canteen hygiene", ("hostel.boys.safety", "canteen.hygiene")),
+        ("Tell me about girls hostel rooms and fees", ("hostel.girls.overview",)),
+        ("Tell me about boys hostel safety and canteen hygiene", ("hostel.safety", "canteen.hygiene")),
         ("Tell me about the canteen and TechVidya", ("canteen.overview", "events.techvidya")),
         (
             "CSE overview and girls hostel rooms and Sanchalana",
-            ("cse.overview", "hostel.girls.rooms", "events.sanchalana"),
+            ("cse.overview", "hostel.girls.overview", "events.sanchalana"),
         ),
         (
             "Show me CSE Data Science HOD, overview and placements",
@@ -78,11 +85,11 @@ class TestPhase2DCombinations(unittest.TestCase):
             ("leadership.principal", "leadership.trustees", "events.sanchalana"),
         ),
         (
-            "Tell me about girls hostel rooms, boys hostel fees, canteen timings, Sanchalana and TechVidya",
+            "Tell me about girls hostel rooms, boys hostel, canteen hygiene, Sanchalana and TechVidya",
             (
-                "hostel.girls.rooms",
-                "hostel.boys.fees",
-                "canteen.timings",
+                "hostel.girls.overview",
+                "hostel.boys.overview",
+                "canteen.hygiene",
                 "events.sanchalana",
                 "events.techvidya",
             ),
@@ -102,19 +109,19 @@ class TestPhase2DCombinations(unittest.TestCase):
     def test_overview_word_does_not_broadcast_onto_hostel(self) -> None:
         self.assertEqual(
             plan_units("CSE overview and girls hostel rooms"),
-            ("cse.overview", "hostel.girls.rooms"),
+            ("cse.overview", "hostel.girls.overview"),
         )
 
 
 class TestPhase2DSixLanguageTriggers(unittest.TestCase):
     CASES = (
-        ("en", "Tell me about the girls hostel rooms", ("hostel.girls.rooms",)),
-        ("kn", "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿ", ("hostel.girls.rooms",)),
-        ("hi", "लड़कियों के हॉस्टल के कमरे", ("hostel.girls.rooms",)),
+        ("en", "Tell me about the girls hostel rooms", ("hostel.girls.overview",)),
+        ("kn", "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿ", ("hostel.girls.overview",)),
+        ("hi", "लड़कियों के हॉस्टल के कमरे", ("hostel.girls.overview",)),
         ("ta", "கேண்டீன் சுகாதாரம்", ("canteen.hygiene",)),
         ("te", "కాంటీన్ పరిశుభ్రత", ("canteen.hygiene",)),
         ("ml", "കാന്റീൻ ശുചിത്വം", ("canteen.hygiene",)),
-        ("en", "Girls hostel rooms hegive?", ("hostel.girls.rooms",)),
+        ("en", "Girls hostel rooms hegive?", ("hostel.girls.overview",)),
         ("kn", "CSE Data Science fees eshtu", ("cse_ds.fees",)),
         ("hi", "AIML का HOD कौन है", ("cse_aiml.hod",)),
         ("hi", "सीएसई फीस", ("cse.fees",)),
@@ -150,7 +157,13 @@ class TestPhase2DLanguagePersistence(unittest.TestCase):
         self.assertEqual([s.unit_id for s in segs], list(plan.units))
         spoken = [(s.tts_text or "") for s in segs]
         self.assertTrue(all(SAMPLE_STATUS not in text for text in spoken))
-        self.assertTrue(all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in text for text in spoken))
+        # Hostel overview is official; canteen/event still use blocked SAMPLE narration.
+        hostel_seg = next(s for s in segs if s.unit_id.startswith("hostel."))
+        other_segs = [s for s in segs if not s.unit_id.startswith("hostel.")]
+        self.assertNotIn("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ", hostel_seg.tts_text or "")
+        self.assertTrue(
+            all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in (s.tts_text or "") for s in other_segs)
+        )
         for text in spoken:
             self.assertTrue(any(ord(ch) > 127 for ch in text))
             self.assertNotIn("This sample card", text)
@@ -182,7 +195,7 @@ class TestPhase2DPersonFollowup(unittest.TestCase):
 
 class TestPhase2DGuestNameNarration(unittest.TestCase):
     def test_name_is_sparse_and_not_a_greeting(self) -> None:
-        unit = resolve_unit(unit_id="hostel.girls.rooms", language="en", language_code="en")
+        unit = resolve_unit(unit_id="hostel.girls.overview", language="en", language_code="en")
         assert unit is not None
         spoken = narrate_unit(unit, "en", guest_name="Naveen")
         self.assertIn("Naveen", spoken)
@@ -200,7 +213,7 @@ class TestPhase2DGuestNameNarration(unittest.TestCase):
         self.assertIn("Nagashree", spoken)
 
     def test_name_used_once_across_n_units(self) -> None:
-        rooms = resolve_unit(unit_id="hostel.girls.rooms", language="en", language_code="en")
+        rooms = resolve_unit(unit_id="hostel.girls.overview", language="en", language_code="en")
         hygiene = resolve_unit(unit_id="canteen.hygiene", language="en", language_code="en")
         event = resolve_unit(unit_id="events.techvidya", language="en", language_code="en")
         segs = map_content_units_to_segments(
@@ -211,7 +224,7 @@ class TestPhase2DGuestNameNarration(unittest.TestCase):
         named = [s.tts_text for s in segs if s.tts_text and "Naveen" in s.tts_text]
         self.assertEqual(len(named), 1)
         self.assertEqual([s.unit_id for s in segs], [
-            "hostel.girls.rooms",
+            "hostel.girls.overview",
             "canteen.hygiene",
             "events.techvidya",
         ])

@@ -270,7 +270,7 @@ test.describe('M5.3 HOD identity live browser', () => {
 
     await ask(page, 'लड़कियों के हॉस्टल की फीस बताओ');
     await expect.poll(async () => (await m52(page)).unitIds, { timeout: 90000 }).toEqual([
-      'hostel.girls.fees',
+      'hostel.girls.overview',
     ]);
     expect((await m52(page)).cardIds).toEqual(['hostel']);
     const campusText = await page.getByTestId('campus-unit-card').innerText();

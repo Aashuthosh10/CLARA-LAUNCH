@@ -36,8 +36,20 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('leadership.principal')).toBe('principal');
     expect(cardTypeFromUnitId('leadership.vice_principal')).toBe('vice_principal');
     expect(cardTypeFromUnitId('leadership.trustees')).toBe('trustees');
-    expect(cardTypeFromUnitId('hostel.girls.rooms')).toBe('hostel');
-    expect(cardTypeFromUnitId('hostel.boys.fees')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.girls.overview')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.boys.overview')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.facilities')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.mess')).toBe('hostel');
+    expect(cardTypeFromUnitId('hostel.safety')).toBe('hostel');
+    expect(cardTypeFromUnitId('ncc.overview')).toBe('ncc');
+    expect(cardTypeFromUnitId('ncc.training')).toBe('ncc');
+    expect(cardTypeFromUnitId('ncc.benefits')).toBe('ncc');
+    expect(departmentIdFromUnitId('hostel.facilities')).toBe('hostel');
+    expect(departmentIdFromUnitId('ncc.overview')).toBe('ncc');
+    expect(cardTypeFromCanonicalCardId('ncc')).toBe('ncc');
+    expect(cardTypeFromUnitId('canteen.hygiene')).toBe('canteen');
+    expect(departmentIdFromUnitId('hostel.mess')).toBe('hostel');
+    expect(departmentIdFromUnitId('hostel.boys.overview')).toBe('hostel.boys');
     expect(cardTypeFromUnitId('canteen.hygiene')).toBe('canteen');
     expect(cardTypeFromUnitId('events.techvidya')).toBe('event');
     expect(cardTypeFromUnitId('cse.faculty')).toBe('faculty');
@@ -76,17 +88,20 @@ describe('presentationCardsFromNarrationSegments — no hidden expansion', () =>
 
   it('builds mixed campus units without collapsing them', () => {
     const models = presentationCardsFromNarrationSegments([
-      { unitId: 'hostel.girls.rooms', displayText: 'Rooms\nBody', cardIndex: 0 },
-      { unitId: 'canteen.hygiene', displayText: 'Hygiene\nBody', cardIndex: 1 },
-      { unitId: 'events.techvidya', displayText: 'TechVidya\nBody', cardIndex: 2 },
+      { unitId: 'hostel.girls.overview', displayText: 'Rooms\nBody', cardIndex: 0 },
+      { unitId: 'hostel.mess', displayText: 'Mess\nBody', cardIndex: 1 },
+      { unitId: 'canteen.hygiene', displayText: 'Hygiene\nBody', cardIndex: 2 },
+      { unitId: 'events.techvidya', displayText: 'TechVidya\nBody', cardIndex: 3 },
     ]);
     expect(selectedUnitIds(models)).toEqual([
-      'hostel.girls.rooms',
+      'hostel.girls.overview',
+      'hostel.mess',
       'canteen.hygiene',
       'events.techvidya',
     ]);
-    expect(models.map((m) => m.cardType)).toEqual(['hostel', 'canteen', 'event']);
+    expect(models.map((m) => m.cardType)).toEqual(['hostel', 'hostel', 'canteen', 'event']);
     expect(models[0]!.departmentId).toBe('hostel.girls');
+    expect(models[1]!.departmentId).toBe('hostel');
   });
 
   it('builds five models from five unitIds with no expansion', () => {

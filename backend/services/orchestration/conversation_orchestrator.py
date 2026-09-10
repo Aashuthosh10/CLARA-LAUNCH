@@ -110,6 +110,8 @@ class ConversationOrchestrator:
             turn_id=turn_id,
             last_semantic_entities=_session_last_semantic_entities(session),
             last_person_unit_id=str(session.get("last_person_unit_id") or "").strip() or None,
+            last_hostel_gender=str(session.get("last_hostel_gender") or "").strip() or None,
+            last_ncc_active=bool(session.get("last_ncc_active")),
         )
 
         orch_event(
@@ -203,8 +205,34 @@ class ConversationOrchestrator:
                 session["last_person_unit_id"] = None
                 session_updates["last_person_unit_id"] = None
 
+            # Sticky hostel gender for follow-ups (mess / facilities / warden).
+            hostel_gender = None
+            for entity, _topic in tuple(getattr(response_decision, "items", ()) or ()):
+                ent = str(entity or "").strip().lower()
+                if ent == "hostel.boys":
+                    hostel_gender = "boys"
+                    break
+                if ent == "hostel.girls":
+                    hostel_gender = "girls"
+                    break
+            if isinstance(working_local, dict) and not hostel_gender:
+                g = str(working_local.get("hostel_gender") or "").strip().lower()
+                if g in {"boys", "girls"}:
+                    hostel_gender = g
+
+            ncc_active = any(
+                str(entity or "").strip().lower() == "ncc"
+                for entity, _topic in tuple(getattr(response_decision, "items", ()) or ())
+            )
+
             # Sticky clarification slot — only while CLARIFY is the sealed mode.
             mode_value = str(getattr(mode, "value", mode) or "")
+            if mode_value == "CARD" and hostel_gender:
+                session["last_hostel_gender"] = hostel_gender
+                session_updates["last_hostel_gender"] = hostel_gender
+            if mode_value in {"CARD", "ANSWER"} and ncc_active:
+                session["last_ncc_active"] = True
+                session_updates["last_ncc_active"] = True
             if mode_value == "CLARIFY":
                 pending_obj = build_pending_for_decision(
                     text=text or "",
@@ -221,6 +249,15 @@ class ConversationOrchestrator:
                 if session.get("pending_clarification") is not None:
                     session.pop("pending_clarification", None)
                     session_updates["pending_clarification"] = None
+                items_now = tuple(getattr(response_decision, "items", ()) or ())
+                still_hostel = any(str(e or "").startswith("hostel") for e, _t in items_now)
+                if not still_hostel and not hostel_gender and session.get("last_hostel_gender") is not None:
+                    session.pop("last_hostel_gender", None)
+                    session_updates["last_hostel_gender"] = None
+                still_ncc = any(str(e or "").strip().lower() == "ncc" for e, _t in items_now)
+                if not still_ncc and not ncc_active and session.get("last_ncc_active"):
+                    session.pop("last_ncc_active", None)
+                    session_updates["last_ncc_active"] = None
 
         # M5.4: FOOD / ENVIRONMENT are no longer forced to UNKNOWN here. "How is the
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;

@@ -224,6 +224,8 @@ test.describe('CLARA chat flow', () => {
   });
 
   test('English text query shows assistant result and reset returns to sleep', async ({ page }) => {
+    // Wake → language → guest name → documents card is slower than the suite's 15s default.
+    test.setTimeout(60_000);
     await page.goto('http://localhost:5176/?e2e=1');
     await wakeFromSleep(page);
 

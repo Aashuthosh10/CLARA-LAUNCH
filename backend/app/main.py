@@ -3737,12 +3737,16 @@ async def websocket_clara(websocket: WebSocket):
                         "cached_greeting_message": None,
                         "visitor_session_id": None,
                         "last_semantic_entities": None,
+                        "last_hostel_gender": None,
+                        "last_ncc_active": None,
                         "pending_clarification": None,
                         "awaiting_closing_reply": False,
                         "closing_prompt_issued": False,
                     }
                 )
                 session.pop("last_semantic_entities", None)
+                session.pop("last_hostel_gender", None)
+                session.pop("last_ncc_active", None)
                 session.pop("pending_clarification", None)
                 await _ws_send_json(websocket, 0, session, None)
                 continue

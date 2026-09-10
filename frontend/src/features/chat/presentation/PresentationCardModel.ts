@@ -26,6 +26,7 @@ export type PresentationCardType =
   | 'trustees'
   | 'hostel'
   | 'canteen'
+  | 'ncc'
   | 'event'
   | 'faculty'
   | 'location'
@@ -68,6 +69,7 @@ export function cardTypeFromCanonicalCardId(cardId: string): PresentationCardTyp
     case 'trustees': return 'trustees';
     case 'hostel': return 'hostel';
     case 'canteen': return 'canteen';
+    case 'ncc': return 'ncc';
     case 'event': return 'event';
     case 'faculty_list': return 'faculty';
     case 'location': return 'location';
@@ -76,13 +78,16 @@ export function cardTypeFromCanonicalCardId(cardId: string): PresentationCardTyp
   }
 }
 
-/** Entity id from unit identity: `hostel.girls.rooms` → `hostel.girls`, `cse_aiml.hod` → `cse_aiml`. */
+/** Entity id from unit identity: `hostel.girls.overview` → `hostel.girls`, `cse_aiml.hod` → `cse_aiml`. */
 export function departmentIdFromUnitId(unitId: string): string {
   const uid = (unitId || '').trim();
   if (!uid) return '';
   if (uid.startsWith('college.')) return '';
   if (uid.startsWith('hostel.')) {
     const parts = uid.split('.');
+    // Shared: hostel.facilities|mess|safety → hostel
+    if (parts.length === 2) return 'hostel';
+    // Gendered: hostel.boys.overview → hostel.boys
     return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : uid;
   }
   const dot = uid.indexOf('.');
@@ -107,6 +112,7 @@ export function cardTypeFromUnitId(unitId: string): PresentationCardType {
   if (uid === 'leadership.trustees') return 'trustees';
   if (uid.startsWith('hostel.')) return 'hostel';
   if (uid.startsWith('canteen.')) return 'canteen';
+  if (uid.startsWith('ncc.')) return 'ncc';
   if (uid.startsWith('events.')) return 'event';
   if (uid === 'college.location') return 'location';
   if (uid === 'college.placements') return 'global_placements';

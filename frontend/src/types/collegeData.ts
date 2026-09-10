@@ -63,10 +63,31 @@ export interface CollegeLocaleData {
   campus_units?: Record<string, CampusUnitRecord>;
 }
 
+export interface CampusUnitWardenRecord {
+  name?: string;
+  role?: string;
+  title?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface CampusUnitTimingsRecord {
+  breakfast?: string;
+  lunch?: string;
+  snacks?: string;
+  dinner?: string;
+}
+
 export interface CampusUnitRecord {
   content_status?: string;
   title?: string;
   body?: string;
   tts_summary?: string;
   points?: string[];
+  supporting_line?: string;
+  /** Reserved image slot; null/absent means empty container (no fetch). */
+  image?: string | null;
+  imageSrc?: string | null;
+  warden?: CampusUnitWardenRecord;
+  timings?: CampusUnitTimingsRecord;
 }

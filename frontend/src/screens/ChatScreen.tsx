@@ -265,7 +265,7 @@ const DEPARTMENT_UNIT_CARD_TYPES = new Set([
 ]);
 
 const CAMPUS_UNIT_CARD_TYPES = new Set([
-  'hostel', 'canteen', 'event', 'faculty', 'location', 'global_placements', 'admissions',
+  'hostel', 'canteen', 'ncc', 'event', 'faculty', 'location', 'global_placements', 'admissions',
 ]);
 
 const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {

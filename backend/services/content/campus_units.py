@@ -1,7 +1,13 @@
-"""Hostel, canteen, and event ContentUnits (M5.10 Phase 2C).
+"""Hostel, canteen, NCC, and event ContentUnits (M5.10+).
 
-Category is organizational only. The selectable object is the unitId.
-Does not invent official institutional facts — locale records are SAMPLE.
+Hostel canonical units (official):
+  hostel.boys.overview, hostel.girls.overview,
+  hostel.facilities, hostel.mess, hostel.safety
+
+NCC canonical units (official):
+  ncc.overview, ncc.training, ncc.benefits
+
+Canteen/events may still carry SAMPLE locale rows.
 """
 
 from __future__ import annotations
@@ -15,18 +21,29 @@ SAMPLE_STATUS = "SAMPLE_REPLACE_WITH_OFFICIAL"
 
 HOSTEL_GIRLS = "hostel.girls"
 HOSTEL_BOYS = "hostel.boys"
+HOSTEL_SHARED_ENTITY = "hostel"
 CANTEEN_ENTITY = "canteen"
+NCC_ENTITY = "ncc"
 EVENTS_PREFIX = "events."
 
-HOSTEL_TOPICS: tuple[str, ...] = (
-    "overview",
-    "rooms",
-    "timings",
-    "food",
-    "safety",
-    "activities",
-    "fees",
+# Gendered overview topic + shared topics (never duplicated per gender).
+HOSTEL_GENDERED_TOPICS: tuple[str, ...] = ("overview", "warden", "rooms")
+HOSTEL_SHARED_TOPICS: tuple[str, ...] = ("facilities", "mess", "safety")
+HOSTEL_TOPICS: tuple[str, ...] = HOSTEL_GENDERED_TOPICS + HOSTEL_SHARED_TOPICS
+
+HOSTEL_SHARED_UNIT_IDS: tuple[str, ...] = (
+    "hostel.facilities",
+    "hostel.mess",
+    "hostel.safety",
 )
+HOSTEL_OVERVIEW_UNIT_IDS: tuple[str, ...] = (
+    "hostel.boys.overview",
+    "hostel.girls.overview",
+)
+HOSTEL_UNIT_IDS: tuple[str, ...] = HOSTEL_OVERVIEW_UNIT_IDS + HOSTEL_SHARED_UNIT_IDS
+
+HOSTEL_DECK_SUFFIXES: tuple[str, ...] = ("overview", "facilities", "mess", "safety")
+
 CANTEEN_TOPICS: tuple[str, ...] = (
     "overview",
     "food_quality",
@@ -36,6 +53,15 @@ CANTEEN_TOPICS: tuple[str, ...] = (
     "timings",
     "safety",
 )
+NCC_TOPICS: tuple[str, ...] = ("overview", "training", "benefits", "enrollment")
+NCC_CARD_TOPICS: tuple[str, ...] = ("overview", "training", "benefits")
+NCC_UNIT_IDS: tuple[str, ...] = tuple(f"ncc.{topic}" for topic in NCC_CARD_TOPICS)
+NCC_DECK_UNIT_IDS: tuple[str, ...] = (
+    "ncc.overview",
+    "ncc.training",
+    "ncc.benefits",
+)
+
 EVENT_IDS: tuple[str, ...] = (
     "sanchalana",
     "techvidya",
@@ -46,15 +72,14 @@ EVENT_IDS: tuple[str, ...] = (
     "alumni_meet",
 )
 
-HOSTEL_UNIT_IDS: tuple[str, ...] = tuple(
-    f"{entity}.{topic}" for entity in (HOSTEL_GIRLS, HOSTEL_BOYS) for topic in HOSTEL_TOPICS
-)
 CANTEEN_UNIT_IDS: tuple[str, ...] = tuple(f"canteen.{topic}" for topic in CANTEEN_TOPICS)
 EVENT_UNIT_IDS: tuple[str, ...] = tuple(f"events.{eid}" for eid in EVENT_IDS)
-CAMPUS_UNIT_IDS: tuple[str, ...] = HOSTEL_UNIT_IDS + CANTEEN_UNIT_IDS + EVENT_UNIT_IDS
+CAMPUS_UNIT_IDS: tuple[str, ...] = (
+    HOSTEL_UNIT_IDS + CANTEEN_UNIT_IDS + NCC_UNIT_IDS + EVENT_UNIT_IDS
+)
 
 HOSTEL_ENTITIES = frozenset({HOSTEL_GIRLS, HOSTEL_BOYS})
-CAMPUS_ENTITIES = HOSTEL_ENTITIES | {CANTEEN_ENTITY} | frozenset(EVENT_UNIT_IDS)
+CAMPUS_ENTITIES = HOSTEL_ENTITIES | {CANTEEN_ENTITY, NCC_ENTITY} | frozenset(EVENT_UNIT_IDS)
 
 
 def is_campus_entity(entity: str) -> bool:
@@ -65,21 +90,91 @@ def is_campus_unit_id(unit_id: str) -> bool:
     return (unit_id or "").strip().lower() in set(CAMPUS_UNIT_IDS)
 
 
+def is_hostel_shared_unit_id(unit_id: str) -> bool:
+    return (unit_id or "").strip().lower() in set(HOSTEL_SHARED_UNIT_IDS)
+
+
+def is_hostel_overview_unit_id(unit_id: str) -> bool:
+    return (unit_id or "").strip().lower() in set(HOSTEL_OVERVIEW_UNIT_IDS)
+
+
+def is_ncc_unit_id(unit_id: str) -> bool:
+    return (unit_id or "").strip().lower() in set(NCC_UNIT_IDS)
+
+
+def is_ncc_overview_unit_id(unit_id: str) -> bool:
+    return (unit_id or "").strip().lower() == "ncc.overview"
+
+
+def ncc_deck_unit_ids() -> tuple[str, ...]:
+    """Fixed overview → training → benefits."""
+    return NCC_DECK_UNIT_IDS
+
+
+def hostel_gender_from_entity(entity: str) -> str | None:
+    ent = (entity or "").strip().lower()
+    if ent == HOSTEL_BOYS:
+        return "boys"
+    if ent == HOSTEL_GIRLS:
+        return "girls"
+    return None
+
+
+def hostel_deck_unit_ids(gender: str) -> tuple[str, ...]:
+    """Fixed boys/girls overview → shared facilities → mess → safety."""
+    g = (gender or "").strip().lower()
+    if g not in {"boys", "girls"}:
+        return ()
+    overview = f"hostel.{g}.overview"
+    return (overview,) + HOSTEL_SHARED_UNIT_IDS
+
+
 def unit_id_for_campus_item(entity: str, topic: str) -> str | None:
     ent = (entity or "").strip().lower()
     top = (topic or "").strip().lower() or "overview"
     if ent in HOSTEL_ENTITIES:
-        if top not in HOSTEL_TOPICS:
+        # Alias legacy / follow-up topics onto the five canonical hostel IDs.
+        if top in {"food", "dining", "menu", "timings"}:
+            top = "mess"
+        if top in {"amenities"}:
+            top = "facilities"
+        if top in {"warden", "rooms"}:
+            top = "overview"
+        if top in HOSTEL_SHARED_TOPICS:
+            uid = f"hostel.{top}"
+            return uid if uid in HOSTEL_SHARED_UNIT_IDS else None
+        if top != "overview":
             return None
-        return f"{ent}.{top}"
+        return f"{ent}.overview"
     if ent == CANTEEN_ENTITY:
         if top == "food":
             top = "food_quality"
         if top == "fees":
             top = "pricing"
+        if top == "mess":
+            top = "food_quality"
         if top not in CANTEEN_TOPICS:
             return None
         return f"canteen.{top}"
+    if ent == NCC_ENTITY:
+        if top in {"activities", "activity", "camp", "camps", "drill", "parade"}:
+            top = "training"
+        if top in {
+            "certificate",
+            "certificates",
+            "b certificate",
+            "c certificate",
+            "why join",
+            "ssb",
+        }:
+            top = "benefits"
+        if top in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact", "ano", "caretaker"}:
+            top = "enrollment"
+        if top == "enrollment":
+            return None  # answered via template guidance — no invented contact card
+        if top not in NCC_CARD_TOPICS:
+            return None
+        return f"ncc.{top}"
     if ent in EVENT_UNIT_IDS or ent.startswith(EVENTS_PREFIX):
         if ent in EVENT_UNIT_IDS:
             return ent
@@ -91,11 +186,14 @@ _GIRLS_CUES: tuple[str, ...] = (
     "girls hostel",
     "girl's hostel",
     "girls' hostel",
+    "girl hostel",
     "ladies hostel",
     "women's hostel",
     "womens hostel",
     "woman hostel",
     "girls hostal",
+    "girls wala",
+    "girls one",
     "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್",
     "ಹುಡುಗಿಯರ ವಸತಿ",
     "ಮಹಿಳಾ ಹಾಸ್ಟೆಲ್",
@@ -116,10 +214,14 @@ _BOYS_CUES: tuple[str, ...] = (
     "boys hostel",
     "boy's hostel",
     "boys' hostel",
+    "boy hostel",
+    "male hostel",
     "mens hostel",
     "men's hostel",
     "gents hostel",
     "boys hostal",
+    "boys wala",
+    "boys one",
     "ಹುಡುಗರ ಹಾಸ್ಟೆಲ್",
     "ಹುಡುಗರ ವಸತಿ",
     "ಬಾಯ್ಸ್ ಹಾಸ್ಟೆಲ್",
@@ -144,6 +246,29 @@ _CANTEEN_CUES: tuple[str, ...] = (
     "கேண்டீன்",
     "కాంటీన్",
     "കാന്റീൻ",
+)
+_NCC_CUES: tuple[str, ...] = (
+    "national cadet corps",
+    "ncc wing",
+    "ncc unit",
+    "ncc at svit",
+    "b certificate",
+    "c certificate",
+    "ncc certificate",
+    "ncc",
+    "cadets",
+    "cadet",
+    "ಎನ್ ಸಿ ಸಿ",
+    "ಎನ್‌ಸಿ‌ಸಿ",
+    "ಎನ್ಸಿಸಿ",
+    "एन सी सी",
+    "एनसीसी",
+    "என் சி சி",
+    "என்சிசி",
+    "ఎన్ సి సి",
+    "ఎన్సిసి",
+    "എൻ സി സി",
+    "എൻസിസി",
 )
 _EVENT_CUES: tuple[tuple[str, str], ...] = (
     ("events.sanchalana", "sanchalana"),
@@ -204,9 +329,36 @@ _EVENT_CUES: tuple[tuple[str, str], ...] = (
     ("events.alumni_meet", "പൂർവ വിദ്യാർഥി"),
 )
 
-# Canonical campus topics. "fees" is reused with hostel; canteen maps later.
+# Canonical campus topics. Hostel shared topics + canteen topics.
 _TOPIC_CUES: tuple[tuple[str, str], ...] = (
-    ("rooms", "comfortable rooms"),
+    ("facilities", "hostel facilities"),
+    ("facilities", "facilities"),
+    ("facilities", "amenities"),
+    ("facilities", "wifi"),
+    ("facilities", "wi-fi"),
+    ("facilities", "ಸೌಲಭ್ಯ"),
+    ("facilities", "सुविधा"),
+    ("facilities", "வசதி"),
+    ("facilities", "సౌకర్య"),
+    ("facilities", "സൗകര്യ"),
+    ("mess", "hostel mess"),
+    ("mess", "mess timings"),
+    ("mess", "mess food"),
+    ("mess", "dining"),
+    ("mess", "mess"),
+    ("mess", "ಮೆಸ್"),
+    ("mess", "मेस"),
+    ("mess", "மெஸ்"),
+    ("mess", "మెస్"),
+    ("mess", "മെസ്"),
+    ("food", "hostel food"),
+    ("food", "food"),
+    ("food", "ಆಹಾರ"),
+    ("food", "खाना"),
+    ("food", "உணவு"),
+    ("food", "ఆహారం"),
+    ("food", "ഭക്ഷണം"),
+    ("rooms", "how many rooms"),
     ("rooms", "hostel rooms"),
     ("rooms", "rooms"),
     ("rooms", "room"),
@@ -215,56 +367,96 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("rooms", "அறைகள்"),
     ("rooms", "గదులు"),
     ("rooms", "മുറികൾ"),
-    ("timings", "entry and exit"),
-    ("timings", "entry time"),
-    ("timings", "exit time"),
-    ("timings", "in-time"),
-    ("timings", "out-time"),
-    ("timings", "timings"),
-    ("timings", "timing"),
-    ("timings", "ಸಮಯ"),
-    ("timings", "समय"),
-    ("timings", "நேரம்"),
-    ("timings", "సమయం"),
-    ("timings", "സമയം"),
-    ("food_quality", "food quality"),
-    ("food", "hostel food"),
-    ("food", "hostel mess"),
-    ("food", "mess food"),
-    ("food", "food"),
-    ("food", "ಆಹಾರ"),
-    ("food", "खाना"),
-    ("food", "உணவு"),
-    ("food", "ఆహారం"),
-    ("food", "ഭക്ഷണം"),
+    ("warden", "who is the warden"),
+    ("warden", "hostel warden"),
+    ("warden", "warden"),
+    ("warden", "ವಾರ್ಡನ್"),
+    ("warden", "वार्डन"),
+    ("warden", "வார்டன்"),
+    ("warden", "వార్డెన్"),
+    ("warden", "വാർഡൻ"),
+    ("warden", "yaaru"),
+    ("warden", "yaar"),
+    ("warden", "kaun"),
+    ("warden", "aara"),
     ("safety", "anti-ragging"),
     ("safety", "anti ragging"),
-    ("safety", "no ragging"),
-    ("safety", "ragging"),
-    ("safety", "food safety"),
+    ("safety", "hostel safety"),
     ("safety", "safety"),
     ("safety", "security"),
     ("safety", "ಭದ್ರತೆ"),
     ("safety", "सुरक्षा"),
     ("safety", "பாதுகாப்பு"),
     ("safety", "భద్రత"),
-    ("safety", "സുരക്ഷ"),
-    ("activities", "hostel activities"),
-    ("activities", "activities"),
-    ("activities", "ಚಟುವಟಿಕೆ"),
-    ("activities", "गतिविधि"),
-    ("activities", "செயல்பாடு"),
-    ("activities", "కార్యకలాప"),
-    ("activities", "പ്രവർത്തന"),
-    ("fees", "hostel fees"),
-    ("fees", "hostel charges"),
-    ("fees", "fees"),
-    ("fees", "fee"),
-    ("fees", "ಶುಲ್ಕ"),
-    ("fees", "फीस"),
-    ("fees", "கட்டணம்"),
-    ("fees", "ఫీజు"),
-    ("fees", "ഫീസ്"),
+    ("safety", "సురക്ഷ"),
+    ("training", "ncc training"),
+    ("training", "training camps"),
+    ("training", "what training"),
+    ("training", "training"),
+    ("training", "activities"),
+    ("training", "activity"),
+    ("training", "drill"),
+    ("training", "parade"),
+    ("training", "camps"),
+    ("training", "camp"),
+    ("training", "ತರಬೇತಿ"),
+    ("training", "ಚಟುವಟಿಕೆ"),
+    ("training", "प्रशिक्षण"),
+    ("training", "गतिविधि"),
+    ("training", "பயிற்சி"),
+    ("training", "செயல்பாடு"),
+    ("training", "శిక్షణ"),
+    ("training", "కార్యకలాప"),
+    ("training", "പരിശീലനം"),
+    ("training", "പ്രവർത്തന"),
+    ("benefits", "ncc benefits"),
+    ("benefits", "why join ncc"),
+    ("benefits", "why should i join"),
+    ("benefits", "b certificate"),
+    ("benefits", "c certificate"),
+    ("benefits", "certificates"),
+    ("benefits", "certificate"),
+    ("benefits", "benefits"),
+    ("benefits", "ssb"),
+    ("benefits", "ಪ್ರಯೋಜನ"),
+    ("benefits", "ಪ್ರಮಾಣಪತ್ರ"),
+    ("benefits", "लाभ"),
+    ("benefits", "प्रमाणपत्र"),
+    ("benefits", "நன்மை"),
+    ("benefits", "சான்றிதழ்"),
+    ("benefits", "ప్రయోజన"),
+    ("benefits", "సర్టిఫికేట్"),
+    ("benefits", "ഗുണങ്ങൾ"),
+    ("benefits", "സർട്ടിഫിക്കറ്റ്"),
+    ("enrollment", "how do i join ncc"),
+    ("enrollment", "how to join ncc"),
+    ("enrollment", "join ncc"),
+    ("enrollment", "ncc enrollment"),
+    ("enrollment", "ncc enrolment"),
+    ("enrollment", "selection drive"),
+    ("enrollment", "selection drives"),
+    ("enrollment", "who should i contact for ncc"),
+    ("enrollment", "ncc contact"),
+    ("enrollment", "ncc caretaker"),
+    ("enrollment", "associate ncc officer"),
+    ("enrollment", "ano"),
+    ("enrollment", "how do i join"),
+    ("enrollment", "how to join"),
+    ("enrollment", "enrollment"),
+    ("enrollment", "enrolment"),
+    ("enrollment", "enroll"),
+    ("enrollment", "enrol"),
+    ("enrollment", "ಸೇರುವುದು"),
+    ("enrollment", "ದಾಖಲಾತಿ"),
+    ("enrollment", "शामिल"),
+    ("enrollment", "नामांकन"),
+    ("enrollment", "சேர்வது"),
+    ("enrollment", "சேர"),
+    ("enrollment", "చేరడం"),
+    ("enrollment", "నమోదు"),
+    ("enrollment", "ചേരുക"),
+    ("enrollment", "എൻറോൾ"),
+    ("food_quality", "food quality"),
     ("hygiene", "hygiene"),
     ("hygiene", "cleanliness"),
     ("hygiene", "clean"),
@@ -289,8 +481,14 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("pricing", "விலை"),
     ("pricing", "ధర"),
     ("pricing", "വില"),
-    ("overview", "facilities"),
-    ("overview", "amenities"),
+    ("timings", "entry and exit"),
+    ("timings", "timings"),
+    ("timings", "timing"),
+    ("timings", "ಸಮಯ"),
+    ("timings", "समय"),
+    ("timings", "நேரம்"),
+    ("timings", "సమయం"),
+    ("timings", "സമയം"),
 )
 
 
@@ -348,6 +546,7 @@ def detect_campus_entity_spans(raw_text: str) -> tuple[CampusSpan, ...]:
     spans.extend(_consume(hay, occupied, _GIRLS_CUES, HOSTEL_GIRLS, "hostel"))
     spans.extend(_consume(hay, occupied, _BOYS_CUES, HOSTEL_BOYS, "hostel"))
     spans.extend(_consume(hay, occupied, _CANTEEN_CUES, CANTEEN_ENTITY, "canteen"))
+    spans.extend(_consume(hay, occupied, _NCC_CUES, NCC_ENTITY, "ncc"))
     spans.sort(key=lambda s: s.start)
     seen: set[str] = set()
     out: list[CampusSpan] = []
@@ -403,6 +602,29 @@ def _normalize_topic_for_family(topic: str, family: str) -> str:
             return "food_quality"
         if topic == "fees":
             return "pricing"
+        if topic == "mess":
+            return "food_quality"
+        if topic in {"facilities", "warden", "rooms"}:
+            return "overview"
+    if family == "hostel":
+        if topic in {"food", "dining", "menu", "timings"}:
+            return "mess"
+        if topic == "amenities":
+            return "facilities"
+    if family == "ncc":
+        if topic in {"activities", "activity", "camp", "camps", "drill", "parade"}:
+            return "training"
+        if topic in {
+            "certificate",
+            "certificates",
+            "b certificate",
+            "c certificate",
+            "why join",
+            "ssb",
+        }:
+            return "benefits"
+        if topic in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact", "ano", "caretaker"}:
+            return "enrollment"
     return topic
 
 
@@ -411,6 +633,8 @@ def _topic_allowed(topic: str, family: str) -> bool:
         return topic in HOSTEL_TOPICS
     if family == "canteen":
         return topic in CANTEEN_TOPICS
+    if family == "ncc":
+        return topic in NCC_TOPICS
     return False
 
 
@@ -430,13 +654,19 @@ def pair_campus_items(
     if bindable:
         usable: list[CampusTopicSpan] = []
         for ts in topic_spans:
-            # A topic is kept if it is valid for at least one bindable family after mapping.
             if any(_topic_allowed(_normalize_topic_for_family(ts.topic, s.family), s.family) for s in bindable):
                 usable.append(ts)
         distinct: list[str] = []
         for ts in usable:
-            if ts.topic not in distinct:
-                distinct.append(ts.topic)
+            mapped_any = None
+            for ent in bindable:
+                mapped = _normalize_topic_for_family(ts.topic, ent.family)
+                if _topic_allowed(mapped, ent.family):
+                    mapped_any = mapped
+                    break
+            key = mapped_any or ts.topic
+            if key not in distinct:
+                distinct.append(key)
 
         if not distinct:
             items.extend(SemanticItem(entity=s.entity, topic="overview") for s in bindable)
@@ -461,8 +691,7 @@ def pair_campus_items(
             else:
                 items.extend(SemanticItem(entity=s.entity, topic="overview") for s in bindable)
         else:
-            # Unequal N: bind each topic to the nearest compatible entity; leftover entities overview.
-            claimed: set[str] = set()
+            claimed: set[tuple[str, str]] = set()
             for ts in usable:
                 choice = None
                 for ent in bindable:
@@ -515,7 +744,7 @@ def _bind_campus_proximity(
             distances = [
                 _distance(ts.start, ts.end, ent.start, ent.end)
                 for ts in topics
-                if ts.topic == topic
+                if _normalize_topic_for_family(ts.topic, ent.family) == mapped or ts.topic == topic
             ]
             if distances:
                 best[(topic, e_index)] = min(distances)
@@ -557,11 +786,77 @@ def campus_items_from_text(raw_text: str) -> tuple[SemanticItem, ...]:
     return pair_campus_items(entity_spans=entities, topic_spans=topics)
 
 
+def hostel_followup_items_from_sticky(
+    raw_text: str,
+    *,
+    last_hostel_gender: str | None,
+) -> tuple[SemanticItem, ...]:
+    """Bind mess/facilities/safety/warden follow-ups to sticky boys/girls gender."""
+    gender = (last_hostel_gender or "").strip().lower()
+    if gender not in {"boys", "girls"}:
+        return ()
+    if detect_campus_entity_spans(raw_text):
+        return ()
+    topics = detect_campus_topic_spans(raw_text)
+    hostel_topics = []
+    for ts in topics:
+        mapped = _normalize_topic_for_family(ts.topic, "hostel")
+        if mapped in HOSTEL_TOPICS and mapped not in hostel_topics:
+            hostel_topics.append(mapped)
+    if not hostel_topics:
+        return ()
+    entity = HOSTEL_BOYS if gender == "boys" else HOSTEL_GIRLS
+    return tuple(SemanticItem(entity=entity, topic=t) for t in hostel_topics)
+
+
+def ncc_followup_items_from_sticky(
+    raw_text: str,
+    *,
+    last_ncc_active: bool,
+) -> tuple[SemanticItem, ...]:
+    """Bind training/benefits/enrollment follow-ups while NCC context is sticky."""
+    if not last_ncc_active:
+        return ()
+    if detect_campus_entity_spans(raw_text):
+        return ()
+    topics = detect_campus_topic_spans(raw_text)
+    ncc_topics: list[str] = []
+    for ts in topics:
+        mapped = _normalize_topic_for_family(ts.topic, "ncc")
+        if mapped in NCC_TOPICS and mapped not in ncc_topics:
+            ncc_topics.append(mapped)
+    if not ncc_topics:
+        return ()
+    return tuple(SemanticItem(entity=NCC_ENTITY, topic=t) for t in ncc_topics)
+
+
+def is_ncc_enrollment_items(items: tuple[tuple[str, str], ...] | tuple[SemanticItem, ...]) -> bool:
+    """True when the only campus ask is NCC enrollment/contact (no invented card)."""
+    if not items:
+        return False
+    normalized: list[tuple[str, str]] = []
+    for item in items:
+        if isinstance(item, SemanticItem):
+            normalized.append((item.entity, item.topic))
+        else:
+            normalized.append((str(item[0]), str(item[1])))
+    if len(normalized) != 1:
+        return False
+    ent, top = normalized[0]
+    return ent.strip().lower() == NCC_ENTITY and top.strip().lower() == "enrollment"
+
+
 _BARE_HOSTEL_CUES: tuple[str, ...] = (
     "hostel",
     "hostal",
     "ಹಾಸ್ಟೆಲ್",
     "ವಸತಿ ನಿಲಯ",
+    "हॉस्टल",
+    "हॉस्टेल",
+    "விடுதி",
+    "ஹாஸ்டல்",
+    "హాస్టల్",
+    "ഹോസ്റ്റൽ",
 )
 
 
@@ -573,3 +868,39 @@ def is_bare_hostel_request(raw_text: str) -> bool:
     if not hay:
         return False
     return any(casefold_keep_scripts(cue) in hay for cue in _BARE_HOSTEL_CUES if cue)
+
+
+def detect_hostel_gender_answer(raw_text: str) -> str | None:
+    """Resolve a short clarification answer to boys|girls."""
+    hay = casefold_keep_scripts(raw_text or "").strip()
+    if not hay:
+        return None
+    # Prefer longer gendered hostel phrases, then bare gender tokens.
+    for cue in sorted(_GIRLS_CUES, key=len, reverse=True):
+        if casefold_keep_scripts(cue) in hay:
+            return "girls"
+    for cue in sorted(_BOYS_CUES, key=len, reverse=True):
+        if casefold_keep_scripts(cue) in hay:
+            return "boys"
+    tokens = set(hay.replace("'", " ").replace("-", " ").split())
+    girls_tokens = {
+        "girls", "girl", "ladies", "women", "woman", "female",
+        "hudugiyaru", "hudugi", "garls", "girlsone", "ladki", "ladkiyan", "ladkiyon",
+        "penngal", "penn", "balikala",
+        "ಗರ್ಲ್ಸ್", "ಹುಡುಗಿಯರ", "ಹುಡುಗಿಯರು", "ಲಡಕಿಯರ",
+        "लड़कियों", "लड़कियाँ", "गर्ल्स",
+        "பெண்கள்", "బాలికల", "ഗേൾസ്", "പെൺകുട്ടികൾ",
+    }
+    boys_tokens = {
+        "boys", "boy", "gents", "men", "man", "male",
+        "hudugaru", "huduga", "boysone", "ladke", "ladkon", "ladkonka",
+        "aanugal", "balura",
+        "ಬಾಯ್ಸ್", "ಹುಡುಗರ", "ಹುಡುಗರು",
+        "लड़कों", "लड़के", "बॉयज",
+        "ஆண்கள்", "బాయ్స్", "ബോയ്സ്", "ആൺകുട്ടികൾ",
+    }
+    if tokens & girls_tokens and not (tokens & boys_tokens):
+        return "girls"
+    if tokens & boys_tokens and not (tokens & girls_tokens):
+        return "boys"
+    return None

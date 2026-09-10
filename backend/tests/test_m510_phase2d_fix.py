@@ -21,14 +21,14 @@ REQUIRED = [
     (
         "girls hostel rooms and canteen hygiene and TechVidya",
         "en",
-        ("hostel.girls.rooms", "canteen.hygiene", "events.techvidya"),
+        ("hostel.girls.overview", "canteen.hygiene", "events.techvidya"),
     ),
     ("principal and trustees", "en", ("leadership.principal", "leadership.trustees")),
     ("CSE HOD ಮತ್ತು ಶುಲ್ಕ", "kn", ("cse.hod", "cse.fees")),
     (
         "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿಗಳು ಮತ್ತು ಕ್ಯಾಂಟೀನ್ ಸ್ವಚ್ಛತೆ ಮತ್ತು ಟೆಕ್‌ವಿದ್ಯಾ",
         "kn",
-        ("hostel.girls.rooms", "canteen.hygiene", "events.techvidya"),
+        ("hostel.girls.overview", "canteen.hygiene", "events.techvidya"),
     ),
     (
         "ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಮತ್ತು ಟ್ರಸ್ಟಿಗಳು",
@@ -43,7 +43,7 @@ REQUIRED = [
     (
         "girls hostel rooms hegide and canteen hygiene hegide?",
         "en",
-        ("hostel.girls.rooms", "canteen.hygiene"),
+        ("hostel.girls.overview", "canteen.hygiene"),
     ),
     (
         "principal yaaru and trustees yaaru?",

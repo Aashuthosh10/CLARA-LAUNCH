@@ -97,7 +97,7 @@ class TestKannadaCardTriggers(unittest.TestCase):
         self.assertEqual(plan_units("ಡೇಟಾ ಸೈನ್ಸ್ ಶುಲ್ಕ", "kn"), ("cse_ds.fees",))
 
     def test_girls_hostel_rooms(self) -> None:
-        self.assertEqual(plan_units("ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿಗಳು", "kn"), ("hostel.girls.rooms",))
+        self.assertEqual(plan_units("ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿಗಳು", "kn"), ("hostel.girls.overview",))
 
     def test_canteen(self) -> None:
         self.assertEqual(plan_units("ಕ್ಯಾಂಟೀನ್", "kn"), ("canteen.overview",))
@@ -111,7 +111,7 @@ class TestKannadaCardTriggers(unittest.TestCase):
                 "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್ ಕೊಠಡಿಗಳು ಮತ್ತು ಕ್ಯಾಂಟೀನ್ ಸ್ವಚ್ಛತೆ ಹಾಗೂ ಟೆಕ್‌ವಿದ್ಯಾ ಬಗ್ಗೆ ತೋರಿಸಿ",
                 "kn",
             ),
-            ("hostel.girls.rooms", "canteen.hygiene", "events.techvidya"),
+            ("hostel.girls.overview", "canteen.hygiene", "events.techvidya"),
         )
 
 
@@ -206,7 +206,7 @@ class TestKannadaNarrationAndLocale(unittest.TestCase):
         self.assertIn("ಅವರು", spoken)
 
     def test_campus_guest_name_does_not_lowercase_kannada(self) -> None:
-        unit = resolve_unit(unit_id="hostel.girls.rooms", language="kn", language_code="kn")
+        unit = resolve_unit(unit_id="hostel.girls.overview", language="kn", language_code="kn")
         assert unit is not None
         spoken = narrate_unit(unit, "kn", guest_name="Naveen")
         self.assertIn("Naveen", spoken)
