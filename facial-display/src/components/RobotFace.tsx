@@ -26,7 +26,8 @@ const EYE_PATHS: Record<IdleEyeVariant | 'speaking', { left: string; right: stri
     right: 'M -8,-30 H 108 A 60,60 0 0 1 168,30 V 110 A 60,60 0 0 1 108,170 H -8 A 60,60 0 0 1 -68,110 V 30 A 60,60 0 0 1 -8,-30 Z',
   },
   curious: {
-    left: 'M 4,-4 H 96 A 50,50 0 0 1 146,46 V 98 A 50,50 0 0 1 96,148 H 4 A 50,50 0 0 1 -46,98 V 46 A 50,50 0 0 1 4,-4 Z',
+    // Same size on both sides (right-eye geometry copied to left).
+    left: 'M -6,-28 H 106 A 62,62 0 0 1 168,34 V 110 A 62,62 0 0 1 106,172 H -6 A 62,62 0 0 1 -68,110 V 34 A 62,62 0 0 1 -6,-28 Z',
     right: 'M -6,-28 H 106 A 62,62 0 0 1 168,34 V 110 A 62,62 0 0 1 106,172 H -6 A 62,62 0 0 1 -68,110 V 34 A 62,62 0 0 1 -6,-28 Z',
   },
   heart: {

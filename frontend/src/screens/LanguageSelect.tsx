@@ -88,9 +88,9 @@ export default function LanguageSelect({
         whileHover={{ scale: 1.03, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
         whileTap={{ scale: 0.97 }}
         onClick={onHome}
-        className="absolute top-12 right-12 z-30 flex items-center justify-center w-16 h-16 rounded-2xl glass interactive-button group"
+        className="absolute top-16 right-12 z-30 flex items-center justify-center w-20 h-20 rounded-2xl glass interactive-button group"
       >
-        <Home className="w-6 h-6 text-slate-600 group-hover:text-slate-900 transition-colors" />
+        <Home className="w-7 h-7 text-slate-600 group-hover:text-slate-900 transition-colors" />
       </motion.button>
 
       {/* Content Layer */}

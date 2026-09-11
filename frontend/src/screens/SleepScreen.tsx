@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'lucide-react';
 import { agentLog, auditPointerInteraction } from '../debug/interactionDebug';
@@ -16,6 +16,40 @@ const CAMPUS_IMAGES = [
   '/assets/campus_hd_8.jpg',
 ];
 
+function formatSleepClock(now: Date): { time: string; date: string } {
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const date = now.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  return { time: `${hours}:${minutes}`, date };
+}
+
+/** Local wall-clock for SleepScreen — updates on the minute. */
+function useLocalWallClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const tick = () => setNow(new Date());
+    tick();
+    const msToNextMinute = 60_000 - (Date.now() % 60_000) + 50;
+    const timeoutId = setTimeout(() => {
+      tick();
+      intervalId = setInterval(tick, 60_000);
+    }, msToNextMinute);
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
+
+  return now;
+}
+
 export default function SleepScreen({
   onWake,
   onAboutMe,
@@ -25,6 +59,9 @@ export default function SleepScreen({
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const wakeRequestedRef = useRef(false);
+  const now = useLocalWallClock();
+  const { time, date } = useMemo(() => formatSleepClock(now), [now]);
+
   const requestWake = () => {
     if (wakeRequestedRef.current) return;
     wakeRequestedRef.current = true;
@@ -105,15 +142,15 @@ export default function SleepScreen({
       />
       <div className="absolute inset-x-0 bottom-0 h-[28%] z-10 pointer-events-none bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
 
-      {/* Top-left: SVIT branding */}
-      <div className="absolute top-[min(4vh,2.75rem)] left-[min(4vw,3.5rem)] z-30 pointer-events-none">
+      {/* Top-left: SVIT branding — lower + ~10% larger for kiosk */}
+      <div className="absolute top-[min(8.5vh,4.75rem)] left-[min(4vw,3.5rem)] z-30 pointer-events-none">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 1 }}
           className="flex items-center gap-3 sm:gap-4 lg:gap-5"
         >
-          <div className="flex h-[clamp(4.5rem,12vh,7.5rem)] w-auto max-w-[min(28vw,220px)] shrink-0 items-center justify-start">
+          <div className="flex h-[clamp(5.95rem,15.85vh,10.9rem)] w-auto max-w-[min(35vw,290px)] shrink-0 items-center justify-start">
             <img
               src={collegeLogoMark}
               alt=""
@@ -126,12 +163,12 @@ export default function SleepScreen({
 
           <div
             aria-hidden
-            className="h-[clamp(4.5rem,12vh,7.5rem)] w-[3px] shrink-0 rounded-sm bg-[#F26522]"
+            className="h-[clamp(5.95rem,15.85vh,10.9rem)] w-[3.5px] shrink-0 rounded-sm bg-[#F26522]"
           />
 
           <div className="flex flex-col justify-center pt-0.5">
             <h1
-              className="text-[clamp(1.65rem,4.2vw,3.6rem)] font-black tracking-[0.1em] text-[#F26522] uppercase leading-none"
+              className="text-[clamp(2.15rem,5.5vw,4.75rem)] font-black tracking-[0.1em] text-[#F26522] uppercase leading-none"
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 textShadow: '0 2px 18px rgba(0,0,0,0.55)',
@@ -140,13 +177,13 @@ export default function SleepScreen({
               SAI VIDYA
             </h1>
             <p
-              className="mt-1.5 text-[clamp(0.55rem,1.1vw,0.85rem)] font-bold tracking-[0.42em] text-white/95 uppercase"
+              className="mt-1.5 text-[clamp(0.72rem,1.43vw,1.1rem)] font-bold tracking-[0.42em] text-white/95 uppercase"
               style={{ textShadow: '0 1px 10px rgba(0,0,0,0.55)' }}
             >
               Institute of Technology
             </p>
             <p
-              className="mt-2 text-[clamp(0.7rem,1.15vw,1rem)] font-medium italic text-white/75"
+              className="mt-2 text-[clamp(0.94rem,1.5vw,1.32rem)] font-medium italic text-white/75"
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
                 letterSpacing: '0.03em',
@@ -159,36 +196,35 @@ export default function SleepScreen({
         </motion.div>
       </div>
 
-      {/* Top-right: About Me — text left of icon, subtle (not a pill) */}
-      <motion.button
-        type="button"
+      {/* Top-right: real-time local clock */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.8 }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          onAboutMe();
-        }}
-        data-testid="about-me-entry"
-        aria-label="About Me"
-        className="group absolute top-[min(3.5vh,2.25rem)] right-[min(3.5vw,2.75rem)] z-40 inline-flex items-center gap-2.5 bg-transparent border-0 p-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 rounded-md"
+        transition={{ delay: 0.5, duration: 0.9 }}
+        className="absolute top-[min(8.5vh,4.75rem)] right-[min(3.5vw,2.75rem)] z-30 text-right pointer-events-none"
+        data-testid="sleep-clock"
+        aria-live="polite"
       >
-        <span
-          className="text-[10px] sm:text-[11px] font-medium tracking-[0.08em] text-white/90 transition-colors group-hover:text-white"
+        <p
+          className="text-[clamp(2.4rem,5vw,3.75rem)] font-bold tabular-nums leading-none text-white tracking-tight"
+          style={{
+            textShadow:
+              '0 0 18px rgba(212, 175, 55, 0.35), 0 2px 14px rgba(0,0,0,0.7)',
+          }}
+          data-testid="sleep-clock-time"
+        >
+          {time}
+        </p>
+        <p
+          className="mt-2 text-[clamp(0.85rem,1.5vw,1.15rem)] font-medium text-white/85 tracking-[0.04em]"
           style={{ textShadow: '0 1px 10px rgba(0,0,0,0.65)' }}
+          data-testid="sleep-clock-date"
         >
-          About Me
-        </span>
-        <span
-          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-[#F26522]/85 bg-black/55 text-white shadow-[0_0_14px_rgba(242,101,34,0.35)] transition-all group-hover:border-[#F26522] group-hover:shadow-[0_0_18px_rgba(242,101,34,0.55)] group-hover:bg-black/70"
-          aria-hidden
-        >
-          <User className="h-[1.05rem] w-[1.05rem] sm:h-5 sm:w-5" strokeWidth={1.75} />
-        </span>
-      </motion.button>
+          {date}
+        </p>
+      </motion.div>
 
-      {/* Center quote */}
+      {/* Center quote — royal gold edge lighting */}
       <motion.div
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -201,8 +237,16 @@ export default function SleepScreen({
             fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
             lineHeight: 1.28,
             letterSpacing: '0.02em',
-            textShadow:
-              '0 0 28px rgba(255, 214, 140, 0.28), 0 0 48px rgba(212, 175, 55, 0.12), 0 4px 22px rgba(0,0,0,0.65)',
+            color: '#FFF8E7',
+            WebkitTextStroke: '0.35px rgba(212, 175, 55, 0.55)',
+            textShadow: [
+              '0 0 1px rgba(255, 236, 179, 0.95)',
+              '0 0 8px rgba(212, 175, 55, 0.85)',
+              '0 0 18px rgba(201, 162, 39, 0.7)',
+              '0 0 36px rgba(184, 134, 11, 0.45)',
+              '0 0 56px rgba(212, 175, 55, 0.28)',
+              '0 3px 18px rgba(0, 0, 0, 0.7)',
+            ].join(', '),
           }}
           data-testid="sleep-quote"
         >
@@ -220,17 +264,47 @@ export default function SleepScreen({
         className="absolute inset-x-0 bottom-[min(7vh,3.75rem)] z-30 flex items-center justify-center gap-3 sm:gap-5 pointer-events-none px-4"
         data-testid="sleep-start-prompt"
       >
-        <span className="hidden sm:block h-px w-10 md:w-14 bg-white/45" aria-hidden />
+        <span className="hidden sm:block h-px w-12 md:w-16 bg-[#D4AF37]/70" aria-hidden />
         <span
-          className="text-[clamp(0.7rem,1.35vw,1.05rem)] tracking-[0.42em] sm:tracking-[0.55em] uppercase text-white/90 font-light"
+          className="text-[clamp(1rem,2vw,1.55rem)] tracking-[0.42em] sm:tracking-[0.55em] uppercase text-white font-bold"
           style={{
-            textShadow: '0 0 18px rgba(255, 220, 160, 0.22), 0 2px 12px rgba(0,0,0,0.7)',
+            textShadow:
+              '0 0 14px rgba(212, 175, 55, 0.45), 0 0 28px rgba(255, 220, 160, 0.25), 0 2px 12px rgba(0,0,0,0.75)',
           }}
         >
           — TAP ANYWHERE TO START —
         </span>
-        <span className="hidden sm:block h-px w-10 md:w-14 bg-white/45" aria-hidden />
+        <span className="hidden sm:block h-px w-12 md:w-16 bg-[#D4AF37]/70" aria-hidden />
       </motion.div>
+
+      {/* Bottom-right: compact About Me utility — text left of icon */}
+      <motion.button
+        type="button"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.8 }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAboutMe();
+        }}
+        data-testid="about-me-entry"
+        aria-label="About Me"
+        className="group absolute bottom-[min(11vh,5.5rem)] right-[min(3.5vw,2.75rem)] z-40 inline-flex items-center gap-2.5 bg-transparent border-0 p-3 min-h-[52px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 rounded-md"
+      >
+        <span
+          className="text-[clamp(0.72rem,1.15vw,0.95rem)] tracking-[0.1em] uppercase text-white/90 font-semibold transition-colors group-hover:text-white"
+          style={{ textShadow: '0 1px 10px rgba(0,0,0,0.7)' }}
+        >
+          About Me
+        </span>
+        <span
+          className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 border-[#F26522]/85 bg-black/55 text-white shadow-[0_0_12px_rgba(242,101,34,0.35)] transition-all group-hover:border-[#F26522] group-hover:shadow-[0_0_16px_rgba(242,101,34,0.55)] group-hover:bg-black/70"
+          aria-hidden
+        >
+          <User className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.75} />
+        </span>
+      </motion.button>
     </motion.div>
   );
 }

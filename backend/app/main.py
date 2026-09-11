@@ -23,7 +23,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
+from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.clients.provider_clients import (
@@ -3464,6 +3464,14 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.websocket("/ws/face-bridge")
+async def face_bridge_ws(websocket: WebSocket, role: str = Query("main")) -> None:
+    """Relay lip-sync events between main UI and an external Chrome --kiosk face window."""
+    from backend.services.face_bridge import handle_face_bridge
+
+    await handle_face_bridge(websocket, role)
 
 
 @app.post("/api/ws-token")

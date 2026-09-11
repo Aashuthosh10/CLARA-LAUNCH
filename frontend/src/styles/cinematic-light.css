@@ -15,17 +15,17 @@
   font-family: 'Inter', sans-serif;
 }
 
-/* Global Home Button - Repositioned to top-left of screen */
+/* Global Home Button — lowered + ~20% larger for 13.3" kiosk readability */
 .premium-home-button {
   position: absolute;
-  top: 30px;
+  top: 48px;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 62px;
+  height: 62px;
+  border-radius: 17px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(252, 231, 243, 0.58), rgba(167, 139, 250, 0.36));
   backdrop-filter: blur(18px);
   border: 2px solid rgba(42, 17, 92, 0.8);
@@ -318,7 +318,7 @@
 
 /* Comparison mode: deterministic vertical budget (nav + orb + gap + Tap label). */
 .full-text-layout.full-text-layout--comparison-active {
-  --comparison-top-inset: clamp(58px, 8.2vh, 82px);
+  --comparison-top-inset: clamp(70px, 9.8vh, 98px);
   --comparison-bottom-inset: clamp(192px, 24vh, 250px);
   --comparison-available-height: calc(100dvh - var(--comparison-top-inset) - var(--comparison-bottom-inset));
 }
@@ -1767,8 +1767,8 @@
 
 .status-text-top {
   position: absolute;
-  top: 60px;
-  font-size: 0.8rem;
+  top: 72px;
+  font-size: 0.96rem;
   text-transform: uppercase;
   letter-spacing: 0.3em;
   color: #94a3b8;
@@ -1834,7 +1834,7 @@
 .interaction-panel-30 {
   width: calc(35% - 48px);
   position: absolute;
-  top: 82px;
+  top: 100px;
   right: 30px;
   bottom: 24px;
   background: rgba(255, 255, 255, 0.08); /* More translucent */
@@ -4031,7 +4031,7 @@
   padding-left: 2.7rem;
 }
 
-.light-chat-container:has(.campus-nav-stage) > .absolute.right-\[30px\].top-\[30px\] {
+.light-chat-container:has(.campus-nav-stage) > .absolute.right-\[30px\].top-\[48px\] {
   display: none;
 }
 

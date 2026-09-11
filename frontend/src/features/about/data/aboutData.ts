@@ -508,12 +508,11 @@ export const CREATORS_FIVE: CreatorMember[] = [
 export const PROJECT_GUIDE: ProjectGuide = {
   name: 'DR. NAGASHREE N',
   role: 'Project Guide / Academic Mentor',
-  department: 'Department of Computer Science & Engineering',
-  institution: 'School of Computing & Artificial Intelligence',
+  department: 'Department of Computer Science & Engineering (Data Science)',
+  institution: '',
   description:
-    'Provided foundational academic guidance, architectural review, and institutional insight throughout the research, design, and deployment of the CLARA conversational intelligence platform.',
-  quote:
-    'True institutional AI doesn’t replace humanity—it elevates hospitality, connects communities, and makes complex organizations effortlessly accessible to everyone.',
+    'Provided foundational academic guidance and rigorous architectural review for CLARA, her institutional insight was pivotal in transforming this conceptual intelligence platform into a fully realized campus assistant.',
+  quote: '',
   avatarSeed: 'nagashree',
 };
 

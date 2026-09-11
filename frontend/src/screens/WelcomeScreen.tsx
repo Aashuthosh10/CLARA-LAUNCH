@@ -52,15 +52,15 @@ const WelcomeScreen: React.FC = () => {
       {/* Subtle radial vignette for depth */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(241,245,249,0.3)_100%)] pointer-events-none z-0"></div>
 
-      {/* Top Controls */}
-      <div className="absolute top-8 left-8 z-20">
-        <button className="flex items-center justify-center w-12 h-12 bg-white/40 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 hover:bg-white/60 transition-all text-slate-700 hover:scale-105 active:scale-95">
-          <Home className="w-5 h-5" strokeWidth={2} />
+      {/* Top Controls — lowered + ~20% larger for 13.3" */}
+      <div className="absolute top-12 left-8 z-20">
+        <button className="flex items-center justify-center w-14 h-14 bg-white/40 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 hover:bg-white/60 transition-all text-slate-700 hover:scale-105 active:scale-95">
+          <Home className="w-6 h-6" strokeWidth={2} />
         </button>
       </div>
-      <div className="absolute top-8 right-8 z-20">
-        <button className="flex items-center justify-center w-12 h-12 bg-white/40 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 hover:bg-white/60 transition-all text-blue-500 hover:scale-105 active:scale-95">
-          <AudioLines className="w-5 h-5" strokeWidth={2} />
+      <div className="absolute top-12 right-8 z-20">
+        <button className="flex items-center justify-center w-14 h-14 bg-white/40 backdrop-blur-xl rounded-2xl shadow-sm border border-white/50 hover:bg-white/60 transition-all text-blue-500 hover:scale-105 active:scale-95">
+          <AudioLines className="w-6 h-6" strokeWidth={2} />
         </button>
       </div>
 

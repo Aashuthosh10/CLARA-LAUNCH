@@ -41,9 +41,9 @@ export default function VoiceConversation({
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onBack}
-        className="absolute top-12 left-12 glass w-16 h-16 rounded-full flex items-center justify-center z-20"
+        className="absolute top-16 left-12 glass w-20 h-20 rounded-full flex items-center justify-center z-20"
       >
-        <ArrowLeft className="w-6 h-6 text-stone-400" />
+        <ArrowLeft className="w-7 h-7 text-stone-400" />
       </motion.button>
 
       {/* Transcript Area */}

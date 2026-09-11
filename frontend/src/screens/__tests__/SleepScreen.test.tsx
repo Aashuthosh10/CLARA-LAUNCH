@@ -1,9 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SleepScreen from '../SleepScreen';
 
 describe('SleepScreen layout', () => {
-  it('places About Me top-right (text left of icon), not a bottom-left pill', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-10T09:41:00'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('places clock top-right and About Me bottom-right (text left of icon)', () => {
     const markup = renderToStaticMarkup(
       <SleepScreen onWake={vi.fn()} onAboutMe={vi.fn()} />,
     );
@@ -12,6 +21,12 @@ describe('SleepScreen layout', () => {
     expect(markup).toContain('data-testid="sleep-quote"');
     expect(markup).toContain('data-testid="sleep-start-prompt"');
     expect(markup).toContain('data-testid="sleep-vignette"');
+    expect(markup).toContain('data-testid="sleep-clock"');
+    expect(markup).toContain('data-testid="sleep-clock-time"');
+    expect(markup).toContain('data-testid="sleep-clock-date"');
+    expect(markup).toContain('09:41');
+    expect(markup).toContain('Thursday');
+    expect(markup).toContain('10 September 2026');
     expect(markup).toContain('About Me');
     expect(markup).toContain('TAP ANYWHERE TO START');
     expect(markup).toContain('Tomorrow');
@@ -21,6 +36,17 @@ describe('SleepScreen layout', () => {
     expect(markup).not.toContain('All Rights Reserved');
     expect(markup).not.toContain('bottom-10 left-10');
     expect(markup).not.toContain('rounded-full border border-white/60 bg-white/20 px-8');
-    expect(markup).toContain('top-[min(3.5vh,2.25rem)] right-[min(3.5vw,2.75rem)]');
+    expect(markup).toContain('bottom-[min(11vh,5.5rem)] right-[min(3.5vw,2.75rem)]');
+    expect(markup).toContain('top-[min(8.5vh,4.75rem)] right-[min(3.5vw,2.75rem)]');
+    expect(markup).not.toContain('top-[min(9vh,5.25rem)] right-[min(3.5vw,2.75rem)]');
+  });
+
+  it('About Me entry stops wake via stopPropagation wiring', () => {
+    const markup = renderToStaticMarkup(
+      <SleepScreen onWake={vi.fn()} onAboutMe={vi.fn()} />,
+    );
+    expect(markup).toContain('data-testid="about-me-entry"');
+    // Compact utility control, not a large pill
+    expect(markup).not.toContain('rounded-full border border-white/60 bg-white/20 px-8');
   });
 });

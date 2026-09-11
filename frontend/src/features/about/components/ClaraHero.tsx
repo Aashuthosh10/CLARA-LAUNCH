@@ -104,7 +104,7 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
     <section
       id="enter"
       onMouseMove={handleMouseMove}
-      className="relative min-h-screen w-full flex flex-col justify-between pt-32 sm:pt-36 pb-8 px-6 sm:px-10 lg:px-14 xl:px-20 bg-white overflow-hidden select-none"
+      className="relative min-h-screen w-full flex flex-col justify-between pt-[11.5rem] sm:pt-[12.5rem] pb-28 px-6 sm:px-10 lg:px-14 xl:px-20 bg-white overflow-hidden select-none"
     >
       {/* 1. THREE.JS SUBTLE LOW-OPACITY BACKGROUND */}
       <HeroThreeBackground className="z-0" />
@@ -193,8 +193,15 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
             </h2>
 
             {/* CLARA BRIEF: High-visibility description */}
-            <p className="hero-text-fade text-[24px] sm:text-[27px] lg:text-[29px] xl:text-[31px] text-[#18181B] font-medium leading-[1.5] tracking-[-0.01em] w-full max-w-[960px] mb-10 sm:mb-12">
-              CLARA is an AI-powered virtual receptionist designed for educational institutions, helping students, faculty, visitors, and staff find information, interact with the institution, connect with the right people, and manage appointments through natural conversation.
+            <p
+              data-testid="about-overview-body"
+              className="hero-text-fade text-[24px] sm:text-[27px] lg:text-[29px] xl:text-[31px] text-[#18181B] font-medium leading-[1.5] tracking-[-0.01em] w-full max-w-[960px] mb-10 sm:mb-12"
+            >
+              CLARA is an intelligent AI receptionist located at the campus
+              entrance to assist visitors, guests, and students. Designed to
+              deliver instant answers about college programs, facilities, and
+              departments, CLARA helps you navigate the campus and connects you
+              directly with faculty and staff online in real time.
             </p>
 
             {/* HERO CTA BUTTONS: Height 72px */}
@@ -207,9 +214,9 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
                 onClick={onOpenLiveDemo}
                 onMouseEnter={playHoverChime}
                 data-testid="enter-clara"
-                className="hero-btn w-full sm:w-[260px] h-[70px] rounded-full font-black text-[20px] sm:text-[22px] text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-2xl shadow-purple-600/40 hover:shadow-purple-600/60 transition-all duration-300 hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-3 cursor-pointer border-2 border-[#6D28D9]"
+                className="hero-btn w-full sm:w-[320px] h-[84px] rounded-full font-black text-[22px] sm:text-[26px] text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-2xl shadow-purple-600/40 hover:shadow-purple-600/60 transition-all duration-300 hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-3 cursor-pointer border-2 border-[#6D28D9]"
               >
-                <Sparkles className="w-6 h-6 text-white" />
+                <Sparkles className="w-7 h-7 text-white" />
                 <span>ENTER CLARA</span>
               </button>
             </div>

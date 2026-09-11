@@ -15,7 +15,8 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clara_user"]
+      # Include -d clara_db so pg_isready does not try a non-existent DB named after the user.
+      test: ["CMD-SHELL", "pg_isready -U clara_user -d clara_db"]
       interval: 5s
       timeout: 5s
       retries: 5

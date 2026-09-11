@@ -8,7 +8,6 @@ import {
   Calendar,
   Users,
   Video,
-  ArrowRight,
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
@@ -86,9 +85,7 @@ interface Card02Props {
   onOpenLiveDemo?: () => void;
 }
 
-export const Card02CapabilitiesMindMap: React.FC<Card02Props> = ({
-  onNextCard,
-}) => {
+export const Card02CapabilitiesMindMap: React.FC<Card02Props> = () => {
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
 
   const toggleNodeExpand = (nodeId: string) => {
@@ -97,7 +94,7 @@ export const Card02CapabilitiesMindMap: React.FC<Card02Props> = ({
   };
 
   return (
-    <section className="relative min-h-screen w-full flex flex-col justify-between pt-24 sm:pt-28 pb-8 px-4 sm:px-8 lg:px-14 bg-gradient-to-b from-[#FAF8FF] via-white to-[#F6F3FE] overflow-hidden select-none">
+    <section className="relative min-h-screen w-full flex flex-col justify-between pt-[11.5rem] sm:pt-[12.5rem] pb-28 px-4 sm:px-8 lg:px-14 bg-gradient-to-b from-[#FAF8FF] via-white to-[#F6F3FE] overflow-hidden select-none">
       {/* Luminous Radial Glow Background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-gradient-to-tr from-[#7C3AED]/10 via-[#DDD6FE]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
 
@@ -255,20 +252,12 @@ export const Card02CapabilitiesMindMap: React.FC<Card02Props> = ({
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto flex items-center justify-between pt-2 px-2">
+      {/* Bottom hint — pagination dock handles page navigation */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto flex items-center justify-center pt-2 px-2">
         <div className="text-sm sm:text-base font-mono text-[#52525B] font-bold flex items-center gap-2">
           <span className="text-[#7C3AED] text-lg">●</span>
           <span>Click any card to expand full capability brief</span>
         </div>
-
-        <button
-          onClick={onNextCard}
-          className="flex items-center gap-2 text-sm sm:text-base font-mono font-black text-[#7C3AED] hover:text-[#6D28D9] hover:underline cursor-pointer transition-all"
-        >
-          <span>NEXT: THE CREATORS</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
       </div>
     </section>
   );

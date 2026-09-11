@@ -1,0 +1,18 @@
+WaveShare mini facial display — why Ubuntu "doesn't see" it
+===========================================================
+
+Your PC currently reports:
+  HDMI-1  = connected (main panel video)
+  HDMI-2  = disconnected (0-byte EDID)  ← no video signal here
+  USB     = WaveShare WS170120          ← TOUCH ONLY
+
+WaveShare HDMI LCDs need BOTH:
+  1. HDMI cable from the mini panel → free HDMI/DP port on the PC
+  2. USB cable from the mini panel → USB port (touch; already working)
+
+If only USB is plugged in, Ubuntu will never show a second monitor.
+Software cannot invent a second display without that HDMI/DP video link.
+
+After both cables + power:
+  sudo -E bash ~/CLARA_LAUNCH/CLARA-LAUNCH/scripts/kiosk/wire-second-display.sh
+  ~/.local/bin/clara-kiosk-start

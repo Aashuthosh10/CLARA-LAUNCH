@@ -67,53 +67,68 @@ export default function App() {
     });
   }, [ch]);
 
-  useEffect(() => {
-    const prevent = (e: Event) => e.preventDefault();
-    document.addEventListener('touchstart', prevent, { passive: false });
-    document.addEventListener('click', prevent);
-    return () => {
-      document.removeEventListener('touchstart', prevent);
-      document.removeEventListener('click', prevent);
-    };
-  }, []);
-
-  // Secondary display: best-effort fullscreen/maximize.
+  // Secondary display / kiosk: enter borderless fullscreen when not already
+  // running under Chrome --kiosk (which has no window chrome).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('kiosk') !== '1') return;
-    try {
-      // Attempt to maximize + move (allowed only for popups).
-      window.moveTo(0, 0);
-      window.resizeTo(window.screen.availWidth, window.screen.availHeight);
-    } catch {}
-    // Best-effort: if Multi-Screen API is available, move to the non-primary screen.
-    void (async () => {
-      try {
-        const anyWin = window as any;
-        if (typeof anyWin.getScreenDetails !== 'function') return;
-        const details = await anyWin.getScreenDetails();
-        const screens = (details?.screens as any[]) || [];
-        const primary = details?.currentScreen;
-        const secondary = screens.find((s) => s && primary && s !== primary) || screens.find((s) => s && !s.isPrimary);
-        const bounds = secondary?.availRect || secondary;
-        if (!bounds) return;
-        if (typeof bounds.left === 'number' && typeof bounds.top === 'number') {
-          window.moveTo(bounds.left, bounds.top);
-        }
-        if (typeof bounds.width === 'number' && typeof bounds.height === 'number') {
-          window.resizeTo(bounds.width, bounds.height);
-        }
-      } catch {}
-    })();
-    // Fullscreen may require user gesture unless in kiosk/app mode.
+
     const tryFs = async () => {
       try {
         if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
+          await document.documentElement.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
         }
-      } catch {}
+      } catch {
+        try {
+          const el = document.documentElement as HTMLElement & {
+            webkitRequestFullscreen?: () => Promise<void> | void;
+          };
+          if (!document.fullscreenElement && el.webkitRequestFullscreen) {
+            await el.webkitRequestFullscreen();
+          }
+        } catch {
+          /* ignore */
+        }
+      }
     };
+
     void tryFs();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void tryFs();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    // One-shot pointer unlock: allow a real user gesture to enter fullscreen if auto failed.
+    const onPtr = () => {
+      void tryFs();
+    };
+    window.addEventListener('pointerdown', onPtr, { once: true, capture: true });
+    const interval = window.setInterval(() => {
+      if (!document.fullscreenElement) void tryFs();
+      else window.clearInterval(interval);
+    }, 2000);
+    window.setTimeout(() => window.clearInterval(interval), 20000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pointerdown', onPtr, true);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    // Under Chrome --kiosk, keep touch lock. Under popup fallback, don't block the
+    // first pointer gesture needed for requestFullscreen.
+    if (params.get('bridge') === '1') {
+      const prevent = (e: Event) => e.preventDefault();
+      document.addEventListener('touchstart', prevent, { passive: false });
+      document.addEventListener('click', prevent);
+      return () => {
+        document.removeEventListener('touchstart', prevent);
+        document.removeEventListener('click', prevent);
+      };
+    }
+    return undefined;
   }, []);
 
   return (

@@ -68,8 +68,30 @@ function isIncoming(value: unknown): value is Incoming {
   return true;
 }
 
+function resolveFaceBridgeUrl(): string | null {
+  const fromEnv = (import.meta.env.VITE_FACE_BRIDGE_URL || '').trim();
+  if (fromEnv) {
+    // Allow env to specify base; force face role.
+    if (fromEnv.includes('role=')) return fromEnv.replace(/role=[^&]+/, 'role=face');
+    return fromEnv.includes('?') ? `${fromEnv}&role=face` : `${fromEnv}?role=face`;
+  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('bridge') === '1' || params.get('kiosk') === '1') {
+      return 'ws://127.0.0.1:6969/ws/face-bridge?role=face';
+    }
+  } catch {
+    /* ignore */
+  }
+  // Standalone face window (no opener) → bridge.
+  if (!window.opener) return 'ws://127.0.0.1:6969/ws/face-bridge?role=face';
+  return null;
+}
+
 export function useParentChannel() {
   const expectedParentOrigin = import.meta.env.VITE_MAIN_ORIGIN || 'http://localhost:5176';
+  const bridgeUrl = resolveFaceBridgeUrl();
+  const useBridge = Boolean(bridgeUrl);
   const latestSpeechRef = useRef<ClaraSpeechEvent | null>(null);
   const listenersRef = useRef({
     speech: new Set<(e: ClaraSpeechEvent) => void>(),
@@ -77,42 +99,84 @@ export function useParentChannel() {
     interrupt: new Set<(e: ClaraInterruptEvent) => void>(),
     idle: new Set<(e: ClaraIdleEvent) => void>(),
   });
-  const postReady = useCallback(() => {
-    if (!window.opener) return;
-    const msg: FaceReady = { type: 'face_ready' };
-    window.opener.postMessage(msg, expectedParentOrigin);
-  }, [expectedParentOrigin]);
+  const bridgeRef = useRef<WebSocket | null>(null);
 
-  /** Parent queues speech until face_ready — must signal on load or messages never flush (deadlock). */
+  const dispatchIncoming = useCallback((data: Incoming) => {
+    switch (data.type) {
+      case 'clara_speech':
+        latestSpeechRef.current = data;
+        listenersRef.current.speech.forEach((l) => l(data));
+        break;
+      case 'clara_thinking':
+        listenersRef.current.thinking.forEach((l) => l(data));
+        break;
+      case 'clara_interrupt':
+        listenersRef.current.interrupt.forEach((l) => l(data));
+        break;
+      case 'clara_idle':
+        listenersRef.current.idle.forEach((l) => l(data));
+        break;
+    }
+  }, []);
+
+  const postReady = useCallback(() => {
+    const msg: FaceReady = { type: 'face_ready' };
+    if (useBridge) {
+      const ws = bridgeRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      return;
+    }
+    if (!window.opener) return;
+    window.opener.postMessage(msg, expectedParentOrigin);
+  }, [expectedParentOrigin, useBridge]);
+
   useEffect(() => {
     postReady();
   }, [postReady]);
 
   useEffect(() => {
+    if (useBridge && bridgeUrl) {
+      let closed = false;
+      let retryTimer: number | undefined;
+      const connect = () => {
+        if (closed) return;
+        const ws = new WebSocket(bridgeUrl);
+        bridgeRef.current = ws;
+        ws.onopen = () => postReady();
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(String(event.data));
+            if (data && typeof data === 'object' && data.type === 'clara_face_ping') {
+              postReady();
+              return;
+            }
+            if (!isIncoming(data)) return;
+            dispatchIncoming(data);
+          } catch {
+            /* ignore */
+          }
+        };
+        ws.onclose = () => {
+          if (!closed) retryTimer = window.setTimeout(connect, 1500);
+        };
+      };
+      connect();
+      return () => {
+        closed = true;
+        if (retryTimer) window.clearTimeout(retryTimer);
+        bridgeRef.current?.close();
+        bridgeRef.current = null;
+      };
+    }
+
     const onMessage = (event: MessageEvent) => {
       if (!isAllowedMainOrigin(event.origin, expectedParentOrigin)) return;
       if (!isIncoming(event.data)) return;
-
-      const data = event.data;
-      switch (data.type) {
-        case 'clara_speech':
-          latestSpeechRef.current = data;
-          listenersRef.current.speech.forEach((l) => l(data));
-          break;
-        case 'clara_thinking':
-          listenersRef.current.thinking.forEach((l) => l(data));
-          break;
-        case 'clara_interrupt':
-          listenersRef.current.interrupt.forEach((l) => l(data));
-          break;
-        case 'clara_idle':
-          listenersRef.current.idle.forEach((l) => l(data));
-          break;
-      }
+      dispatchIncoming(event.data);
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [expectedParentOrigin, postReady]);
+  }, [bridgeUrl, dispatchIncoming, expectedParentOrigin, postReady, useBridge]);
 
   const onSpeech = useCallback((cb: (e: ClaraSpeechEvent) => void) => {
     listenersRef.current.speech.add(cb);

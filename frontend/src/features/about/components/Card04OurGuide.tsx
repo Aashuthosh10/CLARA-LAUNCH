@@ -1,6 +1,6 @@
 import React from 'react';
 import { PROJECT_GUIDE } from '../data/aboutData';
-import { Sparkles, GraduationCap, Building2, Quote, ArrowRight } from 'lucide-react';
+import { Sparkles, GraduationCap, Building2, ArrowRight } from 'lucide-react';
 import { playHoverChime } from '../utils/audio';
 
 interface Card04Props {
@@ -10,14 +10,12 @@ interface Card04Props {
 }
 
 export const Card04OurGuide: React.FC<Card04Props> = ({
-  onPrevCard,
-  onGoToOverview,
   onOpenLiveDemo,
 }) => {
   return (
     <section
       id="guide-card"
-      className="relative min-h-screen w-full flex flex-col justify-between pt-24 sm:pt-28 pb-8 px-4 sm:px-8 lg:px-14 bg-gradient-to-b from-white via-[#FAF8FE] to-[#F3EEFE] overflow-hidden select-none"
+      className="relative min-h-screen w-full flex flex-col justify-between pt-[11.5rem] sm:pt-[12.5rem] pb-32 px-4 sm:px-8 lg:px-14 bg-gradient-to-b from-white via-[#FAF8FE] to-[#F3EEFE] overflow-hidden select-none"
     >
       {/* 1. Refined Ambient Lighting and Atmospheric Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[850px] bg-gradient-to-tr from-[#7C3AED]/10 via-[#DDD6FE]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
@@ -83,64 +81,53 @@ export const Card04OurGuide: React.FC<Card04Props> = ({
           {/* Guide Credentials & Narrative */}
           <div className="flex flex-col text-center md:text-left space-y-4">
             <div>
-              <h3 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#09090B] tracking-tight">
+              <h3
+                data-testid="guide-name"
+                className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#09090B] tracking-tight"
+              >
                 {PROJECT_GUIDE.name}
               </h3>
-              <p className="font-mono text-base sm:text-xl font-bold text-[#7C3AED] mt-1.5">
+              <p
+                data-testid="guide-role"
+                className="font-mono text-base sm:text-xl font-bold text-[#7C3AED] mt-1.5"
+              >
                 {PROJECT_GUIDE.role}
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 text-sm sm:text-base font-semibold text-[#52525B] mt-2">
-                <span className="inline-flex items-center gap-1.5">
+                <span
+                  data-testid="guide-department"
+                  className="inline-flex items-center gap-1.5"
+                >
                   <Building2 className="w-4 h-4 text-[#7C3AED]" />
                   {PROJECT_GUIDE.department}
                 </span>
-                <span>•</span>
-                <span>{PROJECT_GUIDE.institution}</span>
               </div>
             </div>
 
             {/* Description */}
-            <p className="text-base sm:text-lg lg:text-xl text-[#27272A] font-medium leading-relaxed">
+            <p
+              data-testid="guide-description"
+              className="text-base sm:text-lg lg:text-xl text-[#27272A] font-medium leading-relaxed"
+            >
               {PROJECT_GUIDE.description}
             </p>
-
-            {/* Guide Quote */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-[#F5F3FF] border border-[#DDD6FE] relative text-left">
-              <Quote className="w-6 h-6 text-[#7C3AED]/40 absolute top-4 right-4" />
-              <p className="text-sm sm:text-base lg:text-lg text-[#49358F] italic font-semibold leading-relaxed">
-                “{PROJECT_GUIDE.quote}”
-              </p>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* 4. Bottom Controls */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto flex items-center justify-between pt-2">
+      {/* 4. Prominent ENTER CLARA — same canonical start as SleepScreen */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col items-center justify-center pt-6 pb-2">
         <button
-          onClick={onPrevCard}
-          className="text-sm sm:text-base font-mono font-bold text-[#52525B] hover:text-[#09090B] transition-colors cursor-pointer"
+          type="button"
+          onClick={onOpenLiveDemo}
+          onMouseEnter={playHoverChime}
+          data-testid="enter-clara"
+          aria-label="Enter CLARA"
+          className="flex items-center justify-center gap-3.5 min-h-[88px] px-12 sm:px-16 rounded-full text-[24px] sm:text-[28px] font-black text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-2xl shadow-purple-600/45 hover:shadow-purple-600/60 border-2 border-[#6D28D9] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         >
-          ← PREV: THE CREATORS
+          <span>ENTER CLARA</span>
+          <ArrowRight className="w-7 h-7 sm:w-8 sm:h-8" />
         </button>
-
-        <div className="flex items-center gap-3.5">
-          <button
-            onClick={onGoToOverview}
-            className="px-5 py-2.5 rounded-full text-xs sm:text-sm font-mono font-bold text-[#7C3AED] bg-white border border-[#DDD6FE] hover:bg-[#FAF8FF] transition-all cursor-pointer shadow-xs"
-          >
-            ↺ BACK TO CARD 01
-          </button>
-
-          <button
-            onClick={onOpenLiveDemo}
-            data-testid="enter-clara"
-            className="flex items-center gap-2.5 px-6 py-2.5 rounded-full text-sm sm:text-base font-black text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-lg shadow-purple-500/30 transition-all cursor-pointer"
-          >
-            <span>ENTER CLARA</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
       </div>
     </section>
   );

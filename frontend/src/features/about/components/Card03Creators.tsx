@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { CREATORS_FIVE, CreatorMember } from '../data/aboutData';
-import { ArrowRight } from 'lucide-react';
 import { playHoverChime, playNodeSelectChime } from '../utils/audio';
 
 interface Card03Props {
@@ -11,8 +10,6 @@ interface Card03Props {
 }
 
 export const Card03Creators: React.FC<Card03Props> = ({
-  onPrevCard,
-  onNextCard,
   onSelectCreator,
 }) => {
   const displayName = (name: string) =>
@@ -26,7 +23,7 @@ export const Card03Creators: React.FC<Card03Props> = ({
   return (
     <section
       id="creators-card"
-      className="relative min-h-screen w-full flex flex-col justify-between pt-24 sm:pt-28 pb-8 px-4 sm:px-8 lg:px-12 bg-gradient-to-b from-white via-[#FAF9FF] to-[#F5F2FE] overflow-hidden select-none"
+      className="relative min-h-screen w-full flex flex-col justify-between pt-[11.5rem] sm:pt-[12.5rem] pb-28 px-4 sm:px-8 lg:px-12 bg-gradient-to-b from-white via-[#FAF9FF] to-[#F5F2FE] overflow-hidden select-none"
     >
       {/* Ambient Atmospheric Lighting */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] h-[550px] bg-gradient-to-br from-[#DDD6FE]/20 via-[#EDE9FE]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
@@ -105,24 +102,6 @@ export const Card03Creators: React.FC<Card03Props> = ({
             );
           })}
         </div>
-      </div>
-
-      {/* Footer Navigation Bar for Card 03 */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto flex items-center justify-between pt-2">
-        <button
-          onClick={onPrevCard}
-          className="text-sm sm:text-base font-mono font-bold text-[#52525B] hover:text-[#09090B] transition-colors cursor-pointer"
-        >
-          ← PREV: WHAT CLARA CAN DO
-        </button>
-
-        <button
-          onClick={onNextCard}
-          className="flex items-center gap-2 text-sm sm:text-base font-mono font-black text-[#7C3AED] hover:text-[#6D28D9] hover:underline cursor-pointer transition-all"
-        >
-          <span>NEXT: OUR GUIDE</span>
-          <ArrowRight className="w-5 h-5" />
-        </button>
       </div>
     </section>
   );

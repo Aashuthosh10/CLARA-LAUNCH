@@ -231,40 +231,40 @@ export default function App({ onEnterClara }: AboutAppProps) {
       </motion.div>
 
       {/* 3. SLEEK CARD INDICATOR & DOCKS AT BOTTOM */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 px-6 py-3 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15">
+      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 px-7 py-3.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15">
         {/* Previous Button */}
         <button
           type="button"
           onClick={prevCard}
           disabled={currentCardIndex === 0}
-          className={`p-2 rounded-full transition-all cursor-pointer ${
+          className={`p-2.5 rounded-full transition-all cursor-pointer ${
             currentCardIndex === 0
               ? 'text-[#D4D4D8] cursor-not-allowed opacity-40'
               : 'text-[#52525B] hover:text-[#7C3AED] hover:bg-[#F5F3FF]'
           }`}
           title="Previous Card (Left Arrow)"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-6 h-6" />
         </button>
 
         {/* 01 — 04 Indicator */}
-        <div className="flex items-center gap-2 font-mono text-sm sm:text-base font-black tracking-widest text-[#09090B]">
+        <div className="flex items-center gap-2 font-mono text-base sm:text-lg font-black tracking-widest text-[#09090B]">
           <span className="text-[#7C3AED]">0{currentCardIndex + 1}</span>
           <span className="text-[#A1A1AA]">—</span>
           <span className="text-[#71717A]">04</span>
         </div>
 
         {/* Progress Dots */}
-        <div className="flex items-center gap-2 px-2">
+        <div className="flex items-center gap-2.5 px-2">
           {[0, 1, 2, 3].map((idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => goToCard(idx)}
-              className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+              className={`h-3 rounded-full transition-all duration-300 cursor-pointer ${
                 currentCardIndex === idx
-                  ? 'w-8 bg-[#7C3AED]'
-                  : 'w-2.5 bg-[#E4E4E7] hover:bg-[#C4B5FD]'
+                  ? 'w-10 bg-[#7C3AED]'
+                  : 'w-3 bg-[#E4E4E7] hover:bg-[#C4B5FD]'
               }`}
               title={`Jump to Card 0${idx + 1}`}
             />
@@ -276,14 +276,14 @@ export default function App({ onEnterClara }: AboutAppProps) {
           type="button"
           onClick={() => nextCard()}
           disabled={currentCardIndex === TOTAL_CARDS - 1}
-          className={`p-2 rounded-full transition-all cursor-pointer ${
+          className={`p-2.5 rounded-full transition-all cursor-pointer ${
             currentCardIndex === TOTAL_CARDS - 1
               ? 'text-[#D4D4D8] cursor-not-allowed opacity-40'
               : 'text-[#52525B] hover:text-[#7C3AED] hover:bg-[#F5F3FF]'
           }`}
           title="Next Card (Right Arrow)"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-6 h-6" />
         </button>
       </div>
 

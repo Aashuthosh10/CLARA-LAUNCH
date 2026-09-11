@@ -247,9 +247,26 @@ function ClaraKioskRuntime({
   useEffect(() => {
     if (effectiveState === 0) {
       setShowChatLanguageGate(false);
-      attemptedFaceWindowForChatRef.current = false;
+      // Kiosk: keep the facial window across Home/sleep — do not clear the latch so we
+      // do not call window.open again (Phase 11: Home must not relaunch/refresh face).
+      const params = new URLSearchParams(window.location.search);
+      const kioskFace =
+        params.get('kioskFace') === '1' ||
+        (import.meta.env.VITE_KIOSK_FACE_AUTOLAUNCH || '').toLowerCase() === 'true';
+      if (!kioskFace) attemptedFaceWindowForChatRef.current = false;
     }
   }, [effectiveState]);
+
+  useEffect(() => {
+    // Production kiosk: open facial window at boot (query ?kioskFace=1 or VITE_KIOSK_FACE_AUTOLAUNCH).
+    const params = new URLSearchParams(window.location.search);
+    const kioskFace =
+      params.get('kioskFace') === '1' ||
+      (import.meta.env.VITE_KIOSK_FACE_AUTOLAUNCH || '').toLowerCase() === 'true';
+    if (!kioskFace || attemptedFaceWindowForChatRef.current) return;
+    attemptedFaceWindowForChatRef.current = true;
+    faceChannel.openFaceWindow();
+  }, [faceChannel]);
 
   useEffect(() => {
     if (!isChatRouteState(effectiveState) || attemptedFaceWindowForChatRef.current) return;

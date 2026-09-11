@@ -17,9 +17,9 @@ export default function AboutMeScreen({ onExit, onEnterClara }: AboutMeScreenPro
         aria-label="Back to CLARA"
         data-testid="about-me-back"
         onClick={onExit}
-        className="fixed top-5 left-5 z-[70] inline-flex items-center gap-2 rounded-full border border-[#D8CDF7]/70 bg-white/80 px-4 py-2 text-xs font-semibold text-[#49358F] shadow-lg backdrop-blur-md transition hover:bg-white"
+        className="fixed top-14 left-6 z-[70] inline-flex items-center gap-3 rounded-full border-2 border-[#D8CDF7]/70 bg-white/85 px-7 py-3.5 text-base sm:text-lg font-bold text-[#49358F] shadow-lg backdrop-blur-md transition hover:bg-white"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-6 w-6 sm:h-7 sm:w-7" />
         Back to CLARA
       </button>
       <AboutApp onEnterClara={onEnterClara} />

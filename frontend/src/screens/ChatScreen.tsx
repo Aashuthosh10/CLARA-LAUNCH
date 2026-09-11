@@ -5276,27 +5276,27 @@ export default function ChatScreen({
         title={uiText(language, 'session.home')}
         aria-label={uiText(language, 'session.home')}
       >
-        <Home className="w-6 h-6" />
+        <Home className="w-7 h-7" />
       </motion.button>
 
-      {/* Global Quick Actions */}
+      {/* Global Quick Actions — lowered + ~20% larger for 13.3" kiosk */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="absolute right-[30px] top-[30px] z-50 flex flex-wrap justify-end gap-2"
+        className="absolute right-[30px] top-[48px] z-50 flex flex-wrap justify-end gap-2.5"
       >
         <motion.button
           type="button"
           whileHover={{ scale: 1.04, y: -2, boxShadow: 'none' }}
           whileTap={{ scale: 0.97 }}
           onClick={isCampusNavigationStage ? returnToChatFromCampus : openCampusNavigation}
-          className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
+          className="group flex items-center gap-2.5 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-5 py-3 text-base font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
           {isCampusNavigationStage ? (
-            <MessageSquareText className="h-4 w-4 text-[#2a115c]" />
+            <MessageSquareText className="h-5 w-5 text-[#2a115c]" />
           ) : (
-            <MapPinned className="h-4 w-4 text-[#2a115c]" />
+            <MapPinned className="h-5 w-5 text-[#2a115c]" />
           )}
           {isCampusNavigationStage ? campusCopy.chat : campusCopy.campusNavigation}
         </motion.button>
@@ -5309,9 +5309,9 @@ export default function ChatScreen({
             onChatUserActivity?.();
             setSurface('brochure');
           }}
-          className="group flex items-center gap-2 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-4 py-2.5 text-sm font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
+          className="group flex items-center gap-2.5 rounded-full border-2 border-[#2a115c]/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.74),rgba(252,231,243,0.58),rgba(167,139,250,0.36))] px-5 py-3 text-base font-semibold text-slate-900 backdrop-blur-xl transition-colors hover:border-[#17072f]/90 hover:bg-white/82"
         >
-          <FileText className="h-4 w-4 text-[#2a115c]" />
+          <FileText className="h-5 w-5 text-[#2a115c]" />
           {uiText(language, 'cards.college_brochure')}
         </motion.button>
       </motion.div>
