@@ -26,6 +26,7 @@ import {
 import { kioskStore } from './store/kiosk/kioskStore';
 import { KioskState } from './store/kiosk/types';
 import { useFaceChannel } from './hooks/useFaceChannel';
+import { BROWSER_OFFLINE_GRACE_MS, useBrowserOnline } from './hooks/useBrowserOnline';
 import {
   getConversationRuntime,
   getRuntimeTimeline,
@@ -39,6 +40,7 @@ import { RuntimeDashboard } from './runtime/RuntimeDashboard';
 import SleepScreen from './screens/SleepScreen';
 import ChatScreen from './screens/ChatScreen';
 import AboutMeScreen from './features/about/AboutMeScreen';
+import OfflineRecoveryScreen from './screens/OfflineRecoveryScreen';
 
 const WS_BASE_URL =
   import.meta.env.VITE_WS_URL ||
@@ -101,6 +103,7 @@ function ClaraKioskRuntime({
     wireStaleDropCount,
     isStalePayloadGen,
   } = useWebSocket(WS_URL);
+  const { showOfflineFallback } = useBrowserOnline({ graceMs: BROWSER_OFFLINE_GRACE_MS });
   const [urlOverrideState, setUrlOverrideState] = React.useState<number | null>(null);
   const [showChatLanguageGate, setShowChatLanguageGate] = useState(false);
   const [showAboutMe, setShowAboutMe] = useState(false);
@@ -459,32 +462,39 @@ function ClaraKioskRuntime({
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden font-sans">
-      {showOfflineBanner && (
-        <div className={`${scriptClass} absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs text-center backdrop-blur-md`}>
-          {uiText(language, 'status.connectivity_issue')}{' '}
-          <button type="button" onClick={retryConnect} className="underline font-bold">
-            {uiText(language, 'session.retry_connection')}
-          </button>
-          {faceChannel.enabled && (
-            <>
-              {' '}
-              |{' '}
-              <button
-                type="button"
-                onClick={() => faceChannel.openFaceWindow()}
-                className="underline font-bold"
-              >
-                {uiText(language, 'session.enable_face_display')}
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      {showOfflineFallback ? <OfflineRecoveryScreen /> : null}
+      <div
+        className={showOfflineFallback ? 'pointer-events-none hidden' : 'contents'}
+        aria-hidden={showOfflineFallback || undefined}
+        {...(showOfflineFallback ? { inert: true } : {})}
+      >
+        {showOfflineBanner && (
+          <div className={`${scriptClass} absolute top-0 left-0 right-0 z-[100] p-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-200 text-xs text-center backdrop-blur-md`}>
+            {uiText(language, 'status.connectivity_issue')}{' '}
+            <button type="button" onClick={retryConnect} className="underline font-bold">
+              {uiText(language, 'session.retry_connection')}
+            </button>
+            {faceChannel.enabled && (
+              <>
+                {' '}
+                |{' '}
+                <button
+                  type="button"
+                  onClick={() => faceChannel.openFaceWindow()}
+                  className="underline font-bold"
+                >
+                  {uiText(language, 'session.enable_face_display')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
-      <main className="relative z-10 w-full h-full">
-        <AnimatePresence mode="wait">{renderState()}</AnimatePresence>
-      </main>
-      {runtimeSettings.dashboardEnabled ? <RuntimeDashboard /> : null}
+        <main className="relative z-10 w-full h-full">
+          <AnimatePresence mode="wait">{renderState()}</AnimatePresence>
+        </main>
+        {runtimeSettings.dashboardEnabled ? <RuntimeDashboard /> : null}
+      </div>
     </div>
   );
 }

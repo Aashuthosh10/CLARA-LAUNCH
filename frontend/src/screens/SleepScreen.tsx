@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User } from 'lucide-react';
+import { CalendarDays, Clock, User } from 'lucide-react';
 import { agentLog, auditPointerInteraction } from '../debug/interactionDebug';
 import { collegeLogoMark } from '../assets/logo';
+import { getDailyThought, getThoughtDayKey } from '../data/dailyThoughts';
 
 /** Existing approved campus assets — cinematic darkening applied in CSS overlays. */
 const CAMPUS_IMAGES = [
@@ -14,6 +15,12 @@ const CAMPUS_IMAGES = [
   '/assets/campus_hd_6.jpg',
   '/assets/campus_hd_7.jpg',
   '/assets/campus_hd_8.jpg',
+  '/assets/campus_hd_9.jpg',
+  '/assets/campus_hd_10.jpg',
+  '/assets/campus_hd_11.png',
+  '/assets/campus_hd_12.png',
+  '/assets/campus_hd_13.JPG',
+  '/assets/campus_hd_14.JPG',
 ];
 
 function formatSleepClock(now: Date): { time: string; date: string } {
@@ -61,7 +68,18 @@ export default function SleepScreen({
   const wakeRequestedRef = useRef(false);
   const now = useLocalWallClock();
   const { time, date } = useMemo(() => formatSleepClock(now), [now]);
-
+  const dailyThought = getDailyThought(now);
+  const thoughtDayKey = getThoughtDayKey(now);
+  const dateLabel = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(now);
+  const timeLabel = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(now);
   const requestWake = () => {
     if (wakeRequestedRef.current) return;
     wakeRequestedRef.current = true;
@@ -231,29 +249,50 @@ export default function SleepScreen({
         transition={{ delay: 0.7, duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
         className="absolute inset-x-0 top-[48%] -translate-y-1/2 z-30 flex flex-col items-center text-center pointer-events-none px-6"
       >
-        <p
-          className="font-normal text-white max-w-[min(92vw,54rem)] text-[clamp(1.85rem,4.6vw,3.75rem)]"
-          style={{
-            fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-            lineHeight: 1.28,
-            letterSpacing: '0.02em',
-            color: '#FFF8E7',
-            WebkitTextStroke: '0.35px rgba(212, 175, 55, 0.55)',
-            textShadow: [
-              '0 0 1px rgba(255, 236, 179, 0.95)',
-              '0 0 8px rgba(212, 175, 55, 0.85)',
-              '0 0 18px rgba(201, 162, 39, 0.7)',
-              '0 0 36px rgba(184, 134, 11, 0.45)',
-              '0 0 56px rgba(212, 175, 55, 0.28)',
-              '0 3px 18px rgba(0, 0, 0, 0.7)',
-            ].join(', '),
-          }}
-          data-testid="sleep-quote"
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={thoughtDayKey}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="font-normal text-white max-w-[min(92vw,54rem)] text-[clamp(1.85rem,4.6vw,3.75rem)]"
+            style={{
+              fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+              lineHeight: 1.28,
+              letterSpacing: '0.02em',
+              color: '#FFF8E7',
+              WebkitTextStroke: '0.35px rgba(212, 175, 55, 0.55)',
+              textShadow: [
+                '0 0 1px rgba(255, 236, 179, 0.95)',
+                '0 0 8px rgba(212, 175, 55, 0.85)',
+                '0 0 18px rgba(201, 162, 39, 0.7)',
+                '0 0 36px rgba(184, 134, 11, 0.45)',
+                '0 0 56px rgba(212, 175, 55, 0.28)',
+                '0 3px 18px rgba(0, 0, 0, 0.7)',
+              ].join(', '),
+            }}
+            data-testid="sleep-quote"
+          >
+            &ldquo;{dailyThought}&rdquo;
+          </motion.p>
+        </AnimatePresence>
+
+        <div
+          className="mt-5 flex items-center justify-center gap-3 text-[clamp(0.72rem,1.3vw,0.95rem)] font-light tracking-[0.05em] text-white/90"
+          style={{ textShadow: '0 1px 10px rgba(0,0,0,0.65)' }}
+          data-testid="sleep-date-time"
         >
-          &ldquo;Tomorrow&apos;s intelligence, engineered by
-          <br />
-          today&apos;s minds.&rdquo;
-        </p>
+          <span className="inline-flex items-center gap-2 whitespace-nowrap" data-testid="sleep-date">
+            <CalendarDays className="h-[1.05em] w-[1.05em]" strokeWidth={1.5} aria-hidden />
+            {dateLabel}
+          </span>
+          <span className="h-5 w-px bg-white/45" aria-hidden />
+          <span className="inline-flex items-center gap-2 whitespace-nowrap" data-testid="sleep-time">
+            <Clock className="h-[1.05em] w-[1.05em]" strokeWidth={1.5} aria-hidden />
+            {timeLabel}
+          </span>
+        </div>
       </motion.div>
 
       {/* Bottom-center start prompt */}

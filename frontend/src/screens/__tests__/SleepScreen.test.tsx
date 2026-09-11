@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDailyThought } from '../../data/dailyThoughts';
 import SleepScreen from '../SleepScreen';
 
 describe('SleepScreen layout', () => {
@@ -29,8 +30,7 @@ describe('SleepScreen layout', () => {
     expect(markup).toContain('10 September 2026');
     expect(markup).toContain('About Me');
     expect(markup).toContain('TAP ANYWHERE TO START');
-    expect(markup).toContain('Tomorrow');
-    expect(markup).toContain('today');
+    expect(markup).toContain(getDailyThought());
     expect(markup).toContain('SAI VIDYA');
     expect(markup).not.toContain('Copyright');
     expect(markup).not.toContain('All Rights Reserved');

@@ -12,6 +12,12 @@ const CAMPUS_IMAGES = [
   '/assets/campus_hd_6.jpg',
   '/assets/campus_hd_7.jpg',
   '/assets/campus_hd_8.jpg',
+  '/assets/campus_hd_9.jpg',
+  '/assets/campus_hd_10.jpg',
+  '/assets/campus_hd_11.png',
+  '/assets/campus_hd_12.png',
+  '/assets/campus_hd_13.JPG',
+  '/assets/campus_hd_14.JPG',
 ];
 
 /** Shared with in-chat language gate (ChatScreen). */
