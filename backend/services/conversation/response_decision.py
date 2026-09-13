@@ -731,6 +731,22 @@ def resolve_response_decision(
             )
         )
 
+    # Clear restricted asks (staff mobile / payment action) before the broader
+    # controlled-receptionist redirect, so policy can use the dedicated reply.
+    from backend.services.conversation.restricted_requests import restricted_evidence
+
+    restricted = restricted_evidence(raw)
+    if restricted:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.FALLBACK,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.93,
+                evidence=restricted,
+                clarification_reason="restricted_action",
+            )
+        )
+
     controlled_kind = controlled_request_kind(raw)
     if controlled_kind:
         return _done(
@@ -766,18 +782,39 @@ def resolve_response_decision(
             )
         )
 
-    # 3a. Clear intent that the kiosk must not fulfill (not ambiguity).
-    from backend.services.conversation.restricted_requests import restricted_evidence
+    # Academic concepts and student advice may use general knowledge. Random
+    # world knowledge does not become eligible merely because it is harmless.
+    if _is_college_general(raw):
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.ANSWER,
+                domain_relevance=DomainRelevance.UNKNOWN,
+                authority_domain="general",
+                confidence=0.85,
+                evidence="college_general",
+            )
+        )
 
-    restricted = restricted_evidence(raw)
-    if restricted:
+    if _is_out_of_scope(raw):
         return _done(
             ResponseDecision(
                 mode=ResponseMode.FALLBACK,
+                domain_relevance=DomainRelevance.OFF_DOMAIN,
+                confidence=0.95,
+                evidence="out_of_scope",
+            )
+        )
+
+    # Direction/contact wording is a receptionist request even when a noun such
+    # as fees or admissions also resembles a card topic. Use grounded guidance
+    # instead of asking for an unrelated department slot.
+    if _is_receptionist_request(raw):
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.ANSWER,
                 domain_relevance=DomainRelevance.INSTITUTION,
-                confidence=0.93,
-                evidence=restricted,
-                clarification_reason="restricted_action",
+                confidence=0.88,
+                evidence="receptionist_request",
             )
         )
 

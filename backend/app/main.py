@@ -1678,6 +1678,9 @@ async def process_user_text_and_reply(
         if session.get("guest_name") is None:
             session["guest_name"] = None
 
+    context_resolution = resolve_contextual_query(text, session)
+    routing_text = context_resolution.resolved_query
+
     # Detect language before orchestration so CARD localization and ANSWER
     # routing see the same language as TTS. Narration is still deferred.
     await maybe_auto_detect_session_language(session, text, websocket, timing, stt_meta=stt_meta)

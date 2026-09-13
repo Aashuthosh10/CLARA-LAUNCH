@@ -115,6 +115,7 @@ class ConversationOrchestrator:
             last_hostel_gender=str(session.get("last_hostel_gender") or "").strip() or None,
             last_ncc_active=bool(session.get("last_ncc_active")),
             last_about_me=session.get("last_about_me") if isinstance(session.get("last_about_me"), dict) else None,
+            contextual_follow_up=contextual_follow_up,
         )
 
         orch_event(
@@ -266,7 +267,12 @@ class ConversationOrchestrator:
                     session.pop("last_ncc_active", None)
                     session_updates["last_ncc_active"] = None
                 # Campus topic wins — drop sticky About Me so follow-ups do not reopen it.
-                if session.get("last_about_me") is not None:
+                # Do not clear on the ABOUT_ME turn itself (policy sets sticky first;
+                # response_decision for that turn is often FALLBACK/off-domain).
+                if (
+                    intel.decision.action != PolicyAction.ABOUT_ME
+                    and session.get("last_about_me") is not None
+                ):
                     session.pop("last_about_me", None)
                     session_updates["last_about_me"] = None
 

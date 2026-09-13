@@ -140,7 +140,11 @@ def route_policy(
             },
         )
 
-    if any(h in text for h in _SMALL_TALK_HINTS):
+    social_kind = next(
+        (kind for kind, cues in _SOCIAL_CUES if any(cue in text for cue in cues)),
+        None,
+    )
+    if social_kind:
         return PolicyDecision(
             action=PolicyAction.SMALL_TALK,
             reply_text=small_talk_reply(language, social_kind),

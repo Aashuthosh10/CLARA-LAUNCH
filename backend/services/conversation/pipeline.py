@@ -43,6 +43,7 @@ async def run_conversation_intelligence(
     last_hostel_gender: str | None = None,
     last_ncc_active: bool = False,
     last_about_me: dict[str, Any] | None = None,
+    contextual_follow_up: bool = False,
 ) -> ConversationIntelligenceResult:
     """
     Evaluate transcript → entities → intent confidence → policy.
