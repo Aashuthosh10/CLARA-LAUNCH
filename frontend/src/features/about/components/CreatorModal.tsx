@@ -13,7 +13,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
   return (
     <AnimatePresence>
       {creator && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none" role="dialog" aria-modal="true" aria-labelledby="creator-profile-name">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none" role="dialog" aria-modal="true" aria-labelledby="creator-profile-name" data-testid="creator-modal" data-creator-id={creator.id}>
           {/* 1. Frosted Glass Blurred Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

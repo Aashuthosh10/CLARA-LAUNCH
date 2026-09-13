@@ -165,7 +165,12 @@ def resolve_presentation(
         resolution.should_generate_presentation = False
         return resolution
 
-    if action in (PolicyAction.ENTITY_UPDATE, PolicyAction.GREETING, PolicyAction.SMALL_TALK):
+    if action in (
+        PolicyAction.ENTITY_UPDATE,
+        PolicyAction.GREETING,
+        PolicyAction.SMALL_TALK,
+        PolicyAction.ABOUT_ME,
+    ):
         resolution.presentation_mode = PresentationMode.DIRECT.value
         resolution.response_type = "direct"
         resolution.should_call_groq = False

@@ -2506,7 +2506,7 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
     if intent == INTENT_BUS_ROUTES:
         return "bus_routes"
     if intent == INTENT_DEPARTMENT_COMPARISON:
-        return "department_comparison"
+        return "department_explanation"
     if intent == INTENT_PRINCIPAL_PROFILE:
         return "principal_profile"
     if intent == INTENT_VICE_PRINCIPAL_PROFILE:

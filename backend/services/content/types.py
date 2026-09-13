@@ -43,6 +43,7 @@ SURFACE_ADMISSIONS = "admissions"
 SURFACE_TRUSTEES = "trustees"
 SURFACE_COLLEGE = "college"
 SURFACE_COMPARISON = "department_comparison"
+SURFACE_DEPARTMENT_EXPLANATION = "department_explanation"
 SURFACE_BUS = "bus_routes"
 SURFACE_COURSE_MENU = "course_menu"
 SURFACE_FAQ = "faq"
@@ -64,7 +65,8 @@ ALL_SURFACES: frozenset[str] = frozenset(
         SURFACE_ADMISSIONS,
         SURFACE_TRUSTEES,
         SURFACE_COLLEGE,
-        SURFACE_COMPARISON,
+        # SURFACE_COMPARISON retired — comparison queries now route to SURFACE_DEPARTMENT_EXPLANATION
+        SURFACE_DEPARTMENT_EXPLANATION,
         SURFACE_BUS,
         SURFACE_COURSE_MENU,
         SURFACE_FAQ,

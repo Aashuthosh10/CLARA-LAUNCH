@@ -110,7 +110,9 @@ class TestM52WsNarrationPlanPropagation(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_unit_ids(final_plan if isinstance(final_plan, dict) else None), expected_units)
 
     async def test_tell_me_about_cse_ws_preserves_five_unit_ids(self) -> None:
-        payloads = await self._run_card_turn("Tell me about CSE")
+        # "Tell me about CSE" now CLARIFYs per dept-explanation spec.
+        # "everything about" is a _STRONG_FULL_OVERVIEW_CUE → skips CLARIFY → full deck.
+        payloads = await self._run_card_turn("Tell me everything about CSE")
         self._assert_plan_on_audio_frames(
             payloads,
             [

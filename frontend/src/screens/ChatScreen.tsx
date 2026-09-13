@@ -46,7 +46,8 @@ import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/P
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import Trustees from '../components/chat/cards/Trustees/Trustees';
 import CampusUnitCard from '../components/chat/cards/CampusUnitCard/CampusUnitCard';
-import DepartmentComparisonCinema from '../components/comparison/DepartmentComparisonCinema';
+import DepartmentExplanationStage from '../components/explanation/DepartmentExplanationStage';
+import type { ExplanationCardData } from '../components/explanation/DepartmentExplanationStage';
 import BusRoutesFullscreen from '../components/bus/BusRoutesFullscreen';
 import ChatOrbControl from './chat/ChatOrbControl';
 import { useChatLayoutReducer, type ChatLayoutMode } from './chat/useChatLayoutReducer';
@@ -323,8 +324,6 @@ type NarrationPlan = {
 
 const FAQ_CAROUSEL_INTERVAL_MS = 3600;
 const GENERAL_FAQ_CATEGORIES: FaqSuggestionCategory[] = ['college', 'campus', 'admissions', 'placements'];
-/** Must match `row_order.length` in `departmentComparison.json` (3 narrative beats). */
-const COMPARISON_NARRATION_SECTIONS = 3;
 
 function processResponseSentences(value: unknown): string[] {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -621,16 +620,12 @@ export default function ChatScreen({
   const [campusRouteResult, setCampusRouteResult] = useState<CampusRouteResult | null>(null);
   const [campusDirectionOverride, setCampusDirectionOverride] = useState<CampusDirection | null>(null);
   const [surface, setSurface] = useState<ClaraChatSurface>('chat');
-  const departmentComparisonOpen = surface === 'department_comparison';
   const isBrochureOpen = surface === 'brochure';
   const isBusRoutesSurface = surface === 'bus_routes';
 
-  const [comparisonDeptIds, setComparisonDeptIds] = useState<string[]>([]);
-  const [comparisonHighlightId, setComparisonHighlightId] = useState<string | null>(null);
-  const [comparisonRecommendFocus, setComparisonRecommendFocus] = useState<string | null>(null);
-  const [comparisonNarrationSection, setComparisonNarrationSection] = useState(0);
-  const comparisonLayoutSnapRef = useRef<ChatLayoutMode | null>(null);
-  const comparisonSlideSinkRef = useRef<(idx: number) => void>(() => {});
+  // Department explanation surface state
+  const isDepartmentExplanationSurface = surface === 'department_explanation';
+  const [explanationCards, setExplanationCards] = useState<ExplanationCardData[]>([]);
 
   const presentation = usePresentationController();
   const presentationRef = useRef(presentation);
@@ -1069,7 +1064,6 @@ export default function ChatScreen({
     } else {
       setNarrationCaption(snap.displayCaption);
     }
-    setComparisonNarrationSection(snap.comparisonSection);
   }, [
     presentation.snapshot.engineState,
     presentation.snapshot.cardIndex,
@@ -1156,7 +1150,6 @@ export default function ChatScreen({
       playedSegmentKeysRef.current.clear();
       setAudioPendingTimedOut(false);
       if (resetLayout) {
-        comparisonLayoutSnapRef.current = null;
         busRoutesDismissedTurnIdRef.current = null;
         setBusRoutesHighlightQuery(null);
         setLayoutMode('FULL_TEXT');
@@ -1903,15 +1896,6 @@ export default function ChatScreen({
     });
   }, [language, collegeData]);
 
-  const handleCloseDepartmentComparison = useCallback(() => {
-    presentationRef.current.cancel();
-    setComparisonNarrationSection(0);
-    setSurface('chat');
-    const snap = comparisonLayoutSnapRef.current;
-    if (snap !== null) setLayoutMode(snap);
-    comparisonLayoutSnapRef.current = null;
-  }, [setLayoutMode]);
-
   const handleCloseBusRoutes = useCallback(() => {
     if (closingBusRef.current) return;
     closingBusRef.current = true;
@@ -1926,15 +1910,6 @@ export default function ChatScreen({
       closingBusRef.current = false;
     }, 220);
   }, []);
-  useEffect(() => {
-    comparisonSlideSinkRef.current = (idx: number) => {
-      setComparisonNarrationSection((prev) => {
-        const next = Math.max(0, Math.min(COMPARISON_NARRATION_SECTIONS - 1, idx));
-        return prev === next ? prev : next;
-      });
-    };
-  }, []);
-
   const applyComparisonNarrationSegment = useCallback(
     (seg: NarrationPlan['segments'][number], segmentIndex: number) => {
       if (!seg || typeof seg !== 'object') return;
@@ -1964,12 +1939,6 @@ export default function ChatScreen({
     },
     [],
   );
-
-  useEffect(() => {
-    if (!departmentComparisonOpen) {
-      setComparisonNarrationSection(0);
-    }
-  }, [departmentComparisonOpen]);
 
   const stopCampusSpeech = useCallback(() => {
     if (currentAudioRef.current) {
@@ -2014,7 +1983,6 @@ export default function ChatScreen({
     abortThinkingInterlude();
     autoListenApiRef.current?.disarm({ stopMic: true });
     setSurface('chat');
-    comparisonLayoutSnapRef.current = null;
     busRoutesDismissedTurnIdRef.current = null;
     setBusRoutesHighlightQuery(null);
     if (onHome) onHome();
@@ -2151,7 +2119,6 @@ export default function ChatScreen({
         : null);
     clearCardStages();
     setSurface('chat');
-    comparisonLayoutSnapRef.current = null;
     setIsCampusNavigationStage(true);
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
@@ -3026,29 +2993,91 @@ export default function ChatScreen({
       return;
     }
 
-    if (cardTrigger === 'department_comparison' && isResponseReady) {
-      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
-      if (comparisonLayoutSnapRef.current === null) {
-        comparisonLayoutSnapRef.current = layoutMode;
+    if (cardTrigger === 'department_explanation') {
+      // Never fall through into the generic unit-backed overview path with a bare
+      // "department_explanation" unitId. Only open the stage with valid dept units.
+      if (!isResponseReady) {
+        if (audioBase64) {
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'FULL_TEXT',
+          });
+        }
+        return;
       }
-      const rawList = payload?.comparisonDepartments;
-      const cmpIds = Array.isArray(rawList)
-        ? (rawList as unknown[]).filter((x): x is string => typeof x === 'string')
+
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+      // Build explanation cards from narration_plan unit segments and/or comparisonDepartments.
+      const rawDepts = payload?.comparisonDepartments;
+      const deptIds: string[] = Array.isArray(rawDepts)
+        ? (rawDepts as unknown[]).filter((x): x is string => typeof x === 'string')
         : [];
-      // Backend is the only source of comparison identity. No local re-inference.
-      setComparisonDeptIds(cmpIds);
-      setComparisonHighlightId(
-        typeof payload?.comparisonHighlightId === 'string' ? payload.comparisonHighlightId : null,
-      );
-      setComparisonRecommendFocus(
-        typeof payload?.comparisonRecommendFocus === 'string'
-          ? payload.comparisonRecommendFocus
-          : null,
-      );
-      // Section + point are driven by PresentationEngine from narration_plan segments.
-      setComparisonNarrationSection(0);
-      setSurface('department_comparison');
-      setBusRoutesHighlightQuery(null);
+      const plan = (payload as Record<string, unknown>)?.narration_plan as
+        | Record<string, unknown>
+        | undefined;
+      const segments = Array.isArray((plan as Record<string, unknown> | undefined)?.segments)
+        ? ((plan as Record<string, unknown>).segments as unknown[])
+        : [];
+
+      const fromSegments: ExplanationCardData[] = [];
+      for (const rawSeg of segments) {
+        if (!rawSeg || typeof rawSeg !== 'object') continue;
+        const seg = rawSeg as Record<string, unknown>;
+        const unitId =
+          typeof seg.unitId === 'string'
+            ? seg.unitId
+            : typeof seg.unit_id === 'string'
+              ? seg.unit_id
+              : '';
+        // Reject bare "department_explanation" — require department_explanation.<dept_key>
+        if (!unitId.startsWith('department_explanation.') || unitId === 'department_explanation') {
+          continue;
+        }
+        const deptId = unitId.slice('department_explanation.'.length);
+        if (!deptId || deptId.includes('.')) continue;
+        const title =
+          typeof seg.title === 'string' && seg.title.trim()
+            ? seg.title
+            : deptId.replace(/_/g, ' ').toUpperCase();
+        const summary =
+          (typeof seg.tts_text === 'string' && seg.tts_text) ||
+          (typeof seg.ttsText === 'string' && seg.ttsText) ||
+          (typeof seg.summary === 'string' && seg.summary) ||
+          (typeof seg.caption === 'string' && seg.caption) ||
+          '';
+        const videoSrc =
+          typeof seg.video_src === 'string'
+            ? seg.video_src
+            : `/assets/department_explanations/${deptId}.mp4`;
+        fromSegments.push({ unitId, title, summary, videoSrc });
+      }
+
+      const fromDepts: ExplanationCardData[] = deptIds
+        .filter((deptId) => typeof deptId === 'string' && deptId.trim().length > 0)
+        .map((deptId) => {
+          const unitId = `department_explanation.${deptId}`;
+          const existing = fromSegments.find((c) => c.unitId === unitId);
+          if (existing) return existing;
+          return {
+            unitId,
+            title: deptId.replace(/_/g, ' ').toUpperCase(),
+            summary: '',
+            videoSrc: `/assets/department_explanations/${deptId}.mp4`,
+          };
+        });
+
+      // Prefer canonical narration unit IDs; fall back to dept list only as wire assist.
+      const newCards = fromSegments.length > 0 ? fromSegments : fromDepts;
+      if (newCards.length === 0) {
+        // Invalid / empty explanation composition — do not open a blank stage.
+        return;
+      }
+      setExplanationCards(newCards);
+      setSurface('department_explanation');
       setLayoutMode('FULL_TEXT');
       if (audioBase64) {
         offerAssistantAudio({
@@ -3067,7 +3096,6 @@ export default function ChatScreen({
       const turnIdStr = String(turnId);
       if (busRoutesDismissedTurnIdRef.current !== turnIdStr) {
         engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
-        comparisonLayoutSnapRef.current = null;
         setBusRoutesHighlightQuery(lastUserTextForInference);
         setBusRoutesMountKey((k) => k + 1);
         setSurface('bus_routes');
@@ -3884,7 +3912,7 @@ export default function ChatScreen({
 
   useEffect(() => {
     if (
-      departmentComparisonOpen ||
+      isDepartmentExplanationSurface ||
       isBusRoutesSurface ||
       faqSuggestions.length <= 1 ||
       isFaqCarouselPaused ||
@@ -3897,7 +3925,7 @@ export default function ChatScreen({
     }, FAQ_CAROUSEL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [
-    departmentComparisonOpen,
+    isDepartmentExplanationSurface,
     isBusRoutesSurface,
     faqSuggestions.length,
     isFaqCarouselPaused,
@@ -3906,7 +3934,7 @@ export default function ChatScreen({
 
   useAnimationFrame((_time, delta) => {
     if (
-      departmentComparisonOpen ||
+      isDepartmentExplanationSurface ||
       isBusRoutesSurface ||
       !faqSuggestions.length ||
       isFaqCarouselPaused ||
@@ -4817,7 +4845,7 @@ export default function ChatScreen({
       : latestTextAssistantMsg;
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
-    isLanguageGateOpen || isResponsePending || departmentComparisonOpen || isBusRoutesSurface;
+    isLanguageGateOpen || isResponsePending || isDepartmentExplanationSurface || isBusRoutesSurface;
   const submitFaqSuggestion = useCallback(
     (_id: string, question: string) => {
       // #region agent log
@@ -5165,7 +5193,7 @@ export default function ChatScreen({
   });
 
   const renderFaqCarousel = (placement: 'full' | 'panel') => {
-    if (placement === 'full' && (departmentComparisonOpen || isBusRoutesSurface)) return null;
+    if (placement === 'full' && (isDepartmentExplanationSurface || isBusRoutesSurface)) return null;
     if (placement === 'panel') {
       const activeSuggestion = faqSuggestions[faqCarouselIndex % faqSuggestions.length];
       if (!activeSuggestion) return null;
@@ -5352,15 +5380,15 @@ export default function ChatScreen({
             <motion.div
               key="full-text"
               layoutId="main"
-              className={`full-text-layout min-h-0${departmentComparisonOpen ? ' full-text-layout--comparison-active' : ''}`}
+              className={`full-text-layout min-h-0`}
             >
               <div
-                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${departmentComparisonOpen ? ' full-text-message-stage--with-comparison' : ''}`}
+                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col`}
               >
                 <div
                   ref={fullTextScrollRef}
                   className={`text-container${
-                    !departmentComparisonOpen &&
+                    !isDepartmentExplanationSurface &&
                     lastAssistantMsg &&
                     isTextMessage(lastAssistantMsg) &&
                     !isAwaitingReadyPrompt &&
@@ -5378,10 +5406,6 @@ export default function ChatScreen({
                       ? {
                           width: responseLayout.containerStyle.width,
                           overflowY: responseLayout.containerStyle.overflowY,
-                          // Optical spacers own vertical placement when --optical is active.
-                          ...(departmentComparisonOpen
-                            ? { justifyContent: responseLayout.containerStyle.justifyContent }
-                            : {}),
                         }
                       : undefined
                   }
@@ -5472,7 +5496,7 @@ export default function ChatScreen({
                   </AnimatePresence>
                 </div>
 
-                {!departmentComparisonOpen && !showThinkingStage && !isLanguageGateOpen ? (
+                {!isDepartmentExplanationSurface && !showThinkingStage && !isLanguageGateOpen ? (
                   <div
                     className="full-text-orb-zone"
                     onPointerDownCapture={(ev) => {
@@ -5501,15 +5525,30 @@ export default function ChatScreen({
                 ) : null}
               </div>
 
-              <DepartmentComparisonCinema
-                language={language}
-                open={departmentComparisonOpen}
-                initialDepartmentIds={comparisonDeptIds}
-                highlightId={comparisonHighlightId}
-                recommendFocus={comparisonRecommendFocus}
-                narrationSectionIndex={comparisonNarrationSection}
-                onClose={handleCloseDepartmentComparison}
-              />
+              {/* Department explanation stage — renders when surface === 'department_explanation' */}
+              {isDepartmentExplanationSurface && explanationCards.length > 0 && (
+                <div className="absolute inset-0 z-30 flex flex-col p-4 gap-4 bg-black/80">
+                  <DepartmentExplanationStage
+                    cards={explanationCards}
+                    languageCode={localizationCodeKey(
+                      presentationLanguage,
+                      typeof payload?.language_code_key === 'string' ? payload.language_code_key : null,
+                    ) ?? 'en'}
+                  />
+                  {/* Orb bottom-center */}
+                  <div className="flex justify-center pb-2">
+                    <ChatOrbControl
+                      orbState={orbState}
+                      isProcessing={false}
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
+                      frequencyDataRef={voiceAnalyser.frequencyDataRef}
+                      onTap={handleOrbTap}
+                      bottomClassName="mt-2 mb-2 w-full text-center"
+                    />
+                  </div>
+                </div>
+              )}
+
             </motion.div>
 
           /* ─── SPLIT CARDS MODE (college/dept/hod/trustees) ─── */
@@ -5718,30 +5757,6 @@ export default function ChatScreen({
             </motion.div>
           )}
       </AnimatePresence>
-
-      {/* Comparison mode: orb lives outside the FULL_TEXT motion wrapper so position:fixed is viewport-anchored
-          (transform on layoutId/main would otherwise trap fixed positioning and overlap the panel). */}
-      {layoutMode === 'FULL_TEXT' &&
-      departmentComparisonOpen &&
-      !showThinkingStage &&
-      !isLanguageGateOpen ? (
-        <>
-          <div className="full-text-comparison-faq-layer">
-            {renderFaqCarousel('full')}
-          </div>
-          <div className="full-text-comparison-orb-layer">
-            <ChatOrbControl
-              orbState={orbState}
-              isProcessing={isResponsePending}
-              amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
-              frequencyDataRef={voiceAnalyser.frequencyDataRef}
-              onTap={handleOrbTap}
-              comparisonMode
-              bottomClassName="pointer-events-none mt-1 w-full text-center"
-            />
-          </div>
-        </>
-      ) : null}
 
       <AnimatePresence>
         {isBrochureOpen && (

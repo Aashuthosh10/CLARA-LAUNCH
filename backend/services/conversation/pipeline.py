@@ -42,6 +42,7 @@ async def run_conversation_intelligence(
     last_person_unit_id: str | None = None,
     last_hostel_gender: str | None = None,
     last_ncc_active: bool = False,
+    last_about_me: dict[str, Any] | None = None,
 ) -> ConversationIntelligenceResult:
     """
     Evaluate transcript → entities → intent confidence → policy.
@@ -64,6 +65,7 @@ async def run_conversation_intelligence(
             language=language_name,
             local_intent=None,
             faq_matched=False,
+            last_about_me=last_about_me,
         )
         result = ConversationIntelligenceResult(
             assessment=assessment,
@@ -158,6 +160,7 @@ async def run_conversation_intelligence(
         local_intent=local_intent if force_local else None,
         faq_matched=faq_matched,
         response_decision=response_decision,
+        last_about_me=last_about_me,
     )
 
     result = ConversationIntelligenceResult(

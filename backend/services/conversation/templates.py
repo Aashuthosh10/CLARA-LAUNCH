@@ -85,6 +85,48 @@ _NCC_ENROLLMENT: dict[str, str] = {
     "Malayalam": ui_text("ml", "ncc.enrollment"),
 }
 
+_CLARIFY_DEPARTMENT_INFORMATION: dict[str, str] = {
+    "English": (
+        "Would you like a general overview of {department}, "
+        "or a simple explanation of what students learn in {department}?"
+    ),
+    "Kannada": (
+        "ನೀವು {department} ನ ಸಾಮಾನ್ಯ ಅವಲೋಕನ ಬಯಸುತ್ತೀರಾ, "
+        "ಅಥವಾ {department} ನಲ್ಲಿ ವಿದ್ಯಾರ್ಥಿಗಳು ಏನು ಕಲಿಯುತ್ತಾರೆ ಎಂಬ ಸರಳ ವಿವರಣೆ ಬೇಕೇ?"
+    ),
+    "Hindi": (
+        "क्या आप {department} का सामान्य अवलोकन चाहते हैं, "
+        "या {department} में विद्यार्थी क्या सीखते हैं इसकी सरल व्याख्या चाहते हैं?"
+    ),
+    "Tamil": (
+        "நீங்கள் {department} இன் பொது கண்ணோட்டத்தை விரும்புகிறீர்களா, "
+        "அல்லது {department} இல் மாணவர்கள் என்ன படிக்கிறார்கள் என்ற எளிய விளக்கம் வேண்டுமா?"
+    ),
+    "Telugu": (
+        "మీకు {department} యొక్క సాధారణ అవలోకనం కావాలా, "
+        "లేదా {department} లో విద్యార్థులు ఏమి నేర్చుకుంటారో అనే సరళమైన వివరణ కావాలా?"
+    ),
+    "Malayalam": (
+        "നിങ്ങൾക്ക് {department} ന്റെ പൊതുവായ അവലോകനം വേണോ, "
+        "അതോ {department} ൽ വിദ്യാർഥികൾ എന്ത് പഠിക്കുന്നു എന്ന ലളിതമായ വിശദീകരണം വേണോ?"
+    ),
+}
+
+# Short kiosk labels for department_information clarify prompts.
+_DEPT_CLARIFY_LABELS: dict[str, str] = {
+    "cse": "CSE",
+    "ise": "ISE",
+    "cse_aiml": "CSE AIML",
+    "cse_ds": "CSE Data Science",
+    "cse_cysec": "CSE Cyber Security",
+    "cse_bs": "CSE Business Systems",
+    "ece": "ECE",
+    "civil": "Civil",
+    "mechanical": "Mechanical",
+    "mba": "MBA",
+    "basic_sciences": "Basic Sciences",
+}
+
 _CLARIFY_ADMISSIONS_INFO: dict[str, str] = {
     "English": (
         "Would you like the admission steps, eligibility details, or the documents required?"
@@ -202,7 +244,12 @@ def unknown_reply(language: str | None) -> str:
     return _pick(_UNKNOWN, language)
 
 
-def clarification_reply(language: str | None, target: str | None = None) -> str:
+def clarification_reply(
+    language: str | None,
+    target: str | None = None,
+    *,
+    department: str | None = None,
+) -> str:
     """Clarification text. `target` names the slot CLARA still needs."""
     slot = (target or "").strip().lower()
     if slot == "department":
@@ -211,6 +258,16 @@ def clarification_reply(language: str | None, target: str | None = None) -> str:
         return _pick(_CLARIFY_HOSTEL, language)
     if slot == "admissions_info":
         return _pick(_CLARIFY_ADMISSIONS_INFO, language)
+    if slot == "department_information":
+        tmpl = _pick(_CLARIFY_DEPARTMENT_INFORMATION, language)
+        key = (department or "").strip().lower()
+        label = _DEPT_CLARIFY_LABELS.get(key) or (
+            key.replace("_", " ").upper() if key else "the department"
+        )
+        try:
+            return tmpl.format(department=label)
+        except (KeyError, ValueError):
+            return tmpl
     return _pick(_CLARIFICATION, language)
 
 
@@ -240,6 +297,63 @@ def small_talk_reply(language: str | None) -> str:
     return _pick(_SMALL_TALK, language)
 
 
+_ABOUT_ME_BRIDGES: dict[str, dict[str, str]] = {
+    "overview": {
+        "English": "Let me introduce myself.",
+        "Kannada": "ನನ್ನ ಪರಿಚಯ ಮಾಡಿಕೊಳ್ಳುತ್ತೇನೆ.",
+        "Hindi": "मुझे अपना परिचय देने दीजिए।",
+        "Tamil": "நான் என்னை அறிமுகப்படுத்திக் கொள்கிறேன்.",
+        "Telugu": "నన్ను పరిచయం చేసుకుంటాను.",
+        "Malayalam": "ഞാൻ എന്നെ പരിചയപ്പെടുത്തട്ടെ.",
+    },
+    "capabilities": {
+        "English": "Let me show you what I can do.",
+        "Kannada": "ನಾನು ಏನು ಮಾಡಬಲ್ಲೆ ಎಂದು ತೋರಿಸುತ್ತೇನೆ.",
+        "Hindi": "मैं आपको दिखाती हूँ कि मैं क्या कर सकती हूँ।",
+        "Tamil": "நான் என்ன செய்ய முடியும் என்பதை காட்டுகிறேன்.",
+        "Telugu": "నేను ఏమి చేయగలనో చూపిస్తాను.",
+        "Malayalam": "എനിക്ക് എന്തൊക്കെ ചെയ്യാൻ കഴിയുമെന്ന് കാണിച്ചുതരാം.",
+    },
+    "capability_item": {
+        "English": "Let me show you how that works.",
+        "Kannada": "ಅದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಎಂದು ತೋರಿಸುತ್ತೇನೆ.",
+        "Hindi": "मैं आपको दिखाती हूँ कि यह कैसे काम करता है।",
+        "Tamil": "அது எப்படி வேலை செய்கிறது என்பதை காட்டுகிறேன்.",
+        "Telugu": "అది ఎలా పని చేస్తుందో చూపిస్తాను.",
+        "Malayalam": "അത് എങ്ങനെ പ്രവർത്തിക്കുന്നുവെന്ന് കാണിച്ചുതരാം.",
+    },
+    "creators": {
+        "English": "Meet the honorable creators of me.",
+        "Kannada": "ನನ್ನ ಗೌರವಾನ್ವಿತ ಸೃಷ್ಟಿಕರ್ತರನ್ನು ಭೇಟಿಯಾಗಿ.",
+        "Hindi": "मेरे सम्मानित निर्माताओं से मिलिए।",
+        "Tamil": "என்னை உருவாக்கிய மதிப்பிற்குரியவர்களை சந்தியுங்கள்.",
+        "Telugu": "నన్ను సృష్టించిన గౌరవనీయులను కలవండి.",
+        "Malayalam": "എന്നെ സൃഷ്ടിച്ച ബഹുമാനപ്പെട്ടവരെ കാണൂ.",
+    },
+    "creator_item": {
+        "English": "Let me introduce you to one of the people behind me.",
+        "Kannada": "ನನ್ನ ಹಿಂದಿರುವವರಲ್ಲಿ ಒಬ್ಬರನ್ನು ಪರಿಚಯಿಸುತ್ತೇನೆ.",
+        "Hindi": "मुझे अपने पीछे के लोगों में से एक का परिचय देने दीजिए।",
+        "Tamil": "எனக்குப் பின்னால் உள்ளவர்களில் ஒருவரை அறிமுகப்படுத்துகிறேன்.",
+        "Telugu": "నా వెనుక ఉన్నవారిలో ఒకరిని పరిచయం చేస్తాను.",
+        "Malayalam": "എന്റെ പിന്നിലുള്ളവരിൽ ഒരാളെ പരിചയപ്പെടുത്തട്ടെ.",
+    },
+    "guide": {
+        "English": "Let me introduce you to my project guide.",
+        "Kannada": "ನನ್ನ ಪ್ರಾಜೆಕ್ಟ್ ಮಾರ್ಗದರ್ಶಕರನ್ನು ಪರಿಚಯಿಸುತ್ತೇನೆ.",
+        "Hindi": "मुझे अपनी प्रोजेक्ट गाइड से आपका परिचय देने दीजिए।",
+        "Tamil": "என் திட்ட வழிகாட்டியை அறிமுகப்படுத்துகிறேன்.",
+        "Telugu": "నా ప్రాజెక్ట్ గైడ్‌ను పరిచయం చేస్తాను.",
+        "Malayalam": "എന്റെ പ്രോജക്ട് ഗൈഡിനെ പരിചയപ്പെടുത്തട്ടെ.",
+    },
+}
+
+
+def about_me_bridge_reply(language: str | None, bridge_key: str) -> str:
+    table = _ABOUT_ME_BRIDGES.get(bridge_key) or _ABOUT_ME_BRIDGES["overview"]
+    return _pick(table, language)
+
+
 def _assert_parity() -> None:
     for name, mapping in (
         ("_NO_SPEECH_RETRY", _NO_SPEECH_RETRY),
@@ -249,6 +363,7 @@ def _assert_parity() -> None:
         ("_CLARIFY_HOSTEL", _CLARIFY_HOSTEL),
         ("_NCC_ENROLLMENT", _NCC_ENROLLMENT),
         ("_CLARIFY_ADMISSIONS_INFO", _CLARIFY_ADMISSIONS_INFO),
+        ("_CLARIFY_DEPARTMENT_INFORMATION", _CLARIFY_DEPARTMENT_INFORMATION),
         ("_RESTRICTED_PERSONAL_CONTACT", _RESTRICTED_PERSONAL_CONTACT),
         ("_RESTRICTED_PAYMENT", _RESTRICTED_PAYMENT),
         ("_NAME_ACK", _NAME_ACK),
@@ -258,6 +373,10 @@ def _assert_parity() -> None:
         missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
         if missing:
             raise RuntimeError(f"{name} missing translations: {', '.join(missing)}")
+    for key, mapping in _ABOUT_ME_BRIDGES.items():
+        missing = [lang for lang in SUPPORTED_LANGUAGES if lang not in mapping]
+        if missing:
+            raise RuntimeError(f"_ABOUT_ME_BRIDGES[{key}] missing translations: {', '.join(missing)}")
 
 
 _assert_parity()

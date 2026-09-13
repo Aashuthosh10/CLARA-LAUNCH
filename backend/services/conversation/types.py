@@ -17,6 +17,7 @@ class PolicyAction(str, Enum):
     CARD_PRESENTATION = "CARD_PRESENTATION"
     DIRECT_RESPONSE = "DIRECT_RESPONSE"
     NO_SPEECH_RETRY = "NO_SPEECH_RETRY"
+    ABOUT_ME = "ABOUT_ME"
 
 
 # Actions that must not call Groq / RAG / narration plan.
@@ -28,6 +29,7 @@ SHORT_CIRCUIT_ACTIONS: frozenset[PolicyAction] = frozenset(
         PolicyAction.ENTITY_UPDATE,
         PolicyAction.GREETING,
         PolicyAction.SMALL_TALK,
+        PolicyAction.ABOUT_ME,
     }
 )
 

@@ -18,7 +18,7 @@ from backend.services.answer_generation import (
 from backend.services.content.surface_registry import all_surfaces, get_surface
 from backend.services.content.surface_selector import select_surface
 from backend.services.content.types import (
-    SURFACE_COMPARISON,
+    SURFACE_DEPARTMENT_EXPLANATION,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_DOCUMENTS,
@@ -90,7 +90,8 @@ class TestSurfaceSelector(unittest.TestCase):
             (INTENT_DOCUMENTS, SURFACE_DOCUMENTS),
             (INTENT_PRINCIPAL_PROFILE, SURFACE_PRINCIPAL),
             (INTENT_PLACEMENTS, SURFACE_PLACEMENTS),
-            (INTENT_DEPARTMENT_COMPARISON, SURFACE_COMPARISON),
+            # Comparison queries now route directly to department_explanation (cinema retired)
+            (INTENT_DEPARTMENT_COMPARISON, SURFACE_DEPARTMENT_EXPLANATION),
             (INTENT_TRUSTEES_PROFILE, SURFACE_TRUSTEES),
             (INTENT_HOD_PROFILE, SURFACE_HOD),
         ]

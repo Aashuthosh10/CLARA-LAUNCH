@@ -107,6 +107,11 @@ function ClaraKioskRuntime({
   const [urlOverrideState, setUrlOverrideState] = React.useState<number | null>(null);
   const [showChatLanguageGate, setShowChatLanguageGate] = useState(false);
   const [showAboutMe, setShowAboutMe] = useState(false);
+  const [aboutMeDeepLink, setAboutMeDeepLink] = useState<{
+    section: 'overview' | 'capabilities' | 'creators' | 'guide';
+    itemId: string | null;
+  } | null>(null);
+  const aboutMeUiActionKeyRef = useRef<string | null>(null);
   const [lastHardResetAt, setLastHardResetAt] = useState<number | null>(null);
 
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
@@ -174,8 +179,40 @@ function ClaraKioskRuntime({
 
   const enterClaraFromAbout = useCallback(() => {
     setShowAboutMe(false);
+    setAboutMeDeepLink(null);
+    aboutMeUiActionKeyRef.current = null;
     startClaraSession();
   }, [startClaraSession]);
+
+  const exitAboutMeToClara = useCallback(() => {
+    // Navigation overlay only — preserve active chat/session.
+    setShowAboutMe(false);
+    setAboutMeDeepLink(null);
+    aboutMeUiActionKeyRef.current = null;
+  }, []);
+
+  // Conversational About Me: backend uiAction → open existing About Me overlay.
+  useEffect(() => {
+    const action = payload?.uiAction;
+    if (!action || typeof action !== 'object') return;
+    if (action.type !== 'open_about_me') return;
+    const sectionRaw = String(action.section || 'overview').trim().toLowerCase();
+    const allowed = new Set(['overview', 'capabilities', 'creators', 'guide']);
+    const section = (allowed.has(sectionRaw) ? sectionRaw : 'overview') as
+      | 'overview'
+      | 'capabilities'
+      | 'creators'
+      | 'guide';
+    const itemId =
+      typeof action.itemId === 'string' && action.itemId.trim()
+        ? action.itemId.trim()
+        : null;
+    const key = `${String(payload?.turn_id || '')}|${section}|${itemId || ''}`;
+    if (aboutMeUiActionKeyRef.current === key) return;
+    aboutMeUiActionKeyRef.current = key;
+    setAboutMeDeepLink({ section, itemId });
+    setShowAboutMe(true);
+  }, [payload]);
 
   // K1: on every (re)connect, re-register the active visitor session and its
   // canonical selected language so a new backend socket rebinds to `kn` etc.
@@ -384,8 +421,11 @@ function ClaraKioskRuntime({
       return (
         <motion.div key="about-me" className="w-full h-full">
           <AboutMeScreen
-            onExit={() => setShowAboutMe(false)}
+            key={`about-${aboutMeDeepLink?.section || 'default'}-${aboutMeDeepLink?.itemId || 'none'}-${aboutMeUiActionKeyRef.current || 'sleep'}`}
+            onExit={exitAboutMeToClara}
             onEnterClara={enterClaraFromAbout}
+            initialSection={aboutMeDeepLink?.section ?? null}
+            initialItemId={aboutMeDeepLink?.itemId ?? null}
           />
         </motion.div>
       );
@@ -396,7 +436,11 @@ function ClaraKioskRuntime({
         return (
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
-              onAboutMe={() => setShowAboutMe(true)}
+              onAboutMe={() => {
+                setAboutMeDeepLink(null);
+                aboutMeUiActionKeyRef.current = null;
+                setShowAboutMe(true);
+              }}
               onWake={startClaraSession}
             />
           </motion.div>

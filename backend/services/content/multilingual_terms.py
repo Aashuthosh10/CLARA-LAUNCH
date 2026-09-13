@@ -12,6 +12,7 @@ TOPIC_PLACEMENTS = "placements"
 TOPIC_PRINCIPAL = "principal"
 TOPIC_VICE_PRINCIPAL = "vice_principal"
 TOPIC_TRUSTEES = "trustees"
+TOPIC_EXPLANATION = "explanation"
 
 
 # Achievements cues: answer_generation.extract_features does not expose a dedicated

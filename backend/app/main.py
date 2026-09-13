@@ -1699,16 +1699,20 @@ async def process_user_text_and_reply(
         )
         clarify_target = getattr(conversation_resolution, "clarification_target", None)
         think_text = str(session.get("_effective_user_text") or text or "")
-        thinking_sentence = await _send_thinking_interlude_text(
-            session,
-            think_text,
-            websocket,
-            timing,
-            turn_gen_marker,
-            semantic_request=semantic_request,
-            conversational_action=think_action,
-            clarification_target=clarify_target,
-        )
+        # About Me bridge is the sole spoken line for that turn — skip thinking TTS.
+        skip_thinking = str(policy_action_str or "").upper() == "ABOUT_ME"
+        thinking_sentence = None
+        if not skip_thinking:
+            thinking_sentence = await _send_thinking_interlude_text(
+                session,
+                think_text,
+                websocket,
+                timing,
+                turn_gen_marker,
+                semantic_request=semantic_request,
+                conversational_action=think_action,
+                clarification_target=clarify_target,
+            )
         if thinking_sentence:
             try:
                 session["_thinking_tts_task"] = asyncio.create_task(
@@ -1720,6 +1724,10 @@ async def process_user_text_and_reply(
                 logger.exception("Could not start thinking TTS task")
 
         if should_short_circuit(orch_result) and conversation_resolution.short_circuit_reply:
+            ui_extra = None
+            pending_ui = session.pop("_pending_ui_action", None)
+            if isinstance(pending_ui, dict) and pending_ui.get("type") == "open_about_me":
+                ui_extra = {"uiAction": pending_ui}
             await _emit_direct_conversation_reply(
                 session,
                 text,
@@ -1729,6 +1737,7 @@ async def process_user_text_and_reply(
                 turn_gen_marker,
                 utterance_kind=f"policy_{(conversation_resolution.policy or 'direct').lower()}",
                 length_kind=conversation_resolution.length_kind or "clarification",
+                payload_extra=ui_extra,
             )
             return
     except Exception:
@@ -2582,6 +2591,7 @@ async def process_user_text_and_reply(
 
         if show_card is not None and department_id is None and entity_map.get("department"):
             department_id = entity_map.get("department")
+
         if show_card is not None:
             assistant_msg["isCardData"] = True
             assistant_msg["isHidden"] = True
@@ -2825,7 +2835,7 @@ async def process_user_text_and_reply(
             chunk_source_text = tts_text.strip()
             if show_card == "department_overview":
                 max_chars = TTS_CHUNK_MAX_CHARS_NARRATOR
-            elif show_card == "department_comparison":
+            elif show_card == "department_explanation" and intent == INTENT_DEPARTMENT_COMPARISON:
                 max_chars = TTS_CHUNK_MAX_CHARS_COMPARISON
             else:
                 max_chars = TTS_CHUNK_MAX_CHARS

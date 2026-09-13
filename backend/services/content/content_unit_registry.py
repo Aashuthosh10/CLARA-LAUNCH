@@ -25,10 +25,16 @@ from backend.services.content.global_units import (
     UNIT_LOCATION,
     UNIT_PLACEMENTS,
 )
+from backend.services.content.department_explanation_units import (
+    DepartmentExplanationDescriptor,
+    all_explanation_descriptors,
+    get_explanation_descriptor,
+)
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_CANTEEN,
     SURFACE_COLLEGE,
+    SURFACE_DEPARTMENT_EXPLANATION,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_DOCUMENTS,
@@ -326,8 +332,8 @@ _CAMPUS_DESCRIPTORS: tuple[ContentUnitDescriptor, ...] = tuple(
 
 
 @lru_cache(maxsize=1)
-def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
-    out: dict[str, ContentUnitDescriptor] = {}
+def _all_descriptors_by_id() -> dict[str, object]:
+    out: dict[str, object] = {}
     for dept_key in DEPARTMENT_JSON_KEY_ORDER:
         for section_id in _DEPT_SLIDE_SECTION_IDS:
             desc = _department_descriptor(dept_key, section_id)
@@ -340,6 +346,9 @@ def _all_descriptors_by_id() -> dict[str, ContentUnitDescriptor]:
         out[desc.unit_id] = desc
     for desc in _CAMPUS_DESCRIPTORS:
         out[desc.unit_id] = desc
+    # Explanation units — one per department key.
+    for exp_desc in all_explanation_descriptors():
+        out[exp_desc.unit_id] = exp_desc
     return out
 
 
@@ -355,11 +364,11 @@ def list_context_scoped_descriptors(context: str) -> tuple[ContentUnitDescriptor
     return tuple(d for d in _CONTEXT_SCOPED_DESCRIPTORS if d.context == ctx)
 
 
-def get_unit_descriptor(unit_id: str) -> ContentUnitDescriptor | None:
+def get_unit_descriptor(unit_id: str) -> ContentUnitDescriptor | DepartmentExplanationDescriptor | None:
     uid = (unit_id or "").strip()
     if not uid:
         return None
-    return _all_descriptors_by_id().get(uid)
+    return _all_descriptors_by_id().get(uid)  # type: ignore[return-value]
 
 
 def unit_id_for(dept_key: str, section_id: str) -> str | None:

@@ -54,9 +54,11 @@ from backend.services.content.semantic_topics import cue_in_hay, detect_atomic_t
 from backend.services.content.semantic_vocab.catalog import (
     TOPIC_ACHIEVEMENTS,
     TOPIC_CONTACT,
+    TOPIC_EXPLANATION,
     TOPIC_FACULTY,
     TOPIC_FEES,
     TOPIC_HOD,
+    TOPIC_OVERVIEW,
     TOPIC_PLACEMENTS,
 )
 from backend.services.content.semantic_vocab.institution import institution_cues
@@ -271,6 +273,22 @@ _ADMISSIONS_SPECIFIC_CUES: tuple[str, ...] = (
     "deadline",
     "office",
     "admission block",
+    # Explicit information cues — user is asking for info, not just expressing intent.
+    "details",
+    "detail",
+    "information",
+    # Romanized / code-switch info cues
+    "jankari",
+    "jaankari",
+    "bataiye",
+    "batao",
+    "बताइये",
+    "जानकारी",
+    "जानकारि",
+    "ಮಾಹಿತಿ",
+    "telviyai",
+    "vivaram",
+    # Existing script cues
     "ದಾಖಲೆ",
     "ಅರ್ಹತೆ",
     "ಶುಲ್ಕ",
@@ -308,6 +326,7 @@ def is_ambiguous_admissions_request(
     Topic=admissions is clear, but the information slot is not.
 
     Bare 'I want to do admissions' must CLARIFY, not open a card.
+    Requests with explicit info cues (details/batao/jankari/etc.) pass through to CARD.
     """
     if has_specific_admissions_slot(text):
         return False
@@ -326,6 +345,88 @@ def is_ambiguous_admissions_request(
 def has_card_topic_cue(text: str) -> bool:
     """A department-scoped topic word (hod / fees / placements / achievements / overview)."""
     return bool(detect_topic_spans(text or ""))
+
+
+# Strong explanation cues — if present, go straight to CARD (no clarify).
+# These are compound / unambiguous cues only. Bare "what is" / "what does" are
+# intentionally excluded because they also match "what is the fee?" etc.
+_STRONG_EXPLANATION_CUES: tuple[str, ...] = (
+    "explain simply",
+    "explain to my child",
+    "explain to a child",
+    "for parents",
+    "parent guide",
+    "what do students learn",
+    "what will students learn",
+    "what do they study",
+    "kalitare",
+    "sarala",
+    "maganige",
+    "magalige",
+    "makkalaige",
+    "ಏನು ಕಲಿ",
+    "ಸರಳವಾಗಿ",
+    "ಮಕ್ಕ",
+)
+
+# Strong full-overview cues — if present, go straight to CARD (no clarify).
+_STRONG_FULL_OVERVIEW_CUES: tuple[str, ...] = (
+    "department overview",
+    "full department",
+    "show me the department",
+    "all about",
+    "everything about",
+)
+
+
+def is_ambiguous_department_information_request(
+    text: str,
+    semantic_request: SemanticRequest | None,
+) -> bool:
+    """
+    True when the user named exactly one department with no specific atomic topic
+    (not fees/hod/placements/achievements/faculty) and neither strong explanation
+    cues nor strong full-overview cues are present.
+
+    Such requests must CLARIFY between overview and explanation instead of
+    auto-expanding to full_department.
+    """
+    if semantic_request is None:
+        return False
+    # Must have exactly one department entity, no atomic topics.
+    items = semantic_request.unit_items
+    if not items:
+        return False
+    topics = {topic for _, topic in items}
+    entities = {entity for entity, _ in items}
+    # If any atomic topic present → not ambiguous; go to CARD as normal.
+    atomic_present = any(
+        t in {TOPIC_HOD, TOPIC_FEES, TOPIC_PLACEMENTS, TOPIC_ACHIEVEMENTS, TOPIC_FACULTY, TOPIC_CONTACT}
+        for t in topics
+    )
+    if atomic_present:
+        return False
+    # If explanation topic already resolved → also go to CARD.
+    if TOPIC_EXPLANATION in topics:
+        return False
+    # Must be a department context (not campus, global, leadership).
+    from backend.services.content.campus_units import is_campus_entity
+    from backend.services.content.global_units import is_global_entity
+    from backend.services.content.leadership_units import LEADERSHIP_ENTITY
+
+    if any(is_campus_entity(e) or is_global_entity(e) or e == LEADERSHIP_ENTITY for e in entities):
+        return False
+    # Only trigger on full_department scope (e.g. "tell me about CSE").
+    # Single-topic "overview" requests (explicit "overview" word) are unambiguous → skip.
+    if semantic_request.requested_scope != "full_department":
+        return False
+    # Strong cues skip clarify.
+    hay = _hay(text)
+    if any(cue_in_hay(hay, cue) for cue in _STRONG_EXPLANATION_CUES):
+        return False
+    if any(cue_in_hay(hay, cue) for cue in _STRONG_FULL_OVERVIEW_CUES):
+        return False
+    return True
 
 
 def _has_any_concept_cue(text: str, cues: tuple[str, ...]) -> bool:
@@ -405,8 +506,45 @@ def resolve_response_decision(
         merged.update(diag)
         return replace(decision, diagnostics=merged)
 
-    # 1. Explicit UI action. The user physically chose a card.
+    # 1. Explicit UI action / structured clarification resolution.
     if local_intent and isinstance(local_intent, dict) and local_intent:
+        trigger = str(
+            local_intent.get("trigger")
+            or local_intent.get("requested_card")
+            or local_intent.get("showCard")
+            or ""
+        ).strip().lower()
+        dept_key = str(local_intent.get("dept_key") or "").strip().lower()
+        if (
+            local_intent.get("from_clarification")
+            and dept_key
+            and trigger in {"department_explanation", "department_overview"}
+        ):
+            if trigger == "department_explanation":
+                return _done(
+                    ResponseDecision(
+                        mode=ResponseMode.CARD,
+                        topic=TOPIC_EXPLANATION,
+                        items=((dept_key, TOPIC_EXPLANATION),),
+                        entities=(dept_key,),
+                        scope="single",
+                        domain_relevance=DomainRelevance.INSTITUTION,
+                        confidence=0.99,
+                        evidence="clarification_department_explanation",
+                    )
+                )
+            return _done(
+                ResponseDecision(
+                    mode=ResponseMode.CARD,
+                    topic=TOPIC_OVERVIEW,
+                    items=((dept_key, TOPIC_OVERVIEW),),
+                    entities=(dept_key,),
+                    scope="full_department",
+                    domain_relevance=DomainRelevance.INSTITUTION,
+                    confidence=0.99,
+                    evidence="clarification_department_overview",
+                )
+            )
         return _done(
             ResponseDecision(
                 mode=ResponseMode.CARD,
@@ -570,6 +708,23 @@ def resolve_response_decision(
     # 4. A resolved semantic request is the strongest card evidence there is.
     # Bare admissions (topic clear, slot unclear) must CLARIFY before any card.
     if semantic_request is not None:
+        # 4-pre. Ambiguous "tell me about CSE" without atomic topic or strong cue
+        # must CLARIFY overview vs explanation rather than auto-expand to full deck.
+        if is_ambiguous_department_information_request(raw, semantic_request):
+            dept_keys = [entity for entity, _ in semantic_request.unit_items]
+            dept_key = dept_keys[0] if dept_keys else None
+            return _done(
+                ResponseDecision(
+                    mode=ResponseMode.CLARIFY,
+                    topic=dept_key,
+                    clarification_target="department_information",
+                    clarification_reason="ambiguous_department_information",
+                    entities=semantic_request.entities,
+                    domain_relevance=DomainRelevance.INSTITUTION,
+                    confidence=0.85,
+                    evidence="ambiguous_dept_info_request",
+                )
+            )
         if is_ambiguous_admissions_request(raw, semantic_request):
             return _done(
                 ResponseDecision(

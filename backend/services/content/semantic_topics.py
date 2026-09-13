@@ -8,6 +8,7 @@ from backend.services.content.semantic_vocab.catalog import (
     SCOPE_FULL,
     TOPIC_ACHIEVEMENTS,
     TOPIC_CONTACT,
+    TOPIC_EXPLANATION,
     TOPIC_FACULTY,
     TOPIC_FEES,
     TOPIC_HOD,
@@ -26,6 +27,7 @@ ATOMIC_TOPICS = frozenset(
         TOPIC_ACHIEVEMENTS,
         TOPIC_FACULTY,
         TOPIC_CONTACT,
+        TOPIC_EXPLANATION,
     }
 )
 
@@ -66,6 +68,12 @@ def detect_atomic_topics(*texts: str) -> frozenset[str]:
             continue
         if any(cue_in_hay(h, e.variant) for h in hays):
             found.add(e.canonical)
+    # Non-contiguous "explain … simply" (e.g. "Explain CSE simply").
+    if TOPIC_EXPLANATION not in found:
+        for h in hays:
+            if cue_in_hay(h, "explain") and cue_in_hay(h, "simply"):
+                found.add(TOPIC_EXPLANATION)
+                break
     return frozenset(found)
 
 

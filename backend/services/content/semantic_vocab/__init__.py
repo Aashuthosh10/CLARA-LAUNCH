@@ -3,6 +3,7 @@
 from backend.services.content.semantic_vocab.catalog import (
     SCOPE_FULL,
     TOPIC_ACHIEVEMENTS,
+    TOPIC_EXPLANATION,
     TOPIC_FEES,
     TOPIC_HOD,
     TOPIC_OVERVIEW,
@@ -17,6 +18,7 @@ from backend.services.content.semantic_vocab.types import VocabEntry
 __all__ = [
     "SCOPE_FULL",
     "TOPIC_ACHIEVEMENTS",
+    "TOPIC_EXPLANATION",
     "TOPIC_FEES",
     "TOPIC_HOD",
     "TOPIC_OVERVIEW",

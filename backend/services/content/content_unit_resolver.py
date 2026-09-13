@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from backend.core.language_detection import LANGUAGE_KEY_TO_NAME
 from backend.services.content.content_unit import ContentUnit
 from backend.services.content.content_unit_registry import (
@@ -78,6 +80,8 @@ def resolve_unit(
         unit = _resolve_shared_ui_unit(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key == "aggregate_surface":
         unit = _resolve_aggregate_surface_unit(descriptor, language=language, language_code=language_code)
+    elif descriptor.adapter_key == "department_explanation":
+        unit = _resolve_explanation_unit(descriptor, language=language, language_code=language_code)
     else:
         content_event("CONTENT_UNIT_FAILED", unit_id=unit_id, reason="unsupported_adapter")
         return None
@@ -469,6 +473,63 @@ def _unit_from_aggregate_content(
         metadata=dict(content.metadata or {}),
         keywords=tuple(content.keywords or ()),
         presentation_capabilities=(),
+    )
+
+
+def _resolve_explanation_unit(
+    descriptor: Any,
+    *,
+    language: str,
+    language_code: str,
+) -> ContentUnit:
+    """Build a placeholder explanation ContentUnit.
+
+    Titles and body are clearly marked SAMPLE_REPLACE_WITH_OFFICIAL.
+    video_src is stored in metadata so the frontend can render the card.
+    """
+    from backend.services.content.department_explanation_units import placeholder_title
+    from backend.services.content.validators import compute_unit_hash
+    from backend.core.language_detection import LANGUAGE_KEY_TO_NAME
+
+    dept_key = descriptor.entity_id
+    display_name = getattr(descriptor, "display_name", dept_key.upper())
+    video_src = getattr(descriptor, "video_src", "")
+    title = f"{display_name} — {placeholder_title(language_code)}"
+    body = title
+    unit_hash = compute_unit_hash(
+        unit_id=descriptor.unit_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        body=body,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+    )
+    display = (language or "").strip() or LANGUAGE_KEY_TO_NAME.get(language_code, "English")
+    return ContentUnit(
+        unit_id=descriptor.unit_id,
+        surface=descriptor.surface,
+        content_type=descriptor.content_type,
+        entity_type=descriptor.entity_type,
+        entity_id=descriptor.entity_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        title=title,
+        summary=title[:200],
+        body=body,
+        language=display,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+        source_version=_SOURCE_VERSION,
+        content_hash=unit_hash,
+        metadata={
+            "department": dept_key,
+            "video_src": video_src,
+            "content_status": _SAMPLE_CONTENT_STATUS,
+        },
+        keywords=(dept_key, "explanation"),
+        presentation_capabilities=("department_explanation",),
     )
 
 

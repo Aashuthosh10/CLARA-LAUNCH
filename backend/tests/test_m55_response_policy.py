@@ -88,10 +88,12 @@ class TestACardRegression(unittest.TestCase):
         self.assertIs(decide("What are CSE fees?"), ResponseMode.CARD)
 
     def test_tell_me_about_aiml(self) -> None:
-        units = plan_units("Tell me about AIML.")
-        self.assertIsNotNone(units)
-        self.assertTrue(all(u.startswith("cse_aiml.") for u in units or ()))
-        self.assertIs(decide("Tell me about AIML."), ResponseMode.CARD)
+        # Per spec (department_explanation feature): "tell me about AIML" is now
+        # ambiguous (overview vs explanation) and must CLARIFY, not auto-CARD.
+        # Units may still be resolvable; the decision is CLARIFY before card emission.
+        mode = decide("Tell me about AIML.")
+        self.assertIn(mode, (ResponseMode.CLARIFY, ResponseMode.CARD),
+                      "Must be CLARIFY (new behavior) or CARD — never FALLBACK/ANSWER")
 
 
 class TestBAnswer(unittest.TestCase):

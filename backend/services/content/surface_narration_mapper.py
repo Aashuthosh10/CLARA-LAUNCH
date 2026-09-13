@@ -125,15 +125,21 @@ def map_content_units_to_segments(
         raw_line = f"{title}\n{body_clipped}".strip()
         # Display keeps card facts. Spoken text is the intent-aware narration plan.
         # M5.8 TTS only speaks tts_text.
+        canonical = card_id_for_unit_id(unit.unit_id)
+        if (unit.unit_id or "").startswith("department_explanation."):
+            slide_card_id = canonical or "department_explanation"
+        else:
+            # Department overview / HOD / fees decks keep the historical dept_slide id.
+            slide_card_id = "dept_slide"
         segments.append(
             NarrationSegment(
                 display_text=_clip_caption(raw_line, 320),
                 tts_text=spoken,
                 card_index=i,
-                card_id="dept_slide",
+                card_id=slide_card_id,
                 section_id=unit.section_id,
                 unit_id=unit.unit_id,
-                canonical_card_id=card_id_for_unit_id(unit.unit_id),
+                canonical_card_id=canonical,
             )
         )
     return segments

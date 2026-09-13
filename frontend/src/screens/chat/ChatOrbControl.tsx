@@ -16,8 +16,6 @@ type ChatOrbControlProps = {
   onTap: () => void;
   bottomClassName: string;
   compact?: boolean;
-  /** Shrinks / lowers orb when department comparison panel is dominant */
-  comparisonMode?: boolean;
 };
 
 export default function ChatOrbControl({
@@ -28,7 +26,6 @@ export default function ChatOrbControl({
   onTap,
   bottomClassName,
   compact = false,
-  comparisonMode = false,
 }: ChatOrbControlProps) {
   const { language, t } = useLanguage();
   const scriptClass = getScriptTypography(language).cssClass;
@@ -41,7 +38,7 @@ export default function ChatOrbControl({
         ? uiText(language, 'status.listening')
         : t('tapToSpeak');
 
-  const isCompactLayout = compact || comparisonMode;
+  const isCompactLayout = compact;
   const targetWidth = isCompactLayout ? 290 : 420;
   const targetHeight = isCompactLayout ? 100 : 140;
 
@@ -50,8 +47,8 @@ export default function ChatOrbControl({
       className="relative flex flex-col items-center group"
       initial={false}
       animate={{
-        scale: comparisonMode ? 0.72 : compact ? 0.62 : 1,
-        y: comparisonMode ? 12 : 0,
+        scale: compact ? 0.62 : 1,
+        y: 0,
       }}
       transition={{ duration: 0.55, ease: [0.16, 1, 0.28, 1] }}
       style={{ transformOrigin: '50% 100%', pointerEvents: 'none' }}
@@ -156,7 +153,7 @@ export default function ChatOrbControl({
               : 'text-slate-400 group-hover:text-indigo-500'
           }`}
           style={{
-            opacity: comparisonMode ? 0.88 : isProcessing || isListening ? 0.9 : 0.7,
+            opacity: isProcessing || isListening ? 0.9 : 0.7,
           }}
         >
           {isProcessing

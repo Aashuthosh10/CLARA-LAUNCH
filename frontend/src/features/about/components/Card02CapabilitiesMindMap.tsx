@@ -83,10 +83,22 @@ export const MIND_MAP_CAPABILITIES: MindMapNode[] = [
 interface Card02Props {
   onNextCard?: () => void;
   onOpenLiveDemo?: () => void;
+  /** Expand a capability node when opened from chat navigation. */
+  initialExpandedId?: string | null;
 }
 
-export const Card02CapabilitiesMindMap: React.FC<Card02Props> = () => {
-  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null);
+export const Card02CapabilitiesMindMap: React.FC<Card02Props> = ({
+  initialExpandedId = null,
+}) => {
+  const [expandedNodeId, setExpandedNodeId] = useState<string | null>(() => {
+    if (
+      initialExpandedId &&
+      MIND_MAP_CAPABILITIES.some((n) => n.id === initialExpandedId)
+    ) {
+      return initialExpandedId;
+    }
+    return null;
+  });
 
   const toggleNodeExpand = (nodeId: string) => {
     setExpandedNodeId((prev) => (prev === nodeId ? null : nodeId));
@@ -278,6 +290,8 @@ const ExpandableCapabilityCard: React.FC<ExpandableCardProps> = ({
 
   return (
     <div
+      data-testid={`capability-card-${node.id}`}
+      data-expanded={isExpanded ? 'true' : 'false'}
       onClick={onToggle}
       onMouseEnter={playHoverChime}
       className={`relative cursor-pointer rounded-2xl transition-all duration-300 ease-out overflow-hidden transform hover:-translate-y-1 active:scale-[0.98] ${

@@ -9,8 +9,8 @@ from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
     SURFACE_COLLEGE,
-    SURFACE_COMPARISON,
     SURFACE_COURSE_MENU,
+    SURFACE_DEPARTMENT_EXPLANATION,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_DOCUMENTS,
@@ -129,13 +129,15 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         canonical_source="backend/data/narration/static_cards.json#college",
         notes="Marketing slides. institution_overview is a parallel structured store.",
     ),
-    SURFACE_COMPARISON: ContentOwnerDescriptor(
-        surface=SURFACE_COMPARISON,
-        owner_id="department_comparison.json",
-        adapter_key="comparison",
-        content_type=ContentType.COMPARISON.value,
-        canonical_source="backend/data/department_comparison.json",
-        notes="BE file. FE has parallel departmentComparison.json.",
+    # SURFACE_COMPARISON retired — entry removed; all comparison queries now
+    # route directly to SURFACE_DEPARTMENT_EXPLANATION via surface_selector.
+    SURFACE_DEPARTMENT_EXPLANATION: ContentOwnerDescriptor(
+        surface=SURFACE_DEPARTMENT_EXPLANATION,
+        owner_id="department_explanation_units",
+        adapter_key="department_explanation",
+        content_type=ContentType.DEPARTMENT.value,
+        canonical_source="backend/services/content/department_explanation_units.py",
+        notes="SAMPLE_REPLACE_WITH_OFFICIAL — cinematic department explanation cards. Video from /assets/department_explanations/{dept}.mp4.",
     ),
     SURFACE_BUS: ContentOwnerDescriptor(
         surface=SURFACE_BUS,

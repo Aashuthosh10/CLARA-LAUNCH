@@ -12,6 +12,7 @@ TOPIC_ACHIEVEMENTS = "achievements"
 TOPIC_PLACEMENTS = "placements"
 TOPIC_FACULTY = "faculty"
 TOPIC_CONTACT = "contact"
+TOPIC_EXPLANATION = "explanation"
 SCOPE_FULL = "full_department"
 SCOPE_SINGLE = "single"
 UNSUPPORTED_BUS = "bus"
@@ -122,10 +123,75 @@ _ENTRIES: tuple[VocabEntry, ...] = (
     VocabEntry("achievements", "ta", "சாதனை", "TOPIC", "tamil_script_achievement"),
     VocabEntry("achievements", "te", "సాధన", "TOPIC", "telugu_script_achievement"),
     VocabEntry("achievements", "ml", "നേട്ടം", "TOPIC", "malayalam_script_achievement"),
+    # --- TOPIC: explanation (parent-friendly / child-learn / what-does-it-do cues) ---
+    # Only compound / unambiguous cues — "what is" alone is too broad (matches "what is the fee").
+    # English
+    VocabEntry("explanation", "en", "what does", "TOPIC", "english_what_does"),
+    VocabEntry("explanation", "en", "actually about", "TOPIC", "english_actually_about"),
+    VocabEntry("explanation", "en", "what will my child learn", "TOPIC", "english_child_learn"),
+    VocabEntry("explanation", "en", "what will they study", "TOPIC", "english_they_study"),
+    VocabEntry("explanation", "en", "what kind of things do students learn", "TOPIC", "english_kind_learn"),
+    VocabEntry("explanation", "en", "what does this branch teach", "TOPIC", "english_branch_teach"),
+    VocabEntry("explanation", "en", "branch teach", "TOPIC", "english_branch_teach"),
+    VocabEntry("explanation", "en", "explain simply", "TOPIC", "english_explain_simply"),
+    VocabEntry("explanation", "en", "simply explain", "TOPIC", "english_explain_simply"),
+    VocabEntry("explanation", "en", "explain to my child", "TOPIC", "english_parent_cue"),
+    VocabEntry("explanation", "en", "explain to a child", "TOPIC", "english_parent_cue"),
+    VocabEntry("explanation", "en", "explain to a parent", "TOPIC", "english_parent_cue"),
+    VocabEntry("explanation", "en", "for parents", "TOPIC", "english_parent_cue"),
+    VocabEntry("explanation", "en", "parent guide", "TOPIC", "english_parent_cue"),
+    VocabEntry("explanation", "en", "what do students learn", "TOPIC", "english_learn_cue"),
+    VocabEntry("explanation", "en", "what will students learn", "TOPIC", "english_learn_cue"),
+    VocabEntry("explanation", "en", "what do they study", "TOPIC", "english_learn_cue"),
+    VocabEntry("explanation", "en", "students learn", "TOPIC", "english_learn_cue"),
+    VocabEntry("explanation", "en", "suitable for", "TOPIC", "english_suitable_cue"),
+    VocabEntry("explanation", "en", "right for my child", "TOPIC", "english_parent_cue"),
+    # Kannada romanized / code-switch
+    # NOTE: "padhte/padhate" alone are too broad (match "padhate hain" = quality question).
+    # Use compound-only variants to avoid false positives.
+    VocabEntry("explanation", "*", "sikhate hain", "ROMANIZED", "hindi_learn_compound"),
+    VocabEntry("explanation", "*", "padhte hain kya", "ROMANIZED", "hindi_study_what"),
+    VocabEntry("explanation", "*", "kalitare", "ROMANIZED", "kannada_learn_cue"),
+    VocabEntry("explanation", "*", "kaliyutare", "ROMANIZED", "kannada_learn_cue"),
+    VocabEntry("explanation", "*", "enu kaliyuttare", "ROMANIZED", "kannada_what_learn"),
+    VocabEntry("explanation", "*", "sarala", "ROMANIZED", "kannada_simple"),
+    VocabEntry("explanation", "*", "maganige", "ROMANIZED", "kannada_for_son"),
+    VocabEntry("explanation", "*", "magalige", "ROMANIZED", "kannada_for_daughter"),
+    VocabEntry("explanation", "*", "makkalaige", "ROMANIZED", "kannada_for_children"),
+    # Kannada script
+    VocabEntry("explanation", "kn", "ಏನು ಕಲಿಯುತ್ತಾರೆ", "TOPIC", "kannada_what_learn"),
+    VocabEntry("explanation", "kn", "ಸರಳವಾಗಿ ಹೇಳಿ", "TOPIC", "kannada_explain_simple"),
+    VocabEntry("explanation", "kn", "ಮಗನಿಗೆ", "TOPIC", "kannada_for_son"),
+    VocabEntry("explanation", "kn", "ಮಗಳಿಗೆ", "TOPIC", "kannada_for_daughter"),
+    VocabEntry("explanation", "kn", "ಮಕ್ಕಳಿಗೆ", "TOPIC", "kannada_for_children"),
+    # Hindi script
+    VocabEntry("explanation", "hi", "क्या पढ़ते हैं", "TOPIC", "hindi_what_study"),
+    VocabEntry("explanation", "hi", "क्या सीखते हैं", "TOPIC", "hindi_what_learn"),
+    VocabEntry("explanation", "hi", "सरल भाषा में", "TOPIC", "hindi_simple_lang"),
+    VocabEntry("explanation", "hi", "बच्चे को समझाओ", "TOPIC", "hindi_explain_child"),
+    VocabEntry("explanation", "hi", "माता पिता के लिए", "TOPIC", "hindi_for_parents"),
+    # Tamil script
+    VocabEntry("explanation", "ta", "என்ன படிக்கிறார்கள்", "TOPIC", "tamil_what_study"),
+    VocabEntry("explanation", "ta", "எளிமையாக சொல்", "TOPIC", "tamil_explain_simple"),
+    VocabEntry("explanation", "ta", "பெற்றோருக்கு", "TOPIC", "tamil_for_parents"),
+    # Telugu script
+    VocabEntry("explanation", "te", "ఏమి చదువుతారు", "TOPIC", "telugu_what_study"),
+    VocabEntry("explanation", "te", "సులభంగా చెప్పండి", "TOPIC", "telugu_explain_simple"),
+    VocabEntry("explanation", "te", "తల్లిదండ్రులకు", "TOPIC", "telugu_for_parents"),
+    # Malayalam script
+    VocabEntry("explanation", "ml", "എന്ത് പഠിക്കുന്നു", "TOPIC", "malayalam_what_study"),
+    VocabEntry("explanation", "ml", "ലളിതമായി പറഞ്ഞാൽ", "TOPIC", "malayalam_explain_simple"),
+    VocabEntry("explanation", "ml", "രക്ഷിതാക്കൾക്ക്", "TOPIC", "malayalam_for_parents"),
+
     # --- SCOPE: full-department overview (not generic "about"/"overview") ---
+    # NOTE: "explain" and bare "tell me about" are SOFTENED — they may CLARIFY
+    # when only a department entity is present without an atomic topic.
+    # Strong, unambiguous full-overview cues remain:
+    VocabEntry("full_department", "en", "department overview", "SCOPE", "full_overview_strong"),
+    VocabEntry("full_department", "en", "full department", "SCOPE", "full_overview_strong"),
+    VocabEntry("full_department", "en", "show me the department", "SCOPE", "full_overview_strong"),
     VocabEntry("full_department", "en", "tell me about", "SCOPE", "full_overview"),
     VocabEntry("full_department", "en", "tell me", "SCOPE", "full_overview"),
-    VocabEntry("full_department", "en", "explain", "SCOPE", "full_overview"),
     VocabEntry("full_department", "en", "describe", "SCOPE", "full_overview"),
     VocabEntry("full_department", "*", "bagge", "CODE-SWITCH", "kannada_about"),
     VocabEntry("full_department", "*", "helu", "CODE-SWITCH", "kannada_tell"),

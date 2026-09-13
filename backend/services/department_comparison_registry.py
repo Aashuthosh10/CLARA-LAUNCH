@@ -1,57 +1,51 @@
-"""Load normalized department comparison JSON (built from CSV or stub) for LLM context."""
+"""Comparison helpers (comparison cinema retired; JSON registry removed).
+
+validate_department_ids and build_comparison_context_for_llm are kept so
+main.py callers need no immediate changes.  The old load_comparison_registry /
+build_department_comparison_registry.py pipeline has been deleted.
+"""
 
 from __future__ import annotations
 
-import json
 import logging
-from functools import lru_cache
-from pathlib import Path
 from typing import Any
+
+from backend.services.answer_generation import DEPARTMENT_JSON_KEY_ORDER
 
 logger = logging.getLogger(__name__)
 
-_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "data" / "department_comparison.json"
-
-
-@lru_cache(maxsize=1)
-def load_comparison_registry() -> dict[str, Any]:
-    if not _REGISTRY_PATH.is_file():
-        logger.warning("department_comparison.json missing at %s", _REGISTRY_PATH)
-        return {}
-    try:
-        data = json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception as exc:
-        logger.warning("Could not load comparison registry: %s", exc)
-        return {}
+_DEPT_DISPLAY_EN: dict[str, str] = {
+    "cse": "CSE",
+    "ise": "ISE",
+    "cse_aiml": "CSE (AI & ML)",
+    "cse_ds": "CSE (Data Science)",
+    "cse_cysec": "CSE (Cyber Security)",
+    "cse_bs": "CSE (Business Systems)",
+    "ece": "ECE",
+    "civil": "Civil",
+    "mechanical": "Mechanical",
+    "mba": "MBA",
+    "basic_sciences": "Basic Sciences",
+}
 
 
 def department_order_keys() -> list[str]:
-    reg = load_comparison_registry()
-    order = reg.get("department_order")
-    if isinstance(order, list):
-        return [str(x) for x in order if isinstance(x, str)]
-    deps = reg.get("departments")
-    if isinstance(deps, dict):
-        return list(deps.keys())
-    return []
+    """Canonical SVIT department JSON key order (legacy name kept for main.py)."""
+    return list(DEPARTMENT_JSON_KEY_ORDER)
 
 
 def default_comparison_ids(max_n: int = 3) -> list[str]:
-    keys = department_order_keys()
-    return keys[:max_n] if keys else []
+    return list(DEPARTMENT_JSON_KEY_ORDER[:max_n])
 
 
 def validate_department_ids(ids: list[str]) -> list[str]:
-    reg = load_comparison_registry()
-    deps = reg.get("departments")
-    if not isinstance(deps, dict):
-        return []
-    out: list[str] = []
+    """Return up to 3 valid SVIT department JSON keys from `ids`, preserving order."""
+    valid = frozenset(DEPARTMENT_JSON_KEY_ORDER)
     seen: set[str] = set()
+    out: list[str] = []
     for raw in ids:
         k = str(raw or "").strip()
-        if not k or k not in deps or k in seen:
+        if not k or k not in valid or k in seen:
             continue
         seen.add(k)
         out.append(k)
@@ -60,62 +54,26 @@ def validate_department_ids(ids: list[str]) -> list[str]:
     return out
 
 
-def build_comparison_context_for_llm(department_ids: list[str], *, lang_key: str | None = None) -> str:
-    """Structured insight context for the LLM: three sections × N programs (schema v2)."""
-    reg = load_comparison_registry()
-    deps = reg.get("departments")
-    row_order = reg.get("row_order")
-    row_labels = reg.get("row_labels")
-    if not isinstance(deps, dict) or not department_ids:
+def build_comparison_context_for_llm(
+    department_ids: list[str],
+    *,
+    lang_key: str | None = None,
+) -> str:
+    """Minimal parent-friendly context for LLM comparison answers.
+
+    The old cinema JSON registry has been retired.  This builder emits only
+    verified department names plus a constraint so the LLM does not invent
+    curriculum or placement figures.
+    """
+    if not department_ids:
         return ""
-    rows = row_order if isinstance(row_order, list) else []
-    lk = (lang_key or "en").strip().lower()
-    if lk not in ("en", "kn", "hi", "ta", "te", "ml"):
-        lk = "en"
-
-    labels_map = row_labels if isinstance(row_labels, dict) else {}
-
-    lines: list[str] = [
-        "On-screen comparison uses three short parent-friendly insight sections per program (learning, jobs, 5–10 year scope). "
-        "Use ONLY these facts; do not invent placements or salaries.",
-    ]
-
-    def dept_title(did: str) -> str:
-        block = deps.get(did)
-        if not isinstance(block, dict):
-            return did
-        title = did
-        dn = block.get("display_names")
-        if isinstance(dn, dict):
-            tv = dn.get(lk) or dn.get("en")
-            if isinstance(tv, str) and tv.strip():
-                title = tv.strip()
-        return title
-
-    for rk in rows:
-        rkey = str(rk)
-        lab_entry = labels_map.get(rkey)
-        lab_row = lab_entry if isinstance(lab_entry, dict) else {}
-        section_title = ""
-        if isinstance(lab_row, dict):
-            section_title = str(lab_row.get(lk) or lab_row.get("en") or "").strip()
-        if not section_title:
-            section_title = rkey.replace("_", " ").title()
-        lines.append("")
-        lines.append(f"## {section_title}")
-        for did in department_ids:
-            block = deps.get(did)
-            if not isinstance(block, dict):
-                continue
-            cells = block.get("cells")
-            if not isinstance(cells, dict):
-                continue
-            cell = cells.get(rkey)
-            if not isinstance(cell, dict):
-                continue
-            val = cell.get(lk) or cell.get("en") or ""
-            if not isinstance(val, str) or not val.strip():
-                continue
-            lines.append(f"- {dept_title(did)}: {val.strip()}")
-
-    return "\n".join(lines).strip()
+    names = [_DEPT_DISPLAY_EN.get(d, d.replace("_", " ").upper()) for d in department_ids]
+    return (
+        "Departments requested for comparison: "
+        + ", ".join(names)
+        + ".\n"
+        "Give a concise, accurate, parent-friendly contrast of these programs. "
+        "Use only well-established facts. "
+        "Do NOT invent placement statistics, salary figures, or curriculum details that are not in this context. "
+        "SAMPLE_REPLACE_WITH_OFFICIAL: verify all claims against official SVIT data before production use."
+    )

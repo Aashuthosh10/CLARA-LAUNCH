@@ -205,6 +205,8 @@ def build_pending_for_decision(
         options = ()
     elif target == "hostel":
         options = ("boys", "girls")
+    elif target == "department_information":
+        options = ("overview", "explanation")
     return PendingClarification(
         original_query=(text or "").strip(),
         clarification_target=target,
@@ -261,6 +263,132 @@ def _admissions_slot_intent(slot: str, pending: PendingClarification) -> dict[st
         "original_topic": pending.topic or "admissions",
         "language_code_key": pending.language_code_key,
     }
+
+
+# --- Department-information clarification cues -----------------------------------
+# Explicit answers to the overview vs explanation clarify prompt only.
+# Do NOT include restatements of the original ask ("tell me about", bare "about").
+_DEPT_OVERVIEW_ANSWER_CUES: tuple[str, ...] = (
+    "overview",
+    "general overview",
+    "department overview",
+    "general",
+    "full",
+    "all",
+    "everything",
+    "complete",
+    "what subjects",
+    "subjects are there",
+    "department offer",
+    "what does the department offer",
+    # Kannada
+    "avalokan",
+    "ಅವಲೋಕನ",
+    "ಸಂಪೂರ್ಣ",
+    # Hindi
+    "अवलोकन",
+    "सब कुछ",
+    "poori",
+    "puri",
+    # Tamil
+    "ஒட்டுமொத்தம்",
+    # Telugu
+    "అన్నీ",
+    # Malayalam
+    "എല്ലാം",
+)
+
+# Cues that indicate the user wants a simple/parent-friendly explanation.
+_DEPT_EXPLANATION_ANSWER_CUES: tuple[str, ...] = (
+    "explanation",
+    "explain",
+    "explain it simply",
+    "simple",
+    "simply",
+    "parent",
+    "parents",
+    "child",
+    "children",
+    "what do students",
+    "what will students",
+    "what do they",
+    "what students learn",
+    "students learn",
+    "what does",
+    "suitable",
+    # Romanized multilingual (compound forms only to avoid false positives)
+    "kalitare",
+    "sarala",
+    "maganige",
+    "magalige",
+    "makkalaige",
+    # Kannada script
+    "ಏನು ಕಲಿ",
+    "ಸರಳ",
+    "ಮಗ",
+    "ಮಕ್ಕ",
+    # Hindi
+    "सरल",
+    "बच्चे",
+    "माता",
+    # Tamil
+    "எளிமை",
+    "பெற்றோ",
+    # Telugu
+    "సులభ",
+    "తల్లి",
+    # Malayalam
+    "ലളിത",
+    "രക്ഷ",
+)
+
+# New topic cues that cancel department_information pending.
+_DEPT_INFO_TOPIC_SWITCH_CUES: tuple[str, ...] = (
+    "bus",
+    "hostel",
+    "canteen",
+    "principal",
+    "trustee",
+    "admission",
+    "ncc",
+    "placement",
+    "fees",
+    "fee",
+    "actually",
+    "instead",
+)
+
+
+def _department_explanation_intent(pending: PendingClarification) -> dict[str, Any]:
+    """Structured local intent that yields an explanation unit for the original dept."""
+    return {
+        "trigger": "department_explanation",
+        "from_clarification": True,
+        "dept_key": pending.topic or "",
+        "clarification_target": pending.clarification_target,
+        "original_query": pending.original_query,
+        "language_code_key": pending.language_code_key,
+    }
+
+
+def _department_overview_intent(pending: PendingClarification) -> dict[str, Any]:
+    """Structured local intent that yields the full department overview deck."""
+    return {
+        "trigger": "department_overview",
+        "from_clarification": True,
+        "dept_key": pending.topic or "",
+        "clarification_target": pending.clarification_target,
+        "original_query": pending.original_query,
+        "language_code_key": pending.language_code_key,
+    }
+
+
+def _rewrite_department_information(option: str, pending: PendingClarification) -> str:
+    """Deterministic rewrite so UnitSelector sees the pending department + chosen topic."""
+    dept = (pending.topic or "").strip().lower() or "department"
+    if option == "explanation":
+        return f"what does {dept} do"
+    return f"show me the department overview of {dept}"
 
 
 _HOSTEL_TOPIC_SWITCH_CUES: tuple[str, ...] = (
@@ -360,6 +488,28 @@ def try_resolve_pending(text: str, pending: PendingClarification | None) -> Pend
         # Topic switch (buses etc.) — do not treat bare "hostel" as a switch.
         if _has_any(hay, _HOSTEL_TOPIC_SWITCH_CUES) and not gender:
             return PendingResolution(clear_pending=True, expired_new_topic=True)
+        return PendingResolution(clear_pending=False)
+
+    if target == "department_information":
+        # New unrelated topic → cancel.
+        if _has_any(hay, _DEPT_INFO_TOPIC_SWITCH_CUES):
+            return PendingResolution(clear_pending=True, expired_new_topic=True)
+        # Overview-specific phrases before broader explanation cues like "what does".
+        if _has_any(hay, _DEPT_OVERVIEW_ANSWER_CUES):
+            return PendingResolution(
+                clear_pending=True,
+                rewritten_text=_rewrite_department_information("overview", pending),
+                local_intent=_department_overview_intent(pending),
+                selected_option="overview",
+            )
+        if _has_any(hay, _DEPT_EXPLANATION_ANSWER_CUES):
+            return PendingResolution(
+                clear_pending=True,
+                rewritten_text=_rewrite_department_information("explanation", pending),
+                local_intent=_department_explanation_intent(pending),
+                selected_option="explanation",
+            )
+        # Restatement / ambiguous follow-up — keep pending so CI can re-ask.
         return PendingResolution(clear_pending=False)
 
     return PendingResolution(clear_pending=True)

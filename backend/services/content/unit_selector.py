@@ -30,6 +30,7 @@ from backend.services.content.leadership_units import (
 from backend.services.content.global_units import is_global_entity, unit_id_for_global_item
 from backend.services.content.multilingual_terms import (
     TOPIC_ACHIEVEMENTS,
+    TOPIC_EXPLANATION,
     TOPIC_FEES,
     TOPIC_HOD,
     TOPIC_OVERVIEW,
@@ -50,6 +51,9 @@ def _compute_plan_hash(*, units: Sequence[str], surface: str) -> str:
 
 
 def _unit_id_for_topic(*, dept_key: str, topic: str) -> str | None:
+    # Explanation units have a different id format: department_explanation.<dept>
+    if topic == TOPIC_EXPLANATION:
+        return f"department_explanation.{dept_key}"
     suffix_map = {
         TOPIC_OVERVIEW: "overview",
         TOPIC_HOD: "hod",

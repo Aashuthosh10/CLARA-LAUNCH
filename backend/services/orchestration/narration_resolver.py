@@ -151,12 +151,18 @@ def resolve_narration(
         )
 
     # Non-department intents: legacy builder (menu_department_json_key unused for non-dept)
+    comparison_ids: list[str] | None = None
+    if intent == "DEPARTMENT_COMPARISON":
+        raw_keys = ents.get("department_keys")
+        if isinstance(raw_keys, (list, tuple)):
+            comparison_ids = [str(k).strip() for k in raw_keys if str(k).strip()]
     return _legacy_plan(
         intent=intent,
         resolution=resolution,
         user_text=user_text,
         dept=dept,
         menu_key=None,
+        comparison_department_ids=comparison_ids,
     )
 
 
@@ -167,6 +173,7 @@ def _legacy_plan(
     user_text: str,
     dept: Any,
     menu_key: str | None,
+    comparison_department_ids: list[str] | None = None,
 ) -> list[Any] | None:
     try:
         plan = build_pre_llm_narration_plan(
@@ -175,6 +182,7 @@ def _legacy_plan(
             user_text=user_text or "",
             detected_department_label=dept,
             menu_department_json_key=menu_key,
+            comparison_department_ids=comparison_department_ids,
         )
     except Exception as exc:  # noqa: BLE001
         orch_event("NARRATION_FAIL", reason="plan_exception", detail=str(exc)[:200])

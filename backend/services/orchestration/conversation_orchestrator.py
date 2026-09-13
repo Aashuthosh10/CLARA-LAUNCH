@@ -112,6 +112,7 @@ class ConversationOrchestrator:
             last_person_unit_id=str(session.get("last_person_unit_id") or "").strip() or None,
             last_hostel_gender=str(session.get("last_hostel_gender") or "").strip() or None,
             last_ncc_active=bool(session.get("last_ncc_active")),
+            last_about_me=session.get("last_about_me") if isinstance(session.get("last_about_me"), dict) else None,
         )
 
         orch_event(
@@ -258,6 +259,10 @@ class ConversationOrchestrator:
                 if not still_ncc and not ncc_active and session.get("last_ncc_active"):
                     session.pop("last_ncc_active", None)
                     session_updates["last_ncc_active"] = None
+                # Campus topic wins — drop sticky About Me so follow-ups do not reopen it.
+                if session.get("last_about_me") is not None:
+                    session.pop("last_about_me", None)
+                    session_updates["last_about_me"] = None
 
         # M5.4: FOOD / ENVIRONMENT are no longer forced to UNKNOWN here. "How is the
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;

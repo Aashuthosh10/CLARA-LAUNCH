@@ -83,6 +83,9 @@ export function departmentIdFromUnitId(unitId: string): string {
   const uid = (unitId || '').trim();
   if (!uid) return '';
   if (uid.startsWith('college.')) return '';
+  if (uid.startsWith('department_explanation.')) {
+    return uid.slice('department_explanation.'.length);
+  }
   if (uid.startsWith('hostel.')) {
     const parts = uid.split('.');
     // Shared: hostel.facilities|mess|safety → hostel

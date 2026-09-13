@@ -8,21 +8,50 @@ import { Card04OurGuide } from './components/Card04OurGuide';
 import { CreatorModal } from './components/CreatorModal';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { playNodeSelectChime } from './utils/audio';
-import { CreatorMember } from './data/aboutData';
+import { CreatorMember, CREATORS_FIVE } from './data/aboutData';
 
 const TOTAL_CARDS = 4;
 const AUTO_TRANSITION_DELAY_MS = 10000; // 10 seconds of inactivity
 
+const SECTION_TO_INDEX: Record<string, number> = {
+  overview: 0,
+  capabilities: 1,
+  creators: 2,
+  guide: 3,
+};
+
 type AboutAppProps = {
   /** Canonical CLARA start — same path as SleepScreen wake. Required in kiosk embed. */
   onEnterClara?: () => void;
+  initialSection?: 'overview' | 'capabilities' | 'creators' | 'guide' | null;
+  initialItemId?: string | null;
 };
 
-export default function App({ onEnterClara }: AboutAppProps) {
-  const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
-  const [selectedCreator, setSelectedCreator] = useState<CreatorMember | null>(null);
-  const [hasInteracted, setHasInteracted] = useState<boolean>(false);
+function resolveInitialIndex(section: AboutAppProps['initialSection']): number {
+  if (!section) return 0;
+  return SECTION_TO_INDEX[section] ?? 0;
+}
+
+function resolveInitialCreator(itemId: string | null | undefined): CreatorMember | null {
+  if (!itemId) return null;
+  return CREATORS_FIVE.find((c) => c.id === itemId) ?? null;
+}
+
+export default function App({
+  onEnterClara,
+  initialSection = null,
+  initialItemId = null,
+}: AboutAppProps) {
+  const [currentCardIndex, setCurrentCardIndex] = useState<number>(() =>
+    resolveInitialIndex(initialSection)
+  );
+  const [selectedCreator, setSelectedCreator] = useState<CreatorMember | null>(() =>
+    initialSection === 'creators' ? resolveInitialCreator(initialItemId) : null
+  );
+  const [hasInteracted, setHasInteracted] = useState<boolean>(Boolean(initialSection));
   const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const initialCapabilityId =
+    initialSection === 'capabilities' && initialItemId ? initialItemId : null;
 
   const isTransitioningRef = useRef(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -208,6 +237,7 @@ export default function App({ onEnterClara }: AboutAppProps) {
         <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
           <Card02CapabilitiesMindMap
             onNextCard={() => goToCard(2)}
+            initialExpandedId={initialCapabilityId}
           />
         </div>
 

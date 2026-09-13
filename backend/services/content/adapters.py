@@ -18,7 +18,6 @@ from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
     SURFACE_COLLEGE,
-    SURFACE_COMPARISON,
     SURFACE_COURSE_MENU,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
@@ -51,10 +50,6 @@ from backend.services.narration_plan import (
 
 # Bind after init
 from backend.services import narration_plan as _narration_plan_mod
-
-_COMPARISON_PATH = (
-    Path(__file__).resolve().parents[2] / "data" / "department_comparison.json"
-)
 
 
 def _lang_display(language: str, language_code: str) -> tuple[str, str]:
@@ -538,49 +533,6 @@ def adapt_college(req: ResolveRequest) -> CanonicalContent | None:
     )
 
 
-def adapt_comparison(req: ResolveRequest) -> CanonicalContent | None:
-    language, code = _lang_display(req.language, req.language_code)
-    try:
-        data = json.loads(_COMPARISON_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    deps = data.get("departments") if isinstance(data, dict) else None
-    if not isinstance(deps, dict):
-        return None
-    ids = list(req.comparison_department_ids) or list(data.get("department_order") or [])[:3]
-    ids = [x for x in ids if isinstance(x, str) and x in deps]
-    if not ids:
-        ids = list(deps.keys())[:2]
-    sections: list[ContentSection] = []
-    for did in ids:
-        row = deps.get(did)
-        if not isinstance(row, dict):
-            continue
-        names = row.get("display_names") if isinstance(row.get("display_names"), dict) else {}
-        name = str(names.get(code) or names.get("en") or did)
-        cells = row.get("cells") if isinstance(row.get("cells"), dict) else {}
-        learn = cells.get("student_learning_4y") if isinstance(cells.get("student_learning_4y"), dict) else {}
-        body = str(learn.get(code) or learn.get("en") or "")
-        sections.append(ContentSection(id=f"cmp_{did}", title=name, body=body))
-    if not sections:
-        return None
-    return _finalize(
-        content_id=f"comparison:{'-'.join(ids)}:{code}",
-        content_type=ContentType.COMPARISON.value,
-        surface=SURFACE_COMPARISON,
-        language=language,
-        language_code=code,
-        title="Department Comparison",
-        subtitle="",
-        summary=sections[0].body or sections[0].title,
-        sections=sections,
-        metadata={"department_ids": ids},
-        keywords=["comparison"],
-        presentation_mode="CARD_PRESENTATION",
-        canonical_source="backend/data/department_comparison.json",
-    )
-
-
 def adapt_bus(req: ResolveRequest) -> CanonicalContent | None:
     language, code = _lang_display(req.language, req.language_code)
     prompt = BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE.get(
@@ -670,6 +622,11 @@ def adapt_faculty(req: ResolveRequest) -> CanonicalContent | None:
     return None
 
 
+def adapt_department_explanation(req: ResolveRequest) -> CanonicalContent | None:
+    """Department explanation resolves per department unit via ContentUnitResolver (DepartmentExplanationDescriptor)."""
+    return None
+
+
 ADAPTERS: dict[str, Callable[[ResolveRequest], CanonicalContent | None]] = {
     "department": adapt_department,
     "fees": adapt_fees,
@@ -681,12 +638,12 @@ ADAPTERS: dict[str, Callable[[ResolveRequest], CanonicalContent | None]] = {
     "admissions": adapt_admissions,
     "trustees": adapt_trustees,
     "college": adapt_college,
-    "comparison": adapt_comparison,
     "bus": adapt_bus,
     "course_menu": adapt_course_menu,
     "faq": adapt_faq,
     "campus_unit": adapt_campus_unit,
     "faculty": adapt_faculty,
+    "department_explanation": adapt_department_explanation,
 }
 
 

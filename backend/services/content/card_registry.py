@@ -51,6 +51,8 @@ def card_id_for_unit_id(unit_id: str) -> str | None:
     uid = (unit_id or "").strip().lower()
     if not uid or "." not in uid:
         return None
+    if uid.startswith("department_explanation."):
+        return "department_explanation"
     if uid == "fees.overview":
         return "fees"
     if uid in {"documents.overview", "admission.documents_required"}:
@@ -76,6 +78,8 @@ def department_id_for_unit_id(unit_id: str) -> str | None:
     uid = (unit_id or "").strip().lower()
     if not uid or "." not in uid:
         return None
+    if uid.startswith("department_explanation."):
+        return uid.split(".", 1)[1] or None
     if uid.startswith("hostel."):
         parts = uid.split(".")
         # Shared: hostel.facilities|mess|safety → entity "hostel"

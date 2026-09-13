@@ -39,7 +39,6 @@ from backend.services.ui_localization import ui_text
 logger = logging.getLogger(__name__)
 
 STATIC_CARDS_PATH = Path(__file__).resolve().parent.parent / "data" / "narration" / "static_cards.json"
-COMPARISON_DEFAULTS_PATH = Path(__file__).resolve().parent.parent / "data" / "comparison_insight_defaults.json"
 
 LANG_KEY_FALLBACK_ORDER = ("en", "hi", "kn", "ta", "te", "ml")
 
@@ -302,18 +301,6 @@ def _load_static_cards() -> dict[str, Any]:
         return json.loads(STATIC_CARDS_PATH.read_text(encoding="utf-8"))
     except Exception as exc:
         logger.warning("Could not parse static_cards.json: %s", exc)
-        return {}
-
-
-@lru_cache(maxsize=2)
-def _load_comparison_defaults() -> dict[str, Any]:
-    if not COMPARISON_DEFAULTS_PATH.is_file():
-        logger.warning("comparison_insight_defaults.json missing: %s", COMPARISON_DEFAULTS_PATH)
-        return {}
-    try:
-        return json.loads(COMPARISON_DEFAULTS_PATH.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.warning("Could not parse comparison_insight_defaults.json: %s", exc)
         return {}
 
 
@@ -1106,58 +1093,45 @@ def segment_documents(locale_id: str) -> list[NarrationSegment]:
     return out
 
 
-def build_department_comparison_segments(
+def build_department_explanation_compare_segments(
     department_ids: list[str],
     locale_id: str,
 ) -> list[NarrationSegment]:
     """
-    Token-efficient comparison plan (UI sync via tts_chunk_index):
-    - Phase 1: ONE short 'learns' line per dept (3 subjects max)
-    - Phase 2: ONE short 'jobs' line per dept (2 roles max)
+    Narration plan for comparison-intent queries routed to department_explanation surface.
+    Emits one segment per department with unit_id=department_explanation.{dept_key}.
+    Uses only department display names — no invented curriculum or placement facts.
     """
     lk = _effective_lang(locale_id)
-    data = _load_comparison_defaults()
-    deps = data.get("departments") if isinstance(data, dict) else None
-    if not isinstance(deps, dict) or not department_ids:
-        return [
-            NarrationSegment(
-                display_text=_clip_caption("Comparison will appear on screen shortly.", 120),
-                card_index=0,
-                card_id="comparison_learning",
-            )
-        ]
-
-    segs: list[NarrationSegment] = []
     name_map = _DEPT_DISPLAY.get(lk, _DEPT_DISPLAY["en"])
 
-    def dept_name(did: str) -> str:
-        return name_map.get(did, did.replace("_", " ").upper())
+    if not department_ids:
+        # Never emit a bare "department_explanation" unit — callers must supply ids.
+        return []
 
-    # Phase 1: learning
+    segs: list[NarrationSegment] = []
     for i, did in enumerate(department_ids):
-        row = deps.get(did) if isinstance(deps.get(did), dict) else {}
-        learn_pack = row.get("student_learning_4y") if isinstance(row, dict) else None
-        learn_raw = ""
-        if isinstance(learn_pack, dict):
-            learn_raw = str(learn_pack.get(lk) or learn_pack.get("en") or "")
-        learn_items = [_short_phrase(x, max_words=3) for x in _split_bullets(learn_raw)]
-        learn_short = _compact_list([x for x in learn_items if x], max_items=3)
-        txt = _clip_caption(f"{dept_name(did)}: {learn_short}".strip(" :"), 90)
-        segs.append(NarrationSegment(display_text=txt, card_index=i, card_id="comparison_learning"))
-
-    # Phase 2: jobs
-    for i, did in enumerate(department_ids):
-        row = deps.get(did) if isinstance(deps.get(did), dict) else {}
-        jobs_pack = row.get("future_job_opportunities") if isinstance(row, dict) else None
-        jobs_raw = ""
-        if isinstance(jobs_pack, dict):
-            jobs_raw = str(jobs_pack.get(lk) or jobs_pack.get("en") or "")
-        job_items = [_short_phrase(x, max_words=3) for x in _split_bullets(jobs_raw)]
-        jobs_short = _compact_list([x for x in job_items if x], max_items=2)
-        txt = _clip_caption(f"{dept_name(did)} jobs: {jobs_short}".strip(" :"), 90)
-        segs.append(NarrationSegment(display_text=txt, card_index=i, card_id="comparison_jobs"))
-
+        dept_name = name_map.get(did, did.replace("_", " ").upper())
+        txt = _clip_caption(dept_name, 120)
+        segs.append(
+            NarrationSegment(
+                display_text=txt,
+                card_index=i,
+                card_id="department_explanation",
+                section_id=f"department_explanation.{did}",
+                unit_id=f"department_explanation.{did}",
+            )
+        )
     return segs
+
+
+# Kept as a legacy alias so any code still calling the old name continues to work
+# until callers are updated.  Routes to the new explanation-aligned builder.
+def build_department_comparison_segments(
+    department_ids: list[str],
+    locale_id: str,
+) -> list[NarrationSegment]:
+    return build_department_explanation_compare_segments(department_ids, locale_id)
 
 
 def segment_hod_single(dept_rec: dict[str, Any], json_key: str, locale_id: str) -> NarrationSegment:

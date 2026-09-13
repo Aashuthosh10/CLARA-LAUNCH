@@ -6,7 +6,12 @@ from typing import Any
 
 from backend.services.answer_generation import INTENT_NORMAL_QUERY, get_off_topic_reply
 from backend.services.conversation.restricted_requests import is_restricted_evidence
+from backend.services.conversation.about_me_navigation import (
+    about_me_ui_action,
+    resolve_about_me_navigation,
+)
 from backend.services.conversation.templates import (
+    about_me_bridge_reply,
     clarification_reply,
     greeting_reply,
     name_ack_reply,
@@ -51,6 +56,7 @@ def route_policy(
     local_intent: dict[str, Any] | None = None,
     faq_matched: bool = False,
     response_decision: Any | None = None,
+    last_about_me: dict[str, Any] | None = None,
 ) -> PolicyDecision:
     # Frontend card/menu clicks always continue.
     if local_intent and isinstance(local_intent, dict) and local_intent:
@@ -91,6 +97,35 @@ def route_policy(
             answer_source="policy_greeting",
             passthrough=False,
             length_kind="clarification",
+        )
+
+    # Conversational About Me — before small-talk so self-intro is not swallowed.
+    last_section = None
+    last_item = None
+    if isinstance(last_about_me, dict):
+        last_section = str(last_about_me.get("section") or "").strip() or None
+        last_item = str(last_about_me.get("itemId") or "").strip() or None
+
+    about_nav = resolve_about_me_navigation(
+        assessment.normalized_text or text,
+        last_section=last_section,
+        last_item_id=last_item,
+    )
+    if about_nav is not None:
+        ui_action = about_me_ui_action(about_nav)
+        return PolicyDecision(
+            action=PolicyAction.ABOUT_ME,
+            reply_text=about_me_bridge_reply(language, about_nav.bridge_key),
+            answer_source="policy_about_me",
+            passthrough=False,
+            length_kind="clarification",
+            session_updates={
+                "_pending_ui_action": ui_action,
+                "last_about_me": {
+                    "section": about_nav.section,
+                    "itemId": about_nav.item_id,
+                },
+            },
         )
 
     if any(h in text for h in _SMALL_TALK_HINTS):
@@ -178,6 +213,7 @@ def _project_response_decision(
             reply_text=clarification_reply(
                 language,
                 getattr(response_decision, "clarification_target", None),
+                department=getattr(response_decision, "topic", None),
             ),
             answer_source="policy_clarification",
             passthrough=False,

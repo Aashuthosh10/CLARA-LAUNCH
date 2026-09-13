@@ -2,14 +2,24 @@ import { ArrowLeft } from 'lucide-react';
 import AboutApp from './App';
 import './index.css';
 
+export type AboutMeSection = 'overview' | 'capabilities' | 'creators' | 'guide';
+
 type AboutMeScreenProps = {
   onExit: () => void;
   /** Same canonical start flow as SleepScreen tap. */
   onEnterClara: () => void;
+  /** Deep-link from conversational chat navigation. */
+  initialSection?: AboutMeSection | null;
+  initialItemId?: string | null;
 };
 
 /** Embeds the complete About Me application inside the CLARA screen model. */
-export default function AboutMeScreen({ onExit, onEnterClara }: AboutMeScreenProps) {
+export default function AboutMeScreen({
+  onExit,
+  onEnterClara,
+  initialSection = null,
+  initialItemId = null,
+}: AboutMeScreenProps) {
   return (
     <div className="about-me-root relative w-full h-full overflow-y-auto">
       <button
@@ -22,7 +32,11 @@ export default function AboutMeScreen({ onExit, onEnterClara }: AboutMeScreenPro
         <ArrowLeft className="h-6 w-6 sm:h-7 sm:w-7" />
         Back to CLARA
       </button>
-      <AboutApp onEnterClara={onEnterClara} />
+      <AboutApp
+        onEnterClara={onEnterClara}
+        initialSection={initialSection}
+        initialItemId={initialItemId}
+      />
     </div>
   );
 }

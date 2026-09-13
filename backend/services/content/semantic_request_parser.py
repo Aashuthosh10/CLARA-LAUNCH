@@ -11,6 +11,7 @@ from backend.services.content.department_identity import (
 )
 from backend.services.content.department_resolver import known_department_keys, resolve_department_key
 from backend.services.content.multilingual_terms import (
+    TOPIC_EXPLANATION,
     TOPIC_OVERVIEW,
 )
 from backend.services.content.semantic_anaphora import has_anaphora, has_person_anaphora
@@ -48,6 +49,16 @@ from backend.services.content.semantic_vocab.catalog import (
     UNSUPPORTED_BUS,
     UNSUPPORTED_DOCUMENTS,
 )
+
+
+def _is_explicit_department_contrast_request(raw_text: str, normalized: str) -> bool:
+    """True only for explicit compare/difference language across named departments."""
+    from backend.services.answer_generation import text_has_department_comparison_cue
+
+    return bool(
+        text_has_department_comparison_cue(raw_text)
+        or text_has_department_comparison_cue(normalized)
+    )
 
 
 def _dedupe_keep_order(xs: list[str] | tuple[str, ...]) -> tuple[str, ...]:
@@ -297,6 +308,18 @@ def parse_semantic_request(
             # at comparison vs two full decks ("tell me about CSE and AIML" stays closed).
             dept_items = tuple(
                 SemanticItem(entity=span.json_key, topic=TOPIC_OVERVIEW) for span in entity_spans
+            )
+        if (
+            dept_items is None
+            and not has_explicit_topic
+            and len(entity_spans) >= 2
+            and _is_explicit_department_contrast_request(raw_text, normalized)
+        ):
+            # Explicit contrast/compare between named SVIT departments → one explanation
+            # unit per department. Does not weaken the general multi-dept fail-closed path.
+            dept_items = tuple(
+                SemanticItem(entity=span.json_key, topic=TOPIC_EXPLANATION)
+                for span in entity_spans[:3]
             )
     items = _merge_department_leadership_and_campus_items(
         dept_items=dept_items or (),
