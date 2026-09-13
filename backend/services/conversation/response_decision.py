@@ -122,6 +122,7 @@ class ResponseDecision:
     clarification_reason: str | None = None
     domain_relevance: DomainRelevance = DomainRelevance.UNKNOWN
     evidence: str = "none"
+    authority_domain: str = "unknown"
     diagnostics: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -155,6 +156,10 @@ _INSTITUTION_LEXICON: tuple[str, ...] = (
     "hackathon", "hackathons", "club", "clubs", "fest", "fests",
     "experienced", "supportive", "makerspace", "studies", "study", "academic",
     "practical", "intern", "industry", "opportunity", "opportunities", "vibe",
+    "office", "reception", "receptionist", "enquiry", "inquiry", "submit",
+    "certificate", "certificates", "bonafide", "attendance", "restroom", "washroom",
+    "parents", "visitor", "visitors", "room", "directions", "lost and found",
+    "ncc", "nss", "cadet", "cadets",
 )
 
 # College-wide placement/achievement talk is ANSWER, not "which department?".
@@ -168,10 +173,12 @@ _OFF_DOMAIN_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bcapital\s+of\b", re.I),
     re.compile(r"\b(weather|temperature|forecast)\b", re.I),
     re.compile(r"\b(joke|jokes|song|sing|poem|story)\b", re.I),
-    re.compile(r"\b(cricket|football|movie|movies|film|actor|actress)\b", re.I),
-    re.compile(r"\b(stock|bitcoin|crypto|share\s+price)\b", re.I),
+    re.compile(r"\b(cricket|football|world\s+cup|movie|movies|film|actor|actress|celebrity|gossip)\b", re.I),
+    re.compile(r"\b(virat\s+kohli|shah\s+rukh\s+khan|richest\s+person|famous\s+celebrity)\b", re.I),
+    re.compile(r"\b(stock\s+market|stocks?|bitcoin|crypto|share\s+price)\b", re.I),
     re.compile(r"\b(who\s+is\s+the\s+)?(president|prime\s+minister)\s+of\b", re.I),
-    re.compile(r"\b(recipe|cook|restaurant)\b", re.I),
+    re.compile(r"\b(politics|politician|election|recipe|cook(?:ing)?|restaurant)\b", re.I),
+    re.compile(r"\b(plan\s+(?:my|a)\s+(?:holiday|vacation|trip)|travel\s+plan|book\s+(?:me\s+)?a\s+flight)\b", re.I),
     re.compile(r"\bwrite\s+(me\s+)?(a|an)\s+(code|program|essay|poem)\b", re.I),
 )
 
@@ -179,6 +186,168 @@ _UNSAFE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\b(fuck|shit|bitch|bastard|asshole)\b", re.I),
     re.compile(r"\b(kill|suicide|bomb|weapon|drugs)\b", re.I),
 )
+
+_CONTROLLED_REQUEST_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("payment", re.compile(r"\b(payment\s+(scanner|qr)|(?:scanner|qr)\s+(?:code\s+)?(?:for|to)\s+(?:payment|pay)|where\s+(?:do|can)\s+i\s+scan\s+to\s+pay|bank\s+(account|details))\b", re.I)),
+    ("private_contact", re.compile(r"\b(?:(?:personal|private)\s+)?(?:mobile|phone|contact)\s+number\b|\bsomeone(?:'s)?\s+(?:mobile|phone)\s+number\b", re.I)),
+    ("official_confirmation", re.compile(
+        r"\b(?:definitely\s+refund|promise\s+(?:a\s+)?refund|"
+        r"(?:can|will|could|would)\s+(?:the\s+)?(?:hod|college|department|you)\s+"
+        r"(?:approve|allow|grant|modify|change|excuse|waive|issue|confirm)|"
+        r"approve\s+(?:my\s+)?(?:admission|attendance|leave|request)|"
+        r"(?:excuse|modify|waive)\s+(?:my\s+)?attendance|change\s+(?:my\s+)?marks|"
+        r"grant\s+(?:me\s+)?permission|special\s+permission|issue\s+(?:my\s+)?certificate|"
+        r"guarantee\s+(?:my\s+)?admission)\b",
+        re.I,
+    )),
+)
+
+_CONTROLLED_MULTILINGUAL_CUES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("payment", (
+        "ಪೇಮೆಂಟ್ ಸ್ಕ್ಯಾನರ್", "पेमेंट स्कैनर", "பேமெண்ட் ஸ்கேனர்",
+        "పేమెంట్ స్కానర్", "പേയ്മെന്റ് സ്കാനർ",
+    )),
+    ("private_contact", (
+        "ವೈಯಕ್ತಿಕ ಮೊಬೈಲ್", "निजी मोबाइल", "தனிப்பட்ட மொபைல்",
+        "వ్యక్తిగత మొబైల్", "സ്വകാര്യ മൊബൈൽ",
+    )),
+)
+
+_GENERAL_EXPLANATION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\b(what\s+is|explain|difference\s+between|how\s+does|how\s+do)\b", re.I),
+    re.compile(r"\b(study\s+tips|prepare\s+for|skills?\s+should|career\s+advice|how\s+internships?\s+work)\b", re.I),
+    re.compile(r"\b(?:placements?|interviews?)\b.{0,40}\b(?:prepare|preparation|tips?|skills?|resume)\b", re.I),
+    re.compile(r"\b(?:prepare|preparation|tips?|skills?|resume)\b.{0,40}\b(?:placements?|interviews?)\b", re.I),
+    re.compile(r"\b(?:andre\s+enu|endare\s+enu|enthaanu|enthaanu|kya\s+hai|ante\s+enti|endral\s+enna|ennal\s+entha)\b", re.I),
+)
+
+_GENERAL_DEFINITION_CUES: tuple[str, ...] = (
+    "ಅಂದರೆ ಏನು",  # Kannada
+    "क्या है",  # Hindi
+    "అంటే ఏమిటి", "అంటే ఏంటి",  # Telugu
+    "என்றால் என்ன",  # Tamil
+    "എന്താണ്",  # Malayalam
+)
+
+_TOO_IRRELEVANT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\b(?:write|tell|make|generate)\b.{0,35}\b(?:\d{3,}[\s-]*word|very\s+long|long)\b"
+        r".{0,35}\b(?:story|poem|essay|screenplay|roleplay)\b",
+        re.I,
+    ),
+    re.compile(r"\b(?:book\s+(?:me\s+)?a\s+flight|send\s+(?:an?\s+)?email|order\s+(?:me\s+)?food)\b", re.I),
+    re.compile(r"(?:\b(?:asdf|qwer|qwerty|zxcv|hjkl)\b[\s,;.!?]*){3,}", re.I),
+)
+
+
+def controlled_request_kind(text: str) -> str | None:
+    folded = (text or "").casefold()
+    for kind, cues in _CONTROLLED_MULTILINGUAL_CUES:
+        if any(cue.casefold() in folded for cue in cues):
+            return kind
+    for kind, pattern in _CONTROLLED_REQUEST_PATTERNS:
+        if pattern.search(text or ""):
+            return kind
+    return None
+
+
+def _is_general_harmless(text: str) -> bool:
+    raw = text or ""
+    if re.search(r"\b(svit|sai\s+vidya|at\s+(the\s+)?college|college\s+policy|official)\b", raw, re.I):
+        return False
+    folded = raw.casefold()
+    return (
+        any(pattern.search(raw) for pattern in _GENERAL_EXPLANATION_PATTERNS)
+        or any(cue.casefold() in folded for cue in _GENERAL_DEFINITION_CUES)
+    )
+
+
+_ACADEMIC_CONCEPT_PATTERN = re.compile(
+    r"\b(?:cse|ise|ece|mba|aiml|computer\s+science|data\s+science|ai\s*/?\s*ml|"
+    r"artificial\s+intelligence|machine\s+learning|cloud\s+computing|recursion|"
+    r"algorithms?|programming|cyber\s*security|engineering|semesters?|credits?|cgpa|"
+    r"backlogs?|campus\s+placements?|internships?|curriculum|"
+    r"software\s+jobs?|technical\s+skills?)\b",
+    re.I,
+)
+
+_RECEPTIONIST_REQUEST_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bwhere\s+(?:should|can|do)\s+i\s+(?:go|ask|submit|wait|pay|get)\b", re.I),
+    re.compile(r"\b(?:who|whom)\s+(?:should|can|do)\s+i\s+(?:meet|ask|contact|talk\s+to)\b", re.I),
+    re.compile(r"\bwho\s+(?:handles?|can\s+help\s+with)\b", re.I),
+    re.compile(r"\b(?:need|want)\s+(?:help\s+with\s+)?(?:my\s+)?(?:admission|certificate|bonafide|attendance|fees?|documents?)\b", re.I),
+    re.compile(r"\b(?:lost\s+(?:something|an?\s+item)|lost\s+and\s+found|official\s+information)\b", re.I),
+)
+
+
+def _is_college_adjacent_advice(text: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(study\s+tips|prepare\s+for|skills?\s+should|career\s+advice|how\s+internships?\s+work)\b|"
+            r"\bplacements?\b.{0,40}\b(prepare|preparation|tips?|skills?|resume)\b|"
+            r"\b(prepare|preparation|tips?|skills?|resume)\b.{0,40}\bplacements?\b",
+            text or "",
+            re.I,
+        )
+    )
+
+
+def _is_general_definition_request(text: str) -> bool:
+    """Disambiguate academic definitions from similarly named SVIT cards."""
+    raw = text or ""
+    if detect_atomic_topics(raw).intersection({TOPIC_HOD, TOPIC_FEES, TOPIC_FACULTY}):
+        return False
+    definition_cue = any(
+        cue.casefold() in raw.casefold() for cue in _GENERAL_DEFINITION_CUES
+    ) or bool(
+        re.search(
+            r"\b(?:what\s+is|explain|difference\s+between|andre\s+enu|endare\s+enu|"
+            r"enthaanu|kya\s+hai|ante\s+enti|endral\s+enna|ennal\s+entha)\b",
+            raw,
+            re.I,
+        )
+    )
+    concept_cue = bool(_ACADEMIC_CONCEPT_PATTERN.search(raw)) or bool(
+        re.search(r"\b(?:AI|ML)\b", raw, re.I)
+    )
+    return definition_cue and concept_cue
+
+
+def _is_college_general(text: str) -> bool:
+    raw = text or ""
+    if re.search(r"\b(?:svit|sai\s+vidya|official\s+(?:svit|college))\b", raw, re.I):
+        return False
+    if re.search(r"\bcredit\s+card\b", raw, re.I):
+        return False
+    return bool(
+        _is_college_adjacent_advice(raw)
+        or _is_general_definition_request(raw)
+        or re.search(r"\bhow\s+do\s+internships?\s+work\b", raw, re.I)
+        or re.search(r"\bwhich\s+(?:course|branch)\s+is\s+better\b", raw, re.I)
+        or (
+            _ACADEMIC_CONCEPT_PATTERN.search(raw)
+            and re.search(r"\b(?:compare|comparison|versus|vs\.?|difference)\b", raw, re.I)
+        )
+    )
+
+
+def _is_receptionist_request(text: str) -> bool:
+    return any(pattern.search(text or "") for pattern in _RECEPTIONIST_REQUEST_PATTERNS)
+
+
+def _is_out_of_scope(text: str) -> bool:
+    raw = text or ""
+    if re.search(r"\b(?:svit|sai\s+vidya|college|campus|department)\b", raw, re.I):
+        return False
+    return any(pattern.search(raw) for pattern in _OFF_DOMAIN_PATTERNS) or _is_too_irrelevant(raw)
+
+
+def _is_too_irrelevant(text: str) -> bool:
+    raw = (text or "").strip()
+    if any(pattern.search(raw) for pattern in _TOO_IRRELEVANT_PATTERNS):
+        return True
+    words = re.findall(r"[a-zA-Z]{2,}", raw.casefold())
+    return bool(len(words) >= 5 and len(set(words)) <= 2)
 
 # Comparison against institutions that are not SVIT.
 _EXTERNAL_COMPARISON_CUES: tuple[re.Pattern[str], ...] = (
@@ -222,10 +391,6 @@ def detect_domain_relevance(text: str) -> DomainRelevance:
     for pattern in _UNSAFE_PATTERNS:
         if pattern.search(raw):
             return DomainRelevance.OFF_DOMAIN
-    for pattern in _OFF_DOMAIN_PATTERNS:
-        if pattern.search(raw):
-            return DomainRelevance.OFF_DOMAIN
-
     hay = _hay(raw)
     if not hay:
         return DomainRelevance.UNKNOWN
@@ -474,6 +639,7 @@ def resolve_response_decision(
     local_intent: dict[str, Any] | None = None,
     validated_proposal: SemanticProposal | None = None,
     proposal_diagnostics: dict[str, Any] | None = None,
+    contextual_follow_up: bool = False,
 ) -> ResponseDecision:
     """
     Decide the response mode for one turn.
@@ -499,6 +665,17 @@ def resolve_response_decision(
         decision: ResponseDecision,
         **more: Any,
     ) -> ResponseDecision:
+        if decision.mode is ResponseMode.ANSWER and decision.authority_domain == "unknown":
+            decision = replace(
+                decision,
+                authority_domain=(
+                    "official_svit"
+                    if decision.domain_relevance is DomainRelevance.INSTITUTION
+                    else "general"
+                ),
+            )
+        elif decision.mode is ResponseMode.CARD and decision.authority_domain == "unknown":
+            decision = replace(decision, authority_domain="official_svit")
         diag = _proposal_diag(proposal, {**base_diag, **more})
         if not diag:
             return decision
@@ -551,6 +728,19 @@ def resolve_response_decision(
                 domain_relevance=DomainRelevance.INSTITUTION,
                 confidence=0.99,
                 evidence="local_intent",
+            )
+        )
+
+    controlled_kind = controlled_request_kind(raw)
+    if controlled_kind:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.FALLBACK,
+                clarification_reason=controlled_kind,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                authority_domain="controlled_redirect",
+                confidence=0.98,
+                evidence=f"controlled_{controlled_kind}",
             )
         )
 
@@ -610,6 +800,32 @@ def resolve_response_decision(
     )
     qualitative_request = _has_any_concept_cue(raw, _QUALITATIVE_CUES)
     explicit_card_action = _has_any_concept_cue(raw, _EXPLICIT_CARD_ACTION_CUES)
+
+    # Entity/topic binding may have come from active session context rather than
+    # an explicit card request in this utterance. Keep these informational
+    # follow-ups in authoritative SVIT answer mode instead of opening a card.
+    if contextual_follow_up and (
+        request_topics.intersection({TOPIC_HOD, TOPIC_PLACEMENTS, "documents", "duration"})
+        or (ci_intent or "") == INTENT_DOCUMENTS
+        or bool(re.search(r"\b(?:documents?|how\s+long|duration)\b", raw, re.I))
+        or bool(
+            re.search(
+                r"^\s*(?:tell\s+me\s+more|more\s+about|is\s+it\s+difficult|"
+                r"how\s+difficult|what\s+kind\s+of\s+jobs|which\s+jobs|career\s+options)\b",
+                raw,
+                re.I,
+            )
+        )
+    ):
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.ANSWER,
+                entities=tuple(getattr(semantic_request, "entities", ()) or ()),
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.9,
+                evidence="contextual_svit_follow_up",
+            )
+        )
 
     # A named faculty entity plus an evaluative modifier asks about teaching
     # quality. A bare/qualitative college-wide placement question likewise asks
@@ -957,13 +1173,12 @@ def resolve_response_decision(
             )
         )
 
-    # 11. Nothing recognised. Ask rather than invent or refuse.
+    # 11. Unknown non-receptionist knowledge stays inside CLARA's role boundary.
     return _done(
         ResponseDecision(
-            mode=ResponseMode.CLARIFY,
-            clarification_reason="unrecognised_request",
-            domain_relevance=relevance,
-            confidence=0.4,
-            evidence="no_evidence",
+            mode=ResponseMode.FALLBACK,
+            domain_relevance=DomainRelevance.OFF_DOMAIN,
+            confidence=0.7,
+            evidence="out_of_scope_default",
         )
     )

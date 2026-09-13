@@ -196,6 +196,18 @@ WS_IP_CONNECT_RATE = max(0.01, float(os.getenv("WS_IP_CONNECT_RATE", "0.333333")
 WS_RATE_LIMIT_MAX_IPS = max(100, int(os.getenv("WS_RATE_LIMIT_MAX_IPS", "5000")))
 WS_RATE_LIMIT_STALE_SECONDS = max(60.0, float(os.getenv("WS_RATE_LIMIT_STALE_SECONDS", "600")))
 
+# Public campus endpoints use independent, process-local buckets so map downloads,
+# transcript matching, and route calculation cannot exhaust one another's budget.
+CAMPUS_MAP_IP_BURST = max(1, int(os.getenv("CAMPUS_MAP_IP_BURST", "60")))
+CAMPUS_MAP_IP_RATE = max(0.01, float(os.getenv("CAMPUS_MAP_IP_RATE", "2")))
+CAMPUS_MATCH_IP_BURST = max(1, int(os.getenv("CAMPUS_MATCH_IP_BURST", "30")))
+CAMPUS_MATCH_IP_RATE = max(0.01, float(os.getenv("CAMPUS_MATCH_IP_RATE", "1")))
+CAMPUS_ROUTE_IP_BURST = max(1, int(os.getenv("CAMPUS_ROUTE_IP_BURST", "20")))
+CAMPUS_ROUTE_IP_RATE = max(0.01, float(os.getenv("CAMPUS_ROUTE_IP_RATE", "0.5")))
+CAMPUS_API_MAX_BODY_BYTES = max(
+    1024, min(64 * 1024, int(os.getenv("CAMPUS_API_MAX_BODY_BYTES", "4096")))
+)
+
 # Performance/latency tuning
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "100"))
 # Longer spoken comparison: full walkthrough of every section × every program on the card.

@@ -5,31 +5,89 @@ from __future__ import annotations
 import re
 
 
+def _completed_turns(session: dict) -> list[dict[str, str]]:
+    turns = session.setdefault("turn_history", [])
+    if not isinstance(turns, list):
+        turns = []
+        session["turn_history"] = turns
+    return turns
+
+
+def clear_session_conversation_memory(session: dict) -> None:
+    """Clear all connection-local conversational metadata on a genuine reset."""
+    session["history"] = []
+    session["turn_history"] = []
+    session["active_svit_context"] = {}
+    session["conversation_entities"] = {}
+    for key in (
+        "_pending_history_user",
+        "last_semantic_entities",
+        "last_person_unit_id",
+        "_conversation_resolution",
+    ):
+        session.pop(key, None)
+
+
 def append_session_history(session: dict, role: str, text: str, *, max_turns: int = 3) -> None:
+    """Record only completed user/assistant pairs, keeping exactly ``max_turns``.
+
+    ``history`` remains a flattened compatibility view for existing diagnostics and
+    name-use checks.  ``turn_history`` is the authoritative bounded turn buffer.
+    """
     cleaned = (text or "").strip()
     if not cleaned:
         return
-    history = session.setdefault("history", [])
-    history.append({"role": role, "text": cleaned})
-    max_items = max_turns * 2
-    if len(history) > max_items:
-        del history[:-max_items]
+    if role == "user":
+        session["_pending_history_user"] = cleaned
+        return
+    if role != "assistant":
+        return
+    user_text = str(session.pop("_pending_history_user", "") or "").strip()
+    if not user_text:
+        return
+    turns = _completed_turns(session)
+    turns.append({"user": user_text, "assistant": cleaned})
+    if len(turns) > max_turns:
+        del turns[:-max_turns]
+    session["history"] = [
+        item
+        for turn in turns
+        for item in (
+            {"role": "user", "text": turn["user"]},
+            {"role": "assistant", "text": turn["assistant"]},
+        )
+    ]
 
 
 def prior_user_question(session: dict, current_text: str) -> str:
     """The immediately previous visitor utterance, if any. Never assistant speech."""
     current = (current_text or "").strip()
-    for item in reversed(session.get("history") or []):
-        if item.get("role") != "user":
-            continue
-        text = (item.get("text") or "").strip()
+    turns = session.get("turn_history") or []
+    for turn in reversed(turns):
+        text = (turn.get("user") or "").strip()
         if text and text != current:
             return text
+    for item in reversed(session.get("history") or []):
+        if item.get("role") == "user":
+            text = (item.get("text") or "").strip()
+            if text and text != current:
+                return text
     return ""
 
 
 def history_for_llm(session: dict) -> list[dict[str, str]]:
     """Last 3 conversational turns only (6 messages) to limit context bleed."""
+    turns = session.get("turn_history") or []
+    if turns:
+        return [
+            message
+            for turn in turns[-3:]
+            for message in (
+                {"role": "user", "content": str(turn.get("user") or "").strip()},
+                {"role": "assistant", "content": str(turn.get("assistant") or "").strip()},
+            )
+            if message["content"]
+        ]
     out: list[dict[str, str]] = []
     recent = session.get("history", [])[-6:]
     for item in recent:

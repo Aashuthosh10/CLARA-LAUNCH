@@ -8,6 +8,7 @@ Edit order:
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -143,6 +144,21 @@ _GUEST_NAME_PREFIX_RE = re.compile(
 )
 
 _GUEST_NAME_MAX_LEN = 48
+_GUEST_NAME_MAX_WORDS = 6
+_GUEST_NAME_MAX_SEPARATORS = 4
+_GUEST_NAME_SEPARATORS = frozenset({"'", "\u2019", "-"})
+_GUEST_NAME_INJECTION_PHRASES = (
+    "ignore previous",
+    "ignore all",
+    "system prompt",
+    "developer message",
+    "reveal internal",
+    "reveal instructions",
+    "previous instructions",
+    "follow these instructions",
+    "act as",
+    "you are chatgpt",
+)
 
 # Phrases meaning "I'd rather not share my name" (ASCII normalize for matching).
 _SKIP_GUEST_NAME_PHRASES: frozenset[str] = frozenset(
@@ -277,10 +293,13 @@ def is_plausible_guest_name_utterance(text: str | None) -> bool:
 
 
 def normalize_guest_name(raw: str | None) -> str | None:
-    """Strip fillers and return a safe display name, or None if unusable."""
+    """Return a short multilingual personal name, never instruction-like text."""
     if not raw:
         return None
-    s = str(raw).strip()
+    raw_text = str(raw)
+    if any(unicodedata.category(char).startswith("C") for char in raw_text):
+        return None
+    s = raw_text.strip()
     if not s:
         return None
     if guest_name_reply_is_skip(s):
@@ -289,7 +308,6 @@ def normalize_guest_name(raw: str | None) -> str | None:
     if looks_like_campus_query(s):
         return None
     s = _GUEST_NAME_PREFIX_RE.sub("", s)
-    s = s.strip(" \t\r\n.,!?\"'")
     s = " ".join(s.split())
     if guest_name_reply_is_skip(s):
         return None
@@ -299,21 +317,39 @@ def normalize_guest_name(raw: str | None) -> str | None:
     if looks_like_campus_query(s):
         return None
     if len(s) > _GUEST_NAME_MAX_LEN:
-        # Never cut an Indic grapheme cluster. Prefer complete name words; an
-        # overlong single token is rejected instead of producing broken text.
-        words = s.split()
-        kept: list[str] = []
-        for word in words:
-            candidate = " ".join((*kept, word))
-            if len(candidate) > _GUEST_NAME_MAX_LEN:
-                break
-            kept.append(word)
-        if not kept:
-            return None
-        s = " ".join(kept)
-    if not s or (s.isdigit() and len(s) > 3):
         return None
-    if sum(1 for c in s if c.isalpha()) < 1:
+    if len(s.split()) > _GUEST_NAME_MAX_WORDS:
+        return None
+    folded = s.casefold()
+    if any(phrase in folded for phrase in _GUEST_NAME_INJECTION_PHRASES):
+        return None
+    if not s or s[0] in _GUEST_NAME_SEPARATORS or s[-1] in _GUEST_NAME_SEPARATORS:
+        return None
+    separator_count = 0
+    previous_was_separator = False
+    has_letter = False
+    for char in s:
+        category = unicodedata.category(char)
+        if category.startswith("L"):
+            has_letter = True
+            previous_was_separator = False
+            continue
+        if category.startswith("M"):
+            if not has_letter:
+                return None
+            previous_was_separator = False
+            continue
+        if char == " ":
+            previous_was_separator = False
+            continue
+        if char in _GUEST_NAME_SEPARATORS:
+            separator_count += 1
+            if previous_was_separator or separator_count > _GUEST_NAME_MAX_SEPARATORS:
+                return None
+            previous_was_separator = True
+            continue
+        return None
+    if not has_letter:
         return None
     return s
 

@@ -37,6 +37,7 @@ from backend.services.narration_plan import finalize_segment_list
 from backend.services.runtime import freeze_localization, release_localization, sync_runtime_from_session
 from backend.services.runtime.presentation_integrity import validate_before_narration_plan
 from backend.services.session_language import resolve_session_language
+from backend.services.conversation.context_resolver import update_active_svit_context
 
 
 def _session_last_semantic_entities(session: dict[str, Any]) -> tuple[str, ...] | None:
@@ -71,6 +72,7 @@ class ConversationOrchestrator:
         groq_client: Any | None = None,
         model: str | None = None,
         defer_narration: bool = False,
+        contextual_follow_up: bool = False,
     ) -> OrchestratorResult:
         orch_event("TURN_STARTED", turn_id=turn_id)
         resolution = ConversationResolution()
@@ -179,6 +181,9 @@ class ConversationOrchestrator:
         if response_decision is not None:
             mode = getattr(response_decision, "mode", None)
             resolution.response_mode = str(getattr(mode, "value", mode) or "")
+            resolution.authority_domain = str(
+                getattr(response_decision, "authority_domain", "unknown") or "unknown"
+            )
             resolution.clarification_target = getattr(
                 response_decision, "clarification_target", None
             )
@@ -205,6 +210,7 @@ class ConversationOrchestrator:
             elif getattr(response_decision, "items", ()):
                 session["last_person_unit_id"] = None
                 session_updates["last_person_unit_id"] = None
+            update_active_svit_context(session, response_decision)
 
             # Sticky hostel gender for follow-ups (mess / facilities / warden).
             hostel_gender = None

@@ -53,6 +53,7 @@ class ConversationResolution:
     # M5.4 — authoritative response mode for the turn: CARD | ANSWER | CLARIFY | FALLBACK.
     # Downstream stages consume it; none of them may contradict it.
     response_mode: str | None = None
+    authority_domain: str = "unknown"
     clarification_target: str | None = None
     # Milestone 4.1 — backend-only canonical identity (never emitted on WS)
     canonical_surface: str | None = None
