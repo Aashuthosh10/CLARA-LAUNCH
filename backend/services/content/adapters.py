@@ -17,6 +17,7 @@ from backend.services.answer_generation import (
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
+    SURFACE_CAMPUS_NAVIGATION,
     SURFACE_COLLEGE,
     SURFACE_COURSE_MENU,
     SURFACE_DEPARTMENT_FEES,
@@ -558,6 +559,31 @@ def adapt_bus(req: ResolveRequest) -> CanonicalContent | None:
     )
 
 
+def adapt_campus_navigation(req: ResolveRequest) -> CanonicalContent | None:
+    from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+    language, code = _lang_display(req.language, req.language_code)
+    prompt = campus_navigation_spoken_prompt(language, None, status="resolved")
+    return _finalize(
+        content_id=f"campus_navigation:{code}",
+        content_type=ContentType.CAMPUS_NAVIGATION.value,
+        surface=SURFACE_CAMPUS_NAVIGATION,
+        language=language,
+        language_code=code,
+        title="Campus Navigation",
+        subtitle="",
+        summary=prompt,
+        sections=[ContentSection(id="prompt", title="Spoken prompt", body=prompt)],
+        metadata={
+            "map_ui": "frontend/src/campus-navigation",
+            "map_data": "backend/data/svit-campus-map.json",
+        },
+        keywords=["navigation", "campus", "map"],
+        presentation_mode="CARD_PRESENTATION",
+        canonical_source="backend/data/svit-campus-map.json",
+    )
+
+
 def adapt_course_menu(req: ResolveRequest) -> CanonicalContent | None:
     language, code = _lang_display(req.language, req.language_code)
     prompt = COURSE_MENU_SPOKEN_PROMPT_BY_LANGUAGE.get(
@@ -639,6 +665,7 @@ ADAPTERS: dict[str, Callable[[ResolveRequest], CanonicalContent | None]] = {
     "trustees": adapt_trustees,
     "college": adapt_college,
     "bus": adapt_bus,
+    "campus_navigation": adapt_campus_navigation,
     "course_menu": adapt_course_menu,
     "faq": adapt_faq,
     "campus_unit": adapt_campus_unit,

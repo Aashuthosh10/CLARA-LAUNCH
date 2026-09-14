@@ -22,6 +22,7 @@ class ContentType(str, Enum):
     COLLEGE = "college"
     COMPARISON = "comparison"
     BUS = "bus"
+    CAMPUS_NAVIGATION = "campus_navigation"
     COURSE_MENU = "course_menu"
     FAQ = "faq"
     HOSTEL = "hostel"
@@ -45,6 +46,7 @@ SURFACE_COLLEGE = "college"
 SURFACE_COMPARISON = "department_comparison"
 SURFACE_DEPARTMENT_EXPLANATION = "department_explanation"
 SURFACE_BUS = "bus_routes"
+SURFACE_CAMPUS_NAVIGATION = "campus_navigation"
 SURFACE_COURSE_MENU = "course_menu"
 SURFACE_FAQ = "faq"
 SURFACE_HOSTEL = "hostel"
@@ -68,6 +70,7 @@ ALL_SURFACES: frozenset[str] = frozenset(
         # SURFACE_COMPARISON retired — comparison queries now route to SURFACE_DEPARTMENT_EXPLANATION
         SURFACE_DEPARTMENT_EXPLANATION,
         SURFACE_BUS,
+        SURFACE_CAMPUS_NAVIGATION,
         SURFACE_COURSE_MENU,
         SURFACE_FAQ,
         SURFACE_HOSTEL,

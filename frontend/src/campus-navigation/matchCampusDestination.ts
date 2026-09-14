@@ -1,16 +1,30 @@
 import type { CampusDirection } from './campusDirections';
 
 /**
+ * Normalize transcript for local destination matching.
+ * Preserves letters across scripts (Indic included); strips punctuation only.
+ */
+export function normalizeCampusDestinationTranscript(transcript: string): string {
+  const raw = transcript.trim().toLowerCase();
+  if (!raw) return '';
+  // Keep letters, marks (Indic matras), and numbers — never ASCII-strip regional speech.
+  return raw
+    .replace(/[^\p{L}\p{M}\p{N}\s/-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Best-effort match of speech transcript to a campus destination index.
  * Tolerates room codes ("A 001", "a-001"), full labels, and partial keywords.
+ * Prefer backend `/api/campus/match` for conversation authority; this is a
+ * local English/code fallback that must not wipe Indic scripts.
  */
 export function matchCampusDestinationIndex(
   transcript: string,
   directions: CampusDirection[],
 ): number | null {
-  const raw = transcript.trim().toLowerCase();
-  if (!raw) return null;
-  const normalized = raw.replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = normalizeCampusDestinationTranscript(transcript);
   if (!normalized) return null;
 
   let bestIdx: number | null = null;
@@ -43,10 +57,13 @@ export function matchCampusDestinationIndex(
     }
 
     const tail = dest.includes(' - ') ? dest.split(' - ').slice(1).join(' ') : dest;
+    if (tail.length >= 4 && (normalized === tail || normalized.includes(tail))) {
+      score += 100;
+    }
     const keywords = tail.split(/\s+/).filter((w) => w.length > 2);
     for (const w of keywords) {
       if (w.length > 3 && normalized.includes(w)) {
-        score += 12;
+        score += w.length >= 6 ? 40 : 12;
       }
     }
 

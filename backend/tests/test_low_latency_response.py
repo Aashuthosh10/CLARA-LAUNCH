@@ -384,6 +384,8 @@ class LowLatencyResponseTests(unittest.IsolatedAsyncioTestCase):
             "audioPending",
             "turn_id",
             "assistantText",
+            "answerPresentation",
+            "visualResponseEligible",
             "spokenText",
             "utterance_kind",
             "segment_index",

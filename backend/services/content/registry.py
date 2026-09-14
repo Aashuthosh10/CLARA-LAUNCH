@@ -8,6 +8,7 @@ from backend.services.content.types import (
     ALL_SURFACES,
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
+    SURFACE_CAMPUS_NAVIGATION,
     SURFACE_COLLEGE,
     SURFACE_COURSE_MENU,
     SURFACE_DEPARTMENT_EXPLANATION,
@@ -146,6 +147,14 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         content_type=ContentType.BUS.value,
         canonical_source="backend/services/answer_generation.py#BUS_ROUTES_SPOKEN_PROMPT_BY_LANGUAGE",
         notes="Spoken prompt only. Route table is FE collegeBusRoutes.json.",
+    ),
+    SURFACE_CAMPUS_NAVIGATION: ContentOwnerDescriptor(
+        surface=SURFACE_CAMPUS_NAVIGATION,
+        owner_id="campus_navigation_map",
+        adapter_key="campus_navigation",
+        content_type=ContentType.CAMPUS_NAVIGATION.value,
+        canonical_source="backend/data/svit-campus-map.json",
+        notes="Spoken prompt + destination payload. Map UI is FE campus-navigation.",
     ),
     SURFACE_COURSE_MENU: ContentOwnerDescriptor(
         surface=SURFACE_COURSE_MENU,

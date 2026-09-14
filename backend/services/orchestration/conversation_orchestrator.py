@@ -188,6 +188,13 @@ class ConversationOrchestrator:
             resolution.clarification_target = getattr(
                 response_decision, "clarification_target", None
             )
+            if resolution.response_mode == "CLARIFY":
+                from backend.services.conversation.templates import clarification_choices
+
+                resolution.choice_options = clarification_choices(
+                    resolution.language,
+                    resolution.clarification_target,
+                )
             card_entities = tuple(getattr(response_decision, "entities", ()) or ())
             if card_entities:
                 # CI has already resolved these through the semantic request policy.
@@ -280,6 +287,37 @@ class ConversationOrchestrator:
         # canteen food?" and "How is the campus atmosphere?" are institutional questions;
         # the response decision routes genuine off-domain food requests to FALLBACK.
         decision = intel.decision
+
+        # Campus navigation presentation authority: destination is deterministic.
+        if response_decision is not None:
+            diag = getattr(response_decision, "diagnostics", None) or {}
+            nav_status = diag.get("campus_nav_status")
+            if nav_status:
+                resolution.campus_nav_status = str(nav_status)
+            dest = diag.get("campus_destination")
+            if isinstance(dest, dict) and dest:
+                resolution.campus_destination = dest
+            cands = diag.get("campus_candidates")
+            if isinstance(cands, list):
+                resolution.campus_nav_candidates = [c for c in cands if isinstance(c, dict)]
+            evidence = getattr(response_decision, "evidence", None)
+            if evidence in {
+                "campus_navigation",
+                "campus_navigation_ambiguous",
+                "campus_destination_unknown",
+            } or (
+                nav_status in {"resolved", "ambiguous", "unknown"}
+            ):
+                from backend.services.answer_generation import INTENT_CAMPUS_NAVIGATION
+
+                intent = INTENT_CAMPUS_NAVIGATION
+                orch_event(
+                    "NAVIGATION_PRESENTATION",
+                    turn_id=turn_id,
+                    room_code=(resolution.campus_destination or {}).get("code"),
+                    floor_id=(resolution.campus_destination or {}).get("floor_id"),
+                    nav_status=nav_status,
+                )
 
         resolve_presentation(
             decision=decision,

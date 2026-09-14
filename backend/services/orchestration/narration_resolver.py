@@ -5,8 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from backend.services.answer_generation import (
+    INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_DEPARTMENT_OVERVIEW,
     _wants_all_departments_narration,
+    get_bus_routes_spoken_prompt,
 )
 from backend.services.content.department_resolver import resolve_department_key
 from backend.services.content.diagnostics import content_event
@@ -19,9 +22,14 @@ from backend.services.content.surface_narration_mapper import (
 )
 from backend.services.content.unit_selector import resolve_units_for_plan, select_content_units
 from backend.services.content.semantic_request_parser import parse_semantic_request
-from backend.services.content.types import SURFACE_DEPARTMENT_OVERVIEW, ResolveRequest
+from backend.services.content.types import (
+    SURFACE_BUS,
+    SURFACE_CAMPUS_NAVIGATION,
+    SURFACE_DEPARTMENT_OVERVIEW,
+    ResolveRequest,
+)
 from backend.services.presentation.presentation_plan_builder import build_full_department_plan
-from backend.services.narration_plan import build_pre_llm_narration_plan
+from backend.services.narration_plan import NarrationSegment, build_pre_llm_narration_plan
 from backend.services.orchestration.diagnostics import orch_event
 from backend.services.orchestration.types import ConversationResolution
 
@@ -46,6 +54,14 @@ def resolve_narration(
     ents = dict(entities or resolution.canonical_entities or {})
     dept = resolution.department_label or ents.get("department")
     lang_key = resolution.language_code_key or "en"
+    surface = resolution.card_surface or resolution.show_card
+
+    # Prompt-only non-unit cards (map / bus): one spoken segment, no department deck.
+    if surface in {SURFACE_CAMPUS_NAVIGATION, SURFACE_BUS} or intent in {
+        INTENT_CAMPUS_NAVIGATION,
+        INTENT_BUS_ROUTES,
+    }:
+        return _resolve_prompt_surface_narration(resolution, surface=surface, intent=intent)
 
     # M5.2 UNIT-BACKED: when department_overview card is active, narration is owned by
     # UnitSelector → PresentationPlan (never RAG/LLM). Do not hybridize with fixed decks.
@@ -164,6 +180,33 @@ def resolve_narration(
         menu_key=None,
         comparison_department_ids=comparison_ids,
     )
+
+
+def _resolve_prompt_surface_narration(
+    resolution: ConversationResolution,
+    *,
+    surface: str | None,
+    intent: str | None,
+) -> list[NarrationSegment]:
+    """Single spoken prompt for campus navigation / bus routes cards."""
+    from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+    use_nav = surface == SURFACE_CAMPUS_NAVIGATION or intent == INTENT_CAMPUS_NAVIGATION
+    if use_nav:
+        text = campus_navigation_spoken_prompt(
+            resolution.language,
+            resolution.campus_destination,
+            status=resolution.campus_nav_status or "resolved",
+            candidates=tuple(resolution.campus_nav_candidates or ()),
+        )
+        card_id = SURFACE_CAMPUS_NAVIGATION
+    else:
+        text = get_bus_routes_spoken_prompt(resolution.language)
+        card_id = SURFACE_BUS
+    segs = [NarrationSegment(display_text=text, card_index=0, card_id=card_id)]
+    orch_event("NARRATION_OK", segments=1, intent=intent, via="prompt_surface", surface=card_id)
+    content_event("NARRATION_READY", surface=card_id, segment_count=1, via="prompt_surface")
+    return segs
 
 
 def _legacy_plan(

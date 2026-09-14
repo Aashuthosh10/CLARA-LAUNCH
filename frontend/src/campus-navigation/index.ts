@@ -9,7 +9,7 @@ export { default as CampusMap2D } from './CampusMap2D';
 export { default as CampusNavigationMapOnly } from './CampusNavigationMapOnly';
 export type { CampusNavigationMapOnlyProps } from './CampusNavigationMapOnly';
 export { useCampusMapData } from './useCampusMapData';
-export { matchCampusDestinationIndex } from './matchCampusDestination';
+export { matchCampusDestinationIndex, normalizeCampusDestinationTranscript } from './matchCampusDestination';
 export { matchCampusTranscriptApi } from './matchCampusTranscriptApi';
 export { matchCampusTranscriptLocal } from './matchCampusTranscriptLocal';
 export { getCampusRouteApi } from './getCampusRouteApi';

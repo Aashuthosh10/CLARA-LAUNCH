@@ -148,6 +148,27 @@ _CLARIFY_ADMISSIONS_INFO: dict[str, str] = {
     ),
 }
 
+# Presentation-safe options owned by the same deterministic clarification
+# templates. These are interaction labels, not a second answer source.
+_CLARIFICATION_CHOICES: dict[str, dict[str, tuple[str, ...]]] = {
+    "admissions_info": {
+        "English": ("Admission steps", "Eligibility details", "Documents required"),
+        "Kannada": ("ಪ್ರವೇಶದ ಹಂತಗಳು", "ಅರ್ಹತೆ ವಿವರಗಳು", "ಅಗತ್ಯ ದಾಖಲೆಗಳು"),
+        "Hindi": ("प्रवेश प्रक्रिया", "पात्रता विवरण", "आवश्यक दस्तावेज़"),
+        "Tamil": ("சேர்க்கை படிகள்", "தகுதி விவரங்கள்", "தேவையான ஆவணங்கள்"),
+        "Telugu": ("ప్రవేశ దశలు", "అర్హత వివరాలు", "అవసరమైన పత్రాలు"),
+        "Malayalam": ("അഡ്മിഷൻ ഘട്ടങ്ങൾ", "യോഗ്യത വിവരങ്ങൾ", "ആവശ്യമായ രേഖകൾ"),
+    },
+    "hostel": {
+        "English": ("Boys' hostel", "Girls' hostel"),
+        "Kannada": ("ಬಾಲಕರ ವಸತಿಗೃಹ", "ಬಾಲಕಿಯರ ವಸತಿಗೃಹ"),
+        "Hindi": ("छात्रावास", "छात्राओं का छात्रावास"),
+        "Tamil": ("ஆண்கள் விடுதி", "பெண்கள் விடுதி"),
+        "Telugu": ("బాలుర వసతి గృహం", "బాలికల వసతి గృహం"),
+        "Malayalam": ("ആൺകുട്ടികളുടെ ഹോസ്റ്റൽ", "പെൺകുട്ടികളുടെ ഹോസ്റ്റൽ"),
+    },
+}
+
 # Clear intent, cannot fulfill at the kiosk — not "tell me more".
 _RESTRICTED_PERSONAL_CONTACT: dict[str, str] = {
     "English": (
@@ -312,6 +333,15 @@ def clarification_reply(
         except (KeyError, ValueError):
             return tmpl
     return _pick(_CLARIFICATION, language)
+
+
+def clarification_choices(language: str | None, target: str | None = None) -> list[str]:
+    """Return localized choices only when the authoritative template defines them."""
+    by_language = _CLARIFICATION_CHOICES.get((target or "").strip().lower())
+    if not by_language:
+        return []
+    lang = language if language in SUPPORTED_LANGUAGES else "English"
+    return list(by_language.get(lang, by_language["English"]))
 
 
 def ncc_enrollment_reply(language: str | None) -> str:

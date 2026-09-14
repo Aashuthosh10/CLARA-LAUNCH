@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
+    SURFACE_CAMPUS_NAVIGATION,
     SURFACE_COLLEGE,
     SURFACE_COURSE_MENU,
     SURFACE_DEPARTMENT_EXPLANATION,
@@ -93,6 +94,7 @@ _REGISTRY: dict[str, SurfaceDescriptor] = {
     SURFACE_TRUSTEES: _card(SURFACE_TRUSTEES, supports_scene_navigation=True),
     SURFACE_COLLEGE: _card(SURFACE_COLLEGE, supports_scene_navigation=True),
     SURFACE_BUS: _card(SURFACE_BUS, supports_scene_navigation=False),
+    SURFACE_CAMPUS_NAVIGATION: _card(SURFACE_CAMPUS_NAVIGATION, supports_scene_navigation=False),
     SURFACE_COURSE_MENU: _card(
         SURFACE_COURSE_MENU,
         supports_menu=True,

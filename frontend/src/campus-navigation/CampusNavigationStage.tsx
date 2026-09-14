@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Layers } from 'lucide-react';
 import type { CampusDirection } from './campusDirections';
-import { campusLabels } from './campusDirections';
+import { campusLabels, localizedCampusSteps } from './campusDirections';
 import type { Language } from '../context/LanguageContext';
 import CampusMap2D from './CampusMap2D';
 import { findRoomByCodeOrId, parseRoomCodeFromDestinationLabel } from './campusMapGeometry';
@@ -90,7 +90,14 @@ export default function CampusNavigationStage({
     [exactRoutePlan, viewFloorId],
   );
 
-  const sidebarSteps = exactRoutePlan.displaySteps.length > 0 ? exactRoutePlan.displaySteps : displaySteps;
+  // Route geometry is language-neutral; deterministic visible instructions come
+  // from the selected session language rather than the transcript language.
+  const localizedSteps = localizedCampusSteps(direction, language);
+  const sidebarSteps = localizedSteps.length > 0
+    ? localizedSteps
+    : exactRoutePlan.displaySteps.length > 0
+      ? exactRoutePlan.displaySteps
+      : displaySteps;
 
   const handleRoomSelect = (roomCode: string) => {
     const lookup = findRoomByCodeOrId(data, roomCode);
