@@ -9,17 +9,29 @@ const sampleDirections: CampusDirection[] = [
   {
     from: 'Reception',
     to: 'B-004 - Principal Chamber',
+    block: 'B',
+    floor: 'Ground Floor',
     steps: ['Go to B-004'],
+    estimated_steps: 40,
+    estimated_time_seconds: 30,
   },
   {
     from: 'Reception',
     to: 'B-210 - Mechanical Lab',
+    block: 'B',
+    floor: 'Second Floor',
     steps: ['Go to B-210'],
+    estimated_steps: 80,
+    estimated_time_seconds: 60,
   },
   {
     from: 'Reception',
     to: 'C-003 - Library',
+    block: 'C',
+    floor: 'Ground Floor',
     steps: ['Go to C-003'],
+    estimated_steps: 50,
+    estimated_time_seconds: 40,
   },
 ];
 

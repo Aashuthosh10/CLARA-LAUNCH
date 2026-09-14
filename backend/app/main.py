@@ -381,19 +381,35 @@ def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
     log_turn_metrics(*args, **kwargs)
 
 
+def _is_latin_token_char(ch: str) -> bool:
+    """ASCII letters, digits, underscore — keep location cues token-bounded in app/main."""
+    return bool(ch) and ch.isascii() and (ch.isalnum() or ch == "_")
+
+
+def _latin_token_boundaries_ok(hay: str, start: int, end: int) -> bool:
+    """Latin cues need word boundaries so ``elli`` cannot match inside unrelated words."""
+    chunk = hay[start:end]
+    if not chunk or any(ord(ch) > 127 for ch in chunk):
+        return True
+    left_ok = start == 0 or not _is_latin_token_char(hay[start - 1])
+    right_ok = end >= len(hay) or not _is_latin_token_char(hay[end])
+    return left_ok and right_ok
+
+
 def _is_location_query(text: str | None) -> bool:
     """College-address location heuristics (not room navigation).
 
     Short Latin transliterations must be token-bounded so ``elli`` cannot match
     inside unrelated words, while still matching ``ellide`` as a whole cue.
-    """
-    from backend.services.content.unicode_text import casefold_keep_scripts, latin_token_boundaries_ok
 
-    q = casefold_keep_scripts(text or "").strip()
+    Implemented locally (no ``backend.services.content`` import) to satisfy M4.2
+    architecture guard: app/main may only import surface_selector from content.
+    """
+    q = re.sub(r"\s+", " ", (text or "").strip()).casefold()
     if not q:
         return False
     for term in _LOCATION_QUERY_TERMS:
-        cue = casefold_keep_scripts(term)
+        cue = term.casefold().strip()
         if not cue:
             continue
         start = 0
@@ -402,7 +418,7 @@ def _is_location_query(text: str | None) -> bool:
             if idx < 0:
                 break
             end = idx + len(cue)
-            if any(ord(ch) > 127 for ch in cue) or latin_token_boundaries_ok(q, idx, end):
+            if any(ord(ch) > 127 for ch in cue) or _latin_token_boundaries_ok(q, idx, end):
                 return True
             start = idx + 1
     return False
