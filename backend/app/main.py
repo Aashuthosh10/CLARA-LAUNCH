@@ -191,6 +191,7 @@ from backend.services.runtime.diagnostics import log_runtime_event
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -353,8 +354,12 @@ _LOCATION_QUERY_TERMS = (
     "campus location",
     "located",
     "kaha",
+    "kahan",
+    "kidhar",
     "elli",
+    "ellide",
     "enga",
+    "enge",
     "ekkada",
     "evide",
 )
@@ -377,10 +382,30 @@ def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
 
 
 def _is_location_query(text: str | None) -> bool:
-    q = (text or "").strip().lower()
+    """College-address location heuristics (not room navigation).
+
+    Short Latin transliterations must be token-bounded so ``elli`` cannot match
+    inside unrelated words, while still matching ``ellide`` as a whole cue.
+    """
+    from backend.services.content.unicode_text import casefold_keep_scripts, latin_token_boundaries_ok
+
+    q = casefold_keep_scripts(text or "").strip()
     if not q:
         return False
-    return any(term in q for term in _LOCATION_QUERY_TERMS)
+    for term in _LOCATION_QUERY_TERMS:
+        cue = casefold_keep_scripts(term)
+        if not cue:
+            continue
+        start = 0
+        while True:
+            idx = q.find(cue, start)
+            if idx < 0:
+                break
+            end = idx + len(cue)
+            if any(ord(ch) > 127 for ch in cue) or latin_token_boundaries_ok(q, idx, end):
+                return True
+            start = idx + 1
+    return False
 
 
 def _looks_clear_english(text: str) -> bool:
@@ -516,7 +541,22 @@ def _apply_response_decision_to_intent(
     comparison, FAQ, policy), but it may no longer convert an ANSWER turn into a card
     or a card turn into a fallback.
     """
-    mode = getattr(conversation_resolution, "response_mode", None) if conversation_resolution else None
+    if conversation_resolution is None:
+        return intent
+
+    # Campus navigation is sealed by the orchestrator diagnostics / surface.
+    nav_status = getattr(conversation_resolution, "campus_nav_status", None)
+    show_card = getattr(conversation_resolution, "show_card", None) or getattr(
+        conversation_resolution, "card_surface", None
+    )
+    if (
+        nav_status in {"resolved", "ambiguous", "unknown"}
+        or show_card in {"campus_navigation", "campus_nav", "navigation"}
+        or getattr(conversation_resolution, "campus_destination", None)
+    ):
+        return INTENT_CAMPUS_NAVIGATION
+
+    mode = getattr(conversation_resolution, "response_mode", None)
     if not mode:
         return intent
 
@@ -1275,6 +1315,15 @@ async def _emit_direct_conversation_reply(
     if not omit_user_message and (text or "").strip():
         msgs.append({"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()})
     assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": spoken}
+    from backend.services.orchestration.answer_presentation import enrich_successful_answer_message
+
+    answer_presentation = enrich_successful_answer_message(
+        assistant_msg,
+        resolution=res,
+        authoritative_text=spoken,
+        language_code=getattr(res, "language_code_key", "en") or "en",
+        intentional_plain=omit_user_message or utterance_kind.startswith("session_"),
+    )
     msgs.append(assistant_msg)
     session["messages"] = msgs
 
@@ -1317,6 +1366,9 @@ async def _emit_direct_conversation_reply(
         audio_b64=audio_b64,
         extra=extra,
     )
+    if answer_presentation is not None:
+        payload["visualResponseEligible"] = True
+        payload["answerPresentation"] = answer_presentation
     if audio_b64 and not timing.has("play_start"):
         timing.mark("play_start")
         est = estimate_wav_duration_ms(audio_b64)
@@ -1911,6 +1963,8 @@ async def process_user_text_and_reply(
                     intent = INTENT_DOCUMENTS
                 elif frontend_trigger in {"bus_routes", "bus routes", "bus"}:
                     intent = INTENT_BUS_ROUTES
+                elif frontend_trigger in {"campus_navigation", "campus_nav", "navigation"}:
+                    intent = INTENT_CAMPUS_NAVIGATION
                 elif frontend_trigger in {"principal_profile", "principal"}:
                     intent = INTENT_PRINCIPAL_PROFILE
                 elif frontend_trigger in {"vice_principal_profile", "vice_principal"}:
@@ -1962,10 +2016,14 @@ async def process_user_text_and_reply(
         logger.info("[NLP_TRACE] FINAL_INTENT=%s", intent)
         logger.info("[NLP_TRACE] FINAL_DEPARTMENT=%s", detected_department)
 
-        # Force location/address questions through vector RAG context instead of narrator-only flow.
-        # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
+        # Force college-address location questions through the location template / RAG path.
+        # Do NOT steal campus room navigation (map destinations) into the address reply.
         is_location_turn = False if faq_direct_reply else (_is_location_query(text) or _is_location_query(query_en))
-        if is_location_turn and intent != INTENT_BUS_ROUTES:
+        _nav_status = getattr(conversation_resolution, "campus_nav_status", None) if conversation_resolution else None
+        _campus_dest = getattr(conversation_resolution, "campus_destination", None) if conversation_resolution else None
+        if intent == INTENT_CAMPUS_NAVIGATION or _nav_status in {"resolved", "ambiguous", "unknown"} or _campus_dest:
+            is_location_turn = False
+        if is_location_turn and intent not in {INTENT_BUS_ROUTES, INTENT_CAMPUS_NAVIGATION}:
             intent = INTENT_NORMAL_QUERY
 
         # M5.4: the Groq "is this a broad course question?" probe used to rewrite intent
@@ -2059,7 +2117,7 @@ async def process_user_text_and_reply(
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
-        elif intent == INTENT_DOCUMENTS or intent == INTENT_BUS_ROUTES or is_location_turn:
+        elif intent == INTENT_DOCUMENTS or intent == INTENT_BUS_ROUTES or intent == INTENT_CAMPUS_NAVIGATION or is_location_turn:
             context = ""
             timing.mark("rag_end")
         elif intent == INTENT_DEPARTMENT_COMPARISON:
@@ -2253,6 +2311,15 @@ async def process_user_text_and_reply(
                 direct_reply = get_course_menu_spoken_prompt(lang_name)
             elif intent == INTENT_BUS_ROUTES:
                 direct_reply = get_bus_routes_spoken_prompt(lang_name)
+            elif intent == INTENT_CAMPUS_NAVIGATION:
+                from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+                direct_reply = campus_navigation_spoken_prompt(
+                    lang_name,
+                    getattr(conversation_resolution, "campus_destination", None),
+                    status=getattr(conversation_resolution, "campus_nav_status", None) or "resolved",
+                    candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
+                )
             elif intent == INTENT_DOCUMENTS:
                 direct_reply = _documents_card_direct_reply(lang_key)
             elif intent == INTENT_DEPARTMENT_FEES:
@@ -2268,6 +2335,22 @@ async def process_user_text_and_reply(
             # Unsealed should not happen after orch; fail closed.
             direct_reply = None
 
+        # Campus navigation spoken lines are deterministic (session language), including
+        # ambiguous clarify and unknown destination — never invent map facts via Groq.
+        _campus_nav_status = (
+            getattr(conversation_resolution, "campus_nav_status", None)
+            if conversation_resolution
+            else None
+        )
+        if _campus_nav_status in {"resolved", "ambiguous", "unknown"}:
+            from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+            direct_reply = campus_navigation_spoken_prompt(
+                lang_name,
+                getattr(conversation_resolution, "campus_destination", None),
+                status=str(_campus_nav_status),
+                candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
+            )
         reply_text = direct_reply
         if reply_text is None and auth == ResponseAuthority.GROQ.value:
             for candidate_key in cache_key_candidates:
@@ -2510,6 +2593,7 @@ async def process_user_text_and_reply(
         if (not faq_direct_reply) and intent in (
             INTENT_COURSE_MENU,
             INTENT_BUS_ROUTES,
+            INTENT_CAMPUS_NAVIGATION,
             INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
             INTENT_DEPARTMENT_FEES,
@@ -2524,6 +2608,9 @@ async def process_user_text_and_reply(
         show_card = None
         department_id = None
         course_menu_options = None
+        campus_destination_payload = None
+        if conversation_resolution is not None:
+            campus_destination_payload = getattr(conversation_resolution, "campus_destination", None)
         if faq_direct_reply:
             show_card = None
         elif conversation_resolution is not None and conversation_resolution.show_card:
@@ -2555,6 +2642,17 @@ async def process_user_text_and_reply(
                 reply_text = get_bus_routes_spoken_prompt(lang_name)
                 assistant_msg["text"] = reply_text
                 assistant_msg["isHidden"] = True
+        elif intent == INTENT_CAMPUS_NAVIGATION or show_card == "campus_navigation":
+            from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+            reply_text = campus_navigation_spoken_prompt(
+                lang_name,
+                campus_destination_payload,
+                status=getattr(conversation_resolution, "campus_nav_status", None) or "resolved",
+                candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
+            )
+            assistant_msg["text"] = reply_text
+            assistant_msg["isHidden"] = True
 
         # Fallback only when orch did not select a card (SurfaceSelector only — no parallel map).
         # A turn qualifies when the response decision said CARD, or when there is no decision
@@ -2582,6 +2680,16 @@ async def process_user_text_and_reply(
 
         if show_card is not None and department_id is None and entity_map.get("department"):
             department_id = entity_map.get("department")
+        from backend.services.orchestration.answer_presentation import enrich_successful_answer_message
+
+        answer_presentation = enrich_successful_answer_message(
+            assistant_msg,
+            resolution=conversation_resolution,
+            authoritative_text=reply_text,
+            language_code=lang_key,
+            intentional_plain=bool(show_card is not None or assistant_msg.get("isHidden")),
+        )
+
         if show_card is not None:
             assistant_msg["isCardData"] = True
             assistant_msg["isHidden"] = True
@@ -2619,10 +2727,22 @@ async def process_user_text_and_reply(
             "tts_cache_hit": False,
             "llm_cache_hit": llm_cache_hit,
         }
+        if answer_presentation is not None:
+            visible_payload["visualResponseEligible"] = True
+            visible_payload["answerPresentation"] = answer_presentation
         if department_id and not defer_card_until_tts_ready:
             visible_payload["departmentId"] = department_id
         if course_menu_options and not defer_card_until_tts_ready:
             visible_payload["options"] = course_menu_options
+        if (
+            campus_destination_payload
+            and isinstance(campus_destination_payload, dict)
+            and not defer_card_until_tts_ready
+        ):
+            visible_payload["campusDestination"] = campus_destination_payload
+            visible_payload["campusNavStatus"] = getattr(
+                conversation_resolution, "campus_nav_status", None
+            )
         if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
             timing.mark("visible_answer")
             timing.mark("turn_end")
@@ -2766,10 +2886,18 @@ async def process_user_text_and_reply(
                 "llm_cache_hit": llm_cache_hit,
                 "audioUnavailable": audio_unavailable,
             }
+            if answer_presentation is not None:
+                merged["visualResponseEligible"] = True
+                merged["answerPresentation"] = answer_presentation
             if LOW_LATENCY_VOICE_MODE:
                 merged["type"] = "assistant_audio_update"
             if department_id:
                 merged["departmentId"] = department_id
+            if campus_destination_payload and isinstance(campus_destination_payload, dict):
+                merged["campusDestination"] = campus_destination_payload
+                merged["campusNavStatus"] = getattr(
+                    conversation_resolution, "campus_nav_status", None
+                )
             if intent == INTENT_DEPARTMENT_COMPARISON and comparison_dept_ids:
                 merged["comparisonDepartments"] = list(comparison_dept_ids)
                 merged["comparisonRecommendFocus"] = comparison_recommend_focus

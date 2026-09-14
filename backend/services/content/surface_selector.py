@@ -12,6 +12,7 @@ from typing import Any
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -30,6 +31,7 @@ from backend.services.content.surface_registry import SurfaceDescriptor, get_sur
 from backend.services.content.types import (
     SURFACE_ADMISSIONS,
     SURFACE_BUS,
+    SURFACE_CAMPUS_NAVIGATION,
     SURFACE_COLLEGE,
     SURFACE_COMPARISON,
     SURFACE_COURSE_MENU,
@@ -71,6 +73,9 @@ _TRIGGER_ALIASES: dict[str, str] = {
     "bus_routes": SURFACE_BUS,
     "bus_route": SURFACE_BUS,
     "bus": SURFACE_BUS,
+    "campus_navigation": SURFACE_CAMPUS_NAVIGATION,
+    "campus_nav": SURFACE_CAMPUS_NAVIGATION,
+    "navigation": SURFACE_CAMPUS_NAVIGATION,
     "course_menu": SURFACE_COURSE_MENU,
     "faq": SURFACE_FAQ,
 }
@@ -88,6 +93,7 @@ _INTENT_TO_SURFACE: dict[str, str] = {
     INTENT_COLLEGE_OVERVIEW: SURFACE_COLLEGE,
     INTENT_TRUSTEES_PROFILE: SURFACE_TRUSTEES,
     INTENT_BUS_ROUTES: SURFACE_BUS,
+    INTENT_CAMPUS_NAVIGATION: SURFACE_CAMPUS_NAVIGATION,
     INTENT_COURSE_MENU: SURFACE_COURSE_MENU,
     # Composite: prefer HOD card surface (matches successful CARD emit primary)
     INTENT_HOD_TRUSTEES_PROFILE: SURFACE_HOD,
@@ -229,17 +235,21 @@ def select_surface(
     # Canonical semantic requests are more specific than the legacy CI intent.  For
     # example, an inherited "ECE fees" follow-up can carry the legacy ADMISSIONS
     # intent while its canonical topic is unambiguously `fees`.
-    semantic_surface = _SEMANTIC_TOPIC_TO_SURFACE.get(str(topic or "").strip().casefold())
-    if semantic_surface:
-        return _finish(
-            surface=semantic_surface,
-            confidence=0.94,
-            reason=f"semantic_topic:{topic}",
-            department=dept,
-            requested_card=requested_norm,
-            semantic_topic=topic,
-            source="semantic_request",
-        )
+    # Non-unit card intents (campus navigation, bus routes) keep intent authority.
+    from backend.services.answer_generation import INTENT_BUS_ROUTES, INTENT_CAMPUS_NAVIGATION
+
+    if intent not in {INTENT_CAMPUS_NAVIGATION, INTENT_BUS_ROUTES}:
+        semantic_surface = _SEMANTIC_TOPIC_TO_SURFACE.get(str(topic or "").strip().casefold())
+        if semantic_surface:
+            return _finish(
+                surface=semantic_surface,
+                confidence=0.94,
+                reason=f"semantic_topic:{topic}",
+                department=dept,
+                requested_card=requested_norm,
+                semantic_topic=topic,
+                source="semantic_request",
+            )
 
     # Intent map (priority order among intents is encoded in _INTENT_TO_SURFACE lookup
     # after callers resolve a single intent). When multiple cues exist, intent is already

@@ -22,6 +22,7 @@ class ContentType(str, Enum):
     COLLEGE = "college"
     COMPARISON = "comparison"
     BUS = "bus"
+    CAMPUS_NAVIGATION = "campus_navigation"
     COURSE_MENU = "course_menu"
     FAQ = "faq"
     HOSTEL = "hostel"
@@ -44,6 +45,7 @@ SURFACE_TRUSTEES = "trustees"
 SURFACE_COLLEGE = "college"
 SURFACE_COMPARISON = "department_comparison"
 SURFACE_BUS = "bus_routes"
+SURFACE_CAMPUS_NAVIGATION = "campus_navigation"
 SURFACE_COURSE_MENU = "course_menu"
 SURFACE_FAQ = "faq"
 SURFACE_HOSTEL = "hostel"
@@ -66,6 +68,7 @@ ALL_SURFACES: frozenset[str] = frozenset(
         SURFACE_COLLEGE,
         SURFACE_COMPARISON,
         SURFACE_BUS,
+        SURFACE_CAMPUS_NAVIGATION,
         SURFACE_COURSE_MENU,
         SURFACE_FAQ,
         SURFACE_HOSTEL,

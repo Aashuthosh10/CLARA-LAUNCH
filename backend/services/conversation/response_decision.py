@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -85,6 +86,7 @@ NON_UNIT_CARD_INTENTS: frozenset[str] = frozenset(
     {
         INTENT_ADMISSIONS,
         INTENT_BUS_ROUTES,
+        INTENT_CAMPUS_NAVIGATION,
         INTENT_COLLEGE_OVERVIEW,
         INTENT_COURSE_MENU,
         INTENT_DEPARTMENT_COMPARISON,
@@ -373,6 +375,7 @@ def resolve_response_decision(
     local_intent: dict[str, Any] | None = None,
     validated_proposal: SemanticProposal | None = None,
     proposal_diagnostics: dict[str, Any] | None = None,
+    context_department_keys: tuple[str, ...] | None = None,
 ) -> ResponseDecision:
     """
     Decide the response mode for one turn.
@@ -384,6 +387,7 @@ def resolve_response_decision(
     FALLBACK merely because a request is not a card.
     """
     from backend.services.conversation.semantic_proposal import SemanticProposal as _Proposal
+    from backend.services.campus_navigation_intent import resolve_campus_navigation
 
     raw = text or ""
     relevance = detect_domain_relevance(raw)
@@ -450,6 +454,51 @@ def resolve_response_decision(
                 confidence=0.93,
                 evidence=restricted,
                 clarification_reason="restricted_action",
+            )
+        )
+
+    # 3b. Campus navigation is a first-class presentation outcome.
+    # Explicit destination in the latest utterance outranks prior department context
+    # (handled inside resolve_campus_navigation). Must run before entity-mention ANSWER
+    # demotion and semantic department overview CARD paths.
+    ctx_keys = context_department_keys
+    if not ctx_keys and semantic_request is not None:
+        ctx_keys = tuple(semantic_request.entities or ())
+    nav = resolve_campus_navigation(raw, context_department_keys=ctx_keys)
+    if nav.status == "resolved" and nav.room:
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CARD,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.94,
+                evidence="campus_navigation",
+                diagnostics={
+                    "campus_nav_status": "resolved",
+                    "campus_destination": dict(nav.room),
+                },
+            )
+        )
+    if nav.status == "ambiguous":
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CARD,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.9,
+                evidence="campus_navigation_ambiguous",
+                diagnostics={
+                    "campus_nav_status": "ambiguous",
+                    "campus_candidates": [dict(c) for c in nav.candidates],
+                },
+            )
+        )
+    if nav.status == "unknown":
+        return _done(
+            ResponseDecision(
+                mode=ResponseMode.CARD,
+                domain_relevance=DomainRelevance.INSTITUTION,
+                confidence=0.86,
+                evidence="campus_destination_unknown",
+                diagnostics={"campus_nav_status": "unknown"},
             )
         )
 

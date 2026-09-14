@@ -36,6 +36,7 @@ import {
 } from '../lib/voice/transcriptGate';
 import { createAmbientBaselineTracker } from '../lib/voice/ambientSpeechGate';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
+import AdaptiveAnswerCard, { resolveAnswerPresentation } from '../components/chat/AdaptiveAnswerCard';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
@@ -540,6 +541,9 @@ const normalizeCardTrigger = (trigger: unknown): string | null => {
   if (n === 'bus_route' || n === 'bus_routes' || n === 'college_bus_routes') {
     return 'bus_routes';
   }
+  if (n === 'campus_navigation' || n === 'campus_nav' || n === 'navigation') {
+    return 'campus_navigation';
+  }
   return n;
 };
 
@@ -663,6 +667,7 @@ export default function ChatScreen({
   const [busRoutesHighlightQuery, setBusRoutesHighlightQuery] = useState<string | null>(null);
   const lastPayloadTurnIdRef = useRef<string | null>(null);
   const busRoutesDismissedTurnIdRef = useRef<string | null>(null);
+  const campusNavStickyTurnIdRef = useRef<string | null>(null);
   const closingBusRef = useRef(false);
   const lastTrusteeNarrationKeyRef = useRef<string | null>(null);
 
@@ -1147,6 +1152,9 @@ export default function ChatScreen({
       }
       audioLockRef.current = false;
       setIsPlayingBackendAudio(false);
+      // Always clear campus speaking latch when tearing down turn audio —
+      // do not leave the orb stuck in speaking across a new turn.
+      setIsCampusSpeaking(false);
       streamAudioLayoutRef.current = null;
       const leaving = assistantAudioTurnOwnerRef.current;
       if (leaving && leaving !== TURN_FENCE_PENDING) {
@@ -1322,10 +1330,8 @@ export default function ChatScreen({
   const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
     if (msg?.action === 'user_message' && typeof msg.text === 'string') {
       const trimmed = msg.text.trim();
-      if (source === 'VOICE' && isCampusNavigationStage && trimmed) {
-        processCampusVoiceTranscriptRef.current(trimmed);
-        return;
-      }
+      // Campus navigation is a backend presentation outcome (like bus_routes).
+      // Do not trap voice locally — that blocked CARD/RAG after a map was open.
       const cardDirection = parseCardNavigationCommand(trimmed);
       if (cardDirection && Array.isArray(unitBackedCards) && unitBackedCards.length > 0) {
         const delta = cardDirection === 'next' ? 1 : -1;
@@ -1343,7 +1349,10 @@ export default function ChatScreen({
       }
       // Rule 5: explicit UI menu navigation (localIntent) keeps layout; all other turns reset.
       const preserveLayoutForUiNav = source === 'UI' && Boolean(msg?.localIntent);
-      resetTurnPresentationState({ resetLayout: !preserveLayoutForUiNav });
+      // Keep campus map mounted across consecutive navigation turns; destination updates from payload.
+      const preserveCampusNav =
+        Boolean(isCampusNavigationStage) && source === 'VOICE' && !preserveLayoutForUiNav;
+      resetTurnPresentationState({ resetLayout: !preserveLayoutForUiNav && !preserveCampusNav });
       if (source === 'VOICE') {
         setActiveCards(null);
         setCurrentCardIdx(0);
@@ -1434,13 +1443,12 @@ export default function ChatScreen({
 
   // Browser Speech Rec — NO_INPUT must never invent a backend turn.
   const handleEmptyTranscript = useCallback(() => {
-    if (isCampusNavigationStage) return;
     if (autoListenApiRef.current?.isArmed()) {
       autoListenApiRef.current.notifyRecognitionEndedWithoutSpeech();
       return;
     }
     // Manual listen with empty result: stay silent locally (no BACKGROUND_NOISE LLM).
-  }, [isCampusNavigationStage]);
+  }, []);
 
   const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
     if (errorCode === 'aborted' || !userMessage?.trim()) return;
@@ -1628,7 +1636,6 @@ export default function ChatScreen({
     isListening: speechListening,
     claraBusy: claraBusyForAutoListen,
     suppressed:
-      Boolean(isCampusNavigationStage) ||
       voiceInputMode !== 'browser' ||
       (Boolean(inlineLanguageGate) && !languageGateSatisfied),
     onNameTimeout: endSessionToSleep,
@@ -1972,13 +1979,21 @@ export default function ChatScreen({
   }, [departmentComparisonOpen]);
 
   const stopCampusSpeech = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
+    const owner = assistantAudioTurnOwnerRef.current;
+    const isCampusTurn =
+      typeof owner === 'string' &&
+      (owner.startsWith('campus-') || owner.startsWith('trustee-card-'));
+    // Only pause/clear audio when campus (or trustee card) TTS owns playback —
+    // never kill unrelated chat answer audio.
+    if (isCampusSpeaking || isCampusTurn) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      setIsPlayingBackendAudio(false);
     }
-    setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
-  }, []);
+  }, [isCampusSpeaking]);
 
   const stopTextReveal = useCallback((clearText = false) => {
     sentenceRevealAbortRef.current += 1;
@@ -2125,6 +2140,8 @@ export default function ChatScreen({
 
   const openCampusNavigation = useCallback(() => {
     onChatUserActivity?.();
+    // Disarm settle/auto-listen before select-room TTS so mic cannot re-arm into the prompt.
+    autoListenApiRef.current?.disarm({ stopMic: true });
     stopListening();
     clearSuggestionLayer();
     if (currentAudioRef.current) {
@@ -2132,6 +2149,7 @@ export default function ChatScreen({
       currentAudioRef.current = null;
       setIsPlayingBackendAudio(false);
     }
+    setIsCampusSpeaking(false);
     engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
     const latestVisibleClara = [...displayMessages]
       .reverse()
@@ -2153,6 +2171,9 @@ export default function ChatScreen({
     setSurface('chat');
     comparisonLayoutSnapRef.current = null;
     setIsCampusNavigationStage(true);
+    // Anchor sticky ownership so trailing non-nav TTS frames do not immediately dismiss the map.
+    campusNavStickyTurnIdRef.current =
+      lastPayloadTurnIdRef.current ?? `ui-campus-${Date.now()}`;
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
     setCampusRouteMode('default');
@@ -2739,7 +2760,8 @@ export default function ChatScreen({
       const nextOwner = String(payload.turn_id);
       if (assistantAudioTurnOwnerRef.current !== nextOwner) {
         // Backend-mic path never runs interceptAndSendMessage; mirror turn reset here.
-        resetTurnPresentationState({ resetLayout: true });
+        // Preserve campus map+orb across turns — leave only via leavesCampusFor* paths.
+        resetTurnPresentationState({ resetLayout: !isCampusNavigationStage });
         assistantAudioTurnOwnerRef.current = nextOwner;
       }
       if (responseTtsSchedulerRef.current.turnId !== nextOwner) {
@@ -3071,6 +3093,7 @@ export default function ChatScreen({
         setBusRoutesHighlightQuery(lastUserTextForInference);
         setBusRoutesMountKey((k) => k + 1);
         setSurface('bus_routes');
+        setIsCampusNavigationStage(false);
         setLayoutMode('FULL_TEXT');
         if (audioBase64) {
           setPendingAudio({
@@ -3084,6 +3107,116 @@ export default function ChatScreen({
         }
         return;
       }
+    }
+
+    if (cardTrigger === 'campus_navigation') {
+      const dest = payload?.campusDestination;
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+      campusNavStickyTurnIdRef.current = String(turnId);
+      comparisonLayoutSnapRef.current = null;
+      setSurface('chat');
+      clearCardStages();
+      setIsTrusteesStage(false);
+      setExecutiveLeadershipKind(null);
+      setIsCampusNavigationStage(true);
+      setLayoutMode('SPLIT_CARDS');
+      if (dest && typeof dest === 'object' && typeof dest.code === 'string') {
+        const room = dest as CampusMatchApiRoom;
+        const direction = campusDirectionFromMapMatch(room);
+        setCampusDirectionOverride(direction);
+        const idx = legacyCampusIndexForCode(
+          room.code,
+          (room.floor_id as 'GF' | 'FF' | 'SF' | undefined) ?? undefined,
+        );
+        if (idx !== null) setSelectedCampusIndex(idx);
+        setCampusRouteResult(null);
+        setHasCampusRoomSelection(true);
+        if (import.meta.env.DEV) {
+          console.debug('[NAVIGATION_PRESENTATION]', {
+            code: room.code,
+            floor_id: room.floor_id,
+            name: room.name,
+          });
+        }
+      } else {
+        setHasCampusRoomSelection(false);
+        setCampusDirectionOverride(null);
+        setCampusRouteResult(null);
+      }
+      if (audioBase64) {
+        offerAssistantAudio({
+          audioBase64,
+          segmentKey,
+          turnId: turnId,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    // Campus Navigation + shared orb stay mounted like normal chat.
+    // Leave ONLY for a concrete alternate surface (HOD/card/bus/etc.), never for
+    // intermediate text frames, no-input nudges, or turns that omit showCard briefly.
+    const leavesCampusForOtherSurface =
+      Boolean(cardTrigger) &&
+      cardTrigger !== 'campus_navigation' &&
+      cardTrigger !== 'documents';
+    const leavesCampusForUnitPlan =
+      unitModelsFromPayload.length > 0 && cardTrigger !== 'campus_navigation';
+    const leavesCampusForAdaptiveAnswer =
+      isResponseReady &&
+      cardTrigger !== 'campus_navigation' &&
+      payloadMessageList.some(
+        (message: any) =>
+          String(message?.role ?? '').toLowerCase() !== 'user' &&
+          message?.answerPresentation &&
+          typeof message.answerPresentation === 'object',
+      );
+    const adaptiveAnswerMessage = leavesCampusForAdaptiveAnswer
+      ? [...payloadMessageList]
+          .reverse()
+          .find(
+            (message: any) =>
+              String(message?.role ?? '').toLowerCase() !== 'user' &&
+              message?.answerPresentation &&
+              typeof message.answerPresentation === 'object',
+          )
+      : null;
+
+    let stayOnCampusNavigation = Boolean(isCampusNavigationStage);
+    if (
+      stayOnCampusNavigation &&
+      isResponseReady &&
+      (leavesCampusForOtherSurface || leavesCampusForUnitPlan || leavesCampusForAdaptiveAnswer)
+    ) {
+      stayOnCampusNavigation = false;
+      setIsCampusNavigationStage(false);
+      setCampusRouteResult(null);
+      setCampusDirectionOverride(null);
+      setHasCampusRoomSelection(false);
+      campusNavStickyTurnIdRef.current = null;
+      if (adaptiveAnswerMessage) {
+        setVisuallyFocusedMessage(adaptiveAnswerMessage as ChatMessage);
+        setLayoutMode('FULL_TEXT');
+      }
+      // Fall through so the alternate card/surface handlers can take over.
+    } else if (stayOnCampusNavigation) {
+      // Keep map + orb mounted across questions (normal-screen continuity).
+      // Destination updates arrive via showCard=campus_navigation (handled above).
+      setLayoutMode('SPLIT_CARDS');
+      if (audioBase64) {
+        offerAssistantAudio({
+          audioBase64,
+          segmentKey,
+          turnId: turnId,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
     }
 
     // Keep Bus routes fullscreen sticky while TTS trailing frames omit `showCard`.
@@ -3126,11 +3259,13 @@ export default function ChatScreen({
     }
 
     // Keep Principal / Vice Principal premium cards sticky across TTS chunks that omit `showCard`.
+    // Never block an explicit campus_navigation surface.
     if (
       executiveLeadershipKind &&
       currentUiLockRef.current === 'CARD' &&
       cardTrigger !== 'principal_profile' &&
-      cardTrigger !== 'vice_principal_profile'
+      cardTrigger !== 'vice_principal_profile' &&
+      cardTrigger !== 'campus_navigation'
     ) {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
@@ -4422,7 +4557,8 @@ export default function ChatScreen({
 
   useEffect(() => {
     if (!isCampusNavigationStage) {
-      stopCampusSpeech();
+      // Clear campus speaking latch only — do not pause chat TTS via stopCampusSpeech.
+      setIsCampusSpeaking(false);
       return;
     }
     const timer = window.setTimeout(() => {
@@ -4437,7 +4573,6 @@ export default function ChatScreen({
     selectedCampusIndex,
     language,
     promptCampusRoomSelection,
-    stopCampusSpeech,
   ]);
 
   useEffect(() => {
@@ -4501,8 +4636,7 @@ export default function ChatScreen({
 
     const suppressed =
       voiceInputMode !== 'browser' ||
-      (Boolean(inlineLanguageGate) && !languageGateSatisfied) ||
-      Boolean(isCampusNavigationStage);
+      (Boolean(inlineLanguageGate) && !languageGateSatisfied);
 
     if (
       !shouldScheduleAutoListenArm({
@@ -4545,7 +4679,6 @@ export default function ChatScreen({
   }, [
     clearContinuationTimer,
     endSessionToSleep,
-    isCampusNavigationStage,
     isCampusSpeaking,
     isPlayingBackendAudio,
     isProcessing,
@@ -4676,8 +4809,8 @@ export default function ChatScreen({
       currentAudioRef.current = null;
     }
     stopListening();
+    stopCampusSpeech();
     setIsPlayingBackendAudio(false);
-    setIsCampusSpeaking(false);
     setShowUnmuteHint(false);
     setHasGreeted(true);
     isPendingListeningRef.current = false;
@@ -4857,6 +4990,10 @@ export default function ChatScreen({
       ? sentenceRevealText
       : lastAssistantMsg?.text ?? '';
   const fullTextAnimate = true;
+  const visualAnswerPresentation = useMemo(
+    () => resolveAnswerPresentation(lastAssistantMsg),
+    [lastAssistantMsg],
+  );
 
   const responseLayoutEnabled =
     layoutMode === 'FULL_TEXT' &&
@@ -5355,7 +5492,7 @@ export default function ChatScreen({
               className={`full-text-layout min-h-0${departmentComparisonOpen ? ' full-text-layout--comparison-active' : ''}`}
             >
               <div
-                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${departmentComparisonOpen ? ' full-text-message-stage--with-comparison' : ''}`}
+                  className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${departmentComparisonOpen ? ' full-text-message-stage--with-comparison' : ''}${visualAnswerPresentation ? ' full-text-message-stage--adaptive-answer' : ''}`}
               >
                 <div
                   ref={fullTextScrollRef}
@@ -5370,13 +5507,15 @@ export default function ChatScreen({
                       inlineLanguageGate &&
                       !languageGateSatisfied
                     )
-                      ? ' text-container--optical'
+                      ? ` text-container--optical${visualAnswerPresentation ? ' text-container--adaptive-card' : ''}`
                       : ''
                   }`}
                   style={
                     responseLayoutEnabled
                       ? {
-                          width: responseLayout.containerStyle.width,
+                          width: visualAnswerPresentation
+                            ? 'min(1280px, 88vw)'
+                            : responseLayout.containerStyle.width,
                           overflowY: responseLayout.containerStyle.overflowY,
                           // Optical spacers own vertical placement when --optical is active.
                           ...(departmentComparisonOpen
@@ -5458,15 +5597,23 @@ export default function ChatScreen({
                         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                         className="full-text-message-wrapper full-text-safe-zone"
                       >
-                        <AnimatedAiMessage
-                          key={`${lastAssistantMsg.id ?? 'msg'}-page-${responseLayout.activePageIndex}`}
-                          text={fullTextPageText}
-                          animate={fullTextAnimate}
-                          audioDuration={fullTextPageAudioDuration}
-                          playbackProgress={fullTextRevealProgress}
-                          className={fullTextMessageClassName}
-                          style={fullTextAnswerStyle}
-                        />
+                        {visualAnswerPresentation ? (
+                          <AdaptiveAnswerCard
+                            presentation={visualAnswerPresentation}
+                            scriptClassName={scriptPreset.cssClass}
+                            onChoice={(choice) => interceptAndSendMessage({ action: 'user_message', text: choice }, 'UI')}
+                          />
+                        ) : (
+                          <AnimatedAiMessage
+                            key={`${lastAssistantMsg.id ?? 'msg'}-page-${responseLayout.activePageIndex}`}
+                            text={fullTextPageText}
+                            animate={fullTextAnimate}
+                            audioDuration={fullTextPageAudioDuration}
+                            playbackProgress={fullTextRevealProgress}
+                            className={fullTextMessageClassName}
+                            style={fullTextAnswerStyle}
+                          />
+                        )}
                       </motion.div>
                     ) : null}
                   </AnimatePresence>
@@ -5490,8 +5637,18 @@ export default function ChatScreen({
                     <div className="chat-orb-stack-below-faq">
                       <ChatOrbControl
                         orbState={orbState}
-                        isProcessing={false}
-                        amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
+                        isProcessing={
+                          isResponsePending ||
+                          orbState === 'processing' ||
+                          orbState === 'speaking'
+                        }
+                        amplitude={
+                          orbState === 'listening'
+                            ? voiceAnalyser.amplitude
+                            : orbState === 'speaking' || orbState === 'processing' || isResponsePending
+                              ? 0.3
+                              : 0.05
+                        }
                         frequencyDataRef={voiceAnalyser.frequencyDataRef}
                         onTap={handleOrbTap}
                         bottomClassName="mt-2 mb-5 w-full text-center"
@@ -5526,12 +5683,12 @@ export default function ChatScreen({
                   data-current-unit-id={currentUnitCard?.unitId || ''}
                 >
 
-                {isCampusNavigationStage && selectedCampusDirection ? (
+                {isCampusNavigationStage ? (
                   <CampusNavigationMapOnly
                     direction={selectedCampusDirection}
                     language={presentationLanguage}
                     routeMode={campusRouteMode}
-                    routeResult={campusRouteResult}
+                    routeResult={hasCampusRoomSelection ? campusRouteResult : null}
                     onMappedRoomSelect={handleMappedCampusRoomSelect}
                   />
                 ) : currentUnitCard && CAMPUS_UNIT_CARD_TYPES.has(currentUnitCard.cardType) ? (
@@ -5633,14 +5790,14 @@ export default function ChatScreen({
                   </div>
                 ) : null}
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
-                  {isCampusNavigationStage && selectedCampusDirection ? (
+                  {isCampusNavigationStage ? (
                     <div className="campus-direction-panel">
                       <label className="campus-select-label" htmlFor="campus-destination-select">
                         {campusCopy.chooseDestination}
                       </label>
                       <select
                         id="campus-destination-select"
-                        value={selectedCampusIndex}
+                        value={hasCampusRoomSelection ? selectedCampusIndex : ''}
                         onChange={(event) => {
                           const nextIndex = Number(event.target.value);
                           setCampusDirectionOverride(null);
@@ -5651,6 +5808,11 @@ export default function ChatScreen({
                         }}
                         className="campus-destination-select"
                       >
+                        {!hasCampusRoomSelection ? (
+                          <option value="" disabled>
+                            {campusCopy.chooseDestination}
+                          </option>
+                        ) : null}
                         {CAMPUS_DIRECTIONS.map((direction, index) => (
                           <option key={direction.to} value={index}>
                             {direction.to}
@@ -5658,30 +5820,34 @@ export default function ChatScreen({
                         ))}
                       </select>
 
-                      <div className="campus-direction-card">
-                        <span className="campus-direction-kicker">{campusCopy.destination}</span>
-                        <h3>{selectedCampusDirection.to}</h3>
-                        <div className="campus-direction-meta">
-                          <span>{campusCopy.block} {selectedCampusDirection.block}</span>
-                          <span>{campusCopy.groundFloor}</span>
-                          <span>{selectedCampusDirection.estimated_steps} {campusCopy.steps}</span>
-                          <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
-                        </div>
-                        <ol className="campus-direction-steps">
-                          {campusDisplaySteps.map((step, index) => (
-                            <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
-                          ))}
-                        </ol>
-                      </div>
+                      {hasCampusRoomSelection ? (
+                        <>
+                          <div className="campus-direction-card">
+                            <span className="campus-direction-kicker">{campusCopy.destination}</span>
+                            <h3>{selectedCampusDirection.to}</h3>
+                            <div className="campus-direction-meta">
+                              <span>{campusCopy.block} {selectedCampusDirection.block}</span>
+                              <span>{campusCopy.groundFloor}</span>
+                              <span>{selectedCampusDirection.estimated_steps} {campusCopy.steps}</span>
+                              <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
+                            </div>
+                            <ol className="campus-direction-steps">
+                              {campusDisplaySteps.map((step, index) => (
+                                <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
+                              ))}
+                            </ol>
+                          </div>
 
-                      <button
-                        type="button"
-                        onClick={() => (isCampusSpeaking ? stopCampusSpeech() : speakCampusDirection())}
-                        className="campus-speak-button"
-                      >
-                        {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}
-                        {isCampusSpeaking ? campusCopy.stop : campusCopy.speak}
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() => (isCampusSpeaking ? stopCampusSpeech() : speakCampusDirection())}
+                            className="campus-speak-button"
+                          >
+                            {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}
+                            {isCampusSpeaking ? campusCopy.stop : campusCopy.speak}
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   ) : (
                     <>
@@ -5700,14 +5866,51 @@ export default function ChatScreen({
                     </>
                   )}
                 </div>
-                {!showThinkingStage && renderFaqCarousel('panel')}
-                
+
+                {/* Same ChatOrbControl + session/mic/TTS as the rest of CLARA — under Read Directions */}
+                {isCampusNavigationStage && !isLanguageGateOpen ? (
+                  <div className="campus-nav-orb-slot" data-testid="campus-nav-orb-slot">
+                    <ChatOrbControl
+                      orbState={orbState}
+                      isProcessing={
+                        isResponsePending ||
+                        orbState === 'processing' ||
+                        orbState === 'speaking'
+                      }
+                      amplitude={
+                        orbState === 'listening'
+                          ? voiceAnalyser.amplitude
+                          : orbState === 'speaking' || orbState === 'processing' || isResponsePending
+                            ? 0.3
+                            : 0.05
+                      }
+                      frequencyDataRef={voiceAnalyser.frequencyDataRef}
+                      onTap={handleOrbTap}
+                      compact
+                      bottomClassName="relative mt-1 w-full text-center"
+                    />
+                  </div>
+                ) : null}
+
+                {!isCampusNavigationStage && !showThinkingStage && renderFaqCarousel('panel')}
+
+                {/* Non-campus split: orb below FAQ. During campus nav the shared orb lives under Read Directions. */}
                 {!isCampusNavigationStage && !showThinkingStage && !isLanguageGateOpen && (
                   <motion.div className="chat-orb-stack-below-faq w-full flex justify-center pb-12">
                     <ChatOrbControl
                       orbState={orbState}
-                      isProcessing={false}
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
+                      isProcessing={
+                        isResponsePending ||
+                        orbState === 'processing' ||
+                        orbState === 'speaking'
+                      }
+                      amplitude={
+                        orbState === 'listening'
+                          ? voiceAnalyser.amplitude
+                          : orbState === 'speaking' || orbState === 'processing' || isResponsePending
+                            ? 0.3
+                            : 0.05
+                      }
                       frequencyDataRef={voiceAnalyser.frequencyDataRef}
                       onTap={handleOrbTap}
                       bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
@@ -5732,8 +5935,18 @@ export default function ChatScreen({
           <div className="full-text-comparison-orb-layer">
             <ChatOrbControl
               orbState={orbState}
-              isProcessing={isResponsePending}
-              amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : (isResponsePending ? 0.3 : 0.05)}
+              isProcessing={
+                isResponsePending ||
+                orbState === 'processing' ||
+                orbState === 'speaking'
+              }
+              amplitude={
+                orbState === 'listening'
+                  ? voiceAnalyser.amplitude
+                  : orbState === 'speaking' || orbState === 'processing' || isResponsePending
+                    ? 0.3
+                    : 0.05
+              }
               frequencyDataRef={voiceAnalyser.frequencyDataRef}
               onTap={handleOrbTap}
               comparisonMode

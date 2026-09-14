@@ -613,6 +613,7 @@ INTENT_HOD_TRUSTEES_PROFILE = "HOD_TRUSTEES_PROFILE"
 INTENT_DEPARTMENT_FEES = "DEPARTMENT_FEES"
 INTENT_DOCUMENTS = "DOCUMENTS"
 INTENT_BUS_ROUTES = "BUS_ROUTES"
+INTENT_CAMPUS_NAVIGATION = "CAMPUS_NAVIGATION"
 INTENT_DEPARTMENT_COMPARISON = "DEPARTMENT_COMPARISON"
 INTENT_PRINCIPAL_PROFILE = "PRINCIPAL_PROFILE"
 INTENT_VICE_PRINCIPAL_PROFILE = "VICE_PRINCIPAL_PROFILE"
@@ -1011,6 +1012,7 @@ class QueryFeatures:
     is_course_query: bool
     is_documents_query: bool
     is_bus_routes_query: bool
+    is_campus_navigation_query: bool
     is_placement_query: bool
     is_overview_query: bool
     is_comparison_query: bool
@@ -1397,7 +1399,13 @@ def normalized_text_for_executive_keyword_scan(text: str | None) -> str:
 
 
 def maybe_override_intent_with_executive_profile(base_intent: str, raw_text: str | None) -> str:
-    """If executive cues are present in user text, return the sharper profile intent."""
+    """If executive cues are present in user text, return the sharper profile intent.
+
+    Explicit campus navigation ("where is principal cabin", "principal cabin ಎಲ್ಲಿದೆ")
+    must never be stolen into a profile card.
+    """
+    if base_intent == INTENT_CAMPUS_NAVIGATION:
+        return base_intent
     scanned = normalized_text_for_executive_keyword_scan(raw_text)
     detected = _detect_profile_intent(scanned)
     if detected:
@@ -1928,6 +1936,11 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
     is_comparison_query = is_comp_hit or is_rec_hit
 
     is_bus_routes_query = text_has_bus_routes_cue(raw)
+    # Campus room navigation (map destinations). College-address questions stay out.
+    from backend.services.campus_navigation_intent import resolve_campus_navigation
+
+    _nav = resolve_campus_navigation(raw)
+    is_campus_navigation_query = _nav.status in {"resolved", "ambiguous", "unknown"}
 
     return QueryFeatures(
         has_department=has_department,
@@ -1937,6 +1950,7 @@ def extract_features(query_en: str, department_hint: str | None = None) -> Query
         is_course_query=is_course_query,
         is_documents_query=documents_flag,
         is_bus_routes_query=is_bus_routes_query,
+        is_campus_navigation_query=is_campus_navigation_query,
         is_placement_query=_is_placements_query(normalized),
         is_overview_query=_is_college_overview_query(normalized),
         is_comparison_query=is_comparison_query,
@@ -2389,6 +2403,9 @@ def resolve_intent_from_features(features: QueryFeatures) -> str:
     """
     Final deterministic intent resolver from extracted features only.
     """
+    # Campus navigation outranks HOD/department cards when the user asked for a place.
+    if features.is_campus_navigation_query:
+        return INTENT_CAMPUS_NAVIGATION
     if features.is_hod_query:
         return INTENT_HOD_PROFILE
     if features.is_documents_query:
@@ -2505,6 +2522,8 @@ def infer_show_card_label(intent: str, detected_department: str | None) -> str |
         return "documents"
     if intent == INTENT_BUS_ROUTES:
         return "bus_routes"
+    if intent == INTENT_CAMPUS_NAVIGATION:
+        return "campus_navigation"
     if intent == INTENT_DEPARTMENT_COMPARISON:
         return "department_comparison"
     if intent == INTENT_PRINCIPAL_PROFILE:

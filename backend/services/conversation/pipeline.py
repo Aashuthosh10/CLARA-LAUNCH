@@ -147,6 +147,7 @@ async def run_conversation_intelligence(
         local_intent=local_intent if force_local else None,
         validated_proposal=proposal_result.proposal,
         proposal_diagnostics=proposal_diagnostics,
+        context_department_keys=last_semantic_entities,
     )
 
     decision = route_policy(

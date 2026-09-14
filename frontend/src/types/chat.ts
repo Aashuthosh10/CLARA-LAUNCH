@@ -13,6 +13,27 @@ export interface TextMessage extends BaseMessage {
   role: MessageRole;
   text: string;
   timestamp?: string;
+  visualResponseEligible?: boolean;
+  answerPresentation?: AnswerPresentation;
+}
+
+export type AnswerPresentationType =
+  | 'INFO_CARD'
+  | 'STEP_CARD'
+  | 'LIST_CARD'
+  | 'STATS_CARD'
+  | 'CHOICE_CARD'
+  | 'GENERIC_ANSWER_CARD';
+
+export interface AnswerPresentation {
+  schemaVersion: 1;
+  type: AnswerPresentationType;
+  eyebrow: string;
+  title: string;
+  summary: string;
+  points: string[];
+  highlights: string[];
+  choices: string[];
 }
 
 /** System messages: connection status, "I didn't catch that", etc. */

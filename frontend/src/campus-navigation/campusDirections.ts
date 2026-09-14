@@ -126,6 +126,24 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'ನೇರವಾಗಿ ನಡೆಯಿರಿ',
     keepGoing: 'ಮುಂದುವರಿಯಿರಿ',
     reached: 'ನೀವು ತಲುಪಿದ್ದೀರಿ',
+    floorPlanTabs: 'ಮಹಡಿ', floorTabGF: 'ನೆಲ', floorTabFF: 'ಮೊದಲ', floorTabSF: 'ಎರಡನೇ',
+    floorTabGFFull: 'ನೆಲ ಮಹಡಿ', floorTabFFFull: 'ಮೊದಲ ಮಹಡಿ', floorTabSFFull: 'ಎರಡನೇ ಮಹಡಿ',
+    campusRouteFloorsInvolved: 'ಮಾರ್ಗದ ಮಹಡಿಗಳು:', campusYouAreHere: 'ನೀವು ಇಲ್ಲಿದ್ದೀರಿ',
+    campusMapLoading: 'ಕ್ಯಾಂಪಸ್ ನಕ್ಷೆ ಲೋಡ್ ಆಗುತ್ತಿದೆ…', campusMapLoadError: 'ಕ್ಯಾಂಪಸ್ ನಕ್ಷೆಯನ್ನು ಲೋಡ್ ಮಾಡಲು ಆಗಲಿಲ್ಲ.',
+    campusMapNoOverlayMatch: 'ಈ ಗಮ್ಯಸ್ಥಾನಕ್ಕೆ ವೆಕ್ಟರ್ ನಕ್ಷೆಯಲ್ಲಿ ಹೊಂದುವ ಕೊಠಡಿ ಇಲ್ಲ.',
+    campusMapOverlayUnavailable: 'ಈ ಕೊಠಡಿಯ ರೂಪರೇಖೆ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ; ಮಹಡಿ ನಕ್ಷೆ ಕೆಳಗೆ ಕಾಣಿಸುತ್ತದೆ.',
+    campusMapZoomControls: 'ನಕ್ಷೆ ಜೂಮ್', campusMapZoomIn: 'ಹೆಚ್ಚಿಸಿ', campusMapZoomOut: 'ಕಡಿಮೆ ಮಾಡಿ',
+    campusMapCompassHint: 'ನಕ್ಷೆಯ ಉತ್ತರ ಸೂಚಕ', campusMapLegendTitle: 'ನಕ್ಷೆ ಚಿಹ್ನೆಗಳು',
+    campusMapLegendRoute: 'ಮಾರ್ಗ', campusMapLegendYouAreHere: 'ನೀವು ಇಲ್ಲಿದ್ದೀರಿ',
+    campusMapLegendDoor: 'ಬಾಗಿಲು', campusMapLegendLift: 'ಲಿಫ್ಟ್', campusMapLegendStairs: 'ಮೆಟ್ಟಿಲುಗಳು',
+    campusEtaShort: 'ತಲುಪುವ ಸಮಯ', campusDistanceShort: 'ದೂರ', campusStepCountMetric: 'ಹೆಜ್ಜೆಗಳು',
+    campusModeShortest: 'ಕಡಿಮೆ ದೂರ', campusModeAccessible: 'ಸುಲಭ ಪ್ರವೇಶ', campusModeLift: 'ಲಿಫ್ಟ್', campusModeStairs: 'ಮೆಟ್ಟಿಲುಗಳು',
+    campusRouteMetaRouteMode: 'ಮಾರ್ಗ ವಿಧಾನ', campusTripSummary: 'ಪ್ರಯಾಣ ಸಾರಾಂಶ', campusRepeat: 'ಮತ್ತೆ ಓದಿ',
+    campusStartOver: 'ಮತ್ತೆ ಪ್ರಾರಂಭಿಸಿ', campusRouteComputing: 'ಮಾರ್ಗ ಲೆಕ್ಕಿಸಲಾಗುತ್ತಿದೆ…',
+    campusChangeDestination: 'ಗಮ್ಯಸ್ಥಾನ ಬದಲಿಸಿ', campusKioskChangeDestinationCta: 'ಗಮ್ಯಸ್ಥಾನ ಬದಲಿಸಿ',
+    campusKioskBrandShort: 'CLARA', campusKioskDirectory: 'ಡೈರೆಕ್ಟರಿ', campusKioskHelp: 'ಸಹಾಯ', campusKioskLanguage: 'ಭಾಷೆ',
+    campusKioskChromeNav: 'ಕ್ಯಾಂಪಸ್ ಕಿಯೋಸ್ಕ್ ಕೊಂಡಿಗಳು', campusKioskSearchPlaceholder: 'ಸ್ಥಳ, ಕೊಠಡಿ ಅಥವಾ ವಿಭಾಗ ಹುಡುಕಿ…',
+    campusKioskHelpBody: 'ಗಮ್ಯಸ್ಥಾನವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ ಮತ್ತು ನಕ್ಷೆಯಲ್ಲಿನ ನೇರಳೆ ಮಾರ್ಗವನ್ನು ಅನುಸರಿಸಿ. ಕೊಠಡಿಯ ಹೆಸರು ಅಥವಾ ಕೋಡ್ ಹೇಳಲು ಆರ್ಬ್ ಒತ್ತಿರಿ.',
   },
   Hindi: {
     campusNavigation: 'कैंपस नेविगेशन',
@@ -150,6 +168,24 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'सीधे चलें',
     keepGoing: 'आगे चलते रहें',
     reached: 'आप पहुंच गए',
+    floorPlanTabs: 'मंजिल', floorTabGF: 'भूतल', floorTabFF: 'पहली', floorTabSF: 'दूसरी',
+    floorTabGFFull: 'भूतल', floorTabFFFull: 'पहली मंजिल', floorTabSFFull: 'दूसरी मंजिल',
+    campusRouteFloorsInvolved: 'मार्ग की मंजिलें:', campusYouAreHere: 'आप यहां हैं',
+    campusMapLoading: 'कैंपस मानचित्र लोड हो रहा है…', campusMapLoadError: 'कैंपस मानचित्र लोड नहीं हो सका.',
+    campusMapNoOverlayMatch: 'इस गंतव्य का वेक्टर मानचित्र पर मेल खाता कमरा नहीं है.',
+    campusMapOverlayUnavailable: 'इस कमरे की रूपरेखा अभी उपलब्ध नहीं है; मंजिल का मानचित्र नीचे दिख रहा है.',
+    campusMapZoomControls: 'मानचित्र ज़ूम', campusMapZoomIn: 'ज़ूम इन', campusMapZoomOut: 'ज़ूम आउट',
+    campusMapCompassHint: 'मानचित्र उत्तर संकेतक', campusMapLegendTitle: 'मानचित्र चिह्न',
+    campusMapLegendRoute: 'मार्ग', campusMapLegendYouAreHere: 'आप यहां हैं',
+    campusMapLegendDoor: 'दरवाजा', campusMapLegendLift: 'लिफ्ट', campusMapLegendStairs: 'सीढ़ियां',
+    campusEtaShort: 'अनुमानित समय', campusDistanceShort: 'दूरी', campusStepCountMetric: 'कदम',
+    campusModeShortest: 'सबसे छोटा', campusModeAccessible: 'सुलभ', campusModeLift: 'लिफ्ट', campusModeStairs: 'सीढ़ियां',
+    campusRouteMetaRouteMode: 'मार्ग विकल्प', campusTripSummary: 'यात्रा सारांश', campusRepeat: 'फिर सुनें',
+    campusStartOver: 'फिर शुरू करें', campusRouteComputing: 'मार्ग बन रहा है…',
+    campusChangeDestination: 'गंतव्य बदलें', campusKioskChangeDestinationCta: 'गंतव्य बदलें',
+    campusKioskBrandShort: 'CLARA', campusKioskDirectory: 'निर्देशिका', campusKioskHelp: 'सहायता', campusKioskLanguage: 'भाषा',
+    campusKioskChromeNav: 'कैंपस कियोस्क लिंक', campusKioskSearchPlaceholder: 'स्थान, कमरा या विभाग खोजें…',
+    campusKioskHelpBody: 'गंतव्य चुनें और मानचित्र पर बैंगनी मार्ग का अनुसरण करें. कमरे का नाम या कोड बोलने के लिए ऑर्ब दबाएं.',
   },
   Tamil: {
     campusNavigation: 'வளாக வழிகாட்டல்',
@@ -174,6 +210,24 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'நேராக நடக்கவும்',
     keepGoing: 'தொடர்ந்து செல்லுங்கள்',
     reached: 'நீங்கள் வந்துவிட்டீர்கள்',
+    floorPlanTabs: 'தளம்', floorTabGF: 'தரை', floorTabFF: 'முதல்', floorTabSF: 'இரண்டாம்',
+    floorTabGFFull: 'தரைத்தளம்', floorTabFFFull: 'முதல் தளம்', floorTabSFFull: 'இரண்டாம் தளம்',
+    campusRouteFloorsInvolved: 'பாதையில் உள்ள தளங்கள்:', campusYouAreHere: 'நீங்கள் இங்கே',
+    campusMapLoading: 'வளாக வரைபடம் ஏற்றப்படுகிறது…', campusMapLoadError: 'வளாக வரைபடத்தை ஏற்ற முடியவில்லை.',
+    campusMapNoOverlayMatch: 'இந்த இலக்குக்கு வெக்டர் வரைபடத்தில் பொருந்தும் அறை இல்லை.',
+    campusMapOverlayUnavailable: 'இந்த அறையின் வரைவு இன்னும் இல்லை; தள வரைபடம் கீழே காட்டப்படுகிறது.',
+    campusMapZoomControls: 'வரைபட அளவு', campusMapZoomIn: 'பெரிதாக்கு', campusMapZoomOut: 'சிறிதாக்கு',
+    campusMapCompassHint: 'வரைபட வடக்கு குறி', campusMapLegendTitle: 'வரைபட குறியீடுகள்',
+    campusMapLegendRoute: 'பாதை', campusMapLegendYouAreHere: 'நீங்கள் இங்கே',
+    campusMapLegendDoor: 'கதவு', campusMapLegendLift: 'மின்தூக்கி', campusMapLegendStairs: 'படிக்கட்டுகள்',
+    campusEtaShort: 'நேரம்', campusDistanceShort: 'தூரம்', campusStepCountMetric: 'படிகள்',
+    campusModeShortest: 'குறுகிய', campusModeAccessible: 'அணுகத்தக்க', campusModeLift: 'மின்தூக்கி', campusModeStairs: 'படிக்கட்டுகள்',
+    campusRouteMetaRouteMode: 'பாதை முறை', campusTripSummary: 'பயணச் சுருக்கம்', campusRepeat: 'மீண்டும் வாசி',
+    campusStartOver: 'மீண்டும் தொடங்கு', campusRouteComputing: 'பாதை கணக்கிடப்படுகிறது…',
+    campusChangeDestination: 'இலக்கை மாற்று', campusKioskChangeDestinationCta: 'இலக்கை மாற்று',
+    campusKioskBrandShort: 'CLARA', campusKioskDirectory: 'அடைவு', campusKioskHelp: 'உதவி', campusKioskLanguage: 'மொழி',
+    campusKioskChromeNav: 'வளாக கியோஸ்க் இணைப்புகள்', campusKioskSearchPlaceholder: 'இடம், அறை அல்லது துறையைத் தேடுங்கள்…',
+    campusKioskHelpBody: 'இலக்கைத் தேர்ந்தெடுத்து வரைபடத்தில் ஊதா பாதையைப் பின்பற்றுங்கள். அறை பெயர் அல்லது குறியீட்டைச் சொல்ல ஆர்பைத் தட்டுங்கள்.',
   },
   Telugu: {
     campusNavigation: 'క్యాంపస్ నావిగేషన్',
@@ -198,6 +252,24 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'నేరుగా నడవండి',
     keepGoing: 'ముందుకు కొనసాగండి',
     reached: 'మీరు చేరుకున్నారు',
+    floorPlanTabs: 'అంతస్తు', floorTabGF: 'గ్రౌండ్', floorTabFF: 'మొదటి', floorTabSF: 'రెండవ',
+    floorTabGFFull: 'గ్రౌండ్ ఫ్లోర్', floorTabFFFull: 'మొదటి అంతస్తు', floorTabSFFull: 'రెండవ అంతస్తు',
+    campusRouteFloorsInvolved: 'మార్గంలోని అంతస్తులు:', campusYouAreHere: 'మీరు ఇక్కడ ఉన్నారు',
+    campusMapLoading: 'క్యాంపస్ మ్యాప్ లోడ్ అవుతోంది…', campusMapLoadError: 'క్యాంపస్ మ్యాప్ లోడ్ కాలేదు.',
+    campusMapNoOverlayMatch: 'ఈ గమ్యానికి వెక్టర్ మ్యాప్‌లో సరిపోలే గది లేదు.',
+    campusMapOverlayUnavailable: 'ఈ గది రూపురేఖ ఇంకా లేదు; అంతస్తు మ్యాప్ కింద కనిపిస్తుంది.',
+    campusMapZoomControls: 'మ్యాప్ జూమ్', campusMapZoomIn: 'జూమ్ ఇన్', campusMapZoomOut: 'జూమ్ అవుట్',
+    campusMapCompassHint: 'మ్యాప్ ఉత్తర సూచిక', campusMapLegendTitle: 'మ్యాప్ చిహ్నాలు',
+    campusMapLegendRoute: 'మార్గం', campusMapLegendYouAreHere: 'మీరు ఇక్కడ ఉన్నారు',
+    campusMapLegendDoor: 'తలుపు', campusMapLegendLift: 'లిఫ్ట్', campusMapLegendStairs: 'మెట్లు',
+    campusEtaShort: 'అంచనా సమయం', campusDistanceShort: 'దూరం', campusStepCountMetric: 'అడుగులు',
+    campusModeShortest: 'అతి తక్కువ', campusModeAccessible: 'అందుబాటు', campusModeLift: 'లిఫ్ట్', campusModeStairs: 'మెట్లు',
+    campusRouteMetaRouteMode: 'మార్గ విధానం', campusTripSummary: 'ప్రయాణ సారాంశం', campusRepeat: 'మళ్లీ చదవండి',
+    campusStartOver: 'మళ్లీ ప్రారంభించండి', campusRouteComputing: 'మార్గం లెక్కిస్తోంది…',
+    campusChangeDestination: 'గమ్యాన్ని మార్చండి', campusKioskChangeDestinationCta: 'గమ్యాన్ని మార్చండి',
+    campusKioskBrandShort: 'CLARA', campusKioskDirectory: 'డైరెక్టరీ', campusKioskHelp: 'సహాయం', campusKioskLanguage: 'భాష',
+    campusKioskChromeNav: 'క్యాంపస్ కియోస్క్ లింకులు', campusKioskSearchPlaceholder: 'స్థలం, గది లేదా విభాగం వెతకండి…',
+    campusKioskHelpBody: 'గమ్యాన్ని ఎంచుకుని మ్యాప్‌లో ఊదా మార్గాన్ని అనుసరించండి. గది పేరు లేదా కోడ్ చెప్పడానికి ఆర్బ్‌ను నొక్కండి.',
   },
   Malayalam: {
     campusNavigation: 'ക്യാമ്പസ് നാവിഗേഷൻ',
@@ -222,6 +294,24 @@ export const CAMPUS_LANGUAGE_LABELS: Record<Language, Record<string, string>> = 
     goStraight: 'നേരെ നടക്കുക',
     keepGoing: 'മുന്നോട്ട് തുടരുക',
     reached: 'നിങ്ങൾ എത്തി',
+    floorPlanTabs: 'നില', floorTabGF: 'താഴെ', floorTabFF: 'ഒന്നാം', floorTabSF: 'രണ്ടാം',
+    floorTabGFFull: 'താഴത്തെ നില', floorTabFFFull: 'ഒന്നാം നില', floorTabSFFull: 'രണ്ടാം നില',
+    campusRouteFloorsInvolved: 'വഴിയിലെ നിലകൾ:', campusYouAreHere: 'നിങ്ങൾ ഇവിടെയാണ്',
+    campusMapLoading: 'ക്യാമ്പസ് മാപ്പ് ലോഡ് ചെയ്യുന്നു…', campusMapLoadError: 'ക്യാമ്പസ് മാപ്പ് ലോഡ് ചെയ്യാനായില്ല.',
+    campusMapNoOverlayMatch: 'ഈ ലക്ഷ്യത്തിന് വെക്റ്റർ മാപ്പിൽ പൊരുത്തപ്പെടുന്ന മുറിയില്ല.',
+    campusMapOverlayUnavailable: 'ഈ മുറിയുടെ രൂപരേഖ ഇനിയും ലഭ്യമല്ല; നിലയുടെ മാപ്പ് താഴെ കാണാം.',
+    campusMapZoomControls: 'മാപ്പ് സൂം', campusMapZoomIn: 'വലുതാക്കുക', campusMapZoomOut: 'ചെറുതാക്കുക',
+    campusMapCompassHint: 'മാപ്പിന്റെ വടക്ക് സൂചിക', campusMapLegendTitle: 'മാപ്പ് ചിഹ്നങ്ങൾ',
+    campusMapLegendRoute: 'വഴി', campusMapLegendYouAreHere: 'നിങ്ങൾ ഇവിടെയാണ്',
+    campusMapLegendDoor: 'വാതിൽ', campusMapLegendLift: 'ലിഫ്റ്റ്', campusMapLegendStairs: 'പടികൾ',
+    campusEtaShort: 'എത്തുന്ന സമയം', campusDistanceShort: 'ദൂരം', campusStepCountMetric: 'ചുവടുകൾ',
+    campusModeShortest: 'കുറഞ്ഞ ദൂരം', campusModeAccessible: 'സൗകര്യപ്രദം', campusModeLift: 'ലിഫ്റ്റ്', campusModeStairs: 'പടികൾ',
+    campusRouteMetaRouteMode: 'വഴി രീതി', campusTripSummary: 'യാത്രാ സംഗ്രഹം', campusRepeat: 'വീണ്ടും വായിക്കുക',
+    campusStartOver: 'വീണ്ടും തുടങ്ങുക', campusRouteComputing: 'വഴി കണക്കാക്കുന്നു…',
+    campusChangeDestination: 'ലക്ഷ്യം മാറ്റുക', campusKioskChangeDestinationCta: 'ലക്ഷ്യം മാറ്റുക',
+    campusKioskBrandShort: 'CLARA', campusKioskDirectory: 'ഡയറക്ടറി', campusKioskHelp: 'സഹായം', campusKioskLanguage: 'ഭാഷ',
+    campusKioskChromeNav: 'ക്യാമ്പസ് കിയോസ്ക് ലിങ്കുകൾ', campusKioskSearchPlaceholder: 'സ്ഥലം, മുറി അല്ലെങ്കിൽ വിഭാഗം തിരയുക…',
+    campusKioskHelpBody: 'ലക്ഷ്യം തിരഞ്ഞെടുത്ത് മാപ്പിലെ പർപ്പിൾ വഴി പിന്തുടരുക. മുറിയുടെ പേരോ കോഡോ പറയാൻ ഓർബ് അമർത്തുക.',
   },
 };
 
@@ -267,6 +357,45 @@ const arrivalTemplates: Record<Language, string> = {
   Malayalam: '{to} Block {block}-ലെ {floor}ൽ ആണ്.',
 };
 
+const upperFloorGuidance: Record<Language, string[]> = {
+  English: [
+    'Start from the CLARA kiosk.',
+    'Follow the highlighted route to the Ground Floor lift.',
+    'Take the lift to the {floor}.',
+    'Exit the lift and follow the highlighted corridor route.',
+  ],
+  Kannada: [
+    'CLARA ಕಿಯೋಸ್ಕ್‌ನಿಂದ ಪ್ರಾರಂಭಿಸಿ.',
+    'ಗುರುತಿಸಿದ ಮಾರ್ಗದಲ್ಲಿ ನೆಲ ಮಹಡಿಯ ಲಿಫ್ಟ್‌ಗೆ ಹೋಗಿ.',
+    'ಲಿಫ್ಟ್‌ನಲ್ಲಿ {floor}ಕ್ಕೆ ಹೋಗಿ.',
+    'ಲಿಫ್ಟ್‌ನಿಂದ ಹೊರಬಂದು ಗುರುತಿಸಿದ ಕಾರಿಡಾರ್ ಮಾರ್ಗವನ್ನು ಅನುಸರಿಸಿ.',
+  ],
+  Hindi: [
+    'CLARA कियोस्क से शुरू करें.',
+    'दिखाए गए मार्ग से भूतल की लिफ्ट तक जाएं.',
+    'लिफ्ट से {floor} पर जाएं.',
+    'लिफ्ट से बाहर निकलकर दिखाए गए कॉरिडोर मार्ग पर चलें.',
+  ],
+  Telugu: [
+    'CLARA కియోస్క్ నుంచి ప్రారంభించండి.',
+    'చూపిన మార్గంలో గ్రౌండ్ ఫ్లోర్ లిఫ్ట్‌కి వెళ్లండి.',
+    'లిఫ్ట్‌లో {floor}కి వెళ్లండి.',
+    'లిఫ్ట్ నుంచి బయటకు వచ్చి చూపిన కారిడార్ మార్గాన్ని అనుసరించండి.',
+  ],
+  Tamil: [
+    'CLARA கியோஸ்கிலிருந்து தொடங்குங்கள்.',
+    'காட்டப்பட்ட பாதையில் தரைத்தள மின்தூக்கிக்குச் செல்லுங்கள்.',
+    'மின்தூக்கியில் {floor}த்திற்குச் செல்லுங்கள்.',
+    'மின்தூக்கியிலிருந்து வெளியேறி காட்டப்பட்ட வழிச்சாலைப் பாதையைப் பின்பற்றுங்கள்.',
+  ],
+  Malayalam: [
+    'CLARA കിയോസ്കിൽ നിന്ന് തുടങ്ങുക.',
+    'അടയാളപ്പെടുത്തിയ വഴിയിലൂടെ താഴത്തെ നിലയിലെ ലിഫ്റ്റിലേക്ക് പോകുക.',
+    'ലിഫ്റ്റിൽ {floor}യിലേക്ക് പോകുക.',
+    'ലിഫ്റ്റിൽ നിന്ന് ഇറങ്ങി അടയാളപ്പെടുത്തിയ ഇടനാഴി പിന്തുടരുക.',
+  ],
+};
+
 const _EN = CAMPUS_LANGUAGE_LABELS.English;
 
 export function campusLabels(language: Language): Record<string, string> {
@@ -292,19 +421,13 @@ export function localizedFloorLabel(direction: CampusDirection, labels: Record<s
 export function localizedCampusSteps(direction: CampusDirection, language: Language): string[] {
   const labels = campusLabels(language);
   const floorDisplay = localizedFloorLabel(direction, labels);
-  if ((direction.floor_id === 'FF' || direction.floor_id === 'SF') && language === 'English') {
-    return [
-      'Start from the CLARA kiosk.',
-      'Follow the highlighted route to the Ground Floor lift.',
-      `Take the lift to the ${floorDisplay}.`,
-      'Exit the lift and follow the highlighted corridor route.',
-      `Arrive at ${direction.to}.`,
-    ];
-  }
   const arrival = arrivalTemplates[language]
     .replace('{to}', direction.to)
     .replace('{block}', direction.block)
     .replace('{floor}', floorDisplay);
+  if (direction.floor_id === 'FF' || direction.floor_id === 'SF') {
+    return [...upperFloorGuidance[language].map((step) => step.replace('{floor}', floorDisplay)), arrival];
+  }
   return [...blockGuidance[language][direction.block], arrival];
 }
 

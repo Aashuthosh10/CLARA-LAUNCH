@@ -33,9 +33,18 @@ export default function ChatOrbControl({
   const { language, t } = useLanguage();
   const scriptClass = getScriptTypography(language).cssClass;
   const isListening = orbState === 'listening';
+  const isSpeaking = orbState === 'speaking';
+  // SiriOrb has no dedicated speaking mode — map speaking → processing visually.
+  const showBusy =
+    isProcessing || orbState === 'processing' || isSpeaking;
+  const siriState: 'idle' | 'listening' | 'processing' = isListening
+    ? 'listening'
+    : showBusy
+      ? 'processing'
+      : 'idle';
 
   const aria =
-    isProcessing
+    isSpeaking || orbState === 'processing' || isProcessing
       ? uiText(language, 'status.thinking')
       : isListening
         ? uiText(language, 'status.listening')
@@ -80,10 +89,7 @@ export default function ChatOrbControl({
           transition={{ duration: isListening ? 0.36 : 0.46, ease: [0.16, 1, 0.3, 1] }}
           style={{ pointerEvents: 'none' }}
         >
-          <SiriOrb
-            state={isListening ? 'listening' : isProcessing ? 'processing' : 'idle'}
-            amplitude={amplitude}
-          />
+          <SiriOrb state={siriState} amplitude={amplitude} />
         </motion.div>
 
         {/* ─── 2. STRAIGHT HORIZONTAL VOICE ANALYSER ─── */}
@@ -113,7 +119,7 @@ export default function ChatOrbControl({
           type="button"
           tabIndex={0}
           data-testid="chat-orb"
-          data-orb-state={isProcessing ? 'processing' : orbState}
+          data-orb-state={orbState}
           aria-label={aria}
           initial={false}
           animate={{
@@ -151,15 +157,15 @@ export default function ChatOrbControl({
           className={`${scriptClass} whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${
             isListening
               ? 'animate-pulse text-indigo-500'
-              : isProcessing
+              : showBusy
               ? 'animate-pulse text-amber-500'
               : 'text-slate-400 group-hover:text-indigo-500'
           }`}
           style={{
-            opacity: comparisonMode ? 0.88 : isProcessing || isListening ? 0.9 : 0.7,
+            opacity: comparisonMode ? 0.88 : showBusy || isListening ? 0.9 : 0.7,
           }}
         >
-          {isProcessing
+          {showBusy
             ? uiText(language, 'status.thinking')
             : isListening
               ? uiText(language, 'status.listening')

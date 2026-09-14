@@ -54,6 +54,7 @@ class ConversationResolution:
     # Downstream stages consume it; none of them may contradict it.
     response_mode: str | None = None
     clarification_target: str | None = None
+    choice_options: list[str] = field(default_factory=list)
     # Milestone 4.1 — backend-only canonical identity (never emitted on WS)
     canonical_surface: str | None = None
     canonical_content_id: str | None = None
@@ -61,3 +62,7 @@ class ConversationResolution:
     # Backend-only immutable understanding contract. It is created once by
     # Conversation Intelligence and consumed by presentation/narration.
     semantic_request: Any | None = None
+    # Campus navigation destination payload (public room dict) when resolved.
+    campus_destination: dict[str, Any] | None = None
+    campus_nav_status: str | None = None
+    campus_nav_candidates: list[dict[str, Any]] | None = None
