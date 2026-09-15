@@ -26,9 +26,12 @@ NCC_DECK = ncc_deck_unit_ids()
 
 
 class TestNccRegistry(unittest.TestCase):
-    def test_three_units_registered(self) -> None:
+    def test_four_units_registered(self) -> None:
         ids = {d.unit_id for d in all_unit_descriptors()}
-        self.assertEqual(set(NCC_UNIT_IDS), {"ncc.overview", "ncc.training", "ncc.benefits"})
+        self.assertEqual(
+            set(NCC_UNIT_IDS),
+            {"ncc.overview", "ncc.leadership", "ncc.training", "ncc.benefits"},
+        )
         for uid in NCC_UNIT_IDS:
             self.assertIn(uid, ids)
             self.assertIsNotNone(get_unit_descriptor(uid))
@@ -49,6 +52,11 @@ class TestNccSelector(unittest.TestCase):
         self.assertEqual(plan_units("What are the benefits of NCC?"), ("ncc.benefits",))
         self.assertEqual(plan_units("What is B certificate?"), ("ncc.benefits",))
         self.assertEqual(plan_units("NCC benefits"), ("ncc.benefits",))
+
+    def test_leadership_topic(self) -> None:
+        self.assertEqual(plan_units("Who is the NCC officer?"), ("ncc.leadership",))
+        self.assertEqual(plan_units("Tell me about Gowtham"), ("ncc.leadership",))
+        self.assertEqual(plan_units("NCC caretaker"), ("ncc.leadership",))
 
     def test_romanized_regional(self) -> None:
         cases = (

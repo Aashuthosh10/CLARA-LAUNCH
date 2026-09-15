@@ -2,88 +2,86 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { AUTO_LISTEN_CONFIG } from '../autoListenConfig';
 
 /**
- * Pure simulation of no-input counting (mirrors useAutoListenLifecycle rules)
- * without mounting React — proves TWO-WARNING contract.
+ * Mirrors useAutoListenLifecycle contracts:
+ * - Soft SpeechRecognition.onend → restart only (not closing / not warning)
+ * - Normal logical wait expiry → closing prompt
+ * - Closing wait expiry → closing timeout (feedback / sleep path)
  */
-function simulateNoInputSequence(opts: {
-  maxWarnings?: number;
-  onWarning: (attempt: 1 | 2) => void;
+function simulateAutoListenWindow(opts: {
+  onClosingPrompt: () => void;
+  onClosingTimeout: () => void;
+  onRestart: () => void;
 }) {
-  const max = opts.maxWarnings ?? AUTO_LISTEN_CONFIG.maxNoInputWarnings;
-  let count = 0;
-  let awaitingManual = false;
   let armed = true;
+  let mode: 'normal' | 'closing' = 'normal';
+  let waitAlive = true;
 
-  const onEndedWithoutSpeech = () => {
-    if (!armed || awaitingManual) return;
-    count += 1;
-    if (count >= max) {
-      armed = false;
-      awaitingManual = true;
-      opts.onWarning(2);
-      return;
-    }
-    armed = false;
-    opts.onWarning(1);
+  const onRecognitionEndedWithoutSpeech = () => {
+    if (!armed || !waitAlive) return;
+    opts.onRestart();
   };
 
-  const notifyManualResume = () => {
-    awaitingManual = false;
-    count = 0;
+  const onLogicalWaitExpired = () => {
+    if (!armed || !waitAlive) return;
+    waitAlive = false;
+    armed = false;
+    if (mode === 'closing') {
+      opts.onClosingTimeout();
+      return;
+    }
+    opts.onClosingPrompt();
   };
 
   return {
-    onEndedWithoutSpeech,
-    notifyManualResume,
-    getState: () => ({ count, awaitingManual, armed }),
-    reArm: () => {
-      if (awaitingManual) return;
+    onRecognitionEndedWithoutSpeech,
+    onLogicalWaitExpired,
+    enterClosingMode: () => {
+      mode = 'closing';
       armed = true;
+      waitAlive = true;
     },
+    getState: () => ({ armed, mode, waitAlive }),
   };
 }
 
-describe('no-input two-warning contract', () => {
-  it('first NO_INPUT → warning 1; second → warning 2 + awaiting manual', () => {
-    const warnings: number[] = [];
-    const s = simulateNoInputSequence({
-      onWarning: (a) => warnings.push(a),
+describe('auto-listen closing contract (logical window)', () => {
+  it('soft recognition end does not close; only restarts', () => {
+    const closes: string[] = [];
+    const restarts: number[] = [];
+    const s = simulateAutoListenWindow({
+      onClosingPrompt: () => closes.push('prompt'),
+      onClosingTimeout: () => closes.push('timeout'),
+      onRestart: () => restarts.push(1),
     });
-    s.onEndedWithoutSpeech();
-    expect(warnings).toEqual([1]);
-    expect(s.getState().awaitingManual).toBe(false);
-    s.reArm();
-    s.onEndedWithoutSpeech();
-    expect(warnings).toEqual([1, 2]);
-    expect(s.getState().awaitingManual).toBe(true);
+    s.onRecognitionEndedWithoutSpeech();
+    s.onRecognitionEndedWithoutSpeech();
+    expect(closes).toEqual([]);
+    expect(restarts).toEqual([1, 1]);
+    expect(s.getState().armed).toBe(true);
+  });
+
+  it('normal logical wait expiry → closing prompt (not no-input warnings)', () => {
+    const closes: string[] = [];
+    const s = simulateAutoListenWindow({
+      onClosingPrompt: () => closes.push('prompt'),
+      onClosingTimeout: () => closes.push('timeout'),
+      onRestart: () => undefined,
+    });
+    s.onLogicalWaitExpired();
+    expect(closes).toEqual(['prompt']);
     expect(s.getState().armed).toBe(false);
   });
 
-  it('after warning 2, further no-input does not re-fire', () => {
-    const warnings: number[] = [];
-    const s = simulateNoInputSequence({
-      onWarning: (a) => warnings.push(a),
+  it('closing-mode wait expiry → closing timeout (second hit → feedback)', () => {
+    const closes: string[] = [];
+    const s = simulateAutoListenWindow({
+      onClosingPrompt: () => closes.push('prompt'),
+      onClosingTimeout: () => closes.push('timeout'),
+      onRestart: () => undefined,
     });
-    s.onEndedWithoutSpeech();
-    s.reArm();
-    s.onEndedWithoutSpeech();
-    s.onEndedWithoutSpeech();
-    expect(warnings).toEqual([1, 2]);
-  });
-
-  it('manual resume clears counter and allows auto path again', () => {
-    const warnings: number[] = [];
-    const s = simulateNoInputSequence({
-      onWarning: (a) => warnings.push(a),
-    });
-    s.onEndedWithoutSpeech();
-    s.reArm();
-    s.onEndedWithoutSpeech();
-    s.notifyManualResume();
-    expect(s.getState().awaitingManual).toBe(false);
-    s.reArm();
-    s.onEndedWithoutSpeech();
-    expect(warnings).toEqual([1, 2, 1]);
+    s.enterClosingMode();
+    s.onLogicalWaitExpired();
+    expect(closes).toEqual(['timeout']);
   });
 });
 
@@ -96,12 +94,10 @@ describe('continuation timeout race', () => {
   });
 
   it('continuation timeout should start after warning spoken, not at emit', () => {
-    // Contract documented by ChatScreen: pendingContinuationAfterWarning2Ref
-    // + speaking→idle edge. Pure timing model:
-    const spokenAt = 5_000; // warning TTS length
+    const spokenAt = 5_000;
     const continuationWait = AUTO_LISTEN_CONFIG.continuationWaitMs;
-    const sleepAtIfStartedAtEmit = continuationWait; // wrong
-    const sleepAtIfStartedAfterTts = spokenAt + continuationWait; // correct
+    const sleepAtIfStartedAtEmit = continuationWait;
+    const sleepAtIfStartedAfterTts = spokenAt + continuationWait;
     expect(sleepAtIfStartedAfterTts).toBeGreaterThan(sleepAtIfStartedAtEmit);
     expect(sleepAtIfStartedAfterTts - spokenAt).toBe(continuationWait);
   });

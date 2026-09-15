@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.services.answer_generation import INTENT_CAMPUS_NAVIGATION, INTENT_OFF_TOPIC
+from backend.services.answer_generation import INTENT_OFF_TOPIC
 from backend.services.content.surface_selector import select_surface
 from backend.services.conversation.intent_confidence import is_card_intent
 from backend.services.conversation.semantic_normalize import UNSUPPORTED_TOPICS
@@ -16,7 +16,6 @@ from backend.services.conversation.types import PolicyAction, PolicyDecision
 from backend.services.orchestration.types import ConversationResolution, PresentationMode
 
 from backend.services.content.types import (
-    SURFACE_CAMPUS_NAVIGATION,
     SURFACE_DEPARTMENT_FEES,
     SURFACE_DEPARTMENT_OVERVIEW,
     SURFACE_FACULTY,
@@ -88,8 +87,6 @@ def _apply_unit_plan_authority(
     # SurfaceSelector has already chosen the canonical surface.  UnitSelector
     # validates/selects content for that surface; it must not reinterpret a
     # specific selection (HOD, fees, etc.) as a department overview.
-    if resolution.card_surface == SURFACE_CAMPUS_NAVIGATION:
-        return
     requested_surface = resolution.card_surface or SURFACE_DEPARTMENT_OVERVIEW
     plan = (
         select_content_units(semantic_request, surface=requested_surface)
@@ -107,9 +104,6 @@ def _apply_unit_plan_authority(
         return
 
     from_click = bool(local_intent) or bool((entities or {}).get("from_menu"))
-    # Non-unit surfaces (campus map, bus, …) must not be rewritten by department units.
-    if resolution.card_surface == SURFACE_CAMPUS_NAVIGATION:
-        return
     if resolution.card_surface in _UNIT_BACKED_SURFACES and not from_click:
         resolution.card_surface = None
         resolution.show_card = None
@@ -175,13 +169,34 @@ def resolve_presentation(
         PolicyAction.ENTITY_UPDATE,
         PolicyAction.GREETING,
         PolicyAction.SMALL_TALK,
-        PolicyAction.ABOUT_ME,
     ):
         resolution.presentation_mode = PresentationMode.DIRECT.value
         resolution.response_type = "direct"
         resolution.should_call_groq = False
         resolution.should_call_rag = False
         resolution.should_generate_presentation = False
+        return resolution
+
+    # Conversational About Me → normal card presentation (PremiumHODCard family).
+    if action == PolicyAction.ABOUT_ME:
+        from backend.services.content.about_me_units import SURFACE_ABOUT_ME
+
+        resolution.presentation_mode = PresentationMode.CARD_PRESENTATION.value
+        resolution.response_type = "presentation"
+        resolution.response_mode = "CARD"
+        resolution.should_generate_presentation = True
+        resolution.should_call_groq = False
+        resolution.should_call_rag = False
+        resolution.length_kind = "presentation"
+        resolution.card_surface = SURFACE_ABOUT_ME
+        resolution.show_card = SURFACE_ABOUT_ME
+        resolution.presentation_type = SURFACE_ABOUT_ME
+        resolution.short_circuit_reply = None
+        about = (entities or {}).get("about_me") or resolution.canonical_entities.get("about_me")
+        if not about:
+            sticky = (entities or {}).get("last_about_me")
+            if isinstance(sticky, dict):
+                resolution.canonical_entities["about_me"] = sticky
         return resolution
 
     if action == PolicyAction.DIRECT_RESPONSE:
@@ -203,12 +218,9 @@ def resolve_presentation(
         resolution.should_generate_presentation = False
         return resolution
 
-    # Off-topic / college-address location → DETERMINISTIC templates (never GROQ authority).
-    # Campus room navigation is a CARD surface and must not take this path.
+    # Off-topic / location → DETERMINISTIC templates (never GROQ authority).
     if intent == INTENT_OFF_TOPIC or (
-        intent != INTENT_CAMPUS_NAVIGATION
-        and semantic_topic in _DETERMINISTIC_TOPICS
-        and semantic_request is None
+        semantic_topic in _DETERMINISTIC_TOPICS and semantic_request is None
     ):
         resolution.presentation_mode = PresentationMode.DIRECT.value
         resolution.response_type = "direct"
@@ -226,17 +238,11 @@ def resolve_presentation(
     # Card presentation — SurfaceSelector is the only surface owner.
     # A card intent alone cannot open a card; ResponseDecision already projected the mode.
     if action == PolicyAction.CARD_PRESENTATION:
-        # Campus navigation outranks leftover department overview topics from the parser.
-        topic_for_surface = (
-            None
-            if intent == INTENT_CAMPUS_NAVIGATION
-            else (semantic_request.topic if semantic_request is not None else semantic_topic)
-        )
         selection = select_surface(
             resolution=resolution,
             entities=entities,
             local_intent=local_intent,
-            semantic_topic=topic_for_surface,
+            semantic_topic=(semantic_request.topic if semantic_request is not None else semantic_topic),
             user_text=user_text,
             intent=intent,
             faq_matched=faq_matched,

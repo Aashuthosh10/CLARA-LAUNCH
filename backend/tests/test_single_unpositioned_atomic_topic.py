@@ -85,3 +85,44 @@ def test_unpositioned_topic_does_not_broadcast_across_multiple_entities() -> Non
         )
 
     assert request is None
+
+
+def test_unpositioned_explanation_broadcasts_across_named_departments() -> None:
+    request = parse_semantic_request(
+        raw_text="Explain Data Science and AI ML.",
+        language_code_key="en",
+    )
+    assert request is not None
+    assert request.items == (
+        ("cse_ds", "explanation"),
+        ("cse_aiml", "explanation"),
+    )
+    assert request.topic == "explanation"
+
+
+def test_about_me_and_explanation_cards_survive_non_english_localization() -> None:
+    import asyncio
+
+    from backend.services.orchestration import ConversationOrchestrator
+
+    async def _run():
+        orch = ConversationOrchestrator()
+        sess = {"language_code_key": "kn", "language_name": "Kannada"}
+        result = await orch.run("Who are your creators?", sess, defer_narration=True)
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "Who are your creators?",
+            turn_id="t-kn",
+            entities={
+                **dict(result.resolution.canonical_entities or {}),
+                "about_me": sess.get("last_about_me"),
+            },
+        )
+        return result, segs
+
+    result, segs = asyncio.run(_run())
+    assert result.resolution.show_card == "about_me"
+    assert segs is not None
+    assert len(segs) == 4
+    assert result.resolution.tts_code.startswith("kn")

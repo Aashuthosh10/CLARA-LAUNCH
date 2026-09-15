@@ -74,6 +74,40 @@ def detect_atomic_topics(*texts: str) -> frozenset[str]:
             if cue_in_hay(h, "explain") and cue_in_hay(h, "simply"):
                 found.add(TOPIC_EXPLANATION)
                 break
+    # Explicit "explain <department>" / "what is <department>" without soft full-overview.
+    # Guarded: only when no competing atomic topic (fees/hod/etc.) already matched.
+    if TOPIC_EXPLANATION not in found and not (
+        found & {TOPIC_HOD, TOPIC_FEES, TOPIC_PLACEMENTS, TOPIC_ACHIEVEMENTS, TOPIC_FACULTY, TOPIC_CONTACT}
+    ):
+        for h in hays:
+            if cue_in_hay(h, "explain") or cue_in_hay(h, "what is") or cue_in_hay(h, "what does"):
+                # Avoid "what is the fee / hod / placement …"
+                if any(
+                    cue_in_hay(h, bad)
+                    for bad in (
+                        "fee",
+                        "fees",
+                        "hod",
+                        "head of",
+                        "placement",
+                        "placements",
+                        "faculty",
+                        "admission",
+                        "admissions",
+                        "document",
+                        "documents",
+                    )
+                ):
+                    continue
+                # Multi-dept contrast keeps the dedicated contrast parser path
+                # ("what is the difference between A and B").
+                if any(
+                    cue_in_hay(h, cue)
+                    for cue in ("difference", "compare", "comparison", "versus", "vs")
+                ):
+                    continue
+                found.add(TOPIC_EXPLANATION)
+                break
     return frozenset(found)
 
 

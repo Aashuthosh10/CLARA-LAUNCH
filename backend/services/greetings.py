@@ -450,6 +450,97 @@ def get_continue_listening_prompt(language: str | None) -> str:
     return _CONTINUE_LISTENING_BY_LANGUAGE.get(lang, _CONTINUE_LISTENING_BY_LANGUAGE["English"])
 
 
+_THANKS_CLOSING_BY_LANGUAGE: dict[str, str] = {
+    "English": "You're very welcome. Is there anything else I could help you with?",
+    "Kannada": "ಸ್ವಾಗತ. ನಾನು ನಿಮಗೆ ಇನ್ನೇನಾದರೂ ಸಹಾಯ ಮಾಡಬಹುದೇ?",
+    "Hindi": "आपका बहुत स्वागत है। क्या मैं आपकी और कोई मदद कर सकती हूँ?",
+    "Tamil": "மிகவும் வரவேற்கிறேன். நான் உங்களுக்கு வேறு ஏதேனும் உதவட்டுமா?",
+    "Telugu": "మీకు చాలా స్వాగతం. నేను మీకు ఇంకేమైనా సహాయం చేయవచ్చా?",
+    "Malayalam": "വളരെ സ്വാഗതം. ഞാൻ നിങ്ങളെ കൂടുതൽ സഹായിക്കട്ടെ?",
+}
+
+
+def get_thanks_closing_confirmation(language: str | None) -> str:
+    """Direct thank-you → warm confirmation + anything-else (not immediate session end)."""
+    lang = language if language in _THANKS_CLOSING_BY_LANGUAGE else "English"
+    return _THANKS_CLOSING_BY_LANGUAGE.get(lang, _THANKS_CLOSING_BY_LANGUAGE["English"])
+
+
+_FEEDBACK_REQUEST_BY_LANGUAGE: dict[str, str] = {
+    "English": (
+        "Before you go, may I ask one favour? "
+        "Could you please provide feedback on how good my conversation was?"
+    ),
+    "Kannada": (
+        "ನೀವು ಹೋಗುವ ಮೊದಲು ಒಂದು ಸಣ್ಣ ಮನವಿ — "
+        "ನನ್ನೊಂದಿಗಿನ ಸಂಭಾಷಣೆ ಎಷ್ಟು ಚೆನ್ನಾಗಿತ್ತು ಎಂಬುದರ ಬಗ್ಗೆ ದಯವಿಟ್ಟು ಪ್ರತಿಕ್ರಿಯೆ ನೀಡುತ್ತೀರಾ?"
+    ),
+    "Hindi": (
+        "जाने से पहले, क्या मैं एक छोटा सा आग्रह कर सकती हूँ? "
+        "क्या आप बता सकते हैं कि हमारा संवाद कितना अच्छा रहा?"
+    ),
+    "Tamil": (
+        "நீங்கள் செல்வதற்கு முன் ஒரு சிறிய உதவி கேட்கலாமா? "
+        "என்னுடனான உரையாடல் எவ்வளவு நன்றாக இருந்தது என்று தயவுசெய்து சொல்லுங்கள்."
+    ),
+    "Telugu": (
+        "మీరు వెళ్లే ముందు ఒక చిన్న అభ్యర్థన — "
+        "నాతో మీ సంభాషణ ఎంత బాగుందో దయచేసి మీ అభిప్రాయం చెప్పగలరా?"
+    ),
+    "Malayalam": (
+        "പോകുന്നതിന് മുമ്പ് ഒരു ചെറിയ അഭ്യർത്ഥന — "
+        "എന്നോടുള്ള സംഭാഷണം എത്ര നല്ലതായിരുന്നു എന്ന് ദയവായി ഫീഡ്‌ബാക്ക് നൽകാമോ?"
+    ),
+}
+
+
+def get_feedback_request(language: str | None) -> str:
+    lang = language if language in _FEEDBACK_REQUEST_BY_LANGUAGE else "English"
+    return _FEEDBACK_REQUEST_BY_LANGUAGE.get(lang, _FEEDBACK_REQUEST_BY_LANGUAGE["English"])
+
+
+_FEEDBACK_FOLLOWUP_BY_LANGUAGE: dict[str, str] = {
+    "English": "Anything you liked, or anything you think we could improve?",
+    "Kannada": "ನಿಮಗೆ ಏನು ಇಷ್ಟವಾಯಿತು, ಅಥವಾ ನಾವು ಏನು ಸುಧಾರಿಸಬಹುದು?",
+    "Hindi": "क्या कुछ पसंद आया, या कुछ ऐसा जो हम सुधार सकते हैं?",
+    "Tamil": "உங்களுக்கு பிடித்தது என்ன, அல்லது நாங்கள் எதை மேம்படுத்தலாம்?",
+    "Telugu": "మీకు నచ్చింది ఏమిటి, లేదా మేము ఏమి మెరుగుపరచవచ్చు?",
+    "Malayalam": "നിങ്ങൾക്ക് ഇഷ്ടപ്പെട്ടത് എന്താണ്, അല്ലെങ്കിൽ ഞങ്ങൾ എന്ത് മെച്ചപ്പെടുത്താം?",
+}
+
+
+def get_feedback_followup(language: str | None) -> str:
+    lang = language if language in _FEEDBACK_FOLLOWUP_BY_LANGUAGE else "English"
+    return _FEEDBACK_FOLLOWUP_BY_LANGUAGE.get(lang, _FEEDBACK_FOLLOWUP_BY_LANGUAGE["English"])
+
+
+_FEEDBACK_ACK_BY_LANGUAGE: dict[str, str] = {
+    "English": (
+        "Thank you for spending your precious time in providing feedback."
+    ),
+    "Kannada": (
+        "ಪ್ರತಿಕ್ರಿಯೆ ನೀಡಲು ನಿಮ್ಮ ಅಮೂಲ್ಯ ಸಮಯವನ್ನು ಕೊಟ್ಟಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು."
+    ),
+    "Hindi": (
+        "फीडबैक देने के लिए अपना बहुमूल्य समय देने के लिए धन्यवाद।"
+    ),
+    "Tamil": (
+        "கருத்து தெரிவிக்க உங்கள் விலைமதிப்பற்ற நேரத்தை செலவிட்டதற்கு நன்றி."
+    ),
+    "Telugu": (
+        "ఫీడ్‌బ్యాక్ ఇవ్వడానికి మీ విలువైన సమయం కేటాయించినందుకు ధన్యవాదాలు."
+    ),
+    "Malayalam": (
+        "ഫീഡ്‌ബാക്ക് നൽകാൻ നിങ്ങളുടെ വിലയേറിയ സമയം ചെലവഴിച്ചതിന് നന്ദി."
+    ),
+}
+
+
+def get_feedback_acknowledgement(language: str | None) -> str:
+    lang = language if language in _FEEDBACK_ACK_BY_LANGUAGE else "English"
+    return _FEEDBACK_ACK_BY_LANGUAGE.get(lang, _FEEDBACK_ACK_BY_LANGUAGE["English"])
+
+
 def get_session_farewell(language: str | None) -> str:
     try:
         return ui_text(ui_language_key(language), "session.goodbye")
@@ -458,36 +549,44 @@ def get_session_farewell(language: str | None) -> str:
 
 
 _NO_INPUT_FIRST_BY_LANGUAGE: dict[str, str] = {
-    "English": "I didn't quite hear you. Whenever you're ready, you can speak.",
-    "Kannada": "ನಿಮ್ಮ ಮಾತು ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ನೀವು ಸಿದ್ಧರಾದಾಗ ಮಾತನಾಡಬಹುದು.",
-    "Hindi": "मैं आपकी बात ठीक से नहीं सुन पाई। जब आप तैयार हों, बोल सकते हैं।",
-    "Tamil": "உங்கள் பேச்சு தெளிவாகக் கேட்கவில்லை. தயாரானதும் பேசலாம்.",
-    "Telugu": "మీ మాట సరిగా వినిపించలేదు. సిద్ధంగా ఉన్నప్పుడు మాట్లాడవచ్చు.",
-    "Malayalam": "നിങ്ങളുടെ ശബ്ദം വ്യക്തമായി കേട്ടില്ല. തയ്യാറാകുമ്പോൾ സംസാരിക്കാം.",
+    "English": (
+        "I didn't quite catch that. Take your time, and when you're ready, just speak to me."
+    ),
+    "Kannada": (
+        "ನಿಮ್ಮ ಮಾತು ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ನಿಧಾನವಾಗಿ ಇರಿ; ಸಿದ್ಧರಾದಾಗ ನನ್ನೊಂದಿಗೆ ಮಾತನಾಡಿ."
+    ),
+    "Hindi": (
+        "मैं ठीक से समझ नहीं पाई। अपना समय लें, और जब तैयार हों तो मुझसे बात करें।"
+    ),
+    "Tamil": (
+        "சரியாகப் பிடிக்கவில்லை. நேரம் எடுங்கள்; தயாரானதும் என்னிடம் பேசுங்கள்."
+    ),
+    "Telugu": (
+        "సరిగా అర్థం కాలేదు. మీ సమయం తీసుకోండి; సిద్ధంగా ఉన్నప్పుడు నాతో మాట్లాడండి."
+    ),
+    "Malayalam": (
+        "വ്യക്തമായി മനസിലായില്ല. സമയമെടുക്കൂ; തയ്യാറാകുമ്പോൾ എന്നോട് സംസാരിക്കൂ."
+    ),
 }
 
 _NO_INPUT_SECOND_BY_LANGUAGE: dict[str, str] = {
     "English": (
-        "I still couldn't hear you. Please tap the orb and start speaking whenever you're ready."
+        "If you'd like to continue, just tap the orb and speak whenever you're ready."
     ),
     "Kannada": (
-        "ಇನ್ನೂ ನಿಮ್ಮ ಮಾತು ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಆರ್ಬ್ ಅನ್ನು ಸ್ಪರ್ಶಿಸಿ, "
-        "ನೀವು ಸಿದ್ಧರಾದಾಗ ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ."
+        "ಮುಂದುವರಿಸಬೇಕೆಂದರೆ ಆರ್ಬ್ ಅನ್ನು ಸ್ಪರ್ಶಿಸಿ; ನೀವು ಸಿದ್ಧರಾದಾಗ ಮಾತನಾಡಿ."
     ),
     "Hindi": (
-        "मैं अभी भी आपको नहीं सुन पाई। कृपया ऑर्ब पर टैप करें और जब आप तैयार हों तब बोलना शुरू करें।"
+        "अगर आप जारी रखना चाहते हैं, तो ऑर्ब पर टैप करें और जब तैयार हों तब बोलें।"
     ),
     "Tamil": (
-        "இன்னும் உங்கள் பேச்சு கேட்கவில்லை. தயவுசெய்து ஆர்பைத் தொட்டு, "
-        "தயாரானதும் பேசத் தொடங்குங்கள்."
+        "தொடர விரும்பினால் ஆர்பைத் தொட்டு, தயாரானதும் பேசுங்கள்."
     ),
     "Telugu": (
-        "ఇంకా మీ మాట వినిపించలేదు. దయచేసి ఆర్బ్‌ను తాకి, "
-        "సిద్ధంగా ఉన్నప్పుడు మాట్లాడడం ప్రారంభించండి."
+        "కొనసాగించాలనుకుంటే ఆర్బ్‌ను తాకి, సిద్ధంగా ఉన్నప్పుడు మాట్లాడండి."
     ),
     "Malayalam": (
-        "ഇപ്പോഴും നിങ്ങളുടെ ശബ്ദം കേട്ടില്ല. ദയവായി ഓർബ് തൊട്ട്, "
-        "തയ്യാറാകുമ്പോൾ സംസാരിക്കാൻ തുടങ്ങുക."
+        "തുടരണമെങ്കിൽ ഓർബ് തൊട്ട്, തയ്യാറാകുമ്പോൾ സംസാരിക്കൂ."
     ),
 }
 

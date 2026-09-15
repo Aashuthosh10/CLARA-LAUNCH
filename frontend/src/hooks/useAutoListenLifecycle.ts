@@ -112,14 +112,27 @@ export function useAutoListenLifecycle({
         waitTimerRef.current = null;
         if (gen !== genRef.current) return;
         if (modeRef.current !== mode) return;
-        armedRef.current = false;
+        clearRestart();
         stopRef.current();
-        if (mode === 'name') onNameRef.current();
-        else if (mode === 'closing') onClosingRef.current();
-        else onNormalRef.current();
+        if (mode === 'name') {
+          armedRef.current = false;
+          onNameRef.current();
+          return;
+        }
+        if (mode === 'closing') {
+          armedRef.current = false;
+          onClosingRef.current();
+          return;
+        }
+        // Normal logical listening window elapsed without usable speech →
+        // session closing prompt ("Is there anything else…?"). Soft browser
+        // recognition ends must NOT reach here (handled by restart path).
+        armedRef.current = false;
+        modeRef.current = null;
+        onNormalRef.current();
       }, ms);
     },
-    [clearWait],
+    [clearRestart, clearWait],
   );
 
   const armNow = useCallback(
@@ -169,42 +182,25 @@ export function useAutoListenLifecycle({
   }, [clearRestart, clearSettle, clearWait]);
 
   /**
-   * Recognition ended without a usable transcript while auto-armed.
-   * Counts as NO_INPUT (not REPEAT). Does not send backend traffic.
+   * Browser SpeechRecognition ended without a usable transcript while auto-armed.
+   * This is NOT logical silence — restart recognition inside the same listening window.
+   * Do not count NO_INPUT and do not call the backend.
    */
   const notifyRecognitionEndedWithoutSpeech = useCallback(() => {
     if (!armedRef.current || !modeRef.current) return;
     if (suppressed || claraBusy) return;
     if (awaitingManualRef.current) return;
 
-    const gen = genRef.current;
-    const mode = modeRef.current;
-    noInputCountRef.current += 1;
-    const attempt = noInputCountRef.current;
-
-    if (attempt >= AUTO_LISTEN_CONFIG.maxNoInputWarnings) {
-      armedRef.current = false;
-      modeRef.current = null;
-      awaitingManualRef.current = true;
-      clearRestart();
-      clearWait();
-      stopRef.current();
-      onNoInputRef.current(2);
-      return;
-    }
-
-    // First failure: stop mic, emit warning; ChatScreen re-arms after warning TTS.
-    armedRef.current = false;
     clearRestart();
-    clearWait();
-    stopRef.current();
-    onNoInputRef.current(1);
-
-    // Soft gap then allow re-arm only if still same gen/mode expectation —
-    // ChatScreen owns re-arm via scheduleArmAfterTts after warning TTS ends.
-    void mode;
-    void gen;
-  }, [claraBusy, clearRestart, clearWait, suppressed]);
+    const gen = genRef.current;
+    restartTimerRef.current = window.setTimeout(() => {
+      restartTimerRef.current = null;
+      if (gen !== genRef.current) return;
+      if (!armedRef.current || awaitingManualRef.current) return;
+      if (suppressed || claraBusy) return;
+      startRef.current();
+    }, AUTO_LISTEN_CONFIG.recognitionRestartGapMs);
+  }, [claraBusy, clearRestart, suppressed]);
 
   /** Manual orb tap after second warning — cancel manual-wait and allow arming again. */
   const notifyManualResume = useCallback(() => {
@@ -231,11 +227,13 @@ export function useAutoListenLifecycle({
     if (!claraBusy) return;
     clearSettle();
     clearRestart();
+    clearWait();
     if (armedRef.current) {
       armedRef.current = false;
+      modeRef.current = null;
       stopRef.current();
     }
-  }, [claraBusy, clearRestart, clearSettle]);
+  }, [claraBusy, clearRestart, clearSettle, clearWait]);
 
   useEffect(() => {
     if (!suppressed) return;

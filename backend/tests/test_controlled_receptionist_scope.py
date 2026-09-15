@@ -100,17 +100,17 @@ def test_random_general_knowledge_redirects(text: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("text", "expected_action", "reply_fragment"),
+    ("text", "expected_action", "reply_fragment", "max_words"),
     [
-        ("Hi", PolicyAction.GREETING, "help"),
-        ("How are you?", PolicyAction.SMALL_TALK, "doing well"),
-        ("Thank you", PolicyAction.SMALL_TALK, "welcome"),
-        ("Bye", PolicyAction.SMALL_TALK, "Goodbye"),
-        ("What's your name?", PolicyAction.SMALL_TALK, "CLARA"),
+        ("Hi", PolicyAction.GREETING, "help", 18),
+        ("How are you?", PolicyAction.SMALL_TALK, "doing well", 18),
+        ("Thank you", PolicyAction.SMALL_TALK, "welcome", 24),
+        ("Bye", PolicyAction.SMALL_TALK, "Goodbye", 18),
+        ("What's your name?", PolicyAction.SMALL_TALK, "CLARA", 18),
     ],
 )
 def test_social_conversation_is_short_and_specific(
-    text: str, expected_action: PolicyAction, reply_fragment: str
+    text: str, expected_action: PolicyAction, reply_fragment: str, max_words: int
 ) -> None:
     result = asyncio.run(
         run_conversation_intelligence(
@@ -121,8 +121,10 @@ def test_social_conversation_is_short_and_specific(
         )
     )
     assert result.decision.action is expected_action
-    assert reply_fragment in (result.decision.reply_text or "")
-    assert len((result.decision.reply_text or "").split()) <= 18
+    assert reply_fragment.lower() in (result.decision.reply_text or "").lower()
+    assert len((result.decision.reply_text or "").split()) <= max_words
+    if text == "Thank you":
+        assert result.decision.session_updates.get("awaiting_closing_reply") is True
 
 
 def test_contextual_and_stale_context_behavior() -> None:

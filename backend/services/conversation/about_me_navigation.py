@@ -79,7 +79,9 @@ def _has_self_anchor(hay: str) -> bool:
         "ninna bagge",
         "nimmanna",
         "ninna creators",
+        "nimma creators",
         "ninna guide",
+        "nimma guide",
         "nivu en en",
         "aap kaun",
         "apne baare",
@@ -108,6 +110,16 @@ def _has_self_anchor(hay: str) -> bool:
         "tum kaun",
         "tumhe kisne",
         "aapse",
+        # Prompt-required romanized / code-switched creator+guide asks
+        "creators yaaru",
+        "creators kaun",
+        "creators evaru",
+        "creators aaranu",
+        "guide yaaru",
+        "guide kaun",
+        "oda creators",
+        "yude creators",
+        "ke creators",
     )
     return any(cue_in_hay(hay, a) for a in anchors)
 
@@ -256,10 +268,15 @@ def _is_guide(hay: str) -> bool:
         "ನಾಗಶ್ರೀ",
         "नागश्री",
         "ninna guide",
+        "nimma guide",
         "aapke guide",
         "unga guide",
         "mee guide",
         "ningalude guide",
+        "guide yaaru",
+        "guide kaun",
+        "guide evaru",
+        "guide aaranu",
         "academic guidance",
     )
     return any(cue_in_hay(hay, c) for c in cues)
@@ -284,6 +301,7 @@ def _is_creators_generic(hay: str) -> bool:
         "people behind",
         "honorable creators",
         "ninna creators",
+        "nimma creators",
         "nimmanna yaradru create",
         "create madidara",
         "aapko kisne banaya",
@@ -298,6 +316,18 @@ def _is_creators_generic(hay: str) -> bool:
         "create cheythathu",
         "create pannanga",
         "create chesaru",
+        # Romanized / code-switched creator asks (with or without CLARA token)
+        "creators yaaru",
+        "creators kaun",
+        "creators evaru",
+        "creators aaranu",
+        "oda creators",
+        "yude creators",
+        "ke creators",
+        "clara creators",
+        "clara ke creators",
+        "clara oda creators",
+        "clara yude creators",
     )
     return any(cue_in_hay(hay, c) for c in cues)
 
@@ -483,4 +513,6 @@ def about_me_ui_action(nav: AboutMeNavigation) -> dict[str, str | None]:
         "type": "open_about_me",
         "section": nav.section,
         "itemId": nav.item_id,
+        # Conversational opens are always chat-originated overlays.
+        "entryMode": "chat",
     }

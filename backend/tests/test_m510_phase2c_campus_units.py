@@ -182,13 +182,19 @@ class TestPhase2CLocalizationAndNarration(unittest.TestCase):
                         str((unit.metadata or {}).get("tts_summary") or ""),
                     )
 
-    def test_canteen_and_event_samples_are_blocked_from_production_copy(self) -> None:
-        from backend.services.content.campus_units import HOSTEL_UNIT_IDS, NCC_UNIT_IDS
+    def test_canteen_samples_are_blocked_from_production_copy(self) -> None:
+        from backend.services.content.campus_units import (
+            EVENT_UNIT_IDS,
+            HOSTEL_UNIT_IDS,
+            NCC_UNIT_IDS,
+        )
 
         sample_ids = [
             uid
             for uid in CAMPUS_UNIT_IDS
-            if uid not in HOSTEL_UNIT_IDS and uid not in NCC_UNIT_IDS
+            if uid not in HOSTEL_UNIT_IDS
+            and uid not in NCC_UNIT_IDS
+            and uid not in EVENT_UNIT_IDS
         ]
         for lang in LANGS:
             for uid in sample_ids:
@@ -202,6 +208,24 @@ class TestPhase2CLocalizationAndNarration(unittest.TestCase):
                         self.assertIn("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ", unit.body)
                     elif lang == "hi":
                         self.assertIn("आधिकारिक पुष्टि", unit.body)
+                    self.assertTrue((unit.metadata or {}).get("tts_summary"))
+                    self.assertNotIn(
+                        SAMPLE_STATUS,
+                        str((unit.metadata or {}).get("tts_summary") or ""),
+                    )
+
+    def test_event_units_are_official(self) -> None:
+        from backend.services.content.campus_units import EVENT_UNIT_IDS
+
+        for lang in LANGS:
+            for uid in EVENT_UNIT_IDS:
+                with self.subTest(lang=lang, uid=uid):
+                    unit = resolve_unit(unit_id=uid, language=lang, language_code=lang)
+                    self.assertIsNotNone(unit)
+                    assert unit is not None
+                    self.assertEqual(unit.language_code, lang)
+                    self.assertNotIn(SAMPLE_STATUS, unit.body)
+                    self.assertTrue(unit.title)
                     self.assertTrue((unit.metadata or {}).get("tts_summary"))
                     self.assertNotIn(
                         SAMPLE_STATUS,

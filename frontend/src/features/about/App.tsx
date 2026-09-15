@@ -25,6 +25,13 @@ type AboutAppProps = {
   onEnterClara?: () => void;
   initialSection?: 'overview' | 'capabilities' | 'creators' | 'guide' | null;
   initialItemId?: string | null;
+  /** chat = contained overlay; direct = fullscreen (fixed). */
+  entryMode?: 'chat' | 'direct';
+  /**
+   * When entryMode is chat, inactivity auto-advance stays disarmed until the
+   * About Me TTS completion signal sets this true. Direct mode always arms.
+   */
+  autoAdvanceArmed?: boolean;
 };
 
 function resolveInitialIndex(section: AboutAppProps['initialSection']): number {
@@ -41,7 +48,11 @@ export default function App({
   onEnterClara,
   initialSection = null,
   initialItemId = null,
+  entryMode = 'direct',
+  autoAdvanceArmed = true,
 }: AboutAppProps) {
+  const isChatOverlay = entryMode === 'chat';
+  const timerMayRun = !isChatOverlay || autoAdvanceArmed;
   const [currentCardIndex, setCurrentCardIndex] = useState<number>(() =>
     resolveInitialIndex(initialSection)
   );
@@ -84,10 +95,13 @@ export default function App({
 
   // =========================================================================
   // 10-SECOND INACTIVITY AUTO-ADVANCE ENGINE
+  // Chat overlay: timer starts ONLY after authoritative TTS playback completes
+  // (autoAdvanceArmed), never on mount / TTS start / estimated duration.
   // =========================================================================
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
 
     // Do not auto-advance if creator modal is open
@@ -95,10 +109,14 @@ export default function App({
       return;
     }
 
+    if (!timerMayRun) {
+      return;
+    }
+
     inactivityTimerRef.current = setTimeout(() => {
       nextCard(true);
     }, AUTO_TRANSITION_DELAY_MS);
-  }, [selectedCreator, nextCard]);
+  }, [selectedCreator, nextCard, timerMayRun]);
 
   // Set up listeners for user activity to reset 10-sec timer
   useEffect(() => {
@@ -111,7 +129,7 @@ export default function App({
       window.addEventListener(event, handleUserActivity, { passive: true });
     });
 
-    // Start timer on initial mount
+    // Arm on mount (direct) or when TTS completion flips timerMayRun (chat).
     resetInactivityTimer();
 
     return () => {
@@ -120,6 +138,7 @@ export default function App({
       });
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
       }
     };
   }, [resetInactivityTimer]);
@@ -205,7 +224,15 @@ export default function App({
     <div
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="fixed inset-0 w-screen h-screen bg-[#FAF9FF] text-[#24213A] overflow-hidden select-none"
+      data-testid="about-me-app-root"
+      data-entry-mode={entryMode}
+      data-timer-armed={String(timerMayRun)}
+      className={
+        isChatOverlay
+          ? // Fill the App-constrained overlay (already ends above ChatScreen chrome).
+            'relative h-full w-full bg-[#FAF9FF] text-[#24213A] overflow-hidden select-none'
+          : 'fixed inset-0 w-screen h-screen bg-[#FAF9FF] text-[#24213A] overflow-hidden select-none'
+      }
     >
       {/* 1. Frosted Glass Top Navigation Header */}
       <Navbar
@@ -225,7 +252,13 @@ export default function App({
         }}
       >
         {/* CARD 01 — HERO */}
-        <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
+        <div
+          className={
+            isChatOverlay
+              ? 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col pb-24'
+              : 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col'
+          }
+        >
           <ClaraHero
             onOpenLiveDemo={() => onEnterClara?.()}
             onExploreCapabilities={() => goToCard(1)}
@@ -234,7 +267,13 @@ export default function App({
         </div>
 
         {/* CARD 02 — WHAT CLARA CAN DO (Mind-Map with Click-to-Expand Cards) */}
-        <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
+        <div
+          className={
+            isChatOverlay
+              ? 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col pb-24'
+              : 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col'
+          }
+        >
           <Card02CapabilitiesMindMap
             onNextCard={() => goToCard(2)}
             initialExpandedId={initialCapabilityId}
@@ -242,7 +281,13 @@ export default function App({
         </div>
 
         {/* CARD 03 — THE PEOPLE BEHIND CLARA */}
-        <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
+        <div
+          className={
+            isChatOverlay
+              ? 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col pb-24'
+              : 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col'
+          }
+        >
           <Card03Creators
             onPrevCard={() => goToCard(1)}
             onNextCard={() => goToCard(3)}
@@ -251,7 +296,13 @@ export default function App({
         </div>
 
         {/* CARD 04 — OUR GUIDE (Single Person Feature) */}
-        <div className="w-screen h-full overflow-y-auto shrink-0 relative flex flex-col">
+        <div
+          className={
+            isChatOverlay
+              ? 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col pb-24'
+              : 'w-screen h-full overflow-y-auto shrink-0 relative flex flex-col'
+          }
+        >
           <Card04OurGuide
             onPrevCard={() => goToCard(2)}
             onGoToOverview={() => goToCard(0)}
@@ -260,8 +311,15 @@ export default function App({
         </div>
       </motion.div>
 
-      {/* 3. SLEEK CARD INDICATOR & DOCKS AT BOTTOM */}
-      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 px-7 py-3.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15">
+      {/* 3. ABOUT ME INTERNAL SECTION PAGER (not CLARA FAQ / orb) */}
+      <div
+        data-testid="about-me-section-pager"
+        className={
+          isChatOverlay
+            ? 'absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 px-7 py-3.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15'
+            : 'fixed bottom-7 left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 px-7 py-3.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15'
+        }
+      >
         {/* Previous Button */}
         <button
           type="button"

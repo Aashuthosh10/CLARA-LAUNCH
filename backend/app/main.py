@@ -137,6 +137,9 @@ from backend.services.greetings import (
     get_ready_prompt,
     get_closing_prompt,
     get_continue_listening_prompt,
+    get_feedback_acknowledgement,
+    get_feedback_followup,
+    get_feedback_request,
     get_session_farewell,
     get_no_input_warning,
     guest_name_reply_is_skip,
@@ -200,7 +203,6 @@ from backend.services.runtime.diagnostics import log_runtime_event
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
-    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -379,12 +381,8 @@ _LOCATION_QUERY_TERMS = (
     "campus location",
     "located",
     "kaha",
-    "kahan",
-    "kidhar",
     "elli",
-    "ellide",
     "enga",
-    "enge",
     "ekkada",
     "evide",
 )
@@ -406,47 +404,11 @@ def _log_turn_metrics(*args: Any, **kwargs: Any) -> None:
     log_turn_metrics(*args, **kwargs)
 
 
-def _is_latin_token_char(ch: str) -> bool:
-    """ASCII letters, digits, underscore — keep location cues token-bounded in app/main."""
-    return bool(ch) and ch.isascii() and (ch.isalnum() or ch == "_")
-
-
-def _latin_token_boundaries_ok(hay: str, start: int, end: int) -> bool:
-    """Latin cues need word boundaries so ``elli`` cannot match inside unrelated words."""
-    chunk = hay[start:end]
-    if not chunk or any(ord(ch) > 127 for ch in chunk):
-        return True
-    left_ok = start == 0 or not _is_latin_token_char(hay[start - 1])
-    right_ok = end >= len(hay) or not _is_latin_token_char(hay[end])
-    return left_ok and right_ok
-
-
 def _is_location_query(text: str | None) -> bool:
-    """College-address location heuristics (not room navigation).
-
-    Short Latin transliterations must be token-bounded so ``elli`` cannot match
-    inside unrelated words, while still matching ``ellide`` as a whole cue.
-
-    Implemented locally (no ``backend.services.content`` import) to satisfy M4.2
-    architecture guard: app/main may only import surface_selector from content.
-    """
-    q = re.sub(r"\s+", " ", (text or "").strip()).casefold()
+    q = (text or "").strip().lower()
     if not q:
         return False
-    for term in _LOCATION_QUERY_TERMS:
-        cue = term.casefold().strip()
-        if not cue:
-            continue
-        start = 0
-        while True:
-            idx = q.find(cue, start)
-            if idx < 0:
-                break
-            end = idx + len(cue)
-            if any(ord(ch) > 127 for ch in cue) or _latin_token_boundaries_ok(q, idx, end):
-                return True
-            start = idx + 1
-    return False
+    return any(term in q for term in _LOCATION_QUERY_TERMS)
 
 
 def _looks_clear_english(text: str) -> bool:
@@ -582,22 +544,7 @@ def _apply_response_decision_to_intent(
     comparison, FAQ, policy), but it may no longer convert an ANSWER turn into a card
     or a card turn into a fallback.
     """
-    if conversation_resolution is None:
-        return intent
-
-    # Campus navigation is sealed by the orchestrator diagnostics / surface.
-    nav_status = getattr(conversation_resolution, "campus_nav_status", None)
-    show_card = getattr(conversation_resolution, "show_card", None) or getattr(
-        conversation_resolution, "card_surface", None
-    )
-    if (
-        nav_status in {"resolved", "ambiguous", "unknown"}
-        or show_card in {"campus_navigation", "campus_nav", "navigation"}
-        or getattr(conversation_resolution, "campus_destination", None)
-    ):
-        return INTENT_CAMPUS_NAVIGATION
-
-    mode = getattr(conversation_resolution, "response_mode", None)
+    mode = getattr(conversation_resolution, "response_mode", None) if conversation_resolution else None
     if not mode:
         return intent
 
@@ -1361,20 +1308,22 @@ async def _emit_direct_conversation_reply(
     if not omit_user_message and (text or "").strip():
         msgs.append({"id": f"user-{uuid.uuid4().hex}", "role": "user", "text": text.strip()})
     assistant_msg = {"id": f"clara-{uuid.uuid4().hex}", "role": "clara", "text": spoken}
-    from backend.services.orchestration.answer_presentation import enrich_successful_answer_message
-
-    answer_presentation = enrich_successful_answer_message(
-        assistant_msg,
-        resolution=res,
-        authoritative_text=spoken,
-        language_code=getattr(res, "language_code_key", "en") or "en",
-        intentional_plain=omit_user_message or utterance_kind.startswith("session_"),
-    )
+    ui_action_early = (payload_extra or {}).get("uiAction")
+    # About Me bridge is presentation audio — do not surface in the chat transcript panel.
+    if isinstance(ui_action_early, dict) and ui_action_early.get("type") == "open_about_me":
+        assistant_msg["isHidden"] = True
     msgs.append(assistant_msg)
     session["messages"] = msgs
 
     try:
         processing_payload: dict[str, Any] = {"isProcessing": True, "turn_id": timing.turn_id}
+        # Conversational About Me has no thinking interlude — never arm the FE
+        # thinking gate or the spoken bridge waits on the watchdog.
+        ui_action = (payload_extra or {}).get("uiAction")
+        if isinstance(ui_action, dict) and ui_action.get("type") == "open_about_me":
+            processing_payload["thinking_skip"] = True
+        if "about_me" in str(utterance_kind or "").lower():
+            processing_payload["thinking_skip"] = True
         processing_payload.update(debug_payload(timing))
         await _ws_send_json(websocket, 5, session, processing_payload)
     except Exception as exc:
@@ -1405,6 +1354,11 @@ async def _emit_direct_conversation_reply(
     }
     if payload_extra:
         extra.update(payload_extra)
+    ui_action = extra.get("uiAction")
+    if isinstance(ui_action, dict) and ui_action.get("type") == "open_about_me":
+        extra["thinking_skip"] = True
+    if "about_me" in str(utterance_kind or "").lower():
+        extra["thinking_skip"] = True
     payload = outbound.to_ws_payload(
         messages=session["messages"],
         turn_id=timing.turn_id,
@@ -1412,9 +1366,6 @@ async def _emit_direct_conversation_reply(
         audio_b64=audio_b64,
         extra=extra,
     )
-    if answer_presentation is not None:
-        payload["visualResponseEligible"] = True
-        payload["answerPresentation"] = answer_presentation
     if audio_b64 and not timing.has("play_start"):
         timing.mark("play_start")
         est = estimate_wav_duration_ms(audio_b64)
@@ -1478,20 +1429,9 @@ async def _handle_session_closing_prompt(
 ) -> None:
     """Speak one closing question; arm awaiting_closing_reply (no LLM)."""
     if session.get("closing_prompt_issued"):
-        # One graceful attempt only — end without repeating.
+        # Second inactivity after the anything-else prompt → treat as closure → feedback.
         session["awaiting_closing_reply"] = False
-        farewell = get_session_farewell(session.get("language_name"))
-        await _emit_direct_conversation_reply(
-            session,
-            "",
-            farewell,
-            websocket,
-            timing,
-            turn_gen_marker,
-            utterance_kind="session_farewell",
-            omit_user_message=True,
-            payload_extra={"session_should_end": True},
-        )
+        await _begin_feedback_request(session, websocket, timing, turn_gen_marker)
         return
 
     language_display = session.get("language_name")
@@ -1509,6 +1449,125 @@ async def _handle_session_closing_prompt(
         omit_user_message=True,
         payload_extra={"awaiting_closing_reply": True},
     )
+
+
+async def _begin_feedback_request(
+    session: dict[str, Any],
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+) -> None:
+    """Move WAITING_FOR_CLOSURE_CONFIRMATION → FEEDBACK_REQUEST."""
+    language_display = session.get("language_name")
+    session["awaiting_feedback"] = True
+    session["feedback_followup_issued"] = False
+    session["awaiting_closing_reply"] = False
+    reply = get_feedback_request(language_display)
+    await _emit_direct_conversation_reply(
+        session,
+        "",
+        reply,
+        websocket,
+        timing,
+        turn_gen_marker,
+        utterance_kind="session_feedback_request",
+        omit_user_message=True,
+        payload_extra={"awaiting_feedback": True},
+    )
+
+
+async def _complete_session_after_feedback(
+    session: dict[str, Any],
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+    *,
+    user_text: str,
+) -> None:
+    language_display = session.get("language_name")
+    session["awaiting_feedback"] = False
+    session["feedback_followup_issued"] = False
+    ack = get_feedback_acknowledgement(language_display)
+    await _emit_direct_conversation_reply(
+        session,
+        user_text,
+        ack,
+        websocket,
+        timing,
+        turn_gen_marker,
+        utterance_kind="session_feedback_ack",
+        payload_extra={"session_should_end": True},
+    )
+
+
+async def _handle_feedback_gate(
+    session: dict[str, Any],
+    text: str,
+    websocket: WebSocket,
+    timing: TurnTiming,
+    turn_gen_marker: int,
+) -> bool:
+    """
+    Required feedback step before session completion.
+    Return True when the turn was fully handled.
+    """
+    from backend.services.conversation.closing_reply import (
+        classify_feedback_utterance,
+        infer_feedback_rating,
+    )
+    from backend.services.feedback_store import append_feedback_record
+
+    kind = classify_feedback_utterance(text)
+    language_display = session.get("language_name")
+
+    if kind == "EMPTY":
+        await _emit_direct_conversation_reply(
+            session,
+            text,
+            get_feedback_followup(language_display),
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="session_feedback_clarify",
+            payload_extra={"awaiting_feedback": True},
+        )
+        return True
+
+    if kind == "VAGUE" and not session.get("feedback_followup_issued"):
+        session["feedback_followup_issued"] = True
+        await _emit_direct_conversation_reply(
+            session,
+            text,
+            get_feedback_followup(language_display),
+            websocket,
+            timing,
+            turn_gen_marker,
+            utterance_kind="session_feedback_followup",
+            payload_extra={"awaiting_feedback": True},
+        )
+        return True
+
+    # VALID, or vague after one follow-up — persist and complete.
+    stored_ok = True
+    try:
+        append_feedback_record(
+            feedback=(text or "").strip(),
+            language=language_display,
+            session_id=str(session.get("session_id") or session.get("visitor_id") or "") or None,
+            rating=infer_feedback_rating(text),
+        )
+    except Exception:
+        stored_ok = False
+        logger.exception("Feedback persistence failed; acknowledging without claiming storage")
+
+    if not stored_ok:
+        # Still graceful — do not trap the user; complete session.
+        pass
+
+    await _complete_session_after_feedback(
+        session, websocket, timing, turn_gen_marker, user_text=text
+    )
+    return True
 
 
 async def _handle_closing_reply_gate(
@@ -1531,17 +1590,7 @@ async def _handle_closing_reply_gate(
 
     if decision == "CLOSE":
         session["awaiting_closing_reply"] = False
-        farewell = get_session_farewell(language_display)
-        await _emit_direct_conversation_reply(
-            session,
-            text,
-            farewell,
-            websocket,
-            timing,
-            turn_gen_marker,
-            utterance_kind="session_farewell",
-            payload_extra={"session_should_end": True},
-        )
+        await _begin_feedback_request(session, websocket, timing, turn_gen_marker)
         return True
 
     if decision == "CONTINUE":
@@ -1717,6 +1766,16 @@ async def process_user_text_and_reply(
         )
         return
 
+    if session.get("awaiting_feedback") and li_type not in {
+        "session_closing_prompt",
+        "department_click",
+    }:
+        handled = await _handle_feedback_gate(
+            session, text, websocket, timing, turn_gen_marker
+        )
+        if handled:
+            return
+
     if session.get("awaiting_closing_reply") and li_type not in {
         "session_closing_prompt",
         "department_click",
@@ -1801,8 +1860,21 @@ async def process_user_text_and_reply(
         )
         clarify_target = getattr(conversation_resolution, "clarification_target", None)
         think_text = str(session.get("_effective_user_text") or text or "")
-        # About Me bridge is the sole spoken line for that turn — skip thinking TTS.
-        skip_thinking = str(policy_action_str or "").upper() == "ABOUT_ME"
+        # About Me conversational cards use the normal thinking + card pipeline.
+        # Skip thinking for short social / thanks-closing turns (no false "gathering").
+        answer_source = str(
+            getattr(getattr(orch_result.intel, "decision", None), "answer_source", "") or ""
+        )
+        skip_thinking = (
+            str(policy_action_str or "").upper()
+            in {
+                "SMALL_TALK",
+                "GREETING",
+                "NO_SPEECH_RETRY",
+                "ENTITY_UPDATE",
+            }
+            or answer_source in {"policy_thanks_closing", "policy_small_talk", "policy_greeting"}
+        )
         thinking_sentence = None
         if not skip_thinking:
             thinking_sentence = await _send_thinking_interlude_text(
@@ -1826,10 +1898,14 @@ async def process_user_text_and_reply(
                 logger.exception("Could not start thinking TTS task")
 
         if should_short_circuit(orch_result) and conversation_resolution.short_circuit_reply:
-            ui_extra = None
+            ui_extra: dict[str, Any] = {}
             pending_ui = session.pop("_pending_ui_action", None)
             if isinstance(pending_ui, dict) and pending_ui.get("type") == "open_about_me":
-                ui_extra = {"uiAction": pending_ui}
+                ui_extra["uiAction"] = pending_ui
+            if session.get("awaiting_closing_reply"):
+                ui_extra["awaiting_closing_reply"] = True
+            if session.get("awaiting_feedback"):
+                ui_extra["awaiting_feedback"] = True
             await _emit_direct_conversation_reply(
                 session,
                 text,
@@ -1839,7 +1915,7 @@ async def process_user_text_and_reply(
                 turn_gen_marker,
                 utterance_kind=f"policy_{(conversation_resolution.policy or 'direct').lower()}",
                 length_kind=conversation_resolution.length_kind or "clarification",
-                payload_extra=ui_extra,
+                payload_extra=ui_extra or None,
             )
             return
     except Exception:
@@ -2022,8 +2098,6 @@ async def process_user_text_and_reply(
                     intent = INTENT_DOCUMENTS
                 elif frontend_trigger in {"bus_routes", "bus routes", "bus"}:
                     intent = INTENT_BUS_ROUTES
-                elif frontend_trigger in {"campus_navigation", "campus_nav", "navigation"}:
-                    intent = INTENT_CAMPUS_NAVIGATION
                 elif frontend_trigger in {"principal_profile", "principal"}:
                     intent = INTENT_PRINCIPAL_PROFILE
                 elif frontend_trigger in {"vice_principal_profile", "vice_principal"}:
@@ -2072,14 +2146,10 @@ async def process_user_text_and_reply(
         logger.info("[NLP_TRACE] FINAL_INTENT=%s", intent)
         logger.info("[NLP_TRACE] FINAL_DEPARTMENT=%s", detected_department)
 
-        # Force college-address location questions through the location template / RAG path.
-        # Do NOT steal campus room navigation (map destinations) into the address reply.
+        # Force location/address questions through vector RAG context instead of narrator-only flow.
+        # This prevents false "unavailable" replies when precise location facts are in college_knowledge.
         is_location_turn = False if faq_direct_reply else (_is_location_query(text) or _is_location_query(query_en))
-        _nav_status = getattr(conversation_resolution, "campus_nav_status", None) if conversation_resolution else None
-        _campus_dest = getattr(conversation_resolution, "campus_destination", None) if conversation_resolution else None
-        if intent == INTENT_CAMPUS_NAVIGATION or _nav_status in {"resolved", "ambiguous", "unknown"} or _campus_dest:
-            is_location_turn = False
-        if is_location_turn and intent not in {INTENT_BUS_ROUTES, INTENT_CAMPUS_NAVIGATION}:
+        if is_location_turn and intent != INTENT_BUS_ROUTES:
             intent = INTENT_NORMAL_QUERY
 
         # M5.4: the Groq "is this a broad course question?" probe used to rewrite intent
@@ -2173,7 +2243,7 @@ async def process_user_text_and_reply(
             # Strict scope guard: do not answer non-college questions.
             context = ""
             timing.mark("rag_end")
-        elif intent == INTENT_DOCUMENTS or intent == INTENT_BUS_ROUTES or intent == INTENT_CAMPUS_NAVIGATION or is_location_turn:
+        elif intent == INTENT_DOCUMENTS or intent == INTENT_BUS_ROUTES or is_location_turn:
             context = ""
             timing.mark("rag_end")
         elif intent == INTENT_DEPARTMENT_COMPARISON:
@@ -2387,15 +2457,6 @@ async def process_user_text_and_reply(
                 direct_reply = get_course_menu_spoken_prompt(lang_name)
             elif intent == INTENT_BUS_ROUTES:
                 direct_reply = get_bus_routes_spoken_prompt(lang_name)
-            elif intent == INTENT_CAMPUS_NAVIGATION:
-                from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
-
-                direct_reply = campus_navigation_spoken_prompt(
-                    lang_name,
-                    getattr(conversation_resolution, "campus_destination", None),
-                    status=getattr(conversation_resolution, "campus_nav_status", None) or "resolved",
-                    candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
-                )
             elif intent == INTENT_DOCUMENTS:
                 direct_reply = _documents_card_direct_reply(lang_key)
             elif intent == INTENT_DEPARTMENT_FEES:
@@ -2411,22 +2472,6 @@ async def process_user_text_and_reply(
             # Unsealed should not happen after orch; fail closed.
             direct_reply = None
 
-        # Campus navigation spoken lines are deterministic (session language), including
-        # ambiguous clarify and unknown destination — never invent map facts via Groq.
-        _campus_nav_status = (
-            getattr(conversation_resolution, "campus_nav_status", None)
-            if conversation_resolution
-            else None
-        )
-        if _campus_nav_status in {"resolved", "ambiguous", "unknown"}:
-            from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
-
-            direct_reply = campus_navigation_spoken_prompt(
-                lang_name,
-                getattr(conversation_resolution, "campus_destination", None),
-                status=str(_campus_nav_status),
-                candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
-            )
         reply_text = direct_reply
         if reply_text is None and auth == ResponseAuthority.GROQ.value:
             for candidate_key in cache_key_candidates:
@@ -2669,7 +2714,6 @@ async def process_user_text_and_reply(
         if (not faq_direct_reply) and intent in (
             INTENT_COURSE_MENU,
             INTENT_BUS_ROUTES,
-            INTENT_CAMPUS_NAVIGATION,
             INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
             INTENT_DEPARTMENT_FEES,
@@ -2684,9 +2728,6 @@ async def process_user_text_and_reply(
         show_card = None
         department_id = None
         course_menu_options = None
-        campus_destination_payload = None
-        if conversation_resolution is not None:
-            campus_destination_payload = getattr(conversation_resolution, "campus_destination", None)
         if faq_direct_reply:
             show_card = None
         elif conversation_resolution is not None and conversation_resolution.show_card:
@@ -2718,17 +2759,6 @@ async def process_user_text_and_reply(
                 reply_text = get_bus_routes_spoken_prompt(lang_name)
                 assistant_msg["text"] = reply_text
                 assistant_msg["isHidden"] = True
-        elif intent == INTENT_CAMPUS_NAVIGATION or show_card == "campus_navigation":
-            from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
-
-            reply_text = campus_navigation_spoken_prompt(
-                lang_name,
-                campus_destination_payload,
-                status=getattr(conversation_resolution, "campus_nav_status", None) or "resolved",
-                candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
-            )
-            assistant_msg["text"] = reply_text
-            assistant_msg["isHidden"] = True
 
         # Fallback only when orch did not select a card (SurfaceSelector only — no parallel map).
         # A turn qualifies when the response decision said CARD, or when there is no decision
@@ -2756,15 +2786,6 @@ async def process_user_text_and_reply(
 
         if show_card is not None and department_id is None and entity_map.get("department"):
             department_id = entity_map.get("department")
-        from backend.services.orchestration.answer_presentation import enrich_successful_answer_message
-
-        answer_presentation = enrich_successful_answer_message(
-            assistant_msg,
-            resolution=conversation_resolution,
-            authoritative_text=reply_text,
-            language_code=lang_key,
-            intentional_plain=bool(show_card is not None or assistant_msg.get("isHidden")),
-        )
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
@@ -2803,22 +2824,10 @@ async def process_user_text_and_reply(
             "tts_cache_hit": False,
             "llm_cache_hit": llm_cache_hit,
         }
-        if answer_presentation is not None:
-            visible_payload["visualResponseEligible"] = True
-            visible_payload["answerPresentation"] = answer_presentation
         if department_id and not defer_card_until_tts_ready:
             visible_payload["departmentId"] = department_id
         if course_menu_options and not defer_card_until_tts_ready:
             visible_payload["options"] = course_menu_options
-        if (
-            campus_destination_payload
-            and isinstance(campus_destination_payload, dict)
-            and not defer_card_until_tts_ready
-        ):
-            visible_payload["campusDestination"] = campus_destination_payload
-            visible_payload["campusNavStatus"] = getattr(
-                conversation_resolution, "campus_nav_status", None
-            )
         if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
             timing.mark("visible_answer")
             timing.mark("turn_end")
@@ -2962,18 +2971,10 @@ async def process_user_text_and_reply(
                 "llm_cache_hit": llm_cache_hit,
                 "audioUnavailable": audio_unavailable,
             }
-            if answer_presentation is not None:
-                merged["visualResponseEligible"] = True
-                merged["answerPresentation"] = answer_presentation
             if LOW_LATENCY_VOICE_MODE:
                 merged["type"] = "assistant_audio_update"
             if department_id:
                 merged["departmentId"] = department_id
-            if campus_destination_payload and isinstance(campus_destination_payload, dict):
-                merged["campusDestination"] = campus_destination_payload
-                merged["campusNavStatus"] = getattr(
-                    conversation_resolution, "campus_nav_status", None
-                )
             if intent == INTENT_DEPARTMENT_COMPARISON and comparison_dept_ids:
                 merged["comparisonDepartments"] = list(comparison_dept_ids)
                 merged["comparisonRecommendFocus"] = comparison_recommend_focus
@@ -3987,6 +3988,8 @@ async def websocket_clara(websocket: WebSocket):
                         "pending_clarification": None,
                         "awaiting_closing_reply": False,
                         "closing_prompt_issued": False,
+                        "awaiting_feedback": False,
+                        "feedback_followup_issued": False,
                     }
                 )
                 session.pop("last_semantic_entities", None)

@@ -50,6 +50,20 @@ def localize_card_segments(
         return segments
 
     if translate_fn is None:
+        # English-authored conversational surfaces (About Me cards, department
+        # explanation stages) are not yet fully packed into locale JSON. Prefer
+        # keeping CARD presentation + session TTS voice over degrading to text-only.
+        surface = (
+            str(resolution.card_surface or resolution.show_card or "").strip().lower()
+        )
+        if surface in {"about_me", "department_explanation"}:
+            orch_event(
+                "LOCALIZATION_PASSTHROUGH",
+                reason="english_authored_content_units",
+                language=resolution.language,
+                surface=surface,
+            )
+            return segments
         # Locale pack should have provided non-English; without translator, fail closed.
         orch_event(
             "LOCALIZATION_DEGRADED",

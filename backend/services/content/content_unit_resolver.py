@@ -74,6 +74,8 @@ def resolve_unit(
         unit = _resolve_documents_unit(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key in {"principal", "vice_principal", "trustees"}:
         unit = _resolve_leadership_unit(descriptor, language=language, language_code=language_code)
+    elif descriptor.adapter_key == "dean":
+        unit = _resolve_dean_unit(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key == "campus_unit":
         unit = _resolve_campus_unit(descriptor, language=language, language_code=language_code)
     elif descriptor.adapter_key in {"faculty", "location"}:
@@ -332,6 +334,54 @@ def _resolve_leadership_unit(
     return _unit_from_aggregate_content(descriptor, content, body=body, title=title or content.title)
 
 
+def _resolve_dean_unit(
+    descriptor: ContentUnitDescriptor,
+    *,
+    language: str,
+    language_code: str,
+) -> ContentUnit | None:
+    from backend.services.content.dean_profiles import dean_profile_for
+
+    profile = dean_profile_for(descriptor.section_id, language_code)
+    if not profile:
+        return None
+    name = str(profile.get("name") or "").strip()
+    title = str(profile.get("title") or "").strip()
+    bio = str(profile.get("bio") or "").strip()
+    body = bio or title or name
+    display = (language or "").strip() or LANGUAGE_KEY_TO_NAME.get(language_code, "English")
+    unit_hash = compute_unit_hash(
+        unit_id=descriptor.unit_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        body=body,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+    )
+    return ContentUnit(
+        unit_id=descriptor.unit_id,
+        surface=descriptor.surface,
+        content_type=descriptor.content_type,
+        entity_type=descriptor.entity_type,
+        entity_id=descriptor.entity_id,
+        context=descriptor.context,
+        context_id=descriptor.context_id,
+        section_id=descriptor.section_id,
+        title=name or title,
+        summary=bio or title,
+        body=body,
+        language=display,
+        language_code=language_code,
+        canonical_source=descriptor.canonical_source,
+        source_version=_SOURCE_VERSION,
+        content_hash=unit_hash,
+        metadata={"role_title": title, "dean_id": descriptor.section_id},
+        keywords=(descriptor.section_id, "dean"),
+        presentation_capabilities=("generic_unit",),
+    )
+
+
 def _resolve_fees_overview(
     descriptor: ContentUnitDescriptor,
     *,
@@ -482,30 +532,46 @@ def _resolve_explanation_unit(
     language: str,
     language_code: str,
 ) -> ContentUnit:
-    """Build a placeholder explanation ContentUnit.
-
-    Titles and body are clearly marked SAMPLE_REPLACE_WITH_OFFICIAL.
-    video_src is stored in metadata so the frontend can render the card.
-    """
-    from backend.services.content.department_explanation_units import placeholder_title
+    """Build a progressive parent-friendly department explanation ContentUnit."""
+    from backend.services.content.department_explanation_units import (
+        explanation_body,
+        stage_heading,
+    )
     from backend.services.content.validators import compute_unit_hash
     from backend.core.language_detection import LANGUAGE_KEY_TO_NAME
 
     dept_key = descriptor.entity_id
     display_name = getattr(descriptor, "display_name", dept_key.upper())
-    video_src = getattr(descriptor, "video_src", "")
-    title = f"{display_name} — {placeholder_title(language_code)}"
-    body = title
+    video_src = getattr(descriptor, "video_src", "") or ""
+    stage = getattr(descriptor, "stage", "") or getattr(descriptor, "section_id", "what_is")
+    heading = getattr(descriptor, "stage_heading", None) or stage_heading(stage)
+    body = (getattr(descriptor, "explanation", None) or explanation_body(dept_key, stage) or "").strip()
+    if not body:
+        body = (
+            f"{display_name} teaches students in this field of study. "
+            "Ask about HOD, fees, admissions, or placements for institution-specific details."
+        )
+    title = display_name if stage == "difference" else f"{display_name}"
+    # Display: title line + heading; body is the stage concept.
+    display_body = f"{heading}\n{body}" if stage != "difference" else body
     unit_hash = compute_unit_hash(
         unit_id=descriptor.unit_id,
         context=descriptor.context,
         context_id=descriptor.context_id,
         section_id=descriptor.section_id,
-        body=body,
+        body=display_body,
         language_code=language_code,
         canonical_source=descriptor.canonical_source,
     )
     display = (language or "").strip() or LANGUAGE_KEY_TO_NAME.get(language_code, "English")
+    meta: dict[str, Any] = {
+        "department": dept_key,
+        "stage": stage,
+        "stage_heading": heading,
+        "content_status": "parent_friendly_progressive",
+    }
+    if video_src:
+        meta["video_src"] = video_src
     return ContentUnit(
         unit_id=descriptor.unit_id,
         surface=descriptor.surface,
@@ -516,19 +582,15 @@ def _resolve_explanation_unit(
         context_id=descriptor.context_id,
         section_id=descriptor.section_id,
         title=title,
-        summary=title[:200],
-        body=body,
+        summary=body[:200],
+        body=display_body,
         language=display,
         language_code=language_code,
         canonical_source=descriptor.canonical_source,
         source_version=_SOURCE_VERSION,
         content_hash=unit_hash,
-        metadata={
-            "department": dept_key,
-            "video_src": video_src,
-            "content_status": _SAMPLE_CONTENT_STATUS,
-        },
-        keywords=(dept_key, "explanation"),
+        metadata=meta,
+        keywords=(dept_key, "explanation", stage),
         presentation_capabilities=("department_explanation",),
     )
 

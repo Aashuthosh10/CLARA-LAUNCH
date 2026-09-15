@@ -109,37 +109,77 @@ def map_content_units_to_segments(
     lk = _effective_lang(locale_id)
     labels = dept_labels(lk)
 
+    from backend.services.content.department_explanation_units import (
+        build_parent_friendly_difference,
+        parse_explanation_unit_id,
+    )
+
     segments: list[NarrationSegment] = []
     name_used = False
+    explanation_dept_keys: list[str] = []
+    has_difference_unit = False
     for i, unit in enumerate(units):
         if unit.section_id == "intro":
             title = (unit.title or "").strip() or labels["department"]
         else:
             title = (unit.title or "").strip() or labels["department"]
         body = unit.body or labels["notAvail"]
-        body_clipped = _clip_caption(body, 280)
+        # Prefer stage body for TTS (heading may be on first line).
+        spoken_body = body
+        if "\n" in body and (unit.unit_id or "").startswith("department_explanation."):
+            spoken_body = body.split("\n", 1)[-1].strip() or body
+        body_clipped = _clip_caption(body, 420)
         inject = None if name_used else guest_name
-        spoken = narrate_unit(unit, lang_key, guest_name=inject) or body_clipped
+        spoken = narrate_unit(unit, lang_key, guest_name=inject) or spoken_body
         if inject and inject.strip() and inject.strip() in spoken:
             name_used = True
         raw_line = f"{title}\n{body_clipped}".strip()
-        # Display keeps card facts. Spoken text is the intent-aware narration plan.
-        # M5.8 TTS only speaks tts_text.
         canonical = card_id_for_unit_id(unit.unit_id)
         if (unit.unit_id or "").startswith("department_explanation."):
             slide_card_id = canonical or "department_explanation"
+            parsed = parse_explanation_unit_id(unit.unit_id or "")
+            if parsed:
+                dept_key, stage = parsed
+                if dept_key == "difference" or stage == "difference":
+                    has_difference_unit = True
+                elif dept_key and dept_key not in explanation_dept_keys:
+                    explanation_dept_keys.append(dept_key)
+            # Pair-specific difference text when the difference unit is present.
+            if (unit.unit_id or "") == "department_explanation.difference" and len(
+                explanation_dept_keys
+            ) >= 2:
+                spoken = build_parent_friendly_difference(
+                    explanation_dept_keys[0], explanation_dept_keys[1]
+                )
+                raw_line = f"Key difference\n{_clip_caption(spoken, 480)}"
         else:
-            # Department overview / HOD / fees decks keep the historical dept_slide id.
             slide_card_id = "dept_slide"
         segments.append(
             NarrationSegment(
-                display_text=_clip_caption(raw_line, 320),
+                display_text=_clip_caption(raw_line, 480),
                 tts_text=spoken,
                 card_index=i,
                 card_id=slide_card_id,
                 section_id=unit.section_id,
                 unit_id=unit.unit_id,
                 canonical_card_id=canonical,
+            )
+        )
+
+    # Fallback: append difference only when multi-dept explanation had no difference unit.
+    if len(explanation_dept_keys) >= 2 and not has_difference_unit:
+        diff_body = build_parent_friendly_difference(
+            explanation_dept_keys[0], explanation_dept_keys[1]
+        )
+        segments.append(
+            NarrationSegment(
+                display_text=_clip_caption(f"Key difference\n{diff_body}", 480),
+                tts_text=diff_body,
+                card_index=len(segments),
+                card_id="department_explanation",
+                section_id="difference",
+                unit_id="department_explanation.difference",
+                canonical_card_id="department_explanation",
             )
         )
     return segments

@@ -70,8 +70,24 @@ class TestM59SingleUnit(unittest.TestCase):
     def test_trustees(self) -> None:
         self.assertEqual(plan_units("Tell me about the trustees."), (UNIT_TRUSTEES,))
 
-    def test_dean_maps_to_vice_principal(self) -> None:
-        self.assertEqual(plan_units("Who is the dean?"), (UNIT_VICE_PRINCIPAL,))
+    def test_dean_maps_to_dean_cards(self) -> None:
+        units = plan_units("Who is the dean?")
+        self.assertEqual(
+            units,
+            (
+                "leadership.dean_academics",
+                "leadership.dean_administration",
+                "leadership.dean_student_affairs",
+                "leadership.associate_dean_rnd",
+                "leadership.dean_innovation",
+            ),
+        )
+
+    def test_dean_academics_unit(self) -> None:
+        self.assertEqual(
+            plan_units("Who is the dean of academics?"),
+            ("leadership.dean_academics",),
+        )
 
     def test_hod(self) -> None:
         self.assertEqual(

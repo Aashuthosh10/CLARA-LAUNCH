@@ -6,4 +6,10 @@
  * from user text.
  */
 
-export type ExecutiveLeadershipKind = 'principal' | 'vice_principal';
+import type { DeanProfileId } from './deanLeadershipLocale';
+
+export type ExecutiveLeadershipKind =
+  | 'principal'
+  | 'vice_principal'
+  | 'deans'
+  | DeanProfileId;

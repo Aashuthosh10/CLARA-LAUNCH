@@ -5,9 +5,9 @@ import hodImg from '../../../assets/hod_shashikumar.jpg';
 export default function PremiumHODCardCSE() {
   return (
     <PremiumHODCard
-      name="Dr. Shashikumar D R"
+      name="Dr. G. Dhivyashri"
       title="Professor & HOD, Computer Science & Engineering"
-      bio="With extensive teaching and research experience in core computer science, Dr. Shashikumar D R leads the CSE department with a strong focus on fundamentals and industry-oriented learning. He has guided multiple student projects, promotes coding culture and hackathons, and actively works on curriculum enhancement aligned with emerging technologies. His areas of interest span algorithms, software engineering, and modern computing practices."
+      bio="With around 10 years of experience in teaching, research, and academic leadership. Her expertise spans AI, Machine Learning, Data Science, and IoT, with active involvement in student mentoring, innovation, and faculty development."
       portrait={hodImg}
     />
   );

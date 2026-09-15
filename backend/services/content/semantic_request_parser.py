@@ -204,11 +204,8 @@ def parse_semantic_request(
         )
 
     leadership_spans = detect_leadership_spans(raw_text)
-    leadership_items = tuple(
-        SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic) for span in leadership_spans
-    )
-    if not leadership_items:
-        leadership_items = leadership_items_from_text(raw_text)
+    # Always expand via leadership_items_from_text so TOPIC_DEANS → individual dean cards.
+    leadership_items = leadership_items_from_text(raw_text)
 
     campus_spans = detect_campus_entity_spans(raw_text)
     campus_items = campus_items_from_text(raw_text) if campus_spans else ()
@@ -267,17 +264,28 @@ def parse_semantic_request(
     span_topics = {s.topic for s in topic_spans}
     unpositioned = atomic - span_topics
     single_unpositioned_item: SemanticItem | None = None
+    multi_explanation_broadcast = False
     if unpositioned:
-        if len(atomic | span_topics) > 1 or len(entity_spans) > 1:
+        # "Explain Data Science and AI ML" — explanation is a shared topic that
+        # applies to every named department. Other unpositioned topics (e.g. HOD)
+        # must not broadcast across multiple entities.
+        if (
+            unpositioned == {TOPIC_EXPLANATION}
+            and (atomic | span_topics) == {TOPIC_EXPLANATION}
+            and len(entity_spans) >= 2
+        ):
+            multi_explanation_broadcast = True
+        elif len(atomic | span_topics) > 1 or len(entity_spans) > 1:
             return None
-        # One entity and one canonical topic is a complete, unambiguous request
-        # even when raw-text span extraction could not position the normalized
-        # topic cue. Preserve that topic directly; never route it through the
-        # no-topic overview fallback.
-        single_unpositioned_item = SemanticItem(
-            entity=entity_spans[0].json_key,
-            topic=next(iter(unpositioned)),
-        )
+        else:
+            # One entity and one canonical topic is a complete, unambiguous request
+            # even when raw-text span extraction could not position the normalized
+            # topic cue. Preserve that topic directly; never route it through the
+            # no-topic overview fallback.
+            single_unpositioned_item = SemanticItem(
+                entity=entity_spans[0].json_key,
+                topic=next(iter(unpositioned)),
+            )
 
     has_explicit_topic = bool(span_topics or atomic)
     is_full_scope = (
@@ -289,7 +297,12 @@ def parse_semantic_request(
 
     dept_items: tuple[SemanticItem, ...] | None = None
     if entity_spans:
-        if single_unpositioned_item is not None:
+        if multi_explanation_broadcast:
+            dept_items = tuple(
+                SemanticItem(entity=span.json_key, topic=TOPIC_EXPLANATION)
+                for span in entity_spans[:3]
+            )
+        elif single_unpositioned_item is not None:
             dept_items = (single_unpositioned_item,)
         else:
             dept_items = pair_entities_and_topics(
@@ -407,8 +420,23 @@ def _merge_department_leadership_and_campus_items(
     global_start = {span.topic: span.start for span in global_spans or ()}
     for i, item in enumerate(dept_items):
         tagged.append((entity_start.get(item.entity, 0), i, item))
+    from backend.services.content.dean_profiles import DEAN_TOPICS
+    from backend.services.content.leadership_units import TOPIC_DEANS
+
     for i, span in enumerate(leadership_spans or ()):
-        tagged.append((span.start, 1000 + i, SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic)))
+        if getattr(span, "topic", "") == TOPIC_DEANS:
+            for j, topic in enumerate(DEAN_TOPICS):
+                tagged.append(
+                    (
+                        span.start,
+                        1000 + i * 10 + j,
+                        SemanticItem(entity=LEADERSHIP_ENTITY, topic=topic),
+                    )
+                )
+        else:
+            tagged.append(
+                (span.start, 1000 + i, SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic))
+            )
     for i, item in enumerate(campus_items or ()):
         tagged.append((campus_start.get(item.entity, 0), 2000 + i, item))
     for i, item in enumerate(global_items or ()):

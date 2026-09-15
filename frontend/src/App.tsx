@@ -41,6 +41,7 @@ import SleepScreen from './screens/SleepScreen';
 import ChatScreen from './screens/ChatScreen';
 import AboutMeScreen from './features/about/AboutMeScreen';
 import OfflineRecoveryScreen from './screens/OfflineRecoveryScreen';
+import { CHAT_ABOUT_ME_ORB_SAFE_INSET_PX } from './screens/chat/chatOrbLayout';
 
 const WS_BASE_URL =
   import.meta.env.VITE_WS_URL ||
@@ -110,8 +111,14 @@ function ClaraKioskRuntime({
   const [aboutMeDeepLink, setAboutMeDeepLink] = useState<{
     section: 'overview' | 'capabilities' | 'creators' | 'guide';
     itemId: string | null;
+    entryMode: 'chat' | 'direct';
   } | null>(null);
   const aboutMeUiActionKeyRef = useRef<string | null>(null);
+  /** Chat About Me: auto-advance timer arms only after TTS playback completes. */
+  const [aboutMeAutoAdvanceArmed, setAboutMeAutoAdvanceArmed] = useState(true);
+  const aboutMeOpenedTurnIdRef = useRef<string | null>(null);
+  /** Live FAQ+orb chrome height from ChatScreen — About Me overlay ends above this. */
+  const [chatBottomChromePx, setChatBottomChromePx] = useState(0);
   const [lastHardResetAt, setLastHardResetAt] = useState<number | null>(null);
 
   const effectiveState = urlOverrideState !== null ? urlOverrideState : state;
@@ -181,21 +188,44 @@ function ClaraKioskRuntime({
     setShowAboutMe(false);
     setAboutMeDeepLink(null);
     aboutMeUiActionKeyRef.current = null;
+    aboutMeOpenedTurnIdRef.current = null;
+    setAboutMeAutoAdvanceArmed(true);
     startClaraSession();
   }, [startClaraSession]);
 
   const exitAboutMeToClara = useCallback(() => {
-    // Navigation overlay only — preserve active chat/session.
+    // Navigation overlay only — preserve active chat/session; do not inject
+    // About Me narration into the chat response surface (messages stay isHidden).
     setShowAboutMe(false);
     setAboutMeDeepLink(null);
     aboutMeUiActionKeyRef.current = null;
+    aboutMeOpenedTurnIdRef.current = null;
+    setAboutMeAutoAdvanceArmed(true);
   }, []);
 
-  // Conversational About Me: backend uiAction → open existing About Me overlay.
+  /** New user question while About Me is open → yield overlay to ChatScreen. */
+  const yieldAboutMeForNewTurn = useCallback(() => {
+    if (!showAboutMe) return;
+    setShowAboutMe(false);
+    setAboutMeDeepLink(null);
+    aboutMeUiActionKeyRef.current = null;
+    aboutMeOpenedTurnIdRef.current = null;
+    setAboutMeAutoAdvanceArmed(true);
+  }, [showAboutMe]);
+
+  const armAboutMeAutoAdvance = useCallback(() => {
+    setAboutMeAutoAdvanceArmed(true);
+  }, []);
+
+  // Direct About Me navigation may still use open_about_me with entryMode=direct.
+  // Conversational creators/guide/overview/capabilities now use normal SPLIT_CARDS.
   useEffect(() => {
     const action = payload?.uiAction;
     if (!action || typeof action !== 'object') return;
     if (action.type !== 'open_about_me') return;
+    const entryModeRaw = String(action.entryMode || 'chat').trim().toLowerCase();
+    // Conversational About Me must not open the fullscreen/overlay experience.
+    if (entryModeRaw !== 'direct') return;
     const sectionRaw = String(action.section || 'overview').trim().toLowerCase();
     const allowed = new Set(['overview', 'capabilities', 'creators', 'guide']);
     const section = (allowed.has(sectionRaw) ? sectionRaw : 'overview') as
@@ -207,13 +237,51 @@ function ClaraKioskRuntime({
       typeof action.itemId === 'string' && action.itemId.trim()
         ? action.itemId.trim()
         : null;
-    const key = `${String(payload?.turn_id || '')}|${section}|${itemId || ''}`;
+    const entryMode: 'chat' | 'direct' = 'direct';
+    const key = `${String(payload?.turn_id || '')}|${section}|${itemId || ''}|${entryMode}`;
     if (aboutMeUiActionKeyRef.current === key) return;
     aboutMeUiActionKeyRef.current = key;
-    setAboutMeDeepLink({ section, itemId });
+    aboutMeOpenedTurnIdRef.current =
+      typeof payload?.turn_id === 'string' && payload.turn_id ? String(payload.turn_id) : null;
+    const hasAudio =
+      typeof payload?.audioBase64 === 'string' && payload.audioBase64.length > 0;
+    const audioFailed = payload?.audioUnavailable === true;
+    setAboutMeAutoAdvanceArmed(!hasAudio || audioFailed);
+    setAboutMeDeepLink({ section, itemId, entryMode });
     setShowAboutMe(true);
   }, [payload]);
 
+  // If About Me audio fails after open, do not leave the timer permanently blocked.
+  useEffect(() => {
+    if (!showAboutMe || aboutMeDeepLink?.entryMode !== 'chat') return;
+    if (payload?.audioUnavailable === true) {
+      setAboutMeAutoAdvanceArmed(true);
+    }
+  }, [showAboutMe, aboutMeDeepLink?.entryMode, payload?.audioUnavailable]);
+
+  // Backend-mic / alternate paths: a new processing turn (not About Me) yields overlay.
+  useEffect(() => {
+    if (!showAboutMe || aboutMeDeepLink?.entryMode !== 'chat') return;
+    if (payload?.isProcessing !== true) return;
+    const tid = typeof payload?.turn_id === 'string' ? payload.turn_id : '';
+    const action = payload?.uiAction;
+    const isAboutMeAction =
+      action &&
+      typeof action === 'object' &&
+      String((action as { type?: string }).type || '') === 'open_about_me';
+    if (isAboutMeAction) return;
+    if (tid && aboutMeOpenedTurnIdRef.current && tid === aboutMeOpenedTurnIdRef.current) {
+      return;
+    }
+    yieldAboutMeForNewTurn();
+  }, [
+    showAboutMe,
+    aboutMeDeepLink?.entryMode,
+    payload?.isProcessing,
+    payload?.turn_id,
+    payload?.uiAction,
+    yieldAboutMeForNewTurn,
+  ]);
   // K1: on every (re)connect, re-register the active visitor session and its
   // canonical selected language so a new backend socket rebinds to `kn` etc.
   // without replaying any welcome. Runs only when a selection is stored; after
@@ -271,7 +339,7 @@ function ClaraKioskRuntime({
       clearChatUserInactivityTimer();
       return;
     }
-    if (suppressChatIdleForOverlay) {
+    if (suppressChatIdleForOverlay || showAboutMe) {
       clearChatUserInactivityTimer();
       return clearChatUserInactivityTimer;
     }
@@ -280,6 +348,7 @@ function ClaraKioskRuntime({
   }, [
     effectiveState,
     suppressChatIdleForOverlay,
+    showAboutMe,
     scheduleChatUserInactivityTimer,
     clearChatUserInactivityTimer,
   ]);
@@ -417,7 +486,8 @@ function ClaraKioskRuntime({
   );
 
   const renderState = () => {
-    if (showAboutMe) {
+    // Sleep / non-chat About Me: full-screen About Me (no chat TTS surface).
+    if (showAboutMe && !isChatRouteState(effectiveState)) {
       return (
         <motion.div key="about-me" className="w-full h-full">
           <AboutMeScreen
@@ -426,6 +496,7 @@ function ClaraKioskRuntime({
             onEnterClara={enterClaraFromAbout}
             initialSection={aboutMeDeepLink?.section ?? null}
             initialItemId={aboutMeDeepLink?.itemId ?? null}
+            entryMode="direct"
           />
         </motion.div>
       );
@@ -437,7 +508,11 @@ function ClaraKioskRuntime({
           <motion.div key={`sleep-${runtimeSessionKey}`} className="w-full h-full">
             <SleepScreen
               onAboutMe={() => {
-                setAboutMeDeepLink(null);
+                setAboutMeDeepLink({
+                  section: 'overview',
+                  itemId: null,
+                  entryMode: 'direct',
+                });
                 aboutMeUiActionKeyRef.current = null;
                 setShowAboutMe(true);
               }}
@@ -449,7 +524,7 @@ function ClaraKioskRuntime({
       case 4:
       case 5:
         return (
-          <motion.div key={`chat-branch-${runtimeSessionKey}`} className="w-full h-full">
+          <motion.div key={`chat-branch-${runtimeSessionKey}`} className="relative w-full h-full">
             <Fragment key={chatScreenIdentity}>
               <ChatScreen
                 isPayloadStale={isStalePayloadGen}
@@ -474,8 +549,33 @@ function ClaraKioskRuntime({
                 onChatIdleOverlayChange={setSuppressChatIdleForOverlay}
                 sendMessage={sendMessage}
                 faceChannel={faceChannel}
+                aboutMeSurfaceOpen={showAboutMe}
+                onYieldAboutMe={yieldAboutMeForNewTurn}
+                onAboutMeNarrationComplete={armAboutMeAutoAdvance}
+                onConversationalChromeHeight={setChatBottomChromePx}
               />
             </Fragment>
+            {showAboutMe ? (
+              <div
+                className="absolute inset-x-0 top-0 z-[60] overflow-hidden"
+                data-testid="about-me-conversation-overlay"
+                data-bottom-chrome={String(chatBottomChromePx || CHAT_ABOUT_ME_ORB_SAFE_INSET_PX)}
+                style={{
+                  // End ABOVE live ChatScreen FAQ+orb chrome — do not cover it.
+                  bottom: `${chatBottomChromePx > 0 ? chatBottomChromePx : CHAT_ABOUT_ME_ORB_SAFE_INSET_PX}px`,
+                }}
+              >
+                <AboutMeScreen
+                  key={`about-chat-${aboutMeDeepLink?.section || 'default'}-${aboutMeDeepLink?.itemId || 'none'}-${aboutMeUiActionKeyRef.current || 'chat'}`}
+                  onExit={exitAboutMeToClara}
+                  onEnterClara={enterClaraFromAbout}
+                  initialSection={aboutMeDeepLink?.section ?? null}
+                  initialItemId={aboutMeDeepLink?.itemId ?? null}
+                  entryMode="chat"
+                  autoAdvanceArmed={aboutMeAutoAdvanceArmed}
+                />
+              </div>
+            ) : null}
           </motion.div>
         );
       default:

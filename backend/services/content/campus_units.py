@@ -5,9 +5,11 @@ Hostel canonical units (official):
   hostel.facilities, hostel.mess, hostel.safety
 
 NCC canonical units (official):
-  ncc.overview, ncc.training, ncc.benefits
+  ncc.overview, ncc.leadership, ncc.training, ncc.benefits
 
-Canteen/events may still carry SAMPLE locale rows.
+Flagship fest units (official):
+  events.sanchalana, events.techvidya, events.sangama,
+  events.vignotsava, events.project_expo
 """
 
 from __future__ import annotations
@@ -53,33 +55,37 @@ CANTEEN_TOPICS: tuple[str, ...] = (
     "timings",
     "safety",
 )
-NCC_TOPICS: tuple[str, ...] = ("overview", "training", "benefits", "enrollment")
-NCC_CARD_TOPICS: tuple[str, ...] = ("overview", "training", "benefits")
+NCC_TOPICS: tuple[str, ...] = ("overview", "leadership", "training", "benefits", "enrollment")
+NCC_CARD_TOPICS: tuple[str, ...] = ("overview", "leadership", "training", "benefits")
 NCC_UNIT_IDS: tuple[str, ...] = tuple(f"ncc.{topic}" for topic in NCC_CARD_TOPICS)
 NCC_DECK_UNIT_IDS: tuple[str, ...] = (
     "ncc.overview",
+    "ncc.leadership",
     "ncc.training",
     "ncc.benefits",
 )
 
+EVENTS_ENTITY = "events"
 EVENT_IDS: tuple[str, ...] = (
     "sanchalana",
     "techvidya",
-    "sirikannada_utsava",
-    "freshers_fest",
-    "sports_meet",
+    "sangama",
+    "vignotsava",
     "project_expo",
-    "alumni_meet",
 )
-
-CANTEEN_UNIT_IDS: tuple[str, ...] = tuple(f"canteen.{topic}" for topic in CANTEEN_TOPICS)
 EVENT_UNIT_IDS: tuple[str, ...] = tuple(f"events.{eid}" for eid in EVENT_IDS)
+FEST_DECK_UNIT_IDS: tuple[str, ...] = EVENT_UNIT_IDS
+CANTEEN_UNIT_IDS: tuple[str, ...] = tuple(f"canteen.{topic}" for topic in CANTEEN_TOPICS)
 CAMPUS_UNIT_IDS: tuple[str, ...] = (
     HOSTEL_UNIT_IDS + CANTEEN_UNIT_IDS + NCC_UNIT_IDS + EVENT_UNIT_IDS
 )
 
 HOSTEL_ENTITIES = frozenset({HOSTEL_GIRLS, HOSTEL_BOYS})
-CAMPUS_ENTITIES = HOSTEL_ENTITIES | {CANTEEN_ENTITY, NCC_ENTITY} | frozenset(EVENT_UNIT_IDS)
+CAMPUS_ENTITIES = (
+    HOSTEL_ENTITIES
+    | {CANTEEN_ENTITY, NCC_ENTITY, EVENTS_ENTITY}
+    | frozenset(EVENT_UNIT_IDS)
+)
 
 
 def is_campus_entity(entity: str) -> bool:
@@ -107,8 +113,17 @@ def is_ncc_overview_unit_id(unit_id: str) -> bool:
 
 
 def ncc_deck_unit_ids() -> tuple[str, ...]:
-    """Fixed overview → training → benefits."""
+    """Fixed overview → leadership → training → benefits."""
     return NCC_DECK_UNIT_IDS
+
+
+def fest_deck_unit_ids() -> tuple[str, ...]:
+    """Fixed flagship fest deck order."""
+    return FEST_DECK_UNIT_IDS
+
+
+def is_fest_deck_entity(entity: str) -> bool:
+    return (entity or "").strip().lower() in {EVENTS_ENTITY, "fest", "fests", "festivals"}
 
 
 def hostel_gender_from_entity(entity: str) -> str | None:
@@ -168,13 +183,25 @@ def unit_id_for_campus_item(entity: str, topic: str) -> str | None:
             "ssb",
         }:
             top = "benefits"
-        if top in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact", "ano", "caretaker"}:
+        if top in {
+            "ano",
+            "caretaker",
+            "officer",
+            "ncc officer",
+            "leadership",
+            "gowtham",
+        }:
+            top = "leadership"
+        if top in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact"}:
             top = "enrollment"
         if top == "enrollment":
             return None  # answered via template guidance — no invented contact card
         if top not in NCC_CARD_TOPICS:
             return None
         return f"ncc.{top}"
+    if is_fest_deck_entity(ent):
+        # Placeholder first card; unit_selector expands to the fixed fest deck.
+        return FEST_DECK_UNIT_IDS[0]
     if ent in EVENT_UNIT_IDS or ent.startswith(EVENTS_PREFIX):
         if ent in EVENT_UNIT_IDS:
             return ent
@@ -255,6 +282,10 @@ _NCC_CUES: tuple[str, ...] = (
     "b certificate",
     "c certificate",
     "ncc certificate",
+    "ncc officer",
+    "ncc caretaker",
+    "gowtham b",
+    "gowtham",
     "ncc",
     "cadets",
     "cadet",
@@ -273,8 +304,10 @@ _NCC_CUES: tuple[str, ...] = (
 _EVENT_CUES: tuple[tuple[str, str], ...] = (
     ("events.sanchalana", "sanchalana"),
     ("events.sanchalana", "sanchaalana"),
+    ("events.sanchalana", "sanchalan"),
     ("events.sanchalana", "ಸಂಚಲನ"),
     ("events.sanchalana", "संचलना"),
+    ("events.sanchalana", "संचलन"),
     ("events.sanchalana", "சஞ்சலனா"),
     ("events.sanchalana", "సంచలన"),
     ("events.sanchalana", "സഞ്ചലന"),
@@ -282,51 +315,167 @@ _EVENT_CUES: tuple[tuple[str, str], ...] = (
     ("events.techvidya", "techvidyaയെ"),
     ("events.techvidya", "tech vidya"),
     ("events.techvidya", "tech-vidya"),
+    ("events.techvidya", "techvidhya"),
     ("events.techvidya", "ಟೆಕ್ ವಿದ್ಯಾ"),
     ("events.techvidya", "ಟೆಕ್‌ವಿದ್ಯಾ"),
     ("events.techvidya", "टेक विद्या"),
     ("events.techvidya", "டெக் வித்யா"),
     ("events.techvidya", "టెక్ విద్యా"),
     ("events.techvidya", "ടെക് വിദ്യ"),
-    ("events.sirikannada_utsava", "sirikannada utsava"),
-    ("events.sirikannada_utsava", "siri kannada utsava"),
-    ("events.sirikannada_utsava", "siri kannada"),
-    ("events.sirikannada_utsava", "sirikannada"),
-    ("events.sirikannada_utsava", "ಸಿರಿಕನ್ನಡ ಉತ್ಸವ"),
-    ("events.sirikannada_utsava", "ಸಿರಿಕನ್ನಡ"),
-    ("events.sirikannada_utsava", "सिरीकन्नड़"),
-    ("events.sirikannada_utsava", "சிரிகன்னட"),
-    ("events.sirikannada_utsava", "సిరికన్నడ"),
-    ("events.sirikannada_utsava", "സിരികന്നഡ"),
-    ("events.freshers_fest", "freshers fest"),
-    ("events.freshers_fest", "fresher's fest"),
-    ("events.freshers_fest", "freshers"),
-    ("events.freshers_fest", "ಫ್ರೆಷರ್ಸ್"),
-    ("events.freshers_fest", "फ्रेशर्स"),
-    ("events.freshers_fest", "ஃப்ரெஷர்ஸ்"),
-    ("events.freshers_fest", "ఫ్రెషర్స్"),
-    ("events.freshers_fest", "ഫ്രെഷേഴ്സ്"),
-    ("events.sports_meet", "sports meet"),
-    ("events.sports_meet", "sports day"),
-    ("events.sports_meet", "ಕ್ರೀಡಾ ಕೂಟ"),
-    ("events.sports_meet", "खेल मेला"),
-    ("events.sports_meet", "விளையாட்டு சந்திப்பு"),
-    ("events.sports_meet", "క్రీడా కూటం"),
-    ("events.sports_meet", "കായിക മീറ്റ്"),
+    ("events.sangama", "sangama"),
+    ("events.sangama", "ಸಂಗಮ"),
+    ("events.sangama", "संगम"),
+    ("events.sangama", "சங்கம"),
+    ("events.sangama", "సంగమ"),
+    ("events.sangama", "സംഗമ"),
+    ("events.vignotsava", "vignotsava"),
+    ("events.vignotsava", "vignotsav"),
+    ("events.vignotsava", "vignothsav"),
+    ("events.vignotsava", "onam fest"),
+    ("events.vignotsava", "onam festival"),
+    ("events.vignotsava", "onam celebration"),
+    ("events.vignotsava", "ವಿಘ್ನೋತ್ಸವ"),
+    ("events.vignotsava", "विघ्नोत्सव"),
+    ("events.vignotsava", "விக்னோத்ஸவ"),
+    ("events.vignotsava", "విఘ్నోత్సవ"),
+    ("events.vignotsava", "വിഘ്നോത്സവ"),
     ("events.project_expo", "project expo"),
     ("events.project_expo", "project exhibition"),
+    ("events.project_expo", "projects expo"),
     ("events.project_expo", "ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್‌ಪೋ"),
+    ("events.project_expo", "ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್ಪೋ"),
     ("events.project_expo", "प्रोजेक्ट एक्सपो"),
     ("events.project_expo", "பிராஜெக்ட் எக்ஸ்போ"),
     ("events.project_expo", "ప్రాజెక్ట్ ఎక్స్‌పో"),
+    ("events.project_expo", "ప్రాజెక్ట్ ఎక్స్పో"),
     ("events.project_expo", "പ്രോജക്ട് എക്സ്പോ"),
-    ("events.alumni_meet", "alumni meet"),
-    ("events.alumni_meet", "alumni day"),
-    ("events.alumni_meet", "ಹಳೆಯ ವಿದ್ಯಾರ್ಥಿ"),
-    ("events.alumni_meet", "पूर्व छात्र"),
-    ("events.alumni_meet", "முன்னாள் மாணவர்"),
-    ("events.alumni_meet", "పూర్వ విద్యార్థి"),
-    ("events.alumni_meet", "പൂർവ വിദ്യാർഥി"),
+)
+
+_FEST_DECK_CUES: tuple[str, ...] = (
+    # English
+    "college fests",
+    "college fest",
+    "college festivals",
+    "college festival",
+    "institutional fests",
+    "institutional fest",
+    "flagship events",
+    "flagship fests",
+    "campus fests",
+    "campus fest",
+    "campus events",
+    "campus event",
+    "college events",
+    "college event",
+    "fests at svit",
+    "festivals at svit",
+    "svit fests",
+    "svit fest",
+    "cultural fest",
+    "cultural fests",
+    "technical fest",
+    "technical fests",
+    "festivals",
+    "festival",
+    "fests",
+    "fest",
+    # Romanized regional
+    "college utsav",
+    "college utsava",
+    "college utsavalu",
+    "utsavgalu",
+    "utsavagalu",
+    "utsav",
+    "utsava",
+    "fest bagge",
+    "fests bagge",
+    "fest heli",
+    "fests heli",
+    "fest ke baare",
+    "fests ke baare",
+    "fest patri",
+    "fests patri",
+    "fest gurinchi",
+    "fests gurinchi",
+    "fest kurichu",
+    "fests kurichu",
+    # Kannada
+    "ಕಾಲೇಜು ಉತ್ಸವಗಳು",
+    "ಕಾಲೇಜು ಉತ್ಸವ",
+    "ಕಾಲೇಜು ಫೆಸ್ಟ್‌ಗಳು",
+    "ಕಾಲೇಜು ಫೆಸ್ಟ್",
+    "ಕಾಲೇಜಿನ ಉತ್ಸವಗಳು",
+    "ಕಾಲೇಜಿನ ಉತ್ಸವ",
+    "ಕ್ಯಾಂಪಸ್ ಉತ್ಸವಗಳು",
+    "ಕ್ಯಾಂಪಸ್ ಉತ್ಸವ",
+    "ಸಾಂಸ್ಕೃತಿಕ ಉತ್ಸವಗಳು",
+    "ಸಾಂಸ್ಕೃತಿಕ ಉತ್ಸವ",
+    "ತಾಂತ್ರಿಕ ಉತ್ಸವಗಳು",
+    "ತಾಂತ್ರಿಕ ಉತ್ಸವ",
+    "ಫೆಸ್ಟ್‌ಗಳು",
+    "ಫೆಸ್ಟ್‌ಗಳ ಬಗ್ಗೆ",
+    "ಫೆಸ್ಟ್ ಬಗ್ಗೆ",
+    "ಉತ್ಸವಗಳ ಬಗ್ಗೆ",
+    "ಉತ್ಸವಗಳು",
+    "ಉತ್ಸವ",
+    "ಫೆಸ್ಟ್",
+    # Hindi
+    "कॉलेज के उत्सव",
+    "कॉलेज उत्सव",
+    "कॉलेज फेस्ट",
+    "कॉलेज फेस्टिवल",
+    "कैंपस उत्सव",
+    "कैंपस फेस्ट",
+    "सांस्कृतिक उत्सव",
+    "तकनीकी उत्सव",
+    "उत्सवों के बारे में",
+    "फेस्ट के बारे में",
+    "उत्सवों",
+    "उत्सव",
+    "फेस्टिवल",
+    "फेस्ट",
+    # Tamil
+    "கல்லூரி விழாக்கள்",
+    "கல்லூரி விழா",
+    "கல்லூரி ஃபெஸ்ட்",
+    "வளாக விழாக்கள்",
+    "வளாக விழா",
+    "கலாச்சார விழாக்கள்",
+    "கலாச்சார விழா",
+    "தொழில்நுட்ப விழாக்கள்",
+    "தொழில்நுட்ப விழா",
+    "விழாக்கள் பற்றி",
+    "விழாக்கள்",
+    "விழா",
+    "ஃபெஸ்ட்",
+    # Telugu
+    "కాలేజీ ఉత్సవాలు",
+    "కాలేజీ ఉత్సవం",
+    "కాలేజీ ఫెస్ట్",
+    "క్యాంపస్ ఉత్సవాలు",
+    "క్యాంపస్ ఉత్సవం",
+    "సాంస్కృతిక ఉత్సవాలు",
+    "సాంస్కృతిక ఉత్సవం",
+    "సాంకేతిక ఉత్సవాలు",
+    "సాంకేతిక ఉత్సవం",
+    "ఉత్సవాల గురించి",
+    "ఉత్సవాలు",
+    "ఉత్సవం",
+    "ఫెస్ట్",
+    # Malayalam
+    "കോളേജ് ഉത്സവങ്ങൾ",
+    "കോളേജ് ഉത്സവം",
+    "കോളേജ് ഫെസ്റ്റ്",
+    "ക്യാമ്പസ് ഉത്സവങ്ങൾ",
+    "ക്യാമ്പസ് ഉത്സവം",
+    "സാംസ്കാരിക ഉത്സവങ്ങൾ",
+    "സാംസ്കാരിക ഉത്സവം",
+    "സാങ്കേതിക ഉത്സവങ്ങൾ",
+    "സാങ്കേതിക ഉത്സവം",
+    "ഉത്സവങ്ങളെ കുറിച്ച്",
+    "ഉത്സവങ്ങൾ",
+    "ഉത്സവം",
+    "ഫെസ്റ്റ്",
 )
 
 # Canonical campus topics. Hostel shared topics + canteen topics.
@@ -409,6 +558,14 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("training", "కార్యకలాప"),
     ("training", "പരിശീലനം"),
     ("training", "പ്രവർത്തന"),
+    ("leadership", "ncc leadership"),
+    ("leadership", "ncc officer"),
+    ("leadership", "caretaker officer"),
+    ("leadership", "ncc caretaker"),
+    ("leadership", "associate ncc officer"),
+    ("leadership", "gowtham b"),
+    ("leadership", "gowtham"),
+    ("leadership", "ano"),
     ("benefits", "ncc benefits"),
     ("benefits", "why join ncc"),
     ("benefits", "why should i join"),
@@ -437,9 +594,6 @@ _TOPIC_CUES: tuple[tuple[str, str], ...] = (
     ("enrollment", "selection drives"),
     ("enrollment", "who should i contact for ncc"),
     ("enrollment", "ncc contact"),
-    ("enrollment", "ncc caretaker"),
-    ("enrollment", "associate ncc officer"),
-    ("enrollment", "ano"),
     ("enrollment", "how do i join"),
     ("enrollment", "how to join"),
     ("enrollment", "enrollment"),
@@ -543,6 +697,7 @@ def detect_campus_entity_spans(raw_text: str) -> tuple[CampusSpan, ...]:
     spans: list[CampusSpan] = []
     for unit_id, cue in sorted(_EVENT_CUES, key=lambda p: len(p[1]), reverse=True):
         spans.extend(_consume(hay, occupied, (cue,), unit_id, "event"))
+    spans.extend(_consume(hay, occupied, _FEST_DECK_CUES, EVENTS_ENTITY, "fest_deck"))
     spans.extend(_consume(hay, occupied, _GIRLS_CUES, HOSTEL_GIRLS, "hostel"))
     spans.extend(_consume(hay, occupied, _BOYS_CUES, HOSTEL_BOYS, "hostel"))
     spans.extend(_consume(hay, occupied, _CANTEEN_CUES, CANTEEN_ENTITY, "canteen"))
@@ -623,7 +778,16 @@ def _normalize_topic_for_family(topic: str, family: str) -> str:
             "ssb",
         }:
             return "benefits"
-        if topic in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact", "ano", "caretaker"}:
+        if topic in {
+            "ano",
+            "caretaker",
+            "officer",
+            "ncc officer",
+            "leadership",
+            "gowtham",
+        }:
+            return "leadership"
+        if topic in {"join", "enrol", "enroll", "enrolment", "enrollment", "contact"}:
             return "enrollment"
     return topic
 
@@ -648,7 +812,8 @@ def pair_campus_items(
         return ()
 
     events = tuple(s for s in entity_spans if s.family == "event")
-    bindable = tuple(s for s in entity_spans if s.family != "event")
+    fest_deck = tuple(s for s in entity_spans if s.family == "fest_deck")
+    bindable = tuple(s for s in entity_spans if s.family not in {"event", "fest_deck"})
     items: list[SemanticItem] = []
 
     if bindable:
@@ -717,7 +882,15 @@ def pair_campus_items(
                     items.append(SemanticItem(entity=ent.entity, topic="overview"))
 
     items.extend(SemanticItem(entity=s.entity, topic="overview") for s in events)
+    if fest_deck and not events:
+        # Bare "fests / college events" → full flagship deck once.
+        items.extend(SemanticItem(entity=uid, topic="overview") for uid in FEST_DECK_UNIT_IDS)
+    elif fest_deck and events:
+        # Named events already captured; ignore the generic fest cue.
+        pass
     start_of = {s.entity: s.start for s in entity_spans}
+    for uid in FEST_DECK_UNIT_IDS:
+        start_of.setdefault(uid, fest_deck[0].start if fest_deck else 0)
     items.sort(key=lambda it: start_of.get(it.entity, 0))
     out: list[SemanticItem] = []
     seen: set[tuple[str, str]] = set()

@@ -21,10 +21,20 @@ export const AUTO_LISTEN_CONFIG = {
   postTtsSettleMs: envMs('VITE_AUTO_LISTEN_SETTLE_MS', 650),
   /** No meaningful speech after name prompt → SleepScreen (if still auto-armed). */
   nameWaitMs: envMs('VITE_AUTO_LISTEN_NAME_WAIT_MS', 45_000),
-  /** No meaningful speech after a normal answer → closing prompt. */
+  /** No meaningful speech after a normal answer → logical no-input warning window. */
   normalInactivityMs: envMsAny(
     ['VITE_AUTO_LISTEN_NORMAL_WAIT_MS', 'VITE_AUTO_LISTEN_NORMAL_MS'],
-    35_000,
+    (() => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('e2e')) {
+          const raw = Number(params.get('listenWaitMs'));
+          if (Number.isFinite(raw) && raw > 0) return raw;
+          return 1_500;
+        }
+      }
+      return 60_000;
+    })(),
   ),
   /** No meaningful speech after closing prompt → SleepScreen. */
   closingWaitMs: envMs('VITE_AUTO_LISTEN_CLOSING_WAIT_MS', 20_000),

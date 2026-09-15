@@ -15,6 +15,8 @@ from backend.services.content.campus_units import (
     SAMPLE_STATUS,
 )
 
+OFFICIAL_CAMPUS_UNIT_IDS = frozenset(HOSTEL_UNIT_IDS) | frozenset(NCC_UNIT_IDS) | frozenset(EVENT_UNIT_IDS)
+
 LOCALES_DIR = Path(__file__).resolve().parents[2] / "data" / "locales"
 LANGS = ("en", "kn", "hi", "ta", "te", "ml")
 
@@ -25,11 +27,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "Canteen",
         "events.sanchalana": "Sanchalana",
         "events.techvidya": "TechVidya",
-        "events.sirikannada_utsava": "SiriKannada Utsava",
-        "events.freshers_fest": "Freshers fest (sample)",
-        "events.sports_meet": "Sports meet (sample)",
-        "events.project_expo": "Project expo (sample)",
-        "events.alumni_meet": "Alumni meet (sample)",
+        "events.sangama": "Sangama",
+        "events.vignotsava": "Vignotsava",
+        "events.project_expo": "Project Expo",
     },
     "kn": {
         "hostel.girls": "ಹುಡುಗಿಯರ ಹಾಸ್ಟೆಲ್",
@@ -37,11 +37,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "ಕ್ಯಾಂಟೀನ್",
         "events.sanchalana": "ಸಂಚಲನ",
         "events.techvidya": "ಟೆಕ್ ವಿದ್ಯಾ",
-        "events.sirikannada_utsava": "ಸಿರಿಕನ್ನಡ ಉತ್ಸವ",
-        "events.freshers_fest": "ಫ್ರೆಷರ್ಸ್ ಫೆಸ್ಟ್ (ಮಾದರಿ)",
-        "events.sports_meet": "ಕ್ರೀಡಾ ಕೂಟ (ಮಾದರಿ)",
-        "events.project_expo": "ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್‌ಪೋ (ಮಾದರಿ)",
-        "events.alumni_meet": "ಹಳೆಯ ವಿದ್ಯಾರ್ಥಿ ಸಮಾವೇಶ (ಮಾದರಿ)",
+        "events.sangama": "ಸಂಗಮ",
+        "events.vignotsava": "ವಿಘ್ನೋತ್ಸವ",
+        "events.project_expo": "ಪ್ರಾಜೆಕ್ಟ್ ಎಕ್ಸ್‌ಪೋ",
     },
     "hi": {
         "hostel.girls": "लड़कियों का हॉस्टल",
@@ -49,11 +47,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "कैंटीन",
         "events.sanchalana": "संचलना",
         "events.techvidya": "टेक विद्या",
-        "events.sirikannada_utsava": "सिरीकन्नड़ उत्सव",
-        "events.freshers_fest": "फ्रेशर्स फेस्ट (नमूना)",
-        "events.sports_meet": "खेल मेला (नमूना)",
-        "events.project_expo": "प्रोजेक्ट एक्सपो (नमूना)",
-        "events.alumni_meet": "पूर्व छात्र मिलन (नमूना)",
+        "events.sangama": "संगम",
+        "events.vignotsava": "विघ्नोत्सव",
+        "events.project_expo": "प्रोजेक्ट एक्सपो",
     },
     "ta": {
         "hostel.girls": "பெண்கள் விடுதி",
@@ -61,11 +57,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "கேண்டீன்",
         "events.sanchalana": "சஞ்சலனா",
         "events.techvidya": "டெக் வித்யா",
-        "events.sirikannada_utsava": "சிரிகன்னட உத்சவம்",
-        "events.freshers_fest": "ஃப்ரெஷர்ஸ் விழா (மாதிரி)",
-        "events.sports_meet": "விளையாட்டு சந்திப்பு (மாதிரி)",
-        "events.project_expo": "பிராஜெக்ட் எக்ஸ்போ (மாதிரி)",
-        "events.alumni_meet": "முன்னாள் மாணவர் சந்திப்பு (மாதிரி)",
+        "events.sangama": "சங்கம",
+        "events.vignotsava": "விக்னோத்ஸவ",
+        "events.project_expo": "பிராஜெக்ட் எக்ஸ்போ",
     },
     "te": {
         "hostel.girls": "బాలికల హాస్టల్",
@@ -73,11 +67,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "కాంటీన్",
         "events.sanchalana": "సంచలన",
         "events.techvidya": "టెక్ విద్యా",
-        "events.sirikannada_utsava": "సిరికన్నడ ఉత్సవం",
-        "events.freshers_fest": "ఫ్రెషర్స్ ఫెస్ట్ (నమూనా)",
-        "events.sports_meet": "క్రీడా కూటం (నమూనా)",
-        "events.project_expo": "ప్రాజెక్ట్ ఎక్స్‌పో (నమూనా)",
-        "events.alumni_meet": "పూర్వ విద్యార్థి సమావేశం (నమూనా)",
+        "events.sangama": "సంగమ",
+        "events.vignotsava": "విఘ్నోత్సవ",
+        "events.project_expo": "ప్రాజెక్ట్ ఎక్స్‌పో",
     },
     "ml": {
         "hostel.girls": "പെൺകുട്ടികളുടെ ഹോസ്റ്റൽ",
@@ -85,11 +77,9 @@ _ENTITY_LABEL: dict[str, dict[str, str]] = {
         "canteen": "കാന്റീൻ",
         "events.sanchalana": "സഞ്ചലന",
         "events.techvidya": "ടെക് വിദ്യ",
-        "events.sirikannada_utsava": "സിരികന്നഡ ഉത്സവം",
-        "events.freshers_fest": "ഫ്രെഷേഴ്സ് ഫെസ്റ്റ് (സാമ്പിൾ)",
-        "events.sports_meet": "കായിക മീറ്റ് (സാമ്പിൾ)",
-        "events.project_expo": "പ്രോജക്ട് എക്സ്പോ (സാമ്പിൾ)",
-        "events.alumni_meet": "പൂർവ വിദ്യാർഥി സമാഗമം (സാമ്പിൾ)",
+        "events.sangama": "സംഗമ",
+        "events.vignotsava": "വിഘ്നോത്സവ",
+        "events.project_expo": "പ്രോജക്ട് എക്സ്പോ",
     },
 }
 
@@ -285,20 +275,22 @@ def _split_unit(unit_id: str) -> tuple[str, str]:
         return unit_id, "event"
     if unit_id in CANTEEN_UNIT_IDS:
         return "canteen", unit_id.split(".", 1)[1]
-    # Hostel/NCC units are official locale rows — SAMPLE builder must not rewrite them.
-    if unit_id in HOSTEL_UNIT_IDS or unit_id in NCC_UNIT_IDS:
+    # Hostel/NCC/fest units are official locale rows — SAMPLE builder must not rewrite them.
+    if unit_id in OFFICIAL_CAMPUS_UNIT_IDS:
         if unit_id in {"hostel.facilities", "hostel.mess", "hostel.safety"}:
             return "hostel", unit_id.split(".", 1)[1]
         if unit_id.startswith("ncc."):
             return "ncc", unit_id.split(".", 1)[1]
+        if unit_id.startswith("events."):
+            return unit_id, "event"
         entity, topic = unit_id.rsplit(".", 1)
         return entity, topic
     return unit_id, "overview"
 
 
 def build_campus_unit_record(unit_id: str, lang: str) -> dict[str, Any]:
-    """SAMPLE record for canteen/events only. Hostel/NCC content lives in locale JSON."""
-    if unit_id in HOSTEL_UNIT_IDS or unit_id in NCC_UNIT_IDS:
+    """SAMPLE record for canteen only. Hostel/NCC/fest content lives in locale JSON."""
+    if unit_id in OFFICIAL_CAMPUS_UNIT_IDS:
         raise ValueError(f"official campus unit {unit_id}; do not SAMPLE-generate")
     entity, topic = _split_unit(unit_id)
     labels = _ENTITY_LABEL[lang]
@@ -330,25 +322,22 @@ def build_campus_unit_record(unit_id: str, lang: str) -> dict[str, Any]:
 
 
 def build_campus_units_block(lang: str) -> dict[str, Any]:
-    """SAMPLE canteen/events only. Callers must merge preserved hostel/NCC rows."""
-    sample_ids = [
-        uid for uid in CAMPUS_UNIT_IDS if uid not in HOSTEL_UNIT_IDS and uid not in NCC_UNIT_IDS
-    ]
+    """SAMPLE canteen only. Callers must merge preserved official hostel/NCC/fest rows."""
+    sample_ids = [uid for uid in CAMPUS_UNIT_IDS if uid not in OFFICIAL_CAMPUS_UNIT_IDS]
     return {uid: build_campus_unit_record(uid, lang) for uid in sample_ids}
 
 
 def write_campus_units_into_locales() -> dict[str, int]:
-    """Regenerate SAMPLE canteen/events; preserve existing official hostel/NCC rows."""
+    """Regenerate SAMPLE canteen; preserve existing official hostel/NCC/fest rows."""
     counts: dict[str, int] = {}
     for lang in LANGS:
         path = LOCALES_DIR / f"{lang}.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         existing = data.get("campus_units") if isinstance(data.get("campus_units"), dict) else {}
-        official_ids = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS)
         preserved = {
             k: v
             for k, v in existing.items()
-            if isinstance(k, str) and k in official_ids
+            if isinstance(k, str) and k in OFFICIAL_CAMPUS_UNIT_IDS
         }
         merged = dict(preserved)
         merged.update(build_campus_units_block(lang))

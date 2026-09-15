@@ -7,11 +7,9 @@ from typing import Any
 from backend.services.answer_generation import INTENT_NORMAL_QUERY, get_off_topic_reply
 from backend.services.conversation.restricted_requests import is_restricted_evidence
 from backend.services.conversation.about_me_navigation import (
-    about_me_ui_action,
     resolve_about_me_navigation,
 )
 from backend.services.conversation.templates import (
-    about_me_bridge_reply,
     clarification_reply,
     greeting_reply,
     name_ack_reply,
@@ -89,6 +87,38 @@ def route_policy(
             length_kind="clarification",
         )
 
+    # Direct thanks / ending phrases before name-intro so "I am done" is not
+    # misread as a guest-name introduction.
+    from backend.services.conversation.closing_reply import (
+        classify_direct_thanks_utterance,
+        strip_leading_thanks,
+    )
+    from backend.services.greetings import get_thanks_closing_confirmation
+
+    thanks_kind = classify_direct_thanks_utterance(assessment.normalized_text)
+    if thanks_kind == "CONTINUE":
+        # "Thanks. What about placements?" — not a session end; strip leading thanks
+        # and continue into the normal campus pipeline.
+        residual = strip_leading_thanks(assessment.normalized_text)
+        if residual:
+            # Leave social path; response decision / ANSWER handles the residual via
+            # the original text (CI still sees full utterance — safer for entities).
+            pass
+        else:
+            thanks_kind = "CLOSE_CONFIRM"
+    if thanks_kind == "CLOSE_CONFIRM":
+        return PolicyDecision(
+            action=PolicyAction.SMALL_TALK,
+            reply_text=get_thanks_closing_confirmation(language),
+            answer_source="policy_thanks_closing",
+            passthrough=False,
+            length_kind="clarification",
+            session_updates={
+                "awaiting_closing_reply": True,
+                "closing_prompt_issued": True,
+            },
+        )
+
     # Mid-conversation name introduction (not onboarding awaiting_guest_name path).
     if entities.name_introduction and entities.person_name:
         return PolicyDecision(
@@ -124,15 +154,15 @@ def route_policy(
         last_item_id=last_item,
     )
     if about_nav is not None:
-        ui_action = about_me_ui_action(about_nav)
+        # Conversational About Me → normal ContentUnit cards (not open_about_me overlay).
+        # Direct About Me navigation remains available from SleepScreen / UI.
         return PolicyDecision(
             action=PolicyAction.ABOUT_ME,
-            reply_text=about_me_bridge_reply(language, about_nav.bridge_key),
+            reply_text=None,
             answer_source="policy_about_me",
-            passthrough=False,
-            length_kind="clarification",
+            passthrough=True,
+            length_kind="presentation",
             session_updates={
-                "_pending_ui_action": ui_action,
                 "last_about_me": {
                     "section": about_nav.section,
                     "itemId": about_nav.item_id,
@@ -144,6 +174,9 @@ def route_policy(
         (kind for kind, cues in _SOCIAL_CUES if any(cue in text for cue in cues)),
         None,
     )
+    # Do not let substring "thanks" swallow substantive campus questions.
+    if social_kind == "thanks" and thanks_kind == "CONTINUE":
+        social_kind = None
     if social_kind:
         return PolicyDecision(
             action=PolicyAction.SMALL_TALK,

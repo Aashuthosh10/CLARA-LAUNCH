@@ -42,6 +42,7 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('hostel.mess')).toBe('hostel');
     expect(cardTypeFromUnitId('hostel.safety')).toBe('hostel');
     expect(cardTypeFromUnitId('ncc.overview')).toBe('ncc');
+    expect(cardTypeFromUnitId('ncc.leadership')).toBe('ncc');
     expect(cardTypeFromUnitId('ncc.training')).toBe('ncc');
     expect(cardTypeFromUnitId('ncc.benefits')).toBe('ncc');
     expect(departmentIdFromUnitId('hostel.facilities')).toBe('hostel');
@@ -61,6 +62,17 @@ describe('PresentationCardModel identity helpers', () => {
     expect(cardTypeFromUnitId('cse_bs.achievements')).toBe('achievements');
     expect(cardTypeFromUnitId('cse_bs.placements')).toBe('placements');
     expect(cardTypeFromUnitId('cse_bs.fees')).toBe('department_fees');
+    expect(cardTypeFromUnitId('department_explanation.cse_ds')).toBe('department_explanation');
+    expect(cardTypeFromUnitId('department_explanation.cse_ds.what_is')).toBe('department_explanation');
+    expect(cardTypeFromUnitId('department_explanation.cse_ds.learn')).toBe('department_explanation');
+    expect(cardTypeFromUnitId('department_explanation.difference')).toBe('department_explanation');
+    expect(departmentIdFromUnitId('department_explanation.cse_ds.what_is')).toBe('cse_ds');
+    expect(departmentIdFromUnitId('department_explanation.cse_aiml.lead')).toBe('cse_aiml');
+    expect(departmentIdFromUnitId('department_explanation.difference')).toBe('difference');
+    expect(cardTypeFromUnitId('about_me.creator.aashuthosh')).toBe('creator');
+    expect(cardTypeFromUnitId('about_me.guide')).toBe('guide');
+    expect(cardTypeFromUnitId('about_me.overview')).toBe('clara_intro');
+    expect(cardTypeFromUnitId('about_me.capability.understand')).toBe('clara_capability');
   });
 
   it('never maps fees.overview / documents identities to department fees', () => {

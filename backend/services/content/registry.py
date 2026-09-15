@@ -138,7 +138,7 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         adapter_key="department_explanation",
         content_type=ContentType.DEPARTMENT.value,
         canonical_source="backend/services/content/department_explanation_units.py",
-        notes="SAMPLE_REPLACE_WITH_OFFICIAL — cinematic department explanation cards. Video from /assets/department_explanations/{dept}.mp4.",
+        notes="Parent-friendly department explanation cards via PremiumHODCard. Videos only for files present under /assets/department_explanations/.",
     ),
     SURFACE_BUS: ContentOwnerDescriptor(
         surface=SURFACE_BUS,
@@ -194,7 +194,7 @@ _REGISTRY: dict[str, ContentOwnerDescriptor] = {
         adapter_key="campus_unit",
         content_type=ContentType.NCC.value,
         canonical_source="backend/data/locales/*.json#campus_units",
-        notes="Official NCC units (overview, training, benefits).",
+        notes="Official NCC units (overview, leadership, training, benefits).",
     ),
     SURFACE_EVENT: ContentOwnerDescriptor(
         surface=SURFACE_EVENT,

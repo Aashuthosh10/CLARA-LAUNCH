@@ -47,9 +47,13 @@ class TestPhase2DRegistryForensics(unittest.TestCase):
                     self.assertEqual(segs[0].unit_id, desc.unit_id)
 
     def test_campus_sample_metadata_is_never_exposed(self) -> None:
-        from backend.services.content.campus_units import HOSTEL_UNIT_IDS, NCC_UNIT_IDS
+        from backend.services.content.campus_units import (
+            EVENT_UNIT_IDS,
+            HOSTEL_UNIT_IDS,
+            NCC_UNIT_IDS,
+        )
 
-        official = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS)
+        official = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS) | set(EVENT_UNIT_IDS)
         for uid in CAMPUS_UNIT_IDS:
             unit = resolve_unit(unit_id=uid, language="en", language_code="en")
             assert unit is not None
@@ -157,12 +161,16 @@ class TestPhase2DLanguagePersistence(unittest.TestCase):
         self.assertEqual([s.unit_id for s in segs], list(plan.units))
         spoken = [(s.tts_text or "") for s in segs]
         self.assertTrue(all(SAMPLE_STATUS not in text for text in spoken))
-        # Hostel overview is official; canteen/event still use blocked SAMPLE narration.
+        # Hostel/event are official; canteen still uses blocked SAMPLE narration.
         hostel_seg = next(s for s in segs if s.unit_id.startswith("hostel."))
-        other_segs = [s for s in segs if not s.unit_id.startswith("hostel.")]
+        event_segs = [s for s in segs if s.unit_id.startswith("events.")]
+        canteen_segs = [s for s in segs if s.unit_id.startswith("canteen.")]
         self.assertNotIn("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ", hostel_seg.tts_text or "")
         self.assertTrue(
-            all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in (s.tts_text or "") for s in other_segs)
+            all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" not in (s.tts_text or "") for s in event_segs)
+        )
+        self.assertTrue(
+            all("ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ" in (s.tts_text or "") for s in canteen_segs)
         )
         for text in spoken:
             self.assertTrue(any(ord(ch) > 127 for ch in text))

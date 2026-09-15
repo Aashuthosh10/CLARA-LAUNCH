@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CreatorMember } from '../data/aboutData';
-import { Github, Linkedin, Mail, X, Sparkles } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { playHoverChime } from '../utils/audio';
 
 interface CreatorModalProps {
@@ -79,7 +79,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
                 {/* Specializations Tags */}
                 <div className="text-left mb-7">
               <h4 className="text-xs sm:text-sm font-mono font-bold text-[#71717A] uppercase tracking-wider mb-2.5">
-                Specializations
+                Details
               </h4>
               <div className="flex flex-wrap gap-2.5">
                 {creator.specialization.map((spec) => (
@@ -94,45 +94,7 @@ export const CreatorModal: React.FC<CreatorModalProps> = ({ creator, onClose }) 
               </div>
                 </div>
 
-                {/* Social Links Row & Action Button */}
-                <div className="flex items-center justify-between pt-5 border-t border-[#F4F4F5] mt-auto">
-              <div className="flex items-center gap-3.5">
-                {creator.github && (
-                  <a
-                    href={creator.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl text-[#71717A] hover:text-[#09090B] hover:bg-[#F4F4F5] border border-[#E4E4E7] transition-all"
-                    title="GitHub"
-                  >
-                    <Github className="w-5 h-5" />
-                  </a>
-                )}
-
-                {creator.linkedin && (
-                  <a
-                    href={creator.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl text-[#71717A] hover:text-[#0A66C2] hover:bg-[#F4F4F5] border border-[#E4E4E7] transition-all"
-                    title="LinkedIn"
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                )}
-
-                {creator.email && (
-                  <a
-                    href={creator.email}
-                    className="p-2.5 rounded-xl text-[#71717A] hover:text-[#7C3AED] hover:bg-[#F4F4F5] border border-[#E4E4E7] transition-all"
-                    title="Email Contact"
-                  >
-                    <Mail className="w-5 h-5" />
-                  </a>
-                )}
-              </div>
-
-                </div>
+                <div className="pt-5 border-t border-[#F4F4F5] mt-auto" />
               </div>
             </div>
           </motion.div>

@@ -21,8 +21,14 @@ export type PresentationCardType =
   | 'achievements'
   | 'placements'
   | 'department_fees'
+  | 'department_explanation'
+  | 'creator'
+  | 'guide'
+  | 'clara_intro'
+  | 'clara_capability'
   | 'principal'
   | 'vice_principal'
+  | 'dean'
   | 'trustees'
   | 'hostel'
   | 'canteen'
@@ -64,8 +70,20 @@ export function cardTypeFromCanonicalCardId(cardId: string): PresentationCardTyp
     case 'achievements': return 'achievements';
     case 'placements': return 'placements';
     case 'fees': return 'department_fees';
+    case 'department_explanation': return 'department_explanation';
+    case 'creator_profile': return 'creator';
+    case 'guide_profile': return 'guide';
+    case 'clara_intro': return 'clara_intro';
+    case 'clara_capability': return 'clara_capability';
     case 'principal_profile': return 'principal';
     case 'vice_principal_profile': return 'vice_principal';
+    case 'dean_academics':
+    case 'dean_administration':
+    case 'dean_student_affairs':
+    case 'associate_dean_rnd':
+    case 'dean_innovation':
+    case 'deans':
+      return 'dean';
     case 'trustees': return 'trustees';
     case 'hostel': return 'hostel';
     case 'canteen': return 'canteen';
@@ -84,7 +102,14 @@ export function departmentIdFromUnitId(unitId: string): string {
   if (!uid) return '';
   if (uid.startsWith('college.')) return '';
   if (uid.startsWith('department_explanation.')) {
-    return uid.slice('department_explanation.'.length);
+    const rest = uid.slice('department_explanation.'.length);
+    if (!rest || rest === 'difference') return rest === 'difference' ? 'difference' : '';
+    const stages = new Set(['what_is', 'learn', 'lead']);
+    const parts = rest.split('.');
+    if (parts.length >= 2 && stages.has(parts[parts.length - 1]!)) {
+      return parts.slice(0, -1).join('.');
+    }
+    return rest;
   }
   if (uid.startsWith('hostel.')) {
     const parts = uid.split('.');
@@ -110,8 +135,25 @@ export function cardTypeFromUnitId(unitId: string): PresentationCardType {
   if (uid === 'documents.overview' || uid === 'admission.documents_required') return 'unsupported';
   if (uid.startsWith('documents.') || uid.startsWith('admission.')) return 'unsupported';
 
+  if (uid.startsWith('department_explanation.')) return 'department_explanation';
+  if (uid.startsWith('about_me.creator.')) return 'creator';
+  if (uid === 'about_me.guide' || uid.startsWith('about_me.guide.')) return 'guide';
+  if (uid === 'about_me.overview' || uid === 'clara.overview') return 'clara_intro';
+  if (uid.startsWith('about_me.capability.') || uid.startsWith('clara.capabilities.')) {
+    return 'clara_capability';
+  }
+
   if (uid === 'leadership.principal') return 'principal';
   if (uid === 'leadership.vice_principal') return 'vice_principal';
+  if (
+    uid === 'leadership.dean_academics' ||
+    uid === 'leadership.dean_administration' ||
+    uid === 'leadership.dean_student_affairs' ||
+    uid === 'leadership.associate_dean_rnd' ||
+    uid === 'leadership.dean_innovation'
+  ) {
+    return 'dean';
+  }
   if (uid === 'leadership.trustees') return 'trustees';
   if (uid.startsWith('hostel.')) return 'hostel';
   if (uid.startsWith('canteen.')) return 'canteen';

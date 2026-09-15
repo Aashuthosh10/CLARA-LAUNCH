@@ -91,8 +91,8 @@ async function installForensicMocks(page: Page) {
             const attempt = Number(li.attempt || 1);
             const text =
               attempt >= 2
-                ? "I still couldn't hear you. Please tap the orb and start speaking whenever you're ready."
-                : "I didn't quite hear you. Whenever you're ready, you can speak.";
+                ? "If you'd like to continue, just tap the orb and speak whenever you're ready."
+                : "I didn't quite catch that. Take your time, and when you're ready, just speak to me.";
             this.emit(5, {
               turn_id: `no_input_${attempt}`,
               isProcessing: false,
@@ -166,7 +166,7 @@ test.describe('Voice lifecycle forensic (mocked mic)', () => {
 
   test('silence auto-listen → warning #1 then #2 without campus LLM turns', async ({ page }) => {
     await installForensicMocks(page);
-    await page.goto('http://localhost:5176/?e2e=1');
+    await page.goto('http://localhost:5176/?e2e=1&listenWaitMs=1500');
 
     await expect(page.getByTestId('sleep-screen')).toBeVisible();
     await page.getByTestId('sleep-screen').focus();
@@ -184,14 +184,25 @@ test.describe('Voice lifecycle forensic (mocked mic)', () => {
     });
     await expect(page.getByTestId('chat-orb')).toBeVisible({ timeout: 15000 });
 
-    // Wait for auto-listen → no-speech → warning #1
+    // Soft SpeechRecognition ends must restart — no immediate warning.
+    await page.waitForTimeout(800);
     await expect(
-      page.getByText(/I didn't quite hear you|Whenever you're ready/i),
+      page.getByText(/I didn't quite catch that|Take your time/i),
+    ).toHaveCount(0);
+
+    const srBeforeWarn = await page.evaluate(
+      () => (window as unknown as { __CLARA_SR_STARTS?: number }).__CLARA_SR_STARTS || 0,
+    );
+    expect(srBeforeWarn).toBeGreaterThanOrEqual(2);
+
+    // Logical listen window (~1.5s in e2e) → warning #1
+    await expect(
+      page.getByText(/I didn't quite catch that|Take your time/i),
     ).toBeVisible({ timeout: 20000 });
 
-    // Then warning #2 after second auto-arm no-speech
+    // Then warning #2 after second logical window
     await expect(
-      page.getByText(/I still couldn't hear you|Please tap the orb/i),
+      page.getByText(/tap the orb|If you'd like to continue/i),
     ).toBeVisible({ timeout: 25000 });
 
     const outbound = await page.evaluate(() => {
@@ -221,8 +232,8 @@ test.describe('Voice lifecycle forensic (mocked mic)', () => {
     const srStarts = await page.evaluate(
       () => (window as unknown as { __CLARA_SR_STARTS?: number }).__CLARA_SR_STARTS || 0,
     );
-    // Ready TTS arm + re-arm after warning #1 at minimum; should not infinite-loop.
+    // Soft restarts inside logical windows + re-arm after warning #1.
     expect(srStarts).toBeGreaterThanOrEqual(2);
-    expect(srStarts).toBeLessThan(8);
+    expect(srStarts).toBeLessThan(200);
   });
 });

@@ -996,38 +996,38 @@ def _init_executive_profiles() -> None:
         "en": {
             "label": "Executive Profile",
             "name": "Dr. Lakshminarayanachari K",
-            "title": "Vice Principal & Dean Academics",
-            "bio": "Dr. Lakshminarayanachari K serves as Vice Principal and Dean Academics at SVIT, supporting academic planning, curriculum implementation, and teaching quality enhancement.",
+            "title": "Vice Principal",
+            "bio": "Oversees the daily academic operations, institutional governance, and departmental coordination across all engineering branches to ensure alignment with university regulations.",
         },
         "kn": {
             "label": "ನಾಯಕತ್ವ ಪ್ರೊಫೈಲ್",
             "name": "ಡಾ. ಲಕ್ಷ್ಮಿನಾರಾಯಣಾಚಾರಿ ಕೆ",
-            "title": "ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್",
-            "bio": "ಡಾ. ಲಕ್ಷ್ಮಿನಾರಾಯಣಾಚಾರಿ ಕೆ ಅವರು ಎಸ್ವಿಐಟಿಯಲ್ಲಿ ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಮತ್ತು ಶೈಕ್ಷಣಿಕ ಡೀನ್ ಆಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತಾರೆ.",
+            "title": "ಉಪ ಪ್ರಾಂಶುಪಾಲರು",
+            "bio": "ವಿಶ್ವವಿದ್ಯಾಲಯದ ನಿಯಮಗಳೊಂದಿಗೆ ಹೊಂದಾಣಿಕೆ ಖಚಿತಪಡಿಸಲು ಎಲ್ಲಾ ಎಂಜಿನಿಯರಿಂಗ್ ಶಾಖೆಗಳಲ್ಲಿ ದೈನಂದಿನ ಶೈಕ್ಷಣಿಕ ಕಾರ್ಯಾಚರಣೆಗಳು, ಸಂಸ್ಥೆಯ ಆಡಳಿತ ಮತ್ತು ವಿಭಾಗೀಯ ಸಮನ್ವಯವನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡುತ್ತಾರೆ.",
         },
         "hi": {
             "label": "प्रोफ़ाइल",
             "name": "डॉ. लक्ष्मीनारायणाचारी के",
-            "title": "उप प्राचार्य और शैक्षणिक डीन",
-            "bio": "डॉ. लक्ष्मीनारायणाचारी के एसवीआईटी में उप प्राचार्य और शैक्षणिक डीन हैं।",
+            "title": "उप प्राचार्य",
+            "bio": "विश्वविद्यालय नियमों के साथ संरेखण सुनिश्चित करने हेतु सभी इंजीनियरिंग शाखाओं में दैनिक शैक्षणिक संचालन, संस्थागत शासन और विभागीय समन्वय की देखरेख करते हैं।",
         },
         "ta": {
             "label": "தலைமை அறிமுகம்",
             "name": "டாக்டர் லக்ஷ்மிநாராயணச்சாரி கே",
-            "title": "துணை முதல்வர் மற்றும் கல்வி டீன்",
-            "bio": "டாக்டர் லக்ஷ்மிநாராயணச்சாரி கே SVIT இல் துணை முதல்வரும் கல்வி டீனுமாக செயல்படுகிறார்.",
+            "title": "துணை முதல்வர்",
+            "bio": "பல்கலைக்கழக விதிமுறைகளுடன் இணக்கம் உறுதிசெய்ய அனைத்து பொறியியல் பிரிவுகளிலும் அன்றாட கல்விச் செயல்பாடுகள், நிறுவன ஆளுமை மற்றும் துறை ஒருங்கிணைப்பை மேற்பார்வையிடுகிறார்.",
         },
         "te": {
             "label": "నాయకత్వ ప్రొఫైల్",
             "name": "డాక్టర్ లక్ష్మీనారాయణాచారి కె",
-            "title": "ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్",
-            "bio": "డాక్టర్ లక్ష్మీనారాయణాచారి కె SVIT లో ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్ గా ఉన్నారు.",
+            "title": "ఉప ప్రిన్సిపాల్",
+            "bio": "విశ్వవిద్యాలయ నిబంధనలతో అనుగుణ్యత నిర్ధారించడానికి అన్ని ఇంజినీరింగ్ శాఖల్లో రోజువారీ అకడెమిక్ కార్యకలాపాలు, సంస్థాగత పాలన మరియు విభాగీయ సమన్వయాన్ని పర్యవేక్షిస్తారు.",
         },
         "ml": {
             "label": "നേതൃ പ്രൊഫൈൽ",
             "name": "ഡോ. ലക്ഷ്മീനാരായണാചാരി കെ",
-            "title": "ഉപ പ്രിൻസിപ്പൽ, അക്കാദമിക് ഡീൻ",
-            "bio": "ഡോ. ലക്ഷ്മീനാരായണാചാരി കെ SVIT ലെ ഉപ പ്രിൻസിപ്പലും അക്കാദമിക് ഡീനുമാണ്.",
+            "title": "ഉപ പ്രിൻസിപ്പൽ",
+            "bio": "സർവകലാശാല നിയമങ്ങളുമായി യോജിപ്പ് ഉറപ്പാക്കാൻ എല്ലാ എഞ്ചിനീയറിംഗ് ശാഖകളിലും ദൈനംദിന അക്കാദമിക് പ്രവർത്തനങ്ങൾ, സ്ഥാപന ഭരണം, വകുപ്പ് ഏകോപനം എന്നിവയെ മേൽനോട്ടം ചെയ്യുന്നു.",
         },
     }
 
@@ -1097,29 +1097,48 @@ def build_department_explanation_compare_segments(
     department_ids: list[str],
     locale_id: str,
 ) -> list[NarrationSegment]:
-    """
-    Narration plan for comparison-intent queries routed to department_explanation surface.
-    Emits one segment per department with unit_id=department_explanation.{dept_key}.
-    Uses only department display names — no invented curriculum or placement facts.
-    """
-    lk = _effective_lang(locale_id)
-    name_map = _DEPT_DISPLAY.get(lk, _DEPT_DISPLAY["en"])
+    """Emit progressive stage segments per department, then a difference segment."""
+    from backend.services.content.department_explanation_units import (
+        EXPLANATION_STAGES,
+        build_parent_friendly_difference,
+        explanation_body,
+        explanation_display_name,
+        stage_heading,
+    )
 
+    _ = locale_id
     if not department_ids:
-        # Never emit a bare "department_explanation" unit — callers must supply ids.
         return []
 
     segs: list[NarrationSegment] = []
-    for i, did in enumerate(department_ids):
-        dept_name = name_map.get(did, did.replace("_", " ").upper())
-        txt = _clip_caption(dept_name, 120)
+    for did in department_ids:
+        dept_name = explanation_display_name(did)
+        for stage in EXPLANATION_STAGES:
+            heading = stage_heading(stage)
+            body = explanation_body(did, stage) or dept_name
+            segs.append(
+                NarrationSegment(
+                    display_text=f"{dept_name}\n{heading}\n{_clip_caption(body, 360)}",
+                    tts_text=body,
+                    card_index=len(segs),
+                    card_id="department_explanation",
+                    section_id=stage,
+                    unit_id=f"department_explanation.{did}.{stage}",
+                    canonical_card_id="department_explanation",
+                )
+            )
+
+    if len(department_ids) >= 2:
+        diff_body = build_parent_friendly_difference(department_ids[0], department_ids[1])
         segs.append(
             NarrationSegment(
-                display_text=txt,
-                card_index=i,
+                display_text=f"Key difference\n{_clip_caption(diff_body, 480)}",
+                tts_text=diff_body,
+                card_index=len(segs),
                 card_id="department_explanation",
-                section_id=f"department_explanation.{did}",
-                unit_id=f"department_explanation.{did}",
+                section_id="difference",
+                unit_id="department_explanation.difference",
+                canonical_card_id="department_explanation",
             )
         )
     return segs

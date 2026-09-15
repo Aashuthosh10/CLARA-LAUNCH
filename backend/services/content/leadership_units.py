@@ -1,6 +1,6 @@
 """Leadership unit identity — existing executive cards, not new content.
 
-Principal / vice-principal (dean) / trustees already have card surfaces and
+Principal / vice-principal / deans / trustees already have card surfaces and
 canonical copy. They were excluded from UnitSelector because the semantic
 parser required a department span. This module exposes those existing units
 as ordered (entity, topic) items so they can compose with department units.
@@ -21,6 +21,7 @@ from backend.services.answer_generation import (
     _principal_word_intent_positive,
     normalized_text_for_executive_keyword_scan,
 )
+from backend.services.content.dean_profiles import DEAN_TOPICS
 from backend.services.content.semantic_composition import SemanticItem
 from backend.services.content.unicode_text import casefold_keep_scripts
 
@@ -28,18 +29,47 @@ LEADERSHIP_ENTITY = "leadership"
 TOPIC_PRINCIPAL = "principal"
 TOPIC_VICE_PRINCIPAL = "vice_principal"
 TOPIC_TRUSTEES = "trustees"
+TOPIC_DEAN_ACADEMICS = "dean_academics"
+TOPIC_DEAN_ADMINISTRATION = "dean_administration"
+TOPIC_DEAN_STUDENT_AFFAIRS = "dean_student_affairs"
+TOPIC_ASSOCIATE_DEAN_RND = "associate_dean_rnd"
+TOPIC_DEAN_INNOVATION = "dean_innovation"
+TOPIC_DEANS = "deans"
 
-LEADERSHIP_TOPICS = frozenset({TOPIC_PRINCIPAL, TOPIC_VICE_PRINCIPAL, TOPIC_TRUSTEES})
+LEADERSHIP_TOPICS = frozenset(
+    {
+        TOPIC_PRINCIPAL,
+        TOPIC_VICE_PRINCIPAL,
+        TOPIC_TRUSTEES,
+        TOPIC_DEAN_ACADEMICS,
+        TOPIC_DEAN_ADMINISTRATION,
+        TOPIC_DEAN_STUDENT_AFFAIRS,
+        TOPIC_ASSOCIATE_DEAN_RND,
+        TOPIC_DEAN_INNOVATION,
+        TOPIC_DEANS,
+        *DEAN_TOPICS,
+    }
+)
 
 UNIT_PRINCIPAL = "leadership.principal"
 UNIT_VICE_PRINCIPAL = "leadership.vice_principal"
 UNIT_TRUSTEES = "leadership.trustees"
+UNIT_DEAN_ACADEMICS = "leadership.dean_academics"
+UNIT_DEAN_ADMINISTRATION = "leadership.dean_administration"
+UNIT_DEAN_STUDENT_AFFAIRS = "leadership.dean_student_affairs"
+UNIT_ASSOCIATE_DEAN_RND = "leadership.associate_dean_rnd"
+UNIT_DEAN_INNOVATION = "leadership.dean_innovation"
 
-# Existing executive cards only. Dean is the vice-principal / dean-academics surface.
-LEADERSHIP_UNIT_IDS = (UNIT_PRINCIPAL, UNIT_VICE_PRINCIPAL, UNIT_TRUSTEES)
+DEAN_UNIT_IDS = (
+    UNIT_DEAN_ACADEMICS,
+    UNIT_DEAN_ADMINISTRATION,
+    UNIT_DEAN_STUDENT_AFFAIRS,
+    UNIT_ASSOCIATE_DEAN_RND,
+    UNIT_DEAN_INNOVATION,
+)
 
-# Tight trustee cues. Do not reuse TRUSTEES_PROFILE_KEYWORDS ("management", "board",
-# "president", "founder") — those fire on unrelated institutional talk.
+LEADERSHIP_UNIT_IDS = (UNIT_PRINCIPAL, UNIT_VICE_PRINCIPAL, UNIT_TRUSTEES, *DEAN_UNIT_IDS)
+
 _TRUSTEE_CUES: tuple[str, ...] = (
     "trustees",
     "trustee",
@@ -56,8 +86,6 @@ _TRUSTEE_CUES: tuple[str, ...] = (
     "ട്രസ്റ്റിമാർ",
 )
 
-# Native principal role words already used in locale / regression copy.
-# Do not add generic question words (ಯಾರು / कौन / who).
 _PRINCIPAL_NATIVE_CUES: tuple[str, ...] = (
     "ಪ್ರಾಂಶುಪಾಲ",
     "ಪ್ರಿನ್ಸಿಪಾಲ್",
@@ -70,20 +98,71 @@ _PRINCIPAL_NATIVE_CUES: tuple[str, ...] = (
     "പ്രിൻസിപ്പൽ",
 )
 
-_DEAN_CUES: tuple[str, ...] = (
-    "dean academics",
-    "dean of academics",
-    "academic dean",
-    "dean",
-    "ಡೀನ್",
-    "डीन",
-    "டீன்",
-    "డీన్",
-    "ഡീൻ",
+# Specific deans first (longest phrases), then bare dean/deans → all dean cards.
+_DEAN_TOPIC_CUES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        TOPIC_DEAN_ACADEMICS,
+        (
+            "dean academics",
+            "dean of academics",
+            "academic dean",
+            "dean academic",
+        ),
+    ),
+    (
+        TOPIC_DEAN_ADMINISTRATION,
+        (
+            "dean administration",
+            "dean of administration",
+            "administration dean",
+            "dean admin",
+        ),
+    ),
+    (
+        TOPIC_DEAN_STUDENT_AFFAIRS,
+        (
+            "dean student affairs",
+            "dean of student affairs",
+            "student affairs dean",
+            "dean students",
+        ),
+    ),
+    (
+        TOPIC_ASSOCIATE_DEAN_RND,
+        (
+            "associate dean r&d",
+            "associate dean rd",
+            "associate dean research",
+            "dean r&d",
+            "dean rnd",
+            "dean research",
+            "associate dean",
+        ),
+    ),
+    (
+        TOPIC_DEAN_INNOVATION,
+        (
+            "dean innovation",
+            "dean entrepreneurship",
+            "dean consultancy",
+            "innovation dean",
+            "dean of innovation",
+        ),
+    ),
+    (
+        TOPIC_DEANS,
+        (
+            "deans",
+            "dean",
+            "ಡೀನ್",
+            "डीन",
+            "டீன்",
+            "డీన్",
+            "ഡീൻ",
+        ),
+    ),
 )
 
-# Multi-department listing without a topic: "Show me CSE Data Science and CSE AIML."
-# Distinct from "tell me about CSE and AIML" (full-scope, still fail-closed).
 _SHOW_MULTI_OVERVIEW_CUES: tuple[str, ...] = (
     "show me",
     "show",
@@ -126,7 +205,16 @@ def unit_id_for_leadership_topic(topic: str) -> str | None:
         return UNIT_VICE_PRINCIPAL
     if t == TOPIC_TRUSTEES:
         return UNIT_TRUSTEES
-    return None
+    if t == TOPIC_DEANS:
+        return None  # expanded in unit_selector / leadership_items_from_text
+    mapping = {
+        TOPIC_DEAN_ACADEMICS: UNIT_DEAN_ACADEMICS,
+        TOPIC_DEAN_ADMINISTRATION: UNIT_DEAN_ADMINISTRATION,
+        TOPIC_DEAN_STUDENT_AFFAIRS: UNIT_DEAN_STUDENT_AFFAIRS,
+        TOPIC_ASSOCIATE_DEAN_RND: UNIT_ASSOCIATE_DEAN_RND,
+        TOPIC_DEAN_INNOVATION: UNIT_DEAN_INNOVATION,
+    }
+    return mapping.get(t)
 
 
 def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
@@ -137,8 +225,6 @@ def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
     if not hay:
         return ()
     occupied = [False] * len(hay)
-    # Longer campus words (Tamil கேண்டீன்) contain short dean cues (டீன்).
-    # Occupy campus entity spans first so leadership never steals a substring.
     from backend.services.content.campus_units import detect_campus_entity_spans
 
     for campus in detect_campus_entity_spans(raw_text):
@@ -165,7 +251,10 @@ def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
                 else:
                     probe = idx + 1
 
-    _consume(TOPIC_VICE_PRINCIPAL, tuple(VICE_PRINCIPAL_PROFILE_KEYWORDS) + _DEAN_CUES)
+    # Specific deans before VP / principal so "dean academics" is not VP.
+    for topic, cues in _DEAN_TOPIC_CUES:
+        _consume(topic, cues)
+    _consume(TOPIC_VICE_PRINCIPAL, tuple(VICE_PRINCIPAL_PROFILE_KEYWORDS))
     _consume(TOPIC_PRINCIPAL, tuple(PRINCIPAL_PROFILE_KEYWORDS) + _PRINCIPAL_NATIVE_CUES)
     _consume(TOPIC_TRUSTEES, _TRUSTEE_CUES)
 
@@ -173,11 +262,10 @@ def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
     if _principal_word_intent_positive(normalized) and not any(s.topic == TOPIC_PRINCIPAL for s in spans):
         if not any(s.topic == TOPIC_VICE_PRINCIPAL for s in spans):
             match = re.search(r"\bprincipal\b|\bprinciple\b", hay)
-            if match and not any(occupied[match.start():match.end()]):
+            if match and not any(occupied[match.start() : match.end()]):
                 spans.append(LeadershipSpan(topic=TOPIC_PRINCIPAL, start=match.start(), end=match.end()))
 
     spans.sort(key=lambda s: s.start)
-    # One unit per leadership topic; keep first mention order.
     seen: set[str] = set()
     out: list[LeadershipSpan] = []
     for span in spans:
@@ -189,10 +277,23 @@ def detect_leadership_spans(raw_text: str) -> tuple[LeadershipSpan, ...]:
 
 
 def leadership_items_from_text(raw_text: str) -> tuple[SemanticItem, ...]:
-    return tuple(
-        SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic)
-        for span in detect_leadership_spans(raw_text)
-    )
+    items: list[SemanticItem] = []
+    for span in detect_leadership_spans(raw_text):
+        if span.topic == TOPIC_DEANS:
+            for topic in DEAN_TOPICS:
+                items.append(SemanticItem(entity=LEADERSHIP_ENTITY, topic=topic))
+            continue
+        items.append(SemanticItem(entity=LEADERSHIP_ENTITY, topic=span.topic))
+    # Dedupe while preserving order.
+    seen: set[tuple[str, str]] = set()
+    out: list[SemanticItem] = []
+    for item in items:
+        key = (item.entity, item.topic)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return tuple(out)
 
 
 def is_show_multi_overview_request(raw_text: str, normalized: str) -> bool:
@@ -230,8 +331,9 @@ def has_existing_executive_cue(raw_text: str) -> bool:
         return True
     if any(_contains_phrase(normalized, cue) for cue in _TRUSTEE_CUES):
         return True
-    if any(_contains_phrase(normalized, cue) for cue in _DEAN_CUES):
-        return True
     if any(_contains_phrase(normalized, cue) for cue in _PRINCIPAL_NATIVE_CUES):
         return True
+    for _topic, cues in _DEAN_TOPIC_CUES:
+        if any(_contains_phrase(normalized, cue) for cue in cues):
+            return True
     return False

@@ -7,6 +7,9 @@ import PremiumHODCard from './cards/PremiumHODCard';
 import { useCollegeData } from '../../hooks/useCollegeData';
 import { useLanguage } from '../../context/LanguageContext';
 import { buildDepartmentSlideForUnit } from '../../lib/collegeLocaleUtils';
+import { departmentExplanationVideoSrc } from '../../lib/departmentExplanationVideos';
+import { CREATORS_FIVE, PROJECT_GUIDE } from '../../features/about/data/aboutData';
+import claraPortrait from '../../features/about/assets/images/clara_robot_head.jpg';
 import hodCseImg from '../../assets/hod_cse.jpg';
 import hodAimlImg from '../../assets/hod_aiml.jpg';
 import hodEceImg from '../../assets/hod_ece.jpg';
@@ -32,6 +35,23 @@ const HOD_PORTRAITS: Record<string, string> = {
   chemistry: hodChemImg,
 };
 
+const CREATOR_BY_UNIT: Record<string, (typeof CREATORS_FIVE)[number]> = {
+  'about_me.creator.aashuthosh': CREATORS_FIVE.find((c) => c.id === 'c1')!,
+  'about_me.creator.adithya_nc': CREATORS_FIVE.find((c) => c.id === 'c2')!,
+  'about_me.creator.dhanush_sridhar_babu': CREATORS_FIVE.find((c) => c.id === 'c4')!,
+  'about_me.creator.naveen_kumar': CREATORS_FIVE.find((c) => c.id === 'c5')!,
+};
+
+const PROFILE_CARD_TYPES = new Set([
+  'hod',
+  'department_explanation',
+  'creator',
+  'guide',
+  'clara_intro',
+  'clara_capability',
+]);
+
+
 type HodFallback = { name: string; title: string; bio: string };
 
 const HOD_FALLBACK: Record<string, HodFallback> = {
@@ -51,9 +71,19 @@ const HOD_FALLBACK: Record<string, HodFallback> = {
     bio: 'With 20 years of experience, Dr. Nagashree N holds a Ph.D. from Visvesvaraya Technological University and specializes in Data Science, Machine Learning, and Deep Learning. She has over 35 publications in international journals and conferences, reflecting strong research contributions. As HOD of CSE (Data Science), she leads initiatives that blend theory with practical analytics and AI applications for real-world problems.',
   },
   ise: {
-    name: 'Dr. Vrinda Shetty',
+    name: 'Dr. Amogh Pramod Kulkarni',
     title: 'Professor & HOD, Information Science & Engineering',
-    bio: 'Dr. Vrinda Shetty leads the ISE department with a focus on information systems, data management, and modern software technologies. She has rich teaching experience and encourages students to work on industry-relevant projects and internships. Her interests include databases, networking, and emerging trends in information science.',
+    bio: 'Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development.',
+  },
+  cse_cysec: {
+    name: 'Dr. Amogh Pramod Kulkarni',
+    title: 'Professor & HOD, CSE (Cyber Security)',
+    bio: 'Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development.',
+  },
+  cse_bs: {
+    name: 'Dr. Prasanna Lakshmi G S',
+    title: 'Professor & HOD, CSE (Business Systems)',
+    bio: 'Dr. Prasanna Lakshmi G S is the Head of the CSE (Business Systems) Department at Sai Vidya Institute of Technology, Bengaluru, with over 15 years of teaching and research experience. Her expertise spans Cybersecurity, AI, Machine Learning, Deep Learning, Computer Vision, and Big Data, with significant contributions to research, innovation, patents, and academic development.',
   },
   ece: {
     name: 'Dr. Venkatesha M',
@@ -187,13 +217,114 @@ export default function LeadershipOverview({
   const { language } = useLanguage();
 
   const hodModels = Array.isArray(unitCards)
-    ? unitCards.filter((m) => m.cardType === 'hod' && m.unitId)
+    ? unitCards.filter((m) => PROFILE_CARD_TYPES.has(m.cardType) && m.unitId)
     : [];
 
   if (hodModels.length) {
     const safeIdx = Math.min(Math.max(0, currentCardIdx), hodModels.length - 1);
     const model = hodModels[safeIdx]!;
     const deptKey = toDepartmentKey(model.departmentId) || model.departmentId;
+
+    if (model.cardType === 'department_explanation') {
+      const isDifference = model.unitId === 'department_explanation.difference';
+      const videoSrc = isDifference ? undefined : departmentExplanationVideoSrc(deptKey);
+      const titleLine = (model.title || '').trim() || deptKey.replace(/_/g, ' ').toUpperCase();
+      const raw = (model.content || '').trim();
+      let stageHeading = isDifference ? 'Key difference' : 'What is it?';
+      let bio = raw;
+      const nl = raw.indexOf('\n');
+      if (nl > 0) {
+        stageHeading = raw.slice(0, nl).trim() || stageHeading;
+        bio = raw.slice(nl + 1).trim() || raw;
+      }
+      // Full-card video + floating glass when a department video exists; otherwise
+      // keep the same shell with a portrait fallback (still not a second UI).
+      const useSpotlight = Boolean(videoSrc) || isDifference;
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="department-explanation-card"
+          data-unit-id={model.unitId}
+          data-dept={deptKey}
+          data-card-index={safeIdx}
+          data-stage={isDifference ? 'difference' : stageHeading}
+        >
+          <PremiumHODCard
+            name={titleLine}
+            title={stageHeading}
+            bio={bio}
+            label={isDifference ? 'Compare' : 'Department'}
+            portrait={HOD_PORTRAITS[deptKey] ?? placeholderImg}
+            videoSrc={videoSrc}
+            mediaActive
+            variant={useSpotlight ? 'video_spotlight' : 'profile'}
+            videoStableKey={deptKey || model.unitId}
+          />
+        </div>
+      );
+    }
+
+    if (model.cardType === 'creator') {
+      const creator = CREATOR_BY_UNIT[model.unitId];
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="creator-card"
+          data-unit-id={model.unitId}
+          data-card-index={safeIdx}
+        >
+          <PremiumHODCard
+            name={creator?.name || model.title}
+            title={creator?.role || 'Creator'}
+            bio={(model.content || creator?.bio || '').trim()}
+            label="CLARA Creator"
+            portrait={creator?.image || placeholderImg}
+            mediaActive
+          />
+        </div>
+      );
+    }
+
+    if (model.cardType === 'guide') {
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="guide-card"
+          data-unit-id={model.unitId}
+          data-card-index={safeIdx}
+        >
+          <PremiumHODCard
+            name={PROJECT_GUIDE.name}
+            title={PROJECT_GUIDE.role}
+            bio={(model.content || PROJECT_GUIDE.description || '').trim()}
+            label="Project Guide"
+            portrait={HOD_PORTRAITS.cse_ds ?? placeholderImg}
+            mediaActive
+          />
+        </div>
+      );
+    }
+
+    if (model.cardType === 'clara_intro' || model.cardType === 'clara_capability') {
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="clara-intro-card"
+          data-unit-id={model.unitId}
+          data-card-index={safeIdx}
+        >
+          <PremiumHODCard
+            name={(model.title || 'CLARA').trim()}
+            title={model.cardType === 'clara_capability' ? 'What I can do' : 'Campus AI Assistant'}
+            bio={(model.content || '').trim()}
+            label="About CLARA"
+            portrait={claraPortrait}
+            mediaActive
+          />
+        </div>
+      );
+    }
+
     const row = deptKey ? collegeData.role_holders?.hod_by_department?.[deptKey] : undefined;
     const copy = hodCopyFromUnitCard(model, row);
     return (
@@ -211,6 +342,7 @@ export default function LeadershipOverview({
           bio={copy.bio}
           label={copy.label}
           portrait={HOD_PORTRAITS[deptKey] ?? placeholderImg}
+          mediaActive
         />
       </div>
     );

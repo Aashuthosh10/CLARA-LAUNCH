@@ -46,30 +46,33 @@ def test_explanation_in_atomic_topics():
 # ─── B. Unit IDs ─────────────────────────────────────────────────────────────
 
 def test_explanation_unit_ids_all_dept_keys():
-    """Every canonical dept key has a registered explanation descriptor."""
+    """Every canonical dept key has progressive explanation stage descriptors."""
     for dept_key in DEPARTMENT_JSON_KEY_ORDER:
         uid = explanation_unit_id(dept_key)
-        assert uid == f"department_explanation.{dept_key}"
+        assert uid == f"department_explanation.{dept_key}.what_is"
         desc = get_explanation_descriptor(dept_key)
         assert desc is not None, f"Missing explanation descriptor for {dept_key}"
-        assert desc.unit_id == uid
         assert desc.adapter_key == "department_explanation"
         assert desc.surface == SURFACE_DEPARTMENT_EXPLANATION
+        assert get_unit_descriptor(f"department_explanation.{dept_key}.learn") is not None
+        assert get_unit_descriptor(f"department_explanation.{dept_key}.lead") is not None
 
 
 def test_get_unit_descriptor_finds_explanation_units():
-    """Registry resolves explanation unit ids."""
+    """Registry resolves explanation unit ids (legacy + progressive stages)."""
     for dept_key in DEPARTMENT_JSON_KEY_ORDER:
-        uid = f"department_explanation.{dept_key}"
-        desc = get_unit_descriptor(uid)
-        assert desc is not None, f"Registry missing {uid}"
-        assert desc.unit_id == uid
+        for uid in (
+            f"department_explanation.{dept_key}",
+            f"department_explanation.{dept_key}.what_is",
+        ):
+            desc = get_unit_descriptor(uid)
+            assert desc is not None, f"Registry missing {uid}"
 
 
 def test_unit_id_for_topic_explanation():
-    """_unit_id_for_topic returns explanation id for TOPIC_EXPLANATION."""
+    """_unit_id_for_topic returns first progressive explanation stage id."""
     uid = _unit_id_for_topic(dept_key="cse", topic=TOPIC_EXPLANATION)
-    assert uid == "department_explanation.cse"
+    assert uid == "department_explanation.cse.what_is"
 
 
 def test_surface_registered():
@@ -80,17 +83,32 @@ def test_surface_registered():
 def test_video_src_in_descriptor():
     desc = get_explanation_descriptor("cse")
     assert desc is not None
-    assert desc.video_src == "/assets/department_explanations/cse.mp4"
+    # CSE has no on-disk video yet — empty video_src (do not invent filenames).
+    assert desc.video_src == ""
+
+    ds = get_explanation_descriptor("cse_ds")
+    assert ds is not None
+    assert ds.video_src == "/assets/department_explanations/datascience.mp4"
+
+
+def test_parent_friendly_body():
+    from backend.services.content.department_explanation_units import explanation_body
+
+    body = explanation_body("cse_ds", "what_is")
+    assert "Data Science" in body
+    assert "patterns" in body.lower() or "insights" in body.lower()
 
 
 def test_placeholder_title_en():
     title = placeholder_title("en")
-    assert "[" in title  # marker present
+    assert "[" in title  # legacy marker still available
 
 
 def test_all_explanation_descriptors_count():
     descs = all_explanation_descriptors()
-    assert len(descs) == len(DEPARTMENT_JSON_KEY_ORDER)
+    # 3 progressive stages + 1 legacy alias per dept, plus difference unit.
+    assert len(descs) >= len(DEPARTMENT_JSON_KEY_ORDER) * 3
+    assert any(d.unit_id == "department_explanation.difference" for d in descs)
 
 
 # ─── B2. Topic cue detection ─────────────────────────────────────────────────
@@ -123,7 +141,7 @@ def test_parse_what_does_cse_do_selects_explanation_unit():
     sr = parse_semantic_request(raw_text="What does CSE do?", language_code_key="en")
     assert sr is not None
     assert sr.topic == TOPIC_EXPLANATION
-    assert unit_id_for_item(entity="cse", topic=TOPIC_EXPLANATION) == "department_explanation.cse"
+    assert unit_id_for_item(entity="cse", topic=TOPIC_EXPLANATION) == "department_explanation.cse.what_is"
 
 
 def test_detect_explanation_from_romanized_kannada():

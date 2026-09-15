@@ -101,7 +101,9 @@ def test_orch_pending_explain_simply_opens_explanation_card():
     segs = _attach(orch, result, "Explain it simply.", session, "t2")
     assert segs
     unit_ids = [getattr(s, "unit_id", None) for s in segs]
-    assert "department_explanation.cse" in unit_ids
+    assert "department_explanation.cse.what_is" in unit_ids
+    assert "department_explanation.cse.learn" in unit_ids
+    assert "department_explanation.cse.lead" in unit_ids
     assert "department_explanation" not in unit_ids
 
 
@@ -121,8 +123,9 @@ def test_orch_difference_cse_ece_explanation_units():
     segs = _attach(orch, result, text, session, "cmp")
     assert segs
     unit_ids = [getattr(s, "unit_id", None) for s in segs]
-    assert "department_explanation.cse" in unit_ids
-    assert "department_explanation.ece" in unit_ids
+    assert "department_explanation.cse.what_is" in unit_ids
+    assert "department_explanation.ece.what_is" in unit_ids
+    assert "department_explanation.difference" in unit_ids
     assert "department_explanation" not in unit_ids
 
 
@@ -135,8 +138,9 @@ def test_orch_compare_cse_ece_same_units():
     assert res.show_card == "department_explanation"
     segs = _attach(orch, result, text, session, "cmp2")
     unit_ids = [getattr(s, "unit_id", None) for s in (segs or [])]
-    assert "department_explanation.cse" in unit_ids
-    assert "department_explanation.ece" in unit_ids
+    assert "department_explanation.cse.what_is" in unit_ids
+    assert "department_explanation.ece.what_is" in unit_ids
+    assert "department_explanation.difference" in unit_ids
 
 
 def test_parse_difference_yields_explanation_items():

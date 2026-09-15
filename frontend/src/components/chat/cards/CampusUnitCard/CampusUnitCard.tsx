@@ -13,6 +13,7 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
   const locale = campusUnitFromLocale(card.unitId, language);
   const title = (locale?.title || card.title || card.unitId).trim();
   const supportingLine = (locale?.supporting_line || '').trim();
+  const body = (locale?.body || card.content || '').trim();
   const points = Array.isArray(locale?.points) ? locale!.points!.filter(Boolean) : [];
   const sample = (locale?.content_status || '').trim();
   const showStatus = Boolean(sample && sample !== SAMPLE_CONTENT_STATUS);
@@ -21,6 +22,7 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
   const typeChip = ['hostel', 'canteen', 'ncc', 'event'].includes(card.cardType)
     ? uiText(language, `cards.${card.cardType}`)
     : card.cardType;
+  const narrative = body.trim();
 
   return (
     <div
@@ -48,6 +50,11 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
           {showTypeChip ? <div className="premium-stage-chip">{typeChip}</div> : null}
           {showStatus ? <div className="premium-stage-chip mt-2">{sample}</div> : null}
           <h2 className="premium-stage-title campus-unit-card__title">{title}</h2>
+          {supportingLine ? (
+            <p className="campus-unit-card__tagline" data-testid="campus-unit-tagline">
+              {supportingLine}
+            </p>
+          ) : null}
           {points.length > 0 ? (
             <ul className="campus-unit-card__facts" data-testid="campus-unit-facts">
               {points.map((point) => (
@@ -57,9 +64,9 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
               ))}
             </ul>
           ) : null}
-          {supportingLine ? (
+          {narrative ? (
             <p className="premium-stage-body campus-unit-card__supporting" data-testid="campus-unit-supporting">
-              {supportingLine}
+              {narrative}
             </p>
           ) : null}
         </div>

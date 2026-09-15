@@ -2,6 +2,8 @@ import type { Language } from '../../../../context/LanguageContext';
 import { collegeDataForLanguage } from '../../../../hooks/useCollegeData';
 import type { CampusUnitRecord } from '../../../../types/collegeData';
 import { SAMPLE_CONTENT_STATUS, uiText } from '../../../../localization/uiCopy';
+import { festImageForUnit } from './festCardImages';
+import { nccImageForUnit } from './nccCardImages';
 
 export function campusUnitFromLocale(
   unitId: string,
@@ -15,6 +17,7 @@ export function campusUnitFromLocale(
   );
   const row = data.campus_units?.[unitId];
   if (!row || typeof row !== 'object') return null;
+  const bundledImage = nccImageForUnit(unitId) || festImageForUnit(unitId);
   if (row.content_status === SAMPLE_CONTENT_STATUS) {
     return {
       ...row,
@@ -26,7 +29,11 @@ export function campusUnitFromLocale(
       body: uiText(lang, 'availability.official_fact_blocked'),
       tts_summary: uiText(lang, 'availability.official_fact_blocked').replace('\n', ' '),
       points: [],
+      imageSrc: bundledImage,
     };
   }
-  return row;
+  return {
+    ...row,
+    imageSrc: bundledImage || row.imageSrc || null,
+  };
 }

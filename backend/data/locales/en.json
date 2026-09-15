@@ -89,8 +89,8 @@
     },
     "vice_principal": {
       "name": "Dr. Lakshminarayanachari K",
-      "title": "Vice Principal & Dean Academics",
-      "profile": "Dr. Lakshminarayanachari K serves as Vice Principal and Dean Academics at SVIT, supporting academic planning, curriculum implementation, and teaching quality enhancement, while also contributing to research and publications; he plays a key role in coordinating faculty, improving learning outcomes, and aligning academic processes with institutional goals and regulatory requirements."
+      "title": "Vice Principal",
+      "profile": "Oversees the daily academic operations, institutional governance, and departmental coordination across all engineering branches to ensure alignment with university regulations."
     },
     "trustees": [
       {
@@ -203,14 +203,14 @@
       },
       "ise": {
         "department_name": "Information Science",
-        "hod_name": "Dr. Vrinda Shetty",
+        "hod_name": "Dr. Amogh Pramod Kulkarni",
         "hod_title": "Professor & HOD, Information Science & Engineering",
         "aliases": [
           "ise",
           "information science",
           "information science & engineering"
         ],
-        "hod_bio": "Dr. Vrinda Shetty leads the ISE department with a focus on information systems, data management, and modern software technologies. She has rich teaching experience and encourages students to work on industry-relevant projects and internships. Her interests include databases, networking, and emerging trends in information science."
+        "hod_bio": "Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development."
       },
       "ece": {
         "department_name": "Electronics & Communication",
@@ -284,11 +284,34 @@
           "chemistry"
         ],
         "hod_bio": "Dr. Bhagya N P heads the Chemistry department, teaching engineering chemistry and its applications in materials and environmental domains. She has strong academic experience and promotes lab-based learning to connect theory with practice. Her interests lie in applied chemistry relevant to engineering and industry processes."
+      },
+      "cse_cysec": {
+        "department_name": "CSE (Cyber Security)",
+        "hod_name": "Dr. Amogh Pramod Kulkarni",
+        "hod_title": "Professor & HOD, CSE (Cyber Security)",
+        "aliases": [
+          "cyber security",
+          "cybersecurity",
+          "cse cyber security",
+          "cse cysec"
+        ],
+        "hod_bio": "Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development."
+      },
+      "cse_bs": {
+        "department_name": "CSE (Business Systems)",
+        "hod_name": "Dr. Prasanna Lakshmi G S",
+        "hod_title": "Professor & HOD, CSE (Business Systems)",
+        "aliases": [
+          "business systems",
+          "business studies",
+          "cse business systems",
+          "cse bs",
+          "csbs"
+        ],
+        "hod_bio": "Dr. Prasanna Lakshmi G S is the Head of the CSE (Business Systems) Department at Sai Vidya Institute of Technology, Bengaluru, with over 15 years of teaching and research experience. Her expertise spans Cybersecurity, AI, Machine Learning, Deep Learning, Computer Vision, and Big Data, with significant contributions to research, innovation, patents, and academic development."
       }
     },
     "localization_gaps": [
-      "hod_by_department.cse_cysec.no_official_record",
-      "hod_by_department.cse_bs.no_official_record",
       "hod_by_department.basic_sciences.no_official_record"
     ]
   },
@@ -389,7 +412,7 @@
     "cse_cysec": {
       "name": "CSE (Cyber Security)",
       "intro": "The Cyber Security department trains the frontline defenders of the digital age. We focus on secure systems and defensive computing.",
-      "hod_voice": "Our vision is to build highly ethical security professionals capable of securing enterprise networks and modern digital infrastructure.",
+      "hod_voice": "Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development.",
       "achievements": "We maintain active collaborations with cybersecurity centers of excellence to keep our curriculum highly relevant.",
       "placement": "Graduates are highly sought after by top IT firms and specialized security agencies worldwide.",
       "fees": "KCET: As per KEA norms | Management: ₹3,25,000/year"
@@ -397,7 +420,7 @@
     "cse_bs": {
       "name": "CSE (Business Systems)",
       "intro": "Bridging technology and enterprise strategy, the Business Systems department creates the next generation of tech-savvy business leaders.",
-      "hod_voice": "We blend core computing skills with business administration principles, optimizing enterprise workflows and systems.",
+      "hod_voice": "Dr. Prasanna Lakshmi G S is the Head of the CSE (Business Systems) Department at Sai Vidya Institute of Technology, Bengaluru, with over 15 years of teaching and research experience. Her expertise spans Cybersecurity, AI, Machine Learning, Deep Learning, Computer Vision, and Big Data, with significant contributions to research, innovation, patents, and academic development.",
       "achievements": "Our students excel in cross-disciplinary projects, creating software that solves real-world corporate challenges.",
       "placement": "Consulting and tech firms actively recruit our graduates for roles bridging engineering and enterprise management.",
       "fees": "KCET: As per KEA norms | Management: ₹2,75,000/year"
@@ -405,7 +428,7 @@
     "ise": {
       "name": "Information Science",
       "intro": "Information Science focuses on applied computing and software engineering aligned directly with current industry needs.",
-      "hod_voice": "Led by Dr. Vrinda Shetty, we encourage faculty and students to actively engage in workshops, internships, and dynamic problem-solving.",
+      "hod_voice": "Dr. Amogh Pramod Kulkarni is the Head of the ISE & CSE (Cyber Security) Departments at Sai Vidya Institute of Technology, Bengaluru, with over 16 years of teaching and research experience. His expertise includes Machine Learning, Deep Learning, Big Data Analytics, and Cloud Computing, with active involvement in research, academic leadership, technical training, and student development.",
       "achievements": "Our dedicated faculty ensures project-based learning, entrepreneurial thinking, and ethical technical development.",
       "placement": "Consistent placements in leading IT service and product companies, supported by strong alumni networking.",
       "fees": "KCET: As per KEA norms | Management: ₹2,50,000/year"
@@ -540,76 +563,6 @@
         "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
       ]
     },
-    "events.sanchalana": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Sanchalana",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "Sanchalana currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.techvidya": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "TechVidya",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "TechVidya currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.sirikannada_utsava": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "SiriKannada Utsava",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "SiriKannada Utsava currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.freshers_fest": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Freshers fest (sample)",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "Freshers fest (sample) currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.sports_meet": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Sports meet (sample)",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "Sports meet (sample) currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.project_expo": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Project expo (sample)",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "Project expo (sample) currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
-    "events.alumni_meet": {
-      "content_status": "SAMPLE_REPLACE_WITH_OFFICIAL",
-      "title": "Alumni meet (sample)",
-      "body": "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet. purpose, audience, and sample highlights.",
-      "tts_summary": "Alumni meet (sample) currently has only sample information about purpose, audience, and sample highlights. Official details are not confirmed yet.",
-      "points": [
-        "purpose, audience, and sample highlights — SAMPLE_REPLACE_WITH_OFFICIAL",
-        "SAMPLE_REPLACE_WITH_OFFICIAL. Official details are not confirmed yet."
-      ]
-    },
     "hostel.boys.overview": {
       "title": "BOYS' HOSTEL",
       "supporting_line": "Comfortable, furnished accommodation on campus.",
@@ -690,40 +643,111 @@
       "image": null
     },
     "ncc.overview": {
-      "title": "NCC AT SVIT",
-      "supporting_line": "Build confidence, discipline and a spirit of service.",
+      "title": "NATIONAL CADET CORPS",
+      "supporting_line": "Building Character & Leadership",
       "points": [
-        "Voluntary Student Program",
-        "Character & Discipline",
-        "Leadership & Service"
+        "Builds discipline, courage and comradeship.",
+        "Develops leadership and selfless service.",
+        "Prepares cadets for military and civilian careers."
       ],
-      "body": "SVIT has an active National Cadet Corps unit under its Campus Life and Student Care programs. The NCC is open to students voluntarily and focuses on character building, discipline, leadership and selfless service.",
-      "tts_summary": "SVIT has an active National Cadet Corps unit under its Campus Life and Student Care programs. The NCC is open to students voluntarily and focuses on character building, discipline, leadership and selfless service.",
+      "body": "",
+      "tts_summary": "The National Cadet Corps builds discipline, courage and comradeship, develops leadership and selfless service, and prepares cadets for military and civilian careers.",
+      "image": null
+    },
+    "ncc.leadership": {
+      "title": "NCC LEADERSHIP",
+      "supporting_line": "Caretaker Officer / NCC Officer",
+      "points": [
+        "Mr. Gowtham B leads the NCC wing.",
+        "Assistant Professor, Civil Engineering.",
+        "Guides enrollment, drill and cadet training."
+      ],
+      "body": "",
+      "tts_summary": "NCC leadership is guided by Mr. Gowtham B, Assistant Professor in Civil Engineering and Caretaker Officer, who oversees enrollment, drill and cadet training.",
       "image": null
     },
     "ncc.training": {
       "title": "TRAINING & ACTIVITIES",
-      "supporting_line": "Learn, lead and take part in experiences beyond the classroom.",
+      "supporting_line": "Drill, camps and community service",
       "points": [
-        "Drill & Parade",
-        "Training Camps",
-        "Community Service",
-        "National Events"
+        "Regular drill and physical fitness training.",
+        "Camps, competitions and trekking expeditions.",
+        "Blood donation, cleanliness and community service."
       ],
-      "body": "NCC cadets receive foundational military training including drill, parade practice and basic small arms training. They can also participate in annual training camps, national integration camps, social service and community outreach activities. Cadets may represent the institute at university-level and national-level parades and events.",
-      "tts_summary": "NCC cadets receive foundational military training including drill, parade practice and basic small arms training. They can also participate in annual training camps, national integration camps, social service and community outreach activities. Cadets may represent the institute at university-level and national-level parades and events.",
+      "body": "",
+      "tts_summary": "NCC training includes regular drill and physical fitness, camps and competitions, plus blood donation, cleanliness and community service.",
       "image": null
     },
     "ncc.benefits": {
-      "title": "WHY JOIN NCC?",
-      "supporting_line": "Grow through leadership, teamwork and service.",
+      "title": "NCC BENEFITS & OPPORTUNITIES",
+      "supporting_line": "Leadership, certificates and career pathways",
       "points": [
-        "B & C Certificates",
-        "Leadership Experience",
-        "Teamwork & Fitness"
+        "Builds self-discipline, teamwork and leadership.",
+        "NCC B and C Certificates add selection weightage.",
+        "Opens Armed Forces and leadership pathways."
       ],
-      "body": "NCC gives students the opportunity to earn B and C Certificates. The supplied information states that these can provide reserved quotas and preferences in direct SSB interviews for military officer entries in the Army, Navy and Air Force. Students can also gain leadership, team management and physical fitness experience, along with stated opportunities related to higher education admissions and public sector jobs.",
-      "tts_summary": "NCC gives students the opportunity to earn B and C Certificates. The supplied information states that these can provide reserved quotas and preferences in direct SSB interviews for military officer entries in the Army, Navy and Air Force. Students can also gain leadership, team management and physical fitness experience, along with stated opportunities related to higher education admissions and public sector jobs.",
+      "body": "",
+      "tts_summary": "NCC builds self-discipline, teamwork and leadership. B and C Certificates add selection weightage and open Armed Forces and leadership pathways.",
+      "image": null
+    },
+    "events.sanchalana": {
+      "title": "SANCHALANA",
+      "supporting_line": "Annual Cultural Fest",
+      "points": [
+        "SVIT's flagship inter-collegiate cultural fest.",
+        "Dance, music, theater, fashion and fine arts.",
+        "Celebrity acts, DJ nights and stage events."
+      ],
+      "body": "",
+      "tts_summary": "Sanchalana is SVIT's flagship inter-collegiate cultural fest with dance, music, theater, fashion and fine arts, plus celebrity acts and DJ nights.",
+      "image": null
+    },
+    "events.techvidya": {
+      "title": "TECHVIDYA",
+      "supporting_line": "Annual Technical Fest",
+      "points": [
+        "Promotes innovation and practical engineering skills.",
+        "Hackathons, coding marathons and robotics challenges.",
+        "Paper presentations, circuit debugging and quizzes."
+      ],
+      "body": "",
+      "tts_summary": "Techvidya is SVIT's annual technical fest with hackathons, coding marathons, robotics challenges, paper presentations and technical quizzes.",
+      "image": null
+    },
+    "events.sangama": {
+      "title": "SANGAMA",
+      "supporting_line": "Cultural & Talent Platform",
+      "points": [
+        "SVIT's year-round cultural club and platform.",
+        "Talent hunts, music jams and traditional days.",
+        "Prepares students for larger fests like Sanchalana."
+      ],
+      "body": "",
+      "tts_summary": "Sangama is SVIT's year-round cultural club, with talent hunts and music jams, preparing students for larger fests like Sanchalana.",
+      "image": null
+    },
+    "events.vignotsava": {
+      "title": "VIGNOTSAVA",
+      "supporting_line": "Onam & Cultural Festival",
+      "points": [
+        "Campus celebration around Onam and Ganesha Chaturthi.",
+        "Pookalam competitions and cultural processions.",
+        "Traditional music, dance and ethnic attire."
+      ],
+      "body": "",
+      "tts_summary": "Vignotsava is a campus celebration around Onam and Ganesha Chaturthi, with Pookalam competitions, processions and traditional music and dance.",
+      "image": null
+    },
+    "events.project_expo": {
+      "title": "PROJECT EXPO",
+      "supporting_line": "Annual Innovation Exhibition",
+      "points": [
+        "Final-year students showcase capstone projects.",
+        "Industry leaders, academics and alumni evaluate.",
+        "Top projects get recognition or incubation support."
+      ],
+      "body": "",
+      "tts_summary": "Project Expo is where final-year students showcase capstone projects. Industry leaders, academics and alumni evaluate them, with top projects earning recognition or incubation support.",
       "image": null
     }
   }

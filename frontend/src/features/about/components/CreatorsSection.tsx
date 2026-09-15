@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { CREATORS } from '../data/aboutData';
 import { Creator } from '../types';
-import { Github, Linkedin, Globe, Sparkles, Code2, Heart, Award, ArrowUpRight } from 'lucide-react';
+import { Sparkles, Code2, Heart, Award, ArrowUpRight } from 'lucide-react';
 import { playHoverChime } from '../utils/audio';
 
 export const CreatorsSection: React.FC = () => {
@@ -123,46 +123,6 @@ export const CreatorsSection: React.FC = () => {
                   "{creator.quote}"
                 </div>
 
-              </div>
-
-              {/* Social / Portfolio Links */}
-              <div className="pt-6 mt-6 border-t border-gray-800/80 flex items-center justify-between text-xs">
-                <span className="text-gray-400 font-mono">Connect & Architecture:</span>
-                <div className="flex items-center gap-2">
-                  {creator.githubUrl && (
-                    <a
-                      href={creator.githubUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-2 rounded-lg bg-[#121422] border border-gray-800 text-gray-300 hover:text-white hover:border-red-500/50 transition-colors"
-                      title="GitHub"
-                    >
-                      <Github className="w-4 h-4" />
-                    </a>
-                  )}
-                  {creator.linkedinUrl && (
-                    <a
-                      href={creator.linkedinUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-2 rounded-lg bg-[#121422] border border-gray-800 text-gray-300 hover:text-white hover:border-red-500/50 transition-colors"
-                      title="LinkedIn"
-                    >
-                      <Linkedin className="w-4 h-4" />
-                    </a>
-                  )}
-                  {creator.portfolioUrl && (
-                    <a
-                      href={creator.portfolioUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-2 rounded-lg bg-[#121422] border border-gray-800 text-gray-300 hover:text-white hover:border-red-500/50 transition-colors"
-                      title="Portfolio"
-                    >
-                      <Globe className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
               </div>
 
             </motion.div>

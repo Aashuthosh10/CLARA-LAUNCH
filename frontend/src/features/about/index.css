@@ -20,6 +20,18 @@
     overflow-x: hidden;
   }
 
+  /* Chat-originated: fill the App-constrained overlay box (ends above ChatScreen chrome). */
+  .about-me-root--chat-overlay {
+    overflow: hidden;
+    background-color: #FAF9FF;
+  }
+
+  .about-me-root--chat-overlay .about-me-scroll {
+    position: relative;
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .font-display {
     font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
   }
@@ -29,14 +41,27 @@
   }
 }
 
-/* Custom soft scrollbar */
-.about-me-root::-webkit-scrollbar {
+/* Custom soft scrollbar — direct fullscreen root + chat overlay scroll pane */
+.about-me-root::-webkit-scrollbar,
+.about-me-root--chat-overlay .about-me-scroll::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 
-.about-me-root::-webkit-scrollbar-track {
+.about-me-root::-webkit-scrollbar-track,
+.about-me-root--chat-overlay .about-me-scroll::-webkit-scrollbar-track {
   background: #F5F3FC;
+}
+
+.about-me-root::-webkit-scrollbar-thumb,
+.about-me-root--chat-overlay .about-me-scroll::-webkit-scrollbar-thumb {
+  background: #D8CDF7;
+  border-radius: 999px;
+}
+
+.about-me-root::-webkit-scrollbar-thumb:hover,
+.about-me-root--chat-overlay .about-me-scroll::-webkit-scrollbar-thumb:hover {
+  background: #8066D9;
 }
 
 .about-me-root::-webkit-scrollbar-thumb {

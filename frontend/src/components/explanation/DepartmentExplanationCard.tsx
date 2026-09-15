@@ -88,11 +88,11 @@ export const DepartmentExplanationCard: React.FC<DepartmentExplanationCardProps>
       {/* Subtle dark overlay so text is always readable */}
       <div className="absolute inset-0 bg-black/40" />
 
-      {/* Glass panel — LEFT aligned */}
-      <div className="absolute inset-y-0 left-0 w-full max-w-xs sm:max-w-sm md:max-w-md flex items-center">
+      {/* Glass panel — LEFT aligned; wide enough for regional scripts */}
+      <div className="absolute inset-y-0 left-0 w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl flex items-center">
         <motion.div
           className={[
-            'mx-4 my-6 p-5 rounded-xl',
+            'mx-4 my-6 p-5 sm:p-6 rounded-xl w-full',
             'bg-white/10 backdrop-blur-md',
             'border border-white/20',
             'shadow-2xl',

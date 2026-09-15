@@ -31,27 +31,27 @@ export default function CyberSecurityCard({
     English: {
       name: "CSE (Cyber Security)",
       tagline: "Defending the digital frontier",
-      hod: "Dr. Shashikumar D R"
+      hod: "Dr. Amogh Pramod Kulkarni"
     },
     Hindi: {
        name: "कंप्यूटर विज्ञान और इंजीनियरिंग (Cyber Security)",
        tagline: "डिजिटल सीमाओं की रक्षा",
-       hod: "डॉ. शशिकुमार डी आर"
+       hod: "डॉ. अमोघ प्रमोद कुलकर्णी"
     },
     Tamil: {
        name: "கணினி அறிவியல் மற்றும் பொறியியல் (Cyber Security)",
        tagline: "டிஜிட்டல் எல்லைகளை பாதுகாத்தல்",
-       hod: "டாக்டர். சசிகுமார் டி ஆர்"
+       hod: "டாக்டர். அமோக் பிரமோத் குல்கர்ணி"
     },
     Telugu: {
        name: "కంప్యూటర్ సైన్స్ & ఇంజనీరింగ్ (Cyber Security)",
        tagline: "డిజిటల్ సరిహద్దులను రక్షిస్తున్నాము",
-       hod: "డా. శశికుమార్ డి ఆర్"
+       hod: "డా. అమోఘ్ ప్రమోద్ కులకర్ణి"
     },
     Malayalam: {
        name: "കമ്പ്യൂട്ടർ സയൻസ് & എഞ്ചിനീയറിംഗ് (Cyber Security)",
        tagline: "ഡിജിറ്റൽ അതിർത്തികൾ കാക്കുന്നു",
-       hod: "ഡോ. ശശികുമാർ ഡി ആർ"
+       hod: "ഡോ. അമോഘ് പ്രമോദ് കുൽകർണി"
     }
   };
 

@@ -26,6 +26,9 @@ venv/
 env/
 ENV/
 
+# Local session feedback (append-only JSONL; keep directory)
+feedback/*.jsonl
+
 # Build outputs
 dist/
 build/

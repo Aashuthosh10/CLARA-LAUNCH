@@ -136,12 +136,19 @@ class AboutMeResolveTests(unittest.TestCase):
             ("meeru evaru?", SECTION_OVERVIEW),
             ("ningal aaranu?", SECTION_OVERVIEW),
             ("ninna creators yaaru?", SECTION_CREATORS),
+            ("nimma creators yaaru?", SECTION_CREATORS),
+            ("CLARA ke creators kaun hain?", SECTION_CREATORS),
+            ("CLARA oda creators yaaru?", SECTION_CREATORS),
+            ("CLARA creators evaru?", SECTION_CREATORS),
+            ("CLARA yude creators aaranu?", SECTION_CREATORS),
             ("aapko kisne banaya?", SECTION_CREATORS),
             ("unga guide yaaru?", SECTION_GUIDE),
+            ("nimma guide yaaru?", SECTION_GUIDE),
             ("nivu en en madbahudu?", SECTION_CAPABILITIES),
             ("CLARA bagge heli", SECTION_OVERVIEW),
             ("CLARA ke baare mein batao", SECTION_OVERVIEW),
             ("CLARA ko kisne banaya?", SECTION_CREATORS),
+            ("CLARA yaaru?", SECTION_OVERVIEW),
         )
         for q, section in cases:
             nav = resolve_about_me_navigation(q)
@@ -154,70 +161,141 @@ class AboutMeResolveTests(unittest.TestCase):
         self.assertEqual(action["type"], "open_about_me")
         self.assertEqual(action["section"], "creators")
         self.assertIsNone(action["itemId"])
+        self.assertEqual(action["entryMode"], "chat")
 
     def test_bridge_phrases_english(self):
-        self.assertEqual(about_me_bridge_reply("English", "overview"), "Let me introduce myself.")
+        overview = about_me_bridge_reply("English", "overview")
+        self.assertIn("receptionist", overview.lower())
         self.assertEqual(
             about_me_bridge_reply("English", "creators"),
-            "Meet the honorable creators of me.",
+            (
+                "Meet the honorable creators of me. "
+                "Mister A N Aashuthosh, who is the AI Systems and NLP Engineer. "
+                "Mister Adithya N C, who is the Full-Stack and Systems Interface. "
+                "Mister Dhanush S Babu, who is the Real-Time Infrastructure and Voice. "
+                "And Mister M Naveen Kumar, who is the Lead Architect and Core AI Engineer."
+            ),
         )
-        self.assertEqual(
-            about_me_bridge_reply("English", "capabilities"),
-            "Let me show you what I can do.",
-        )
-        self.assertEqual(
-            about_me_bridge_reply("English", "guide"),
-            "Let me introduce you to my project guide.",
-        )
+        caps = about_me_bridge_reply("English", "capabilities")
+        self.assertIn("understand", caps.lower())
+        guide = about_me_bridge_reply("English", "guide")
+        self.assertIn("Nagashree", guide)
 
 
 class AboutMeOrchestratorTests(unittest.TestCase):
-    def test_who_created_you_short_circuits(self):
+    def test_who_created_you_opens_about_me_cards(self):
         result, sess = run_turn("Who created you?")
         self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
-        self.assertEqual(
-            result.resolution.short_circuit_reply,
-            about_me_bridge_reply("English", "creators"),
-        )
-        self.assertEqual(sess.get("_pending_ui_action", {}).get("type"), "open_about_me")
-        self.assertEqual(sess.get("_pending_ui_action", {}).get("section"), "creators")
+        self.assertIsNone(result.resolution.short_circuit_reply)
+        self.assertEqual(result.resolution.show_card, "about_me")
+        self.assertTrue(result.resolution.should_generate_presentation)
+        self.assertNotEqual(sess.get("_pending_ui_action", {}).get("type"), "open_about_me")
         self.assertEqual(sess.get("last_about_me", {}).get("section"), "creators")
 
-    def test_tell_me_about_yourself(self):
+        orch = ConversationOrchestrator()
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "Who created you?",
+            turn_id="t",
+            entities={"about_me": sess.get("last_about_me")},
+        )
+        self.assertIsNotNone(segs)
+        unit_ids = [getattr(s, "unit_id", None) for s in (segs or [])]
+        self.assertEqual(
+            unit_ids,
+            [
+                "about_me.creator.aashuthosh",
+                "about_me.creator.adithya_nc",
+                "about_me.creator.dhanush_sridhar_babu",
+                "about_me.creator.naveen_kumar",
+            ],
+        )
+
+    def test_who_are_your_creators_same_units(self):
+        result, sess = run_turn("Who are your creators?")
+        self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
+        self.assertEqual(sess.get("last_about_me", {}).get("section"), "creators")
+        self.assertEqual(result.resolution.show_card, "about_me")
+
+    def test_tell_me_about_yourself_overview_unit(self):
         result, sess = run_turn("Tell me about yourself.")
         self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
-        self.assertEqual(sess.get("_pending_ui_action", {}).get("section"), "overview")
+        self.assertEqual(sess.get("last_about_me", {}).get("section"), "overview")
+        orch = ConversationOrchestrator()
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "Tell me about yourself.",
+            turn_id="t",
+            entities={"about_me": sess.get("last_about_me")},
+        )
+        unit_ids = [getattr(s, "unit_id", None) for s in (segs or [])]
+        self.assertEqual(unit_ids, ["about_me.overview"])
 
-    def test_what_can_you_do(self):
+    def test_what_can_you_do_capability_units(self):
         result, sess = run_turn("What can you do?")
         self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
-        self.assertEqual(sess.get("_pending_ui_action", {}).get("section"), "capabilities")
-        self.assertIsNone(sess.get("_pending_ui_action", {}).get("itemId"))
+        self.assertEqual(sess.get("last_about_me", {}).get("section"), "capabilities")
+        self.assertIsNone(sess.get("last_about_me", {}).get("itemId"))
+        orch = ConversationOrchestrator()
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "What can you do?",
+            turn_id="t",
+            entities={"about_me": sess.get("last_about_me")},
+        )
+        unit_ids = [getattr(s, "unit_id", None) for s in (segs or [])]
+        self.assertTrue(all(str(u).startswith("about_me.capability.") for u in unit_ids))
+        self.assertGreaterEqual(len(unit_ids), 4)
+
+    def test_individual_creator_named_unit(self):
+        result, sess = run_turn("Tell me about Naveen.")
+        self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
+        self.assertEqual(sess.get("last_about_me", {}).get("section"), "creators")
+        self.assertEqual(sess.get("last_about_me", {}).get("itemId"), "c5")
+        orch = ConversationOrchestrator()
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "Tell me about Naveen.",
+            turn_id="t",
+            entities={"about_me": sess.get("last_about_me")},
+        )
+        unit_ids = [getattr(s, "unit_id", None) for s in (segs or [])]
+        self.assertEqual(unit_ids, ["about_me.creator.naveen_kumar"])
 
     def test_individual_capability_item(self):
         result, sess = run_turn("Tell me about your scheduling.")
         self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
-        action = sess.get("_pending_ui_action") or {}
-        self.assertEqual(action.get("section"), "capabilities")
-        self.assertEqual(action.get("itemId"), "schedule")
+        sticky = sess.get("last_about_me") or {}
+        self.assertEqual(sticky.get("section"), "capabilities")
+        self.assertEqual(sticky.get("itemId"), "schedule")
 
     def test_guide_and_dhanush(self):
         result, sess = run_turn("Who is your guide?")
         self.assertEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
-        self.assertEqual(sess.get("_pending_ui_action", {}).get("section"), "guide")
+        self.assertEqual(sess.get("last_about_me", {}).get("section"), "guide")
+        orch = ConversationOrchestrator()
+        segs = orch.attach_narration(
+            result.resolution,
+            sess,
+            "Who is your guide?",
+            turn_id="t",
+            entities={"about_me": sess.get("last_about_me")},
+        )
+        self.assertEqual([getattr(s, "unit_id", None) for s in (segs or [])], ["about_me.guide"])
 
         result2, sess2 = run_turn("Tell me about Dhanush.")
         self.assertEqual(result2.intel.decision.action, PolicyAction.ABOUT_ME)
-        self.assertEqual(sess2.get("_pending_ui_action", {}).get("itemId"), "c4")
+        self.assertEqual(sess2.get("last_about_me", {}).get("itemId"), "c4")
 
     def test_topic_switch_clears_about_me_sticky(self):
         sess = {"language_code_key": "en", "language_name": "English"}
         run_turn("Who created you?", session=sess)
         self.assertIsNotNone(sess.get("last_about_me"))
         run_turn("Tell me about the hostel.", session=sess)
-        # Hostel may clarify gender or card — either way About Me sticky must clear
-        # once a non-About-Me institutional turn seals CARD/ANSWER/FALLBACK.
-        # If clarification, sticky may remain until CARD; follow-up clears on CARD.
         if sess.get("last_about_me") is not None:
             run_turn("boys hostel", session=sess)
         self.assertIsNone(sess.get("last_about_me"))
@@ -226,19 +304,16 @@ class AboutMeOrchestratorTests(unittest.TestCase):
         result, _sess = run_turn("Who is the principal?")
         self.assertNotEqual(result.intel.decision.action, PolicyAction.ABOUT_ME)
 
-    def test_kannada_bridge_language(self):
-        result, _sess = run_turn(
+    def test_kannada_about_me_card_route(self):
+        result, sess = run_turn(
             "ನೀವು ಯಾರು?",
             language="Kannada",
             code_key="kn",
         )
-        # May or may not resolve via unicode; romanized path is covered above.
-        # If About Me fires, bridge must be Kannada.
         if result.intel.decision.action == PolicyAction.ABOUT_ME:
-            self.assertEqual(
-                result.resolution.short_circuit_reply,
-                about_me_bridge_reply("Kannada", "overview"),
-            )
+            self.assertEqual(result.resolution.show_card, "about_me")
+            self.assertIsNone(result.resolution.short_circuit_reply)
+            self.assertEqual(sess.get("last_about_me", {}).get("section"), "overview")
 
 
 if __name__ == "__main__":

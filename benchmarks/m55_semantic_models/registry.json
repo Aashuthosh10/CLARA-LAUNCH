@@ -1,0 +1,20 @@
+{
+  "entities": [
+    "cse",
+    "ise",
+    "cse_aiml",
+    "cse_ds",
+    "cse_cysec",
+    "cse_bs",
+    "ece",
+    "civil",
+    "mechanical",
+    "mba",
+    "basic_sciences"
+  ],
+  "topics": ["overview", "hod", "fees", "achievements", "placements"],
+  "scopes": ["single", "full_department"],
+  "modes": ["CARD", "ANSWER", "CLARIFY", "FALLBACK"],
+  "confidence": ["HIGH", "MEDIUM", "LOW"],
+  "schema_note": "M5.4 ResponseDecision.scope is single|full_department. Mission sketch said single|multi. Benchmark uses M5.4."
+}

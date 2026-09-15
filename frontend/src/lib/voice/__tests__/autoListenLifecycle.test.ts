@@ -10,7 +10,7 @@ describe('AUTO_LISTEN_CONFIG', () => {
   it('exposes positive kiosk timeouts', () => {
     expect(AUTO_LISTEN_CONFIG.postTtsSettleMs).toBeGreaterThan(0);
     expect(AUTO_LISTEN_CONFIG.nameWaitMs).toBeGreaterThan(AUTO_LISTEN_CONFIG.postTtsSettleMs);
-    expect(AUTO_LISTEN_CONFIG.normalInactivityMs).toBeGreaterThan(0);
+    expect(AUTO_LISTEN_CONFIG.normalInactivityMs).toBeGreaterThanOrEqual(60_000);
     expect(AUTO_LISTEN_CONFIG.closingWaitMs).toBeGreaterThan(0);
     expect(AUTO_LISTEN_CONFIG.recognitionRestartGapMs).toBeGreaterThan(0);
     expect(AUTO_LISTEN_CONFIG.continuationWaitMs).toBeGreaterThan(0);

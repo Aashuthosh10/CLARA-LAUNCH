@@ -14,9 +14,11 @@ from backend.services.content.content_unit_registry import (
 from backend.services.content.content_unit_resolver import resolve_unit
 from backend.services.content.content_unit import ContentUnit
 from backend.services.content.campus_units import (
+    fest_deck_unit_ids,
     hostel_deck_unit_ids,
     hostel_gender_from_entity,
     is_campus_entity,
+    is_fest_deck_entity,
     is_hostel_overview_unit_id,
     is_ncc_overview_unit_id,
     ncc_deck_unit_ids,
@@ -51,9 +53,10 @@ def _compute_plan_hash(*, units: Sequence[str], surface: str) -> str:
 
 
 def _unit_id_for_topic(*, dept_key: str, topic: str) -> str | None:
-    # Explanation units have a different id format: department_explanation.<dept>
+    # Explanation expands to progressive stage units in select_content_units.
+    # Return the first stage id as the primary selectable identity.
     if topic == TOPIC_EXPLANATION:
-        return f"department_explanation.{dept_key}"
+        return f"department_explanation.{dept_key}.what_is"
     suffix_map = {
         TOPIC_OVERVIEW: "overview",
         TOPIC_HOD: "hod",
@@ -153,12 +156,53 @@ def select_content_units(
         # N compatible (entity, topic) pairs → N independently addressable units,
         # in user order. No first-only, no family lock, no arbitrary cap.
         # Hostel gendered overview expands to the fixed 4-card deck once.
-        # NCC overview expands to overview → training → benefits once.
+        # NCC overview expands to overview → leadership → training → benefits once.
         seen: set[str] = set()
         unresolved_items: list[tuple[str, str]] = []
         hostel_deck_expanded = False
         ncc_deck_expanded = False
+        fest_deck_expanded = False
+        explanation_depts: list[str] = []
         for entity, topic in items:
+            # Progressive department explanation: expand one topic → three stage units.
+            if (topic or "").strip().lower() == TOPIC_EXPLANATION:
+                from backend.services.content.department_explanation_units import (
+                    explanation_stage_unit_ids,
+                )
+
+                dept_key = (entity or "").strip().lower()
+                stage_ids = explanation_stage_unit_ids(dept_key)
+                if not stage_ids or get_unit_descriptor(stage_ids[0]) is None:
+                    unresolved_items.append((entity, topic))
+                    continue
+                for stage_uid in stage_ids:
+                    if stage_uid in seen:
+                        continue
+                    if get_unit_descriptor(stage_uid) is None:
+                        continue
+                    seen.add(stage_uid)
+                    unit_ids.append(stage_uid)
+                if dept_key and dept_key not in explanation_depts:
+                    explanation_depts.append(dept_key)
+                continue
+
+            # Bare "fests / college events" entity expands to the fixed fest deck once.
+            if (
+                not fest_deck_expanded
+                and is_fest_deck_entity(entity)
+                and (topic or "").strip().lower() in {"overview", "event", ""}
+                and len(items) == 1
+            ):
+                for deck_uid in fest_deck_unit_ids():
+                    if deck_uid in seen:
+                        continue
+                    if get_unit_descriptor(deck_uid) is None:
+                        continue
+                    seen.add(deck_uid)
+                    unit_ids.append(deck_uid)
+                fest_deck_expanded = True
+                continue
+
             uid = _unit_id_for_item(entity=entity, topic=topic)
             if not uid:
                 unresolved_items.append((entity, topic))
@@ -206,6 +250,13 @@ def select_content_units(
                 continue
             seen.add(uid)
             unit_ids.append(uid)
+
+        # Multi-department explanation → append parent-friendly difference unit.
+        if len(explanation_depts) >= 2:
+            diff_uid = "department_explanation.difference"
+            if diff_uid not in seen and get_unit_descriptor(diff_uid) is not None:
+                seen.add(diff_uid)
+                unit_ids.append(diff_uid)
 
     if not unit_ids:
         return None

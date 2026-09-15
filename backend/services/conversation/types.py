@@ -21,6 +21,7 @@ class PolicyAction(str, Enum):
 
 
 # Actions that must not call Groq / RAG / narration plan.
+# ABOUT_ME is intentionally excluded — conversational About Me uses normal cards.
 SHORT_CIRCUIT_ACTIONS: frozenset[PolicyAction] = frozenset(
     {
         PolicyAction.NO_SPEECH_RETRY,
@@ -29,7 +30,6 @@ SHORT_CIRCUIT_ACTIONS: frozenset[PolicyAction] = frozenset(
         PolicyAction.ENTITY_UPDATE,
         PolicyAction.GREETING,
         PolicyAction.SMALL_TALK,
-        PolicyAction.ABOUT_ME,
     }
 )
 

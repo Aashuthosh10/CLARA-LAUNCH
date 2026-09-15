@@ -148,13 +148,21 @@ def narrate_unit(unit: ContentUnit, lang_key: str, guest_name: str | None = None
         name = str(p.get("name") or "").strip()
         if name:
             return {
-                "en": f"The Vice Principal and Dean Academics is {name}.",
-                "kn": f"ಉಪ ಪ್ರಾಂಶುಪಾಲರು ಹಾಗೂ ಶೈಕ್ಷಣಿಕ ಡೀನ್ {name} ಅವರು.",
-                "hi": f"उप प्राचार्य और शैक्षणिक डीन {name} हैं।",
-                "ta": f"துணை முதல்வர் மற்றும் கல்வி டீன் {name}.",
-                "te": f"ఉప ప్రిన్సిపాల్ మరియు డీన్ ఎకడెమిక్స్ {name}.",
-                "ml": f"ഉപ പ്രിൻസിപ്പലും അക്കാദമിക് ഡീനും {name} ആണ്.",
-            }.get(lk, f"The Vice Principal and Dean Academics is {name}.")
+                "en": f"The Vice Principal is {name}.",
+                "kn": f"ಉಪ ಪ್ರಾಂಶುಪಾಲರು {name} ಅವರು.",
+                "hi": f"उप प्राचार्य {name} हैं।",
+                "ta": f"துணை முதல்வர் {name}.",
+                "te": f"ఉప ప్రిన్సిపాల్ {name}.",
+                "ml": f"ഉപ പ്രിൻസിപ്പൽ {name} ആണ്.",
+            }.get(lk, f"The Vice Principal is {name}.")
+        return _fact_sentence(unit.body)
+
+    from backend.services.content.dean_profiles import DEAN_TOPICS, dean_spoken_line
+
+    if suffix in DEAN_TOPICS:
+        spoken = dean_spoken_line(suffix, lk)
+        if spoken:
+            return spoken
         return _fact_sentence(unit.body)
 
     if suffix == TOPIC_TRUSTEES:

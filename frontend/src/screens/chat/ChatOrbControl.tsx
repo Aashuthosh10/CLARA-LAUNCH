@@ -16,8 +16,6 @@ type ChatOrbControlProps = {
   onTap: () => void;
   bottomClassName: string;
   compact?: boolean;
-  /** Shrinks / lowers orb when department comparison panel is dominant */
-  comparisonMode?: boolean;
 };
 
 export default function ChatOrbControl({
@@ -28,29 +26,19 @@ export default function ChatOrbControl({
   onTap,
   bottomClassName,
   compact = false,
-  comparisonMode = false,
 }: ChatOrbControlProps) {
   const { language, t } = useLanguage();
   const scriptClass = getScriptTypography(language).cssClass;
   const isListening = orbState === 'listening';
-  const isSpeaking = orbState === 'speaking';
-  // SiriOrb has no dedicated speaking mode — map speaking → processing visually.
-  const showBusy =
-    isProcessing || orbState === 'processing' || isSpeaking;
-  const siriState: 'idle' | 'listening' | 'processing' = isListening
-    ? 'listening'
-    : showBusy
-      ? 'processing'
-      : 'idle';
 
   const aria =
-    isSpeaking || orbState === 'processing' || isProcessing
+    isProcessing
       ? uiText(language, 'status.thinking')
       : isListening
         ? uiText(language, 'status.listening')
         : t('tapToSpeak');
 
-  const isCompactLayout = compact || comparisonMode;
+  const isCompactLayout = compact;
   const targetWidth = isCompactLayout ? 290 : 420;
   const targetHeight = isCompactLayout ? 100 : 140;
 
@@ -59,8 +47,8 @@ export default function ChatOrbControl({
       className="relative flex flex-col items-center group"
       initial={false}
       animate={{
-        scale: comparisonMode ? 0.72 : compact ? 0.62 : 1,
-        y: comparisonMode ? 12 : 0,
+        scale: compact ? 0.62 : 1,
+        y: 0,
       }}
       transition={{ duration: 0.55, ease: [0.16, 1, 0.28, 1] }}
       style={{ transformOrigin: '50% 100%', pointerEvents: 'none' }}
@@ -89,7 +77,10 @@ export default function ChatOrbControl({
           transition={{ duration: isListening ? 0.36 : 0.46, ease: [0.16, 1, 0.3, 1] }}
           style={{ pointerEvents: 'none' }}
         >
-          <SiriOrb state={siriState} amplitude={amplitude} />
+          <SiriOrb
+            state={isListening ? 'listening' : isProcessing ? 'processing' : 'idle'}
+            amplitude={amplitude}
+          />
         </motion.div>
 
         {/* ─── 2. STRAIGHT HORIZONTAL VOICE ANALYSER ─── */}
@@ -119,7 +110,7 @@ export default function ChatOrbControl({
           type="button"
           tabIndex={0}
           data-testid="chat-orb"
-          data-orb-state={orbState}
+          data-orb-state={isProcessing ? 'processing' : orbState}
           aria-label={aria}
           initial={false}
           animate={{
@@ -157,15 +148,15 @@ export default function ChatOrbControl({
           className={`${scriptClass} whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${
             isListening
               ? 'animate-pulse text-indigo-500'
-              : showBusy
+              : isProcessing
               ? 'animate-pulse text-amber-500'
               : 'text-slate-400 group-hover:text-indigo-500'
           }`}
           style={{
-            opacity: comparisonMode ? 0.88 : showBusy || isListening ? 0.9 : 0.7,
+            opacity: isProcessing || isListening ? 0.9 : 0.7,
           }}
         >
-          {showBusy
+          {isProcessing
             ? uiText(language, 'status.thinking')
             : isListening
               ? uiText(language, 'status.listening')

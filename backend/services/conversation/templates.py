@@ -148,27 +148,6 @@ _CLARIFY_ADMISSIONS_INFO: dict[str, str] = {
     ),
 }
 
-# Presentation-safe options owned by the same deterministic clarification
-# templates. These are interaction labels, not a second answer source.
-_CLARIFICATION_CHOICES: dict[str, dict[str, tuple[str, ...]]] = {
-    "admissions_info": {
-        "English": ("Admission steps", "Eligibility details", "Documents required"),
-        "Kannada": ("ಪ್ರವೇಶದ ಹಂತಗಳು", "ಅರ್ಹತೆ ವಿವರಗಳು", "ಅಗತ್ಯ ದಾಖಲೆಗಳು"),
-        "Hindi": ("प्रवेश प्रक्रिया", "पात्रता विवरण", "आवश्यक दस्तावेज़"),
-        "Tamil": ("சேர்க்கை படிகள்", "தகுதி விவரங்கள்", "தேவையான ஆவணங்கள்"),
-        "Telugu": ("ప్రవేశ దశలు", "అర్హత వివరాలు", "అవసరమైన పత్రాలు"),
-        "Malayalam": ("അഡ്മിഷൻ ഘട്ടങ്ങൾ", "യോഗ്യത വിവരങ്ങൾ", "ആവശ്യമായ രേഖകൾ"),
-    },
-    "hostel": {
-        "English": ("Boys' hostel", "Girls' hostel"),
-        "Kannada": ("ಬಾಲಕರ ವಸತಿಗೃಹ", "ಬಾಲಕಿಯರ ವಸತಿಗೃಹ"),
-        "Hindi": ("छात्रावास", "छात्राओं का छात्रावास"),
-        "Tamil": ("ஆண்கள் விடுதி", "பெண்கள் விடுதி"),
-        "Telugu": ("బాలుర వసతి గృహం", "బాలికల వసతి గృహం"),
-        "Malayalam": ("ആൺകുട്ടികളുടെ ഹോസ്റ്റൽ", "പെൺകുട്ടികളുടെ ഹോസ്റ്റൽ"),
-    },
-}
-
 # Clear intent, cannot fulfill at the kiosk — not "tell me more".
 _RESTRICTED_PERSONAL_CONTACT: dict[str, str] = {
     "English": (
@@ -335,15 +314,6 @@ def clarification_reply(
     return _pick(_CLARIFICATION, language)
 
 
-def clarification_choices(language: str | None, target: str | None = None) -> list[str]:
-    """Return localized choices only when the authoritative template defines them."""
-    by_language = _CLARIFICATION_CHOICES.get((target or "").strip().lower())
-    if not by_language:
-        return []
-    lang = language if language in SUPPORTED_LANGUAGES else "English"
-    return list(by_language.get(lang, by_language["English"]))
-
-
 def ncc_enrollment_reply(language: str | None) -> str:
     """Supplied enrollment/contact guidance only — no invented names or phones."""
     return _pick(_NCC_ENROLLMENT, language)
@@ -372,22 +342,79 @@ def small_talk_reply(language: str | None, kind: str | None = None) -> str:
     return _pick(_SMALL_TALK, language)
 
 
+# Spoken About Me lines mirror the frontend About Me page copy (ClaraHero /
+# mind-map / creators / guide). Visual content still lives on the frontend.
 _ABOUT_ME_BRIDGES: dict[str, dict[str, str]] = {
     "overview": {
-        "English": "Let me introduce myself.",
-        "Kannada": "ನನ್ನ ಪರಿಚಯ ಮಾಡಿಕೊಳ್ಳುತ್ತೇನೆ.",
-        "Hindi": "मुझे अपना परिचय देने दीजिए।",
-        "Tamil": "நான் என்னை அறிமுகப்படுத்திக் கொள்கிறேன்.",
-        "Telugu": "నన్ను పరిచయం చేసుకుంటాను.",
-        "Malayalam": "ഞാൻ എന്നെ പരിചയപ്പെടുത്തട്ടെ.",
+        "English": (
+            "CLARA is an intelligent AI receptionist at the campus entrance to assist "
+            "visitors, guests, and students. I give instant answers about college "
+            "programs, facilities, and departments, help you navigate campus, and "
+            "connect you with faculty and staff online in real time."
+        ),
+        "Kannada": (
+            "CLARA ಕ್ಯಾಂಪಸ್ ಪ್ರವೇಶದ್ವಾರದಲ್ಲಿರುವ ಬುದ್ಧಿವಂತ AI ರಿಸೆಪ್ಷನಿಸ್ಟ್. "
+            "ನಾನು ಕಾಲೇಜು ಕಾರ್ಯಕ್ರಮ, ಸೌಲಭ್ಯ ಮತ್ತು ವಿಭಾಗಗಳ ಬಗ್ಗೆ ತ್ವರಿತ ಉತ್ತರ ನೀಡಿ, "
+            "ಕ್ಯಾಂಪಸ್ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಲು ಸಹಾಯ ಮಾಡಿ, ಫ್ಯಾಕಲ್ಟಿ ಮತ್ತು ಸಿಬ್ಬಂದಿಯೊಂದಿಗೆ "
+            "ನೈಜ ಸಮಯದಲ್ಲಿ ಸಂಪರ್ಕಿಸುತ್ತೇನೆ."
+        ),
+        "Hindi": (
+            "CLARA कैंपस प्रवेश पर एक बुद्धिमान AI रिसेप्शनिस्ट है जो आगंतुकों, "
+            "अतिथियों और छात्रों की मदद करती है। मैं कॉलेज कार्यक्रमों, सुविधाओं "
+            "और विभागों के बारे में तुरंत जवाब देती हूँ, कैंपस नेविगेट करने में "
+            "मदद करती हूँ, और फैकल्टी व स्टाफ से रियल टाइम में जोड़ती हूँ।"
+        ),
+        "Tamil": (
+            "CLARA வளாக நுழைவாயிலில் உள்ள அறிவுசார் AI வரவேற்பாளர். "
+            "கல்லூரி திட்டங்கள், வசதிகள் மற்றும் துறைகள் பற்றி உடனடி பதில் அளித்து, "
+            "வளாக வழிகாட்டலில் உதவி, ஆசிரியர்கள் மற்றும் பணியாளர்களுடன் "
+            "நேரலையில் இணைக்கிறேன்."
+        ),
+        "Telugu": (
+            "CLARA క్యాంపస్ ప్రవేశం వద్ద ఉన్న తెలివైన AI రిసెప్షనిస్ట్. "
+            "కాలేజీ ప్రోగ్రామ్‌లు, సౌకర్యాలు, విభాగాల గురించి తక్షణ సమాధానాలు ఇచ్చి, "
+            "క్యాంపస్ నావిగేట్ చేయడంలో సహాయపడి, ఫ్యాకల్టీ మరియు స్టాఫ్‌తో "
+            "రియల్ టైమ్‌లో కలుపుతాను."
+        ),
+        "Malayalam": (
+            "CLARA ക്യാമ്പസ് പ്രവേശന കവാടത്തിലെ ബുദ്ധിമാനായ AI റിസപ്ഷനിസ്റ്റാണ്. "
+            "കോളേജ് പ്രോഗ്രാമുകൾ, സൗകര്യങ്ങൾ, വകുപ്പുകൾ എന്നിവയെക്കുറിച്ച് "
+            "ഉടൻ ഉത്തരം നൽകി, ക്യാമ്പസ് നാവിഗേറ്റ് ചെയ്യാൻ സഹായിച്ച്, "
+            "ഫാക്കൽറ്റിയെയും സ്റ്റാഫിനെയും റിയൽ ടൈമിൽ ബന്ധിപ്പിക്കുന്നു."
+        ),
     },
     "capabilities": {
-        "English": "Let me show you what I can do.",
-        "Kannada": "ನಾನು ಏನು ಮಾಡಬಲ್ಲೆ ಎಂದು ತೋರಿಸುತ್ತೇನೆ.",
-        "Hindi": "मैं आपको दिखाती हूँ कि मैं क्या कर सकती हूँ।",
-        "Tamil": "நான் என்ன செய்ய முடியும் என்பதை காட்டுகிறேன்.",
-        "Telugu": "నేను ఏమి చేయగలనో చూపిస్తాను.",
-        "Malayalam": "എനിക്ക് എന്തൊക്കെ ചെയ്യാൻ കഴിയുമെന്ന് കാണിച്ചുതരാം.",
+        "English": (
+            "I can understand your questions, use campus knowledge, speak with you, "
+            "help with scheduling, connect you to the right people, and support "
+            "live communication."
+        ),
+        "Kannada": (
+            "ನಾನು ನಿಮ್ಮ ಪ್ರಶ್ನೆಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಬಲ್ಲೆ, ಕ್ಯಾಂಪಸ್ ಜ್ಞಾನ ಬಳಸಬಲ್ಲೆ, "
+            "ಮಾತನಾಡಬಲ್ಲೆ, ವೇಳಾಪಟ್ಟಿ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ, ಸರಿಯಾದ ವ್ಯಕ್ತಿಗಳಿಗೆ "
+            "ಸಂಪರ್ಕಿಸಬಲ್ಲೆ ಮತ್ತು ಲೈವ್ ಸಂವಹನ ಬೆಂಬಲಿಸಬಲ್ಲೆ."
+        ),
+        "Hindi": (
+            "मैं आपके सवाल समझ सकती हूँ, कैंपस ज्ञान उपयोग कर सकती हूँ, आपसे बात "
+            "कर सकती हूँ, शेड्यूलिंग में मदद कर सकती हूँ, सही लोगों से जोड़ सकती हूँ, "
+            "और लाइव संचार का समर्थन कर सकती हूँ।"
+        ),
+        "Tamil": (
+            "நான் உங்கள் கேள்விகளைப் புரிந்துகொண்டு, வளாக அறிவைப் பயன்படுத்தி, "
+            "பேசி, நேர அட்டவணைக்கு உதவி, சரியானவர்களுடன் இணைத்து, "
+            "நேரலை தொடர்பையும் ஆதரிக்கிறேன்."
+        ),
+        "Telugu": (
+            "నేను మీ ప్రశ్నలు అర్థం చేసుకొని, క్యాంపస్ జ్ఞానం ఉపయోగించి, "
+            "మాట్లాడి, షెడ్యూలింగ్‌లో సహాయపడి, సరైన వ్యక్తులతో కలిపి, "
+            "లైవ్ కమ్యూనికేషన్‌ను సపోర్ట్ చేస్తాను."
+        ),
+        "Malayalam": (
+            "ഞാൻ നിങ്ങളുടെ ചോദ്യങ്ങൾ മനസിലാക്കുകയും, ക്യാമ്പസ് അറിവ് "
+            "ഉപയോഗിക്കുകയും, സംസാരിക്കുകയും, ഷെഡ്യൂളിങ്ങിൽ സഹായിക്കുകയും, "
+            "ശരിയായ ആളുകളുമായി ബന്ധിപ്പിക്കുകയും, ലൈവ് ആശയവിനിമയം "
+            "പിന്തുണയ്ക്കുകയും ചെയ്യും."
+        ),
     },
     "capability_item": {
         "English": "Let me show you how that works.",
@@ -398,12 +425,48 @@ _ABOUT_ME_BRIDGES: dict[str, dict[str, str]] = {
         "Malayalam": "അത് എങ്ങനെ പ്രവർത്തിക്കുന്നുവെന്ന് കാണിച്ചുതരാം.",
     },
     "creators": {
-        "English": "Meet the honorable creators of me.",
-        "Kannada": "ನನ್ನ ಗೌರವಾನ್ವಿತ ಸೃಷ್ಟಿಕರ್ತರನ್ನು ಭೇಟಿಯಾಗಿ.",
-        "Hindi": "मेरे सम्मानित निर्माताओं से मिलिए।",
-        "Tamil": "என்னை உருவாக்கிய மதிப்பிற்குரியவர்களை சந்தியுங்கள்.",
-        "Telugu": "నన్ను సృష్టించిన గౌరవనీయులను కలవండి.",
-        "Malayalam": "എന്നെ സൃഷ്ടിച്ച ബഹുമാനപ്പെട്ടവരെ കാണൂ.",
+        "English": (
+            "Meet the honorable creators of me. "
+            "Mister A N Aashuthosh, who is the AI Systems and NLP Engineer. "
+            "Mister Adithya N C, who is the Full-Stack and Systems Interface. "
+            "Mister Dhanush S Babu, who is the Real-Time Infrastructure and Voice. "
+            "And Mister M Naveen Kumar, who is the Lead Architect and Core AI Engineer."
+        ),
+        "Kannada": (
+            "ನನ್ನ ಗೌರವಾನ್ವಿತ ಸೃಷ್ಟಿಕರ್ತರನ್ನು ಭೇಟಿಯಾಗಿ. "
+            "ಶ್ರೀ A N ಆಶುತೋಷ್, AI Systems and NLP Engineer. "
+            "ಶ್ರೀ ಆದಿತ್ಯ N C, Full-Stack and Systems Interface. "
+            "ಶ್ರೀ ಧನುಷ್ S ಬಾಬು, Real-Time Infrastructure and Voice. "
+            "ಮತ್ತು ಶ್ರೀ M ನವೀನ್ ಕುಮಾರ್, Lead Architect and Core AI Engineer."
+        ),
+        "Hindi": (
+            "मेरे सम्मानित निर्माताओं से मिलिए। "
+            "श्री A N आशुतोष, जो AI Systems and NLP Engineer हैं। "
+            "श्री आदित्य N C, जो Full-Stack and Systems Interface हैं। "
+            "श्री धनुष S बाबू, जो Real-Time Infrastructure and Voice हैं। "
+            "और श्री M नवीन कुमार, जो Lead Architect and Core AI Engineer हैं।"
+        ),
+        "Tamil": (
+            "என்னை உருவாக்கிய மதிப்பிற்குரியவர்களை சந்தியுங்கள். "
+            "திரு A N ஆசுதோஷ், AI Systems and NLP Engineer. "
+            "திரு ஆதித்யா N C, Full-Stack and Systems Interface. "
+            "திரு தனுஷ் S பாபு, Real-Time Infrastructure and Voice. "
+            "மற்றும் திரு M நவீன் குமார், Lead Architect and Core AI Engineer."
+        ),
+        "Telugu": (
+            "నన్ను సృష్టించిన గౌరవనీయులను కలవండి. "
+            "శ్రీ A N ఆశుతోష్, AI Systems and NLP Engineer. "
+            "శ్రీ ఆదిత్య N C, Full-Stack and Systems Interface. "
+            "శ్రీ ధనుష్ S బాబు, Real-Time Infrastructure and Voice. "
+            "మరియు శ్రీ M నవీన్ కుమార్, Lead Architect and Core AI Engineer."
+        ),
+        "Malayalam": (
+            "എന്നെ സൃഷ്ടിച്ച ബഹുമാനപ്പെട്ടവരെ കാണൂ. "
+            "ശ്രീ A N ആശുതോഷ്, AI Systems and NLP Engineer. "
+            "ശ്രീ ആദിത്യ N C, Full-Stack and Systems Interface. "
+            "ശ്രീ ധനുഷ് S ബാബു, Real-Time Infrastructure and Voice. "
+            "ഒപ്പം ശ്രീ M നവീൻ കുമാർ, Lead Architect and Core AI Engineer."
+        ),
     },
     "creator_item": {
         "English": "Let me introduce you to one of the people behind me.",
@@ -423,9 +486,84 @@ _ABOUT_ME_BRIDGES: dict[str, dict[str, str]] = {
     },
 }
 
+# English spoken lines aligned to frontend About Me mind-map / creator cards.
+_ABOUT_ME_CAPABILITY_SPOKEN: dict[str, str] = {
+    "understand": (
+        "My understanding capability follows natural-language questions and "
+        "conversational intent, with multi-turn memory and adaptive tone for "
+        "campus inquiries."
+    ),
+    "know": (
+        "My knowledge capability uses institution-specific information so answers "
+        "stay grounded in verified campus sources."
+    ),
+    "speak": (
+        "My speaking capability supports speech recognition and voice responses "
+        "for hands-free conversation."
+    ),
+    "schedule": (
+        "My scheduling capability helps with appointment-related interactions "
+        "and visit coordination."
+    ),
+    "connect": (
+        "My connect capability helps you reach the appropriate staff or "
+        "institutional contact."
+    ),
+    "communicate": (
+        "My communication capability supports real-time and video communication "
+        "when you need live assistance."
+    ),
+}
 
-def about_me_bridge_reply(language: str | None, bridge_key: str) -> str:
-    table = _ABOUT_ME_BRIDGES.get(bridge_key) or _ABOUT_ME_BRIDGES["overview"]
+_ABOUT_ME_CREATOR_SPOKEN: dict[str, str] = {
+    "c1": (
+        "Meet A N Aashuthosh, AI Systems and NLP Engineer. He researched and built "
+        "the semantic understanding engine for natural student-institution conversations."
+    ),
+    "c2": (
+        "Meet Adithya N C, Full-Stack and Systems Interface. He crafted the kiosk "
+        "and web client interface architecture."
+    ),
+    "c4": (
+        "Meet Dhanush S Babu, Real-Time Infrastructure and Voice. He architected "
+        "the streaming WebSocket and WebRTC layer."
+    ),
+    "c5": (
+        "Meet M Naveen Kumar, Lead Architect and Core AI Engineer. He led the "
+        "system design and end-to-end integration."
+    ),
+}
+
+_ABOUT_ME_GUIDE_SPOKEN: dict[str, str] = {
+    "English": (
+        "Let me introduce you to my project guide, Dr. Nagashree N, from the "
+        "Department of Computer Science and Engineering, Data Science. She provided "
+        "foundational academic guidance for CLARA."
+    ),
+}
+
+
+def about_me_bridge_reply(
+    language: str | None,
+    bridge_key: str,
+    *,
+    item_id: str | None = None,
+) -> str:
+    key = (bridge_key or "overview").strip()
+    item = (item_id or "").strip()
+    if key == "capability_item" and item in _ABOUT_ME_CAPABILITY_SPOKEN:
+        # Capability details are authored in English on the About Me card; keep
+        # that as the spoken source of truth for the turn.
+        if not language or language == "English":
+            return _ABOUT_ME_CAPABILITY_SPOKEN[item]
+    if key == "creator_item" and item in _ABOUT_ME_CREATOR_SPOKEN:
+        if not language or language == "English":
+            return _ABOUT_ME_CREATOR_SPOKEN[item]
+    if key == "guide":
+        guide = _ABOUT_ME_GUIDE_SPOKEN.get("English")
+        if guide and (not language or language == "English"):
+            return guide
+    table = _ABOUT_ME_BRIDGES.get(key) or _ABOUT_ME_BRIDGES["overview"]
     return _pick(table, language)
 
 

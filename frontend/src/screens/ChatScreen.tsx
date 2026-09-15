@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useTransform } from 'motion/react';
 import { Sparkles, Home, MapPinned, MessageSquareText, Square, Volume2, FileText, X } from 'lucide-react';
 import { useLanguage, type Language } from '../context/LanguageContext';
@@ -36,7 +36,6 @@ import {
 } from '../lib/voice/transcriptGate';
 import { createAmbientBaselineTracker } from '../lib/voice/ambientSpeechGate';
 import AnimatedAiMessage from '../components/chat/AnimatedAiMessage';
-import AdaptiveAnswerCard, { resolveAnswerPresentation } from '../components/chat/AdaptiveAnswerCard';
 import CourseMenuComponent from '../components/chat/CourseMenuComponent';
 import DepartmentCardStage from '../components/chat/DepartmentCardStage';
 import DepartmentCardFactory from '../components/chat/cards/DepartmentCards/DepartmentCardFactory';
@@ -44,6 +43,13 @@ import LeadershipOverview from '../components/chat/LeadershipOverview';
 import DepartmentFeesCard from '../components/chat/cards/DepartmentFeesCard';
 import PremiumPrincipalCard from '../components/chat/cards/DepartmentCards/PremiumPrincipalCard';
 import PremiumVicePrincipalCard from '../components/chat/cards/DepartmentCards/PremiumVicePrincipalCard';
+import PremiumDeanCard from '../components/chat/cards/DepartmentCards/PremiumDeanCard';
+import {
+  DEAN_PROFILE_IDS,
+  deanIdFromCardTrigger,
+  deanIdFromUnitId,
+  type DeanProfileId,
+} from '../lib/deanLeadershipLocale';
 import DocumentsBlock from '../components/chat/cards/DocumentsBlock';
 import Trustees from '../components/chat/cards/Trustees/Trustees';
 import CampusUnitCard from '../components/chat/cards/CampusUnitCard/CampusUnitCard';
@@ -529,19 +535,18 @@ const normalizeCardTrigger = (trigger: unknown): string | null => {
   }
   if (
     n === 'vice_principal_profile' ||
-    n === 'vice_principal' ||
-    n === 'dean_academics' ||
-    n === 'dean_academic' ||
-    n === 'dean_of_academics' ||
-    n === 'academic_dean'
+    n === 'vice_principal'
   ) {
     return 'vice_principal_profile';
   }
+  if (n === 'deans' || n === 'dean' || n === 'all_deans') {
+    return 'deans';
+  }
+  if (deanIdFromCardTrigger(n)) {
+    return deanIdFromCardTrigger(n)!;
+  }
   if (n === 'bus_route' || n === 'bus_routes' || n === 'college_bus_routes') {
     return 'bus_routes';
-  }
-  if (n === 'campus_navigation' || n === 'campus_nav' || n === 'navigation') {
-    return 'campus_navigation';
   }
   return n;
 };
@@ -568,6 +573,24 @@ interface ChatScreenProps {
   /** When true, discard payload-driven updates (ghost session prevention). */
   isPayloadStale?: (p: unknown) => boolean;
   faceChannel?: FaceChannel;
+  /**
+   * Conversational About Me overlay is open above chat. Keep this screen mounted
+   * for same-turn TTS. FAQ pills + orb stay in normal ChatScreen flow — About Me
+   * is sized by App to end above this chrome.
+   */
+  aboutMeSurfaceOpen?: boolean;
+  /** Close About Me when the user starts a new conversational turn. */
+  onYieldAboutMe?: () => void;
+  /**
+   * Fired from the existing TTS playback-complete path after About Me narration
+   * finishes (or fails via the same completion handlers).
+   */
+  onAboutMeNarrationComplete?: () => void;
+  /**
+   * Live height of FAQ+orb conversational chrome (`.full-text-orb-zone`).
+   * Used by App to bottom-constrain the About Me overlay.
+   */
+  onConversationalChromeHeight?: (heightPx: number) => void;
 }
 
 export default function ChatScreen({
@@ -588,6 +611,10 @@ export default function ChatScreen({
   sendMessage,
   isPayloadStale,
   faceChannel,
+  aboutMeSurfaceOpen = false,
+  onYieldAboutMe,
+  onAboutMeNarrationComplete,
+  onConversationalChromeHeight,
 }: ChatScreenProps) {
   const { language, setLanguage, selectLanguageCode, t } = useLanguage();
   const presentationLanguage = languageFromPayload(payload) ?? language;
@@ -662,7 +689,6 @@ export default function ChatScreen({
   const [busRoutesHighlightQuery, setBusRoutesHighlightQuery] = useState<string | null>(null);
   const lastPayloadTurnIdRef = useRef<string | null>(null);
   const busRoutesDismissedTurnIdRef = useRef<string | null>(null);
-  const campusNavStickyTurnIdRef = useRef<string | null>(null);
   const closingBusRef = useRef(false);
   const lastTrusteeNarrationKeyRef = useRef<string | null>(null);
 
@@ -730,6 +756,11 @@ export default function ChatScreen({
   // Interaction State
   const [orbState, setOrbState] = useState<OrbState>('idle');
   const [isPlayingBackendAudio, setIsPlayingBackendAudio] = useState(false);
+  /** Tracks About Me narration so timer arms from real playback completion. */
+  const aboutMeAudioWasPlayingRef = useRef(false);
+  const aboutMeNarrationCompleteNotifiedRef = useRef(false);
+  const fullTextOrbZoneRef = useRef<HTMLDivElement | null>(null);
+  const conversationalChromeHeightRef = useRef(0);
   const [audioPendingTimedOut, setAudioPendingTimedOut] = useState(false);
   const isResponsePending = showThinkingOverlay({
     isProcessing: Boolean(isProcessing),
@@ -891,6 +922,9 @@ export default function ChatScreen({
         setUnitBackedCards(incomingCardModels);
         const allHod = incomingCardModels.every((model) => model.cardType === 'hod');
         const allFees = incomingCardModels.every((model) => model.cardType === 'department_fees');
+        const aboutMeProfile = incomingCardModels.every((model) =>
+          ['creator', 'guide', 'clara_intro', 'clara_capability'].includes(model.cardType),
+        );
         setIsHodStage(allHod);
         setIsFeesStage(allFees);
         if (allHod) {
@@ -904,6 +938,12 @@ export default function ChatScreen({
           setActiveFeesDepartmentId(incomingCardModels[0]!.departmentId);
         } else if (!allFees) {
           setActiveFeesDepartmentId(null);
+        }
+        // Creator/guide cards live only in SPLIT_CARDS; plan arrival must flip layout
+        // even before the main showCard=about_me branch runs.
+        if (aboutMeProfile || allHod) {
+          setIsDepartmentOverviewStage(false);
+          setLayoutMode('SPLIT_CARDS');
         }
       }
       const turnId = typeof plan.turnId === 'string' ? plan.turnId : '';
@@ -1146,9 +1186,6 @@ export default function ChatScreen({
       }
       audioLockRef.current = false;
       setIsPlayingBackendAudio(false);
-      // Always clear campus speaking latch when tearing down turn audio —
-      // do not leave the orb stuck in speaking across a new turn.
-      setIsCampusSpeaking(false);
       streamAudioLayoutRef.current = null;
       const leaving = assistantAudioTurnOwnerRef.current;
       if (leaving && leaving !== TURN_FENCE_PENDING) {
@@ -1323,8 +1360,10 @@ export default function ChatScreen({
   const interceptAndSendMessage = useCallback((msg: any, source: 'VOICE' | 'UI' = 'VOICE') => {
     if (msg?.action === 'user_message' && typeof msg.text === 'string') {
       const trimmed = msg.text.trim();
-      // Campus navigation is a backend presentation outcome (like bus_routes).
-      // Do not trap voice locally — that blocked CARD/RAG after a map was open.
+      if (source === 'VOICE' && isCampusNavigationStage && trimmed) {
+        processCampusVoiceTranscriptRef.current(trimmed);
+        return;
+      }
       const cardDirection = parseCardNavigationCommand(trimmed);
       if (cardDirection && Array.isArray(unitBackedCards) && unitBackedCards.length > 0) {
         const delta = cardDirection === 'next' ? 1 : -1;
@@ -1336,16 +1375,17 @@ export default function ChatScreen({
         onChatUserActivity?.();
         return;
       }
+      // About Me is a conversational surface — a new question yields it immediately.
+      if (aboutMeSurfaceOpen) {
+        onYieldAboutMe?.();
+      }
       clearSuggestionLayer();
       if (source === 'VOICE') {
         setSurface('chat');
       }
       // Rule 5: explicit UI menu navigation (localIntent) keeps layout; all other turns reset.
       const preserveLayoutForUiNav = source === 'UI' && Boolean(msg?.localIntent);
-      // Keep campus map mounted across consecutive navigation turns; destination updates from payload.
-      const preserveCampusNav =
-        Boolean(isCampusNavigationStage) && source === 'VOICE' && !preserveLayoutForUiNav;
-      resetTurnPresentationState({ resetLayout: !preserveLayoutForUiNav && !preserveCampusNav });
+      resetTurnPresentationState({ resetLayout: !preserveLayoutForUiNav });
       if (source === 'VOICE') {
         setActiveCards(null);
         setCurrentCardIdx(0);
@@ -1378,7 +1418,7 @@ export default function ChatScreen({
       }
     }
     sendMessage(msg);
-  }, [clearSuggestionLayer, resetTurnPresentationState, sendMessage, onChatUserActivity, isCampusNavigationStage, unitBackedCards, currentCardIdx, inlineLanguageGate, startThinkingInterlude]);
+  }, [aboutMeSurfaceOpen, clearSuggestionLayer, resetTurnPresentationState, sendMessage, onChatUserActivity, onYieldAboutMe, isCampusNavigationStage, unitBackedCards, currentCardIdx, inlineLanguageGate, startThinkingInterlude]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1436,12 +1476,13 @@ export default function ChatScreen({
 
   // Browser Speech Rec — NO_INPUT must never invent a backend turn.
   const handleEmptyTranscript = useCallback(() => {
+    if (isCampusNavigationStage) return;
     if (autoListenApiRef.current?.isArmed()) {
       autoListenApiRef.current.notifyRecognitionEndedWithoutSpeech();
       return;
     }
     // Manual listen with empty result: stay silent locally (no BACKGROUND_NOISE LLM).
-  }, []);
+  }, [isCampusNavigationStage]);
 
   const handleSpeechError = useCallback((errorCode: string, userMessage: string) => {
     if (errorCode === 'aborted' || !userMessage?.trim()) return;
@@ -1629,11 +1670,13 @@ export default function ChatScreen({
     isListening: speechListening,
     claraBusy: claraBusyForAutoListen,
     suppressed:
+      Boolean(isCampusNavigationStage) ||
       voiceInputMode !== 'browser' ||
       (Boolean(inlineLanguageGate) && !languageGateSatisfied),
     onNameTimeout: endSessionToSleep,
     onNormalInactivity: requestClosingPrompt,
-    onClosingTimeout: endSessionToSleep,
+    // Silent after closing prompt → re-hit closing handler (backend issues feedback).
+    onClosingTimeout: requestClosingPrompt,
     onNoInputFailure: emitNoInputWarning,
   });
   autoListenApiRef.current = autoListen;
@@ -1663,7 +1706,23 @@ export default function ChatScreen({
   useEffect(() => {
     if (payload && isPayloadStale?.(payload)) return;
     if (Array.isArray(payload?.messages)) {
-      const incomingMessages = payload.messages as ChatMessage[];
+      let incomingMessages = payload.messages as ChatMessage[];
+      const uiAction = payload?.uiAction;
+      const isAboutMePayload =
+        uiAction &&
+        typeof uiAction === 'object' &&
+        String((uiAction as { type?: string }).type || '') === 'open_about_me';
+      // About Me narration is a presentation bridge — keep it out of the 30% chat panel.
+      if (isAboutMePayload) {
+        for (let i = incomingMessages.length - 1; i >= 0; i -= 1) {
+          const m = incomingMessages[i] as ChatMessage & { isHidden?: boolean; role?: string };
+          if (m?.role === 'clara' && typeof (m as { text?: string }).text === 'string' && !m.isHidden) {
+            incomingMessages = incomingMessages.slice();
+            incomingMessages[i] = { ...m, isHidden: true } as unknown as ChatMessage;
+            break;
+          }
+        }
+      }
       const hasReadyPrompt = incomingMessages.some((m: any) => m?.id === 'ready_prompt');
       const hasNamePrompt = incomingMessages.some((m: any) => m?.id === 'name_prompt');
       if (
@@ -1701,7 +1760,7 @@ export default function ChatScreen({
           deferredTurnIdRef.current = payload?.turn_id ?? null;
         }
       }
-      if (isCardTurn) {
+      if (isCardTurn || isAboutMePayload) {
         setVisuallyFocusedMessage(null);
       } else if (shouldFocusAssistantAnswer({
         isCardTurn,
@@ -1719,6 +1778,37 @@ export default function ChatScreen({
     isPayloadStale,
     audioPendingTimedOut,
     thinkingEpoch,
+  ]);
+
+  // Authoritative About Me TTS completion → App arms section auto-advance timer.
+  useEffect(() => {
+    if (!onAboutMeNarrationComplete) return;
+    if (isPlayingBackendAudio) {
+      const ui = payload?.uiAction;
+      const isAboutMe =
+        aboutMeSurfaceOpen ||
+        (ui &&
+          typeof ui === 'object' &&
+          String((ui as { type?: string }).type || '') === 'open_about_me');
+      if (isAboutMe) {
+        aboutMeAudioWasPlayingRef.current = true;
+        aboutMeNarrationCompleteNotifiedRef.current = false;
+      }
+      return;
+    }
+    if (
+      aboutMeAudioWasPlayingRef.current &&
+      !aboutMeNarrationCompleteNotifiedRef.current
+    ) {
+      aboutMeNarrationCompleteNotifiedRef.current = true;
+      aboutMeAudioWasPlayingRef.current = false;
+      onAboutMeNarrationComplete();
+    }
+  }, [
+    isPlayingBackendAudio,
+    aboutMeSurfaceOpen,
+    payload?.uiAction,
+    onAboutMeNarrationComplete,
   ]);
 
   useEffect(() => {
@@ -1948,21 +2038,13 @@ export default function ChatScreen({
   );
 
   const stopCampusSpeech = useCallback(() => {
-    const owner = assistantAudioTurnOwnerRef.current;
-    const isCampusTurn =
-      typeof owner === 'string' &&
-      (owner.startsWith('campus-') || owner.startsWith('trustee-card-'));
-    // Only pause/clear audio when campus (or trustee card) TTS owns playback —
-    // never kill unrelated chat answer audio.
-    if (isCampusSpeaking || isCampusTurn) {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-      setIsPlayingBackendAudio(false);
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
+    setIsPlayingBackendAudio(false);
     setIsCampusSpeaking(false);
-  }, [isCampusSpeaking]);
+  }, []);
 
   const stopTextReveal = useCallback((clearText = false) => {
     sentenceRevealAbortRef.current += 1;
@@ -2108,8 +2190,6 @@ export default function ChatScreen({
 
   const openCampusNavigation = useCallback(() => {
     onChatUserActivity?.();
-    // Disarm settle/auto-listen before select-room TTS so mic cannot re-arm into the prompt.
-    autoListenApiRef.current?.disarm({ stopMic: true });
     stopListening();
     clearSuggestionLayer();
     if (currentAudioRef.current) {
@@ -2117,7 +2197,6 @@ export default function ChatScreen({
       currentAudioRef.current = null;
       setIsPlayingBackendAudio(false);
     }
-    setIsCampusSpeaking(false);
     engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
     const latestVisibleClara = [...displayMessages]
       .reverse()
@@ -2138,9 +2217,6 @@ export default function ChatScreen({
     clearCardStages();
     setSurface('chat');
     setIsCampusNavigationStage(true);
-    // Anchor sticky ownership so trailing non-nav TTS frames do not immediately dismiss the map.
-    campusNavStickyTurnIdRef.current =
-      lastPayloadTurnIdRef.current ?? `ui-campus-${Date.now()}`;
     setSelectedCampusIndex(0);
     setHasCampusRoomSelection(false);
     setCampusRouteMode('default');
@@ -2727,8 +2803,7 @@ export default function ChatScreen({
       const nextOwner = String(payload.turn_id);
       if (assistantAudioTurnOwnerRef.current !== nextOwner) {
         // Backend-mic path never runs interceptAndSendMessage; mirror turn reset here.
-        // Preserve campus map+orb across turns — leave only via leavesCampusFor* paths.
-        resetTurnPresentationState({ resetLayout: !isCampusNavigationStage });
+        resetTurnPresentationState({ resetLayout: true });
         assistantAudioTurnOwnerRef.current = nextOwner;
       }
       if (responseTtsSchedulerRef.current.turnId !== nextOwner) {
@@ -2902,7 +2977,47 @@ export default function ChatScreen({
       }
     }
 
-    const blocking = shouldBlockResponsePlayback(thinkingGateRef.current);
+    const uiActionEarly = payload?.uiAction;
+    const isAboutMeTurnEarly =
+      uiActionEarly &&
+      typeof uiActionEarly === 'object' &&
+      String((uiActionEarly as { type?: string }).type || '') === 'open_about_me';
+
+    // About Me spoken bridge must not wait on the thinking gate / pendingAudio delay.
+    if (
+      isAboutMeTurnEarly &&
+      typeof audioBase64 === 'string' &&
+      audioBase64.length > 0
+    ) {
+      const tid = String(turnId || '');
+      const audioSigEarly = `${audioBase64.length}:${audioBase64.slice(0, 24)}`;
+      const segmentKeyEarly = [tid, audioSigEarly].join('|');
+      thinkingPlayerRef.current?.stop();
+      if (tid) {
+        const finished = markThinkingTtsFinished(
+          {
+            ...thinkingGateRef.current,
+            turnId: tid,
+            ttsPlaying: false,
+            responseStarted: false,
+          },
+          tid,
+        );
+        thinkingGateRef.current = finished;
+        setThinkingGate(finished);
+        bumpThinkingEpoch();
+      }
+      setPendingAudio(null);
+      heldResponsePayloadRef.current = null;
+      aboutMeAudioWasPlayingRef.current = true;
+      aboutMeNarrationCompleteNotifiedRef.current = false;
+      setVisuallyFocusedMessage(null);
+      handleAudioPlayback(audioBase64, segmentKeyEarly, false, null, tid);
+      // Fall through so messages / layout still update; audio is already started.
+    }
+
+    const blocking =
+      !isAboutMeTurnEarly && shouldBlockResponsePlayback(thinkingGateRef.current);
     if (blocking) {
       const looksLikeAnswer =
         (Array.isArray(payload?.messages) && payload.messages.length > 0) ||
@@ -2931,6 +3046,8 @@ export default function ChatScreen({
       }
     }
 
+    const isAboutMeTurn = isAboutMeTurnEarly;
+
     const deferAssistantTtsToStream = shouldDeferAssistantTtsToStream(payload);
     const offerAssistantAudio = (opts: {
       audioBase64: string | undefined;
@@ -2947,6 +3064,10 @@ export default function ChatScreen({
         turnId: opts.turnId,
       };
       if (typeof opts.audioBase64 !== 'string' || opts.audioBase64.length === 0) {
+        return;
+      }
+      // Already started About Me audio above — do not double-queue.
+      if (isAboutMeTurn) {
         return;
       }
       if (!deferAssistantTtsToStream) {
@@ -3016,28 +3137,9 @@ export default function ChatScreen({
     }
 
     if (cardTrigger === 'department_explanation') {
-      // Never fall through into the generic unit-backed overview path with a bare
-      // "department_explanation" unitId. Only open the stage with valid dept units.
-      if (!isResponseReady) {
-        if (audioBase64) {
-          offerAssistantAudio({
-            audioBase64,
-            segmentKey,
-            turnId: turnId,
-            isOverview: false,
-            cardsToSync: null,
-            targetLayout: 'FULL_TEXT',
-          });
-        }
-        return;
-      }
-
+      // Apply cards immediately from the narration plan — same early unit-backed
+      // pattern as HOD. TTS readiness must not block SPLIT_CARDS.
       engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
-      // Build explanation cards from narration_plan unit segments and/or comparisonDepartments.
-      const rawDepts = payload?.comparisonDepartments;
-      const deptIds: string[] = Array.isArray(rawDepts)
-        ? (rawDepts as unknown[]).filter((x): x is string => typeof x === 'string')
-        : [];
       const plan = (payload as Record<string, unknown>)?.narration_plan as
         | Record<string, unknown>
         | undefined;
@@ -3045,62 +3147,62 @@ export default function ChatScreen({
         ? ((plan as Record<string, unknown>).segments as unknown[])
         : [];
 
-      const fromSegments: ExplanationCardData[] = [];
-      for (const rawSeg of segments) {
-        if (!rawSeg || typeof rawSeg !== 'object') continue;
-        const seg = rawSeg as Record<string, unknown>;
-        const unitId =
-          typeof seg.unitId === 'string'
-            ? seg.unitId
-            : typeof seg.unit_id === 'string'
-              ? seg.unit_id
-              : '';
-        // Reject bare "department_explanation" — require department_explanation.<dept_key>
-        if (!unitId.startsWith('department_explanation.') || unitId === 'department_explanation') {
-          continue;
-        }
-        const deptId = unitId.slice('department_explanation.'.length);
-        if (!deptId || deptId.includes('.')) continue;
-        const title =
-          typeof seg.title === 'string' && seg.title.trim()
-            ? seg.title
-            : deptId.replace(/_/g, ' ').toUpperCase();
-        const summary =
-          (typeof seg.tts_text === 'string' && seg.tts_text) ||
-          (typeof seg.ttsText === 'string' && seg.ttsText) ||
-          (typeof seg.summary === 'string' && seg.summary) ||
-          (typeof seg.caption === 'string' && seg.caption) ||
-          '';
-        const videoSrc =
-          typeof seg.video_src === 'string'
-            ? seg.video_src
-            : `/assets/department_explanations/${deptId}.mp4`;
-        fromSegments.push({ unitId, title, summary, videoSrc });
-      }
-
-      const fromDepts: ExplanationCardData[] = deptIds
-        .filter((deptId) => typeof deptId === 'string' && deptId.trim().length > 0)
-        .map((deptId) => {
-          const unitId = `department_explanation.${deptId}`;
-          const existing = fromSegments.find((c) => c.unitId === unitId);
-          if (existing) return existing;
+      const models = presentationCardsFromNarrationSegments(
+        segments.map((rawSeg) => {
+          if (!rawSeg || typeof rawSeg !== 'object') return {};
+          const seg = rawSeg as Record<string, unknown>;
+          const unitId =
+            typeof seg.unitId === 'string'
+              ? seg.unitId
+              : typeof seg.unit_id === 'string'
+                ? seg.unit_id
+                : '';
           return {
             unitId,
-            title: deptId.replace(/_/g, ' ').toUpperCase(),
-            summary: '',
-            videoSrc: `/assets/department_explanations/${deptId}.mp4`,
+            canonicalCardId:
+              typeof seg.canonicalCardId === 'string'
+                ? seg.canonicalCardId
+                : typeof seg.canonical_card_id === 'string'
+                  ? seg.canonical_card_id
+                  : 'department_explanation',
+            sectionId:
+              typeof seg.sectionId === 'string'
+                ? seg.sectionId
+                : typeof seg.section_id === 'string'
+                  ? seg.section_id
+                  : null,
+            displayText:
+              typeof seg.displayText === 'string'
+                ? seg.displayText
+                : typeof seg.display_text === 'string'
+                  ? seg.display_text
+                  : typeof seg.title === 'string' && typeof seg.summary === 'string'
+                    ? `${seg.title}\n${seg.summary}`
+                    : typeof seg.title === 'string'
+                      ? seg.title
+                      : null,
+            ttsText:
+              typeof seg.ttsText === 'string'
+                ? seg.ttsText
+                : typeof seg.tts_text === 'string'
+                  ? seg.tts_text
+                  : null,
+            cardIndex: typeof seg.cardIndex === 'number' ? seg.cardIndex : null,
           };
-        });
+        }),
+      ).filter((m) => m.cardType === 'department_explanation');
 
-      // Prefer canonical narration unit IDs; fall back to dept list only as wire assist.
-      const newCards = fromSegments.length > 0 ? fromSegments : fromDepts;
-      if (newCards.length === 0) {
-        // Invalid / empty explanation composition — do not open a blank stage.
+      if (models.length === 0) {
         return;
       }
-      setExplanationCards(newCards);
-      setSurface('department_explanation');
-      setLayoutMode('FULL_TEXT');
+
+      setSurface('chat');
+      setExplanationCards([]);
+      setUnitBackedCards(models);
+      setIsHodStage(false);
+      setIsDepartmentOverviewStage(false);
+      setCurrentCardIdx(0);
+      setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
         offerAssistantAudio({
           audioBase64,
@@ -3108,7 +3210,85 @@ export default function ChatScreen({
           turnId: turnId,
           isOverview: false,
           cardsToSync: null,
-          targetLayout: 'FULL_TEXT',
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
+    if (cardTrigger === 'about_me') {
+      // Creator/guide/CLARA cards: apply as soon as narration unitIds arrive.
+      // Do not wait for audioPending=false — that left TTS playing in FULL_TEXT.
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+      const plan = (payload as Record<string, unknown>)?.narration_plan as
+        | Record<string, unknown>
+        | undefined;
+      const segments = Array.isArray((plan as Record<string, unknown> | undefined)?.segments)
+        ? ((plan as Record<string, unknown>).segments as unknown[])
+        : [];
+
+      const models = presentationCardsFromNarrationSegments(
+        segments.map((rawSeg) => {
+          if (!rawSeg || typeof rawSeg !== 'object') return {};
+          const seg = rawSeg as Record<string, unknown>;
+          const unitId =
+            typeof seg.unitId === 'string'
+              ? seg.unitId
+              : typeof seg.unit_id === 'string'
+                ? seg.unit_id
+                : '';
+          return {
+            unitId,
+            canonicalCardId:
+              typeof seg.canonicalCardId === 'string'
+                ? seg.canonicalCardId
+                : typeof seg.canonical_card_id === 'string'
+                  ? seg.canonical_card_id
+                  : null,
+            sectionId:
+              typeof seg.sectionId === 'string'
+                ? seg.sectionId
+                : typeof seg.section_id === 'string'
+                  ? seg.section_id
+                  : null,
+            displayText:
+              typeof seg.displayText === 'string'
+                ? seg.displayText
+                : typeof seg.display_text === 'string'
+                  ? seg.display_text
+                  : null,
+            ttsText:
+              typeof seg.ttsText === 'string'
+                ? seg.ttsText
+                : typeof seg.tts_text === 'string'
+                  ? seg.tts_text
+                  : null,
+            cardIndex: typeof seg.cardIndex === 'number' ? seg.cardIndex : null,
+          };
+        }),
+      ).filter((m) =>
+        ['creator', 'guide', 'clara_intro', 'clara_capability'].includes(m.cardType),
+      );
+
+      if (models.length === 0) {
+        return;
+      }
+
+      setSurface('chat');
+      setExplanationCards([]);
+      setUnitBackedCards(models);
+      setIsHodStage(false);
+      setIsDepartmentOverviewStage(false);
+      setCurrentCardIdx(0);
+      setLayoutMode('SPLIT_CARDS');
+      if (audioBase64) {
+        offerAssistantAudio({
+          audioBase64,
+          segmentKey,
+          turnId: turnId,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
         });
       }
       return;
@@ -3121,7 +3301,6 @@ export default function ChatScreen({
         setBusRoutesHighlightQuery(lastUserTextForInference);
         setBusRoutesMountKey((k) => k + 1);
         setSurface('bus_routes');
-        setIsCampusNavigationStage(false);
         setLayoutMode('FULL_TEXT');
         if (audioBase64) {
           setPendingAudio({
@@ -3135,116 +3314,6 @@ export default function ChatScreen({
         }
         return;
       }
-    }
-
-    if (cardTrigger === 'campus_navigation') {
-      const dest = payload?.campusDestination;
-      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
-      campusNavStickyTurnIdRef.current = String(turnId);
-      comparisonLayoutSnapRef.current = null;
-      setSurface('chat');
-      clearCardStages();
-      setIsTrusteesStage(false);
-      setExecutiveLeadershipKind(null);
-      setIsCampusNavigationStage(true);
-      setLayoutMode('SPLIT_CARDS');
-      if (dest && typeof dest === 'object' && typeof dest.code === 'string') {
-        const room = dest as CampusMatchApiRoom;
-        const direction = campusDirectionFromMapMatch(room);
-        setCampusDirectionOverride(direction);
-        const idx = legacyCampusIndexForCode(
-          room.code,
-          (room.floor_id as 'GF' | 'FF' | 'SF' | undefined) ?? undefined,
-        );
-        if (idx !== null) setSelectedCampusIndex(idx);
-        setCampusRouteResult(null);
-        setHasCampusRoomSelection(true);
-        if (import.meta.env.DEV) {
-          console.debug('[NAVIGATION_PRESENTATION]', {
-            code: room.code,
-            floor_id: room.floor_id,
-            name: room.name,
-          });
-        }
-      } else {
-        setHasCampusRoomSelection(false);
-        setCampusDirectionOverride(null);
-        setCampusRouteResult(null);
-      }
-      if (audioBase64) {
-        offerAssistantAudio({
-          audioBase64,
-          segmentKey,
-          turnId: turnId,
-          isOverview: false,
-          cardsToSync: null,
-          targetLayout: 'SPLIT_CARDS',
-        });
-      }
-      return;
-    }
-
-    // Campus Navigation + shared orb stay mounted like normal chat.
-    // Leave ONLY for a concrete alternate surface (HOD/card/bus/etc.), never for
-    // intermediate text frames, no-input nudges, or turns that omit showCard briefly.
-    const leavesCampusForOtherSurface =
-      Boolean(cardTrigger) &&
-      cardTrigger !== 'campus_navigation' &&
-      cardTrigger !== 'documents';
-    const leavesCampusForUnitPlan =
-      unitModelsFromPayload.length > 0 && cardTrigger !== 'campus_navigation';
-    const leavesCampusForAdaptiveAnswer =
-      isResponseReady &&
-      cardTrigger !== 'campus_navigation' &&
-      payloadMessageList.some(
-        (message: any) =>
-          String(message?.role ?? '').toLowerCase() !== 'user' &&
-          message?.answerPresentation &&
-          typeof message.answerPresentation === 'object',
-      );
-    const adaptiveAnswerMessage = leavesCampusForAdaptiveAnswer
-      ? [...payloadMessageList]
-          .reverse()
-          .find(
-            (message: any) =>
-              String(message?.role ?? '').toLowerCase() !== 'user' &&
-              message?.answerPresentation &&
-              typeof message.answerPresentation === 'object',
-          )
-      : null;
-
-    let stayOnCampusNavigation = Boolean(isCampusNavigationStage);
-    if (
-      stayOnCampusNavigation &&
-      isResponseReady &&
-      (leavesCampusForOtherSurface || leavesCampusForUnitPlan || leavesCampusForAdaptiveAnswer)
-    ) {
-      stayOnCampusNavigation = false;
-      setIsCampusNavigationStage(false);
-      setCampusRouteResult(null);
-      setCampusDirectionOverride(null);
-      setHasCampusRoomSelection(false);
-      campusNavStickyTurnIdRef.current = null;
-      if (adaptiveAnswerMessage) {
-        setVisuallyFocusedMessage(adaptiveAnswerMessage as ChatMessage);
-        setLayoutMode('FULL_TEXT');
-      }
-      // Fall through so the alternate card/surface handlers can take over.
-    } else if (stayOnCampusNavigation) {
-      // Keep map + orb mounted across questions (normal-screen continuity).
-      // Destination updates arrive via showCard=campus_navigation (handled above).
-      setLayoutMode('SPLIT_CARDS');
-      if (audioBase64) {
-        offerAssistantAudio({
-          audioBase64,
-          segmentKey,
-          turnId: turnId,
-          isOverview: false,
-          cardsToSync: null,
-          targetLayout: 'SPLIT_CARDS',
-        });
-      }
-      return;
     }
 
     // Keep Bus routes fullscreen sticky while TTS trailing frames omit `showCard`.
@@ -3286,14 +3355,14 @@ export default function ChatScreen({
       return;
     }
 
-    // Keep Principal / Vice Principal premium cards sticky across TTS chunks that omit `showCard`.
-    // Never block an explicit campus_navigation surface.
+    // Keep Principal / Vice Principal / Dean premium cards sticky across TTS chunks that omit `showCard`.
     if (
       executiveLeadershipKind &&
       currentUiLockRef.current === 'CARD' &&
       cardTrigger !== 'principal_profile' &&
       cardTrigger !== 'vice_principal_profile' &&
-      cardTrigger !== 'campus_navigation'
+      cardTrigger !== 'deans' &&
+      !deanIdFromCardTrigger(cardTrigger)
     ) {
       setLayoutMode('SPLIT_CARDS');
       if (audioBase64) {
@@ -3535,6 +3604,36 @@ export default function ChatScreen({
       return;
     }
 
+    if (cardTrigger === 'deans' || deanIdFromCardTrigger(cardTrigger)) {
+      engageCardUiLock(lastPayloadTurnIdRef.current ?? 'ui-local');
+      setIsFeesStage(false);
+      setActiveFeesDepartmentId(null);
+      setIsDocumentsStage(false);
+      setIsInfoSlideStage(false);
+      setInfoSlides([]);
+      setInfoSlideChip('');
+      setIsDepartmentOverviewStage(false);
+      setActiveDepartmentId(null);
+      setCourseMenuOptions([]);
+      setIsHodStage(false);
+      setExecutiveLeadershipKind(
+        cardTrigger === 'deans' ? 'deans' : (deanIdFromCardTrigger(cardTrigger) as DeanProfileId),
+      );
+      setLayoutMode('SPLIT_CARDS');
+      setActiveCards(null);
+      if (audioBase64) {
+        offerAssistantAudio({
+          audioBase64,
+          segmentKey,
+          turnId: turnId,
+          isOverview: false,
+          cardsToSync: null,
+          targetLayout: 'SPLIT_CARDS',
+        });
+      }
+      return;
+    }
+
     if (useCollegeWidePlacements) {
       setIsHodStage(false);
       setIsFeesStage(false);
@@ -3612,6 +3711,7 @@ export default function ChatScreen({
         const allFees = models.length === 1 && models[0]!.cardType === 'department_fees';
         const allPrincipal = models.every((m) => m.cardType === 'principal');
         const allVicePrincipal = models.every((m) => m.cardType === 'vice_principal');
+        const allDean = models.every((m) => m.cardType === 'dean');
         const allTrustees = models.every((m) => m.cardType === 'trustees');
 
         if (allFees) {
@@ -3674,6 +3774,27 @@ export default function ChatScreen({
 
         if (allVicePrincipal) {
           setExecutiveLeadershipKind('vice_principal');
+          setIsDepartmentOverviewStage(false);
+          setActiveDepartmentId(null);
+          setLayoutMode('SPLIT_CARDS');
+          setActiveCards(null);
+          setSuppressedTurnId(turnId);
+          offerAssistantAudio({
+            audioBase64,
+            segmentKey,
+            turnId: turnId,
+            isOverview: false,
+            cardsToSync: null,
+            targetLayout: 'SPLIT_CARDS',
+          });
+          return;
+        }
+
+        if (allDean) {
+          const firstDean = deanIdFromUnitId(models[0]?.unitId);
+          setExecutiveLeadershipKind(
+            models.length > 1 ? 'deans' : firstDean || 'dean_academics',
+          );
           setIsDepartmentOverviewStage(false);
           setActiveDepartmentId(null);
           setLayoutMode('SPLIT_CARDS');
@@ -4585,8 +4706,7 @@ export default function ChatScreen({
 
   useEffect(() => {
     if (!isCampusNavigationStage) {
-      // Clear campus speaking latch only — do not pause chat TTS via stopCampusSpeech.
-      setIsCampusSpeaking(false);
+      stopCampusSpeech();
       return;
     }
     const timer = window.setTimeout(() => {
@@ -4601,6 +4721,7 @@ export default function ChatScreen({
     selectedCampusIndex,
     language,
     promptCampusRoomSelection,
+    stopCampusSpeech,
   ]);
 
   useEffect(() => {
@@ -4664,7 +4785,8 @@ export default function ChatScreen({
 
     const suppressed =
       voiceInputMode !== 'browser' ||
-      (Boolean(inlineLanguageGate) && !languageGateSatisfied);
+      (Boolean(inlineLanguageGate) && !languageGateSatisfied) ||
+      Boolean(isCampusNavigationStage);
 
     if (
       !shouldScheduleAutoListenArm({
@@ -4692,7 +4814,8 @@ export default function ChatScreen({
     const msgs = displayMessagesRef.current || [];
     const hasNamePrompt = msgs.some((m: any) => m?.id === 'name_prompt');
     const hasReadyPrompt = msgs.some((m: any) => m?.id === 'ready_prompt');
-    const awaitingClosing = Boolean(payload?.awaiting_closing_reply);
+    const awaitingClosing =
+      Boolean(payload?.awaiting_closing_reply) || Boolean(payload?.awaiting_feedback);
     const pendingMode = pendingNoInputReArmRef.current;
     pendingNoInputReArmRef.current = null;
     let mode: AutoListenWaitMode = pendingMode || 'normal';
@@ -4707,6 +4830,7 @@ export default function ChatScreen({
   }, [
     clearContinuationTimer,
     endSessionToSleep,
+    isCampusNavigationStage,
     isCampusSpeaking,
     isPlayingBackendAudio,
     isProcessing,
@@ -4714,6 +4838,7 @@ export default function ChatScreen({
     languageGateSatisfied,
     payload?.audioPending,
     payload?.awaiting_closing_reply,
+    payload?.awaiting_feedback,
     startContinuationTimer,
     voiceInputMode,
   ]);
@@ -4837,8 +4962,8 @@ export default function ChatScreen({
       currentAudioRef.current = null;
     }
     stopListening();
-    stopCampusSpeech();
     setIsPlayingBackendAudio(false);
+    setIsCampusSpeaking(false);
     setShowUnmuteHint(false);
     setHasGreeted(true);
     isPendingListeningRef.current = false;
@@ -4979,6 +5104,38 @@ export default function ChatScreen({
   const isLanguageGateOpen = inlineLanguageGate && !languageGateSatisfied;
   const shouldHideFaqSuggestions =
     isLanguageGateOpen || isResponsePending || isDepartmentExplanationSurface || isBusRoutesSurface;
+
+  // Publish live FAQ+orb chrome height so App can bottom-constrain About Me.
+  useLayoutEffect(() => {
+    const publish = (heightPx: number) => {
+      const next = Math.max(0, Math.ceil(heightPx));
+      if (next <= 0) return;
+      if (Math.abs(next - conversationalChromeHeightRef.current) < 1) return;
+      conversationalChromeHeightRef.current = next;
+      onConversationalChromeHeight?.(next);
+    };
+    const el = fullTextOrbZoneRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    publish(el.getBoundingClientRect().height);
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      publish(entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    onConversationalChromeHeight,
+    layoutMode,
+    showThinkingStage,
+    isLanguageGateOpen,
+    isDepartmentExplanationSurface,
+    shouldHideFaqSuggestions,
+    aboutMeSurfaceOpen,
+  ]);
+
   const submitFaqSuggestion = useCallback(
     (_id: string, question: string) => {
       // #region agent log
@@ -5018,10 +5175,6 @@ export default function ChatScreen({
       ? sentenceRevealText
       : lastAssistantMsg?.text ?? '';
   const fullTextAnimate = true;
-  const visualAnswerPresentation = useMemo(
-    () => resolveAnswerPresentation(lastAssistantMsg),
-    [lastAssistantMsg],
-  );
 
   const responseLayoutEnabled =
     layoutMode === 'FULL_TEXT' &&
@@ -5410,7 +5563,13 @@ export default function ChatScreen({
   }, [layoutMode, recentPanelMessages, isResponsePending]);
 
   return (
-    <div className={`light-chat-container ${scriptPreset.cssClass}`} data-testid="chat-screen" lang={languageToCode(language)}>
+    <>
+    <div
+      className={`light-chat-container ${scriptPreset.cssClass}${aboutMeSurfaceOpen ? ' about-me-chat-surface' : ''}`}
+      data-testid="chat-screen"
+      lang={languageToCode(language)}
+      data-about-me-surface={aboutMeSurfaceOpen ? 'open' : undefined}
+    >
       <AnimatePresence mode="wait" initial={false}>
         {surface === 'bus_routes' ? (
           React.createElement(BusRoutesFullscreen, {
@@ -5520,7 +5679,7 @@ export default function ChatScreen({
               className={`full-text-layout min-h-0`}
             >
               <div
-                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col${visualAnswerPresentation ? ' full-text-message-stage--adaptive-answer' : ''}`}
+                className={`full-text-message-stage relative z-10 flex min-h-0 flex-col`}
               >
                 <div
                   ref={fullTextScrollRef}
@@ -5535,15 +5694,13 @@ export default function ChatScreen({
                       inlineLanguageGate &&
                       !languageGateSatisfied
                     )
-                      ? ` text-container--optical${visualAnswerPresentation ? ' text-container--adaptive-card' : ''}`
+                      ? ' text-container--optical'
                       : ''
                   }`}
                   style={
                     responseLayoutEnabled
                       ? {
-                          width: visualAnswerPresentation
-                            ? 'min(1280px, 88vw)'
-                            : responseLayout.containerStyle.width,
+                          width: responseLayout.containerStyle.width,
                           overflowY: responseLayout.containerStyle.overflowY,
                         }
                       : undefined
@@ -5621,23 +5778,15 @@ export default function ChatScreen({
                         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                         className="full-text-message-wrapper full-text-safe-zone"
                       >
-                        {visualAnswerPresentation ? (
-                          <AdaptiveAnswerCard
-                            presentation={visualAnswerPresentation}
-                            scriptClassName={scriptPreset.cssClass}
-                            onChoice={(choice) => interceptAndSendMessage({ action: 'user_message', text: choice }, 'UI')}
-                          />
-                        ) : (
-                          <AnimatedAiMessage
-                            key={`${lastAssistantMsg.id ?? 'msg'}-page-${responseLayout.activePageIndex}`}
-                            text={fullTextPageText}
-                            animate={fullTextAnimate}
-                            audioDuration={fullTextPageAudioDuration}
-                            playbackProgress={fullTextRevealProgress}
-                            className={fullTextMessageClassName}
-                            style={fullTextAnswerStyle}
-                          />
-                        )}
+                        <AnimatedAiMessage
+                          key={`${lastAssistantMsg.id ?? 'msg'}-page-${responseLayout.activePageIndex}`}
+                          text={fullTextPageText}
+                          animate={fullTextAnimate}
+                          audioDuration={fullTextPageAudioDuration}
+                          playbackProgress={fullTextRevealProgress}
+                          className={fullTextMessageClassName}
+                          style={fullTextAnswerStyle}
+                        />
                       </motion.div>
                     ) : null}
                   </AnimatePresence>
@@ -5645,7 +5794,9 @@ export default function ChatScreen({
 
                 {!isDepartmentExplanationSurface && !showThinkingStage && !isLanguageGateOpen ? (
                   <div
+                    ref={fullTextOrbZoneRef}
                     className="full-text-orb-zone"
+                    data-testid="chat-conversational-chrome"
                     onPointerDownCapture={(ev) => {
                       // #region agent log
                       const el = ev.target as HTMLElement;
@@ -5661,18 +5812,8 @@ export default function ChatScreen({
                     <div className="chat-orb-stack-below-faq">
                       <ChatOrbControl
                         orbState={orbState}
-                        isProcessing={
-                          isResponsePending ||
-                          orbState === 'processing' ||
-                          orbState === 'speaking'
-                        }
-                        amplitude={
-                          orbState === 'listening'
-                            ? voiceAnalyser.amplitude
-                            : orbState === 'speaking' || orbState === 'processing' || isResponsePending
-                              ? 0.3
-                              : 0.05
-                        }
+                        isProcessing={false}
+                        amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
                         frequencyDataRef={voiceAnalyser.frequencyDataRef}
                         onTap={handleOrbTap}
                         bottomClassName="mt-2 mb-5 w-full text-center"
@@ -5682,29 +5823,7 @@ export default function ChatScreen({
                 ) : null}
               </div>
 
-              {/* Department explanation stage — renders when surface === 'department_explanation' */}
-              {isDepartmentExplanationSurface && explanationCards.length > 0 && (
-                <div className="absolute inset-0 z-30 flex flex-col p-4 gap-4 bg-black/80">
-                  <DepartmentExplanationStage
-                    cards={explanationCards}
-                    languageCode={localizationCodeKey(
-                      presentationLanguage,
-                      typeof payload?.language_code_key === 'string' ? payload.language_code_key : null,
-                    ) ?? 'en'}
-                  />
-                  {/* Orb bottom-center */}
-                  <div className="flex justify-center pb-2">
-                    <ChatOrbControl
-                      orbState={orbState}
-                      isProcessing={false}
-                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
-                      frequencyDataRef={voiceAnalyser.frequencyDataRef}
-                      onTap={handleOrbTap}
-                      bottomClassName="mt-2 mb-2 w-full text-center"
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Retired: fullscreen DepartmentExplanationStage — explanations use SPLIT_CARDS + PremiumHODCard. */}
 
             </motion.div>
 
@@ -5722,12 +5841,12 @@ export default function ChatScreen({
                   data-current-unit-id={currentUnitCard?.unitId || ''}
                 >
 
-                {isCampusNavigationStage ? (
+                {isCampusNavigationStage && selectedCampusDirection ? (
                   <CampusNavigationMapOnly
                     direction={selectedCampusDirection}
                     language={presentationLanguage}
                     routeMode={campusRouteMode}
-                    routeResult={hasCampusRoomSelection ? campusRouteResult : null}
+                    routeResult={campusRouteResult}
                     onMappedRoomSelect={handleMappedCampusRoomSelect}
                   />
                 ) : currentUnitCard && CAMPUS_UNIT_CARD_TYPES.has(currentUnitCard.cardType) ? (
@@ -5736,27 +5855,71 @@ export default function ChatScreen({
                   <PremiumPrincipalCard language={presentationLanguage} />
                 ) : currentUnitCard?.cardType === 'vice_principal' || (executiveLeadershipKind === 'vice_principal' && !currentUnitCard) ? (
                   <PremiumVicePrincipalCard language={presentationLanguage} />
-                ) : currentUnitCard?.cardType === 'trustees' || (isTrusteesStage && !currentUnitCard) ? (
-                  <Trustees onNarrateTrustee={handleTrusteeNarration} language={presentationLanguage} />
-                ) : isHodStage ? (
-                  <LeadershipOverview
-                    cards={[]}
-                    currentCardIdx={currentCardIdx}
-                    targetDepartment={activeTargetDepartment}
-                    targetDepartments={activeHodDepartments}
-                    unitCards={
-                      Array.isArray(unitBackedCards)
-                        ? unitBackedCards.filter((m) => m.cardType === 'hod')
-                        : null
+                ) : currentUnitCard?.cardType === 'dean' ||
+                  executiveLeadershipKind === 'deans' ||
+                  (executiveLeadershipKind != null &&
+                    (DEAN_PROFILE_IDS as readonly string[]).includes(executiveLeadershipKind)) ? (
+                  <PremiumDeanCard
+                    language={presentationLanguage}
+                    deanId={
+                      deanIdFromUnitId(currentUnitCard?.unitId) ||
+                      (executiveLeadershipKind === 'deans'
+                        ? DEAN_PROFILE_IDS[
+                            Math.min(
+                              Math.max(0, currentCardIdx),
+                              DEAN_PROFILE_IDS.length - 1,
+                            )
+                          ]
+                        : ((executiveLeadershipKind as DeanProfileId) || 'dean_academics'))
                     }
                   />
-                ) : currentUnitCard?.cardType === 'hod' ? (
+                ) : currentUnitCard?.cardType === 'trustees' || (isTrusteesStage && !currentUnitCard) ? (
+                  <Trustees onNarrateTrustee={handleTrusteeNarration} language={presentationLanguage} />
+                ) : isHodStage ||
+                  (currentUnitCard &&
+                    (currentUnitCard.cardType === 'hod' ||
+                      currentUnitCard.cardType === 'department_explanation' ||
+                      currentUnitCard.cardType === 'creator' ||
+                      currentUnitCard.cardType === 'guide' ||
+                      currentUnitCard.cardType === 'clara_intro' ||
+                      currentUnitCard.cardType === 'clara_capability')) ? (
                   <LeadershipOverview
                     cards={[]}
-                    currentCardIdx={0}
-                    targetDepartment={currentUnitCard.departmentId}
-                    targetDepartments={[currentUnitCard.departmentId]}
-                    unitCards={[currentUnitCard]}
+                    currentCardIdx={
+                      isHodStage && Array.isArray(unitBackedCards) && unitBackedCards.length > 1
+                        ? currentCardIdx
+                        : currentUnitCard?.cardType === 'hod' && !isHodStage
+                          ? 0
+                          : currentCardIdx
+                    }
+                    targetDepartment={
+                      isHodStage
+                        ? activeTargetDepartment
+                        : currentUnitCard?.departmentId || activeTargetDepartment
+                    }
+                    targetDepartments={
+                      isHodStage
+                        ? activeHodDepartments
+                        : currentUnitCard?.departmentId
+                          ? [currentUnitCard.departmentId]
+                          : activeHodDepartments
+                    }
+                    unitCards={
+                      Array.isArray(unitBackedCards)
+                        ? unitBackedCards.filter((m) =>
+                            [
+                              'hod',
+                              'department_explanation',
+                              'creator',
+                              'guide',
+                              'clara_intro',
+                              'clara_capability',
+                            ].includes(m.cardType),
+                          )
+                        : currentUnitCard
+                          ? [currentUnitCard]
+                          : null
+                    }
                   />
                 ) : currentUnitCard?.cardType === 'department_fees' || isFeesStage ? (
                   <DepartmentFeesCard
@@ -5829,14 +5992,14 @@ export default function ChatScreen({
                   </div>
                 ) : null}
                 <div ref={scrollRef} className="panel-messages no-scrollbar">
-                  {isCampusNavigationStage ? (
+                  {isCampusNavigationStage && selectedCampusDirection ? (
                     <div className="campus-direction-panel">
                       <label className="campus-select-label" htmlFor="campus-destination-select">
                         {campusCopy.chooseDestination}
                       </label>
                       <select
                         id="campus-destination-select"
-                        value={hasCampusRoomSelection ? selectedCampusIndex : ''}
+                        value={selectedCampusIndex}
                         onChange={(event) => {
                           const nextIndex = Number(event.target.value);
                           setCampusDirectionOverride(null);
@@ -5847,11 +6010,6 @@ export default function ChatScreen({
                         }}
                         className="campus-destination-select"
                       >
-                        {!hasCampusRoomSelection ? (
-                          <option value="" disabled>
-                            {campusCopy.chooseDestination}
-                          </option>
-                        ) : null}
                         {CAMPUS_DIRECTIONS.map((direction, index) => (
                           <option key={direction.to} value={index}>
                             {direction.to}
@@ -5859,34 +6017,30 @@ export default function ChatScreen({
                         ))}
                       </select>
 
-                      {hasCampusRoomSelection ? (
-                        <>
-                          <div className="campus-direction-card">
-                            <span className="campus-direction-kicker">{campusCopy.destination}</span>
-                            <h3>{selectedCampusDirection.to}</h3>
-                            <div className="campus-direction-meta">
-                              <span>{campusCopy.block} {selectedCampusDirection.block}</span>
-                              <span>{campusCopy.groundFloor}</span>
-                              <span>{selectedCampusDirection.estimated_steps} {campusCopy.steps}</span>
-                              <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
-                            </div>
-                            <ol className="campus-direction-steps">
-                              {campusDisplaySteps.map((step, index) => (
-                                <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
-                              ))}
-                            </ol>
-                          </div>
+                      <div className="campus-direction-card">
+                        <span className="campus-direction-kicker">{campusCopy.destination}</span>
+                        <h3>{selectedCampusDirection.to}</h3>
+                        <div className="campus-direction-meta">
+                          <span>{campusCopy.block} {selectedCampusDirection.block}</span>
+                          <span>{campusCopy.groundFloor}</span>
+                          <span>{selectedCampusDirection.estimated_steps} {campusCopy.steps}</span>
+                          <span>{selectedCampusDirection.estimated_time_seconds} {campusCopy.seconds}</span>
+                        </div>
+                        <ol className="campus-direction-steps">
+                          {campusDisplaySteps.map((step, index) => (
+                            <li key={`${selectedCampusDirection.to}-${index}`}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
 
-                          <button
-                            type="button"
-                            onClick={() => (isCampusSpeaking ? stopCampusSpeech() : speakCampusDirection())}
-                            className="campus-speak-button"
-                          >
-                            {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}
-                            {isCampusSpeaking ? campusCopy.stop : campusCopy.speak}
-                          </button>
-                        </>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => (isCampusSpeaking ? stopCampusSpeech() : speakCampusDirection())}
+                        className="campus-speak-button"
+                      >
+                        {isCampusSpeaking ? <Square size={16} /> : <Volume2 size={17} />}
+                        {isCampusSpeaking ? campusCopy.stop : campusCopy.speak}
+                      </button>
                     </div>
                   ) : (
                     <>
@@ -5905,51 +6059,14 @@ export default function ChatScreen({
                     </>
                   )}
                 </div>
-
-                {/* Same ChatOrbControl + session/mic/TTS as the rest of CLARA — under Read Directions */}
-                {isCampusNavigationStage && !isLanguageGateOpen ? (
-                  <div className="campus-nav-orb-slot" data-testid="campus-nav-orb-slot">
-                    <ChatOrbControl
-                      orbState={orbState}
-                      isProcessing={
-                        isResponsePending ||
-                        orbState === 'processing' ||
-                        orbState === 'speaking'
-                      }
-                      amplitude={
-                        orbState === 'listening'
-                          ? voiceAnalyser.amplitude
-                          : orbState === 'speaking' || orbState === 'processing' || isResponsePending
-                            ? 0.3
-                            : 0.05
-                      }
-                      frequencyDataRef={voiceAnalyser.frequencyDataRef}
-                      onTap={handleOrbTap}
-                      compact
-                      bottomClassName="relative mt-1 w-full text-center"
-                    />
-                  </div>
-                ) : null}
-
-                {!isCampusNavigationStage && !showThinkingStage && renderFaqCarousel('panel')}
-
-                {/* Non-campus split: orb below FAQ. During campus nav the shared orb lives under Read Directions. */}
+                {!showThinkingStage && renderFaqCarousel('panel')}
+                
                 {!isCampusNavigationStage && !showThinkingStage && !isLanguageGateOpen && (
                   <motion.div className="chat-orb-stack-below-faq w-full flex justify-center pb-12">
                     <ChatOrbControl
                       orbState={orbState}
-                      isProcessing={
-                        isResponsePending ||
-                        orbState === 'processing' ||
-                        orbState === 'speaking'
-                      }
-                      amplitude={
-                        orbState === 'listening'
-                          ? voiceAnalyser.amplitude
-                          : orbState === 'speaking' || orbState === 'processing' || isResponsePending
-                            ? 0.3
-                            : 0.05
-                      }
+                      isProcessing={false}
+                      amplitude={orbState === 'listening' ? voiceAnalyser.amplitude : 0.05}
                       frequencyDataRef={voiceAnalyser.frequencyDataRef}
                       onTap={handleOrbTap}
                       bottomClassName="absolute -bottom-10 left-1/2 -translate-x-1/2 w-full text-center"
@@ -6034,5 +6151,6 @@ export default function ChatScreen({
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 }
