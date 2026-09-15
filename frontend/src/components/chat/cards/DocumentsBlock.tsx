@@ -1,4 +1,13 @@
 import React, { useMemo } from 'react';
+import { motion } from 'motion/react';
+import {
+  FileText,
+  FolderOpen,
+  IdCard,
+  Image as ImageIcon,
+  Ticket,
+  ClipboardList,
+} from 'lucide-react';
 import { useLanguage, type Language } from '../../../context/LanguageContext';
 import { uiText } from '../../../localization/uiCopy';
 
@@ -21,6 +30,15 @@ const TITLE_BY_LANGUAGE: Partial<Record<Language, string>> = {
   Tamil: 'தேவையான ஆவணங்கள்',
   Telugu: 'అవసరమైన పత్రాలు',
   Malayalam: 'ആവശ്യമായ രേഖകൾ',
+};
+
+const SUPPORT_BY_LANGUAGE: Partial<Record<Language, string>> = {
+  English: 'Bring originals and clear photocopies for admission verification.',
+  Hindi: 'प्रवेश सत्यापन के लिए मूल दस्तावेज़ और स्पष्ट फोटोकॉपी साथ लाएँ।',
+  Tamil: 'சேர்க்கை சரிபார்ப்பிற்கு அசல் ஆவணங்களையும் தெளிவான நகல்களையும் கொண்டு வாருங்கள்.',
+  Telugu: 'ప్రవేశ ధృవీకరణ కోసం అసలు పత్రాలు మరియు స్పష్టమైన ఫోటోకాపీలు తీసుకురండి.',
+  Malayalam: 'പ്രവേശന പരിശോധനയ്ക്ക് ഒറിജിനലുകളും വ്യക്തമായ ഫോട്ടോകോപ്പികളും കൊണ്ടുവരുക.',
+  Kannada: 'ಪ್ರವೇಶ ಪರಿಶೀಲನೆಗೆ ಮೂಲ ದಾಖಲೆಗಳು ಮತ್ತು ಸ್ಪಷ್ಟ ಫೋಟೋಕಾಪಿಗಳನ್ನು ತನ್ನಿ.',
 };
 
 const DOCUMENT_TRANSLATIONS: Partial<Record<Language, Record<string, string>>> = {
@@ -75,14 +93,22 @@ const DOCUMENT_TRANSLATIONS: Partial<Record<Language, Record<string, string>>> =
   },
 };
 
-function iconForDocument(doc: string): string {
+function IconForDocument({ doc }: { doc: string }) {
   const n = doc.toLowerCase();
-  if (n.includes('aadhaar')) return '🪪';
-  if (n.includes('marks')) return '📄';
-  if (n.includes('rank card')) return '🎫';
-  if (n.includes('photo')) return '🖼️';
-  if (n.includes('certificate')) return '📁';
-  return '📌';
+  const cls = 'documents-premium__item-icon';
+  if (n.includes('aadhaar') || n.includes('ಆಧಾರ್') || n.includes('आधार')) {
+    return <IdCard className={cls} aria-hidden />;
+  }
+  if (n.includes('marks') || n.includes('अंक') || n.includes('ಮಾರ್ಕ್')) {
+    return <FileText className={cls} aria-hidden />;
+  }
+  if (n.includes('rank') || n.includes('comedk') || n.includes('cet')) {
+    return <Ticket className={cls} aria-hidden />;
+  }
+  if (n.includes('photo') || n.includes('फोटो') || n.includes('ಫೋಟೋ')) {
+    return <ImageIcon className={cls} aria-hidden />;
+  }
+  return <FolderOpen className={cls} aria-hidden />;
 }
 
 export default function DocumentsBlock() {
@@ -91,6 +117,10 @@ export default function DocumentsBlock() {
   const title = isKannada
     ? uiText('Kannada', 'documents.title')
     : TITLE_BY_LANGUAGE[language] ?? TITLE_BY_LANGUAGE.English;
+  const chromeLabel = uiText(language, 'documents.label');
+  const chromeChecklist = uiText(language, 'documents.checklist');
+  const support =
+    SUPPORT_BY_LANGUAGE[language] ?? SUPPORT_BY_LANGUAGE.English ?? SUPPORT_BY_LANGUAGE.English!;
   const translations = DOCUMENT_TRANSLATIONS[language] ?? DOCUMENT_TRANSLATIONS.English ?? {};
   const items = useMemo(
     () =>
@@ -108,33 +138,54 @@ export default function DocumentsBlock() {
             'vtu_eligibility',
           ].map((key) => ({
             text: uiText('Kannada', `documents.items.${key}`),
-            icon: iconForDocument(key),
+            key,
           }))
         : DOCUMENTS_EN.map((doc) => ({
             text: translations[doc] ?? doc,
-            icon: iconForDocument(doc),
+            key: doc,
           })),
     [isKannada, translations],
   );
 
   return (
-    <div data-testid="documents-block" className="w-full max-w-5xl rounded-3xl border border-[#d8d0c3] bg-[#f8f5ee] p-8 shadow-md">
-      <div className="text-[12px] tracking-[0.18em] text-[#9b8e6c] uppercase mb-2">📄 Documents</div>
-      <h2 className="text-[42px] leading-[1.06] font-semibold text-[#1f1f1f] mb-6">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {items.map((item) => (
-          <div
-            key={item.text}
-            className="flex items-center gap-3 rounded-xl border border-[#c8c0b4] bg-[#f3f0e9] px-4 py-3 text-[#222]"
-          >
-            <span className="text-xl" aria-hidden>
-              {item.icon}
-            </span>
-            <span className="text-[17px] leading-snug">{item.text}</span>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="premium-hod-container documents-premium"
+      data-testid="documents-block"
+      data-variant="documents"
+    >
+      <div className="premium-hod-border-outer" />
+      <div className="premium-hod-border-inner" />
+      <div className="premium-hod-vignette" />
+      <div className="premium-hod-glow" />
+
+      <div className="premium-hod-content documents-premium__content">
+        <div className="premium-hod-left documents-premium__left">
+          <div className="premium-hod-text-box documents-premium__text-box">
+            <div className="premium-hod-label">{chromeLabel}</div>
+            <h2 className="premium-hod-name documents-premium__title">{title}</h2>
+            <div className="premium-hod-title">{chromeChecklist}</div>
+            <ul className="documents-premium__list" data-testid="documents-list">
+              {items.map((item) => (
+                <li key={item.key} className="documents-premium__item">
+                  <IconForDocument doc={`${item.key} ${item.text}`} />
+                  <span className="documents-premium__item-text">{item.text}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        ))}
+        </div>
+
+        <div className="premium-hod-right documents-premium__right" aria-hidden>
+          <div className="documents-premium__panel">
+            <ClipboardList className="documents-premium__panel-icon" />
+            <p className="documents-premium__panel-title">Admission desk</p>
+            <p className="documents-premium__panel-copy">{support}</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
-

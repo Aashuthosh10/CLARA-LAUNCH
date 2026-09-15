@@ -369,8 +369,14 @@ def explanation_unit_id(dept_key: str) -> str:
     return f"department_explanation.{(dept_key or '').strip().lower()}.{STAGE_WHAT_IS}"
 
 
-def explanation_body(dept_key: str, stage: str = STAGE_WHAT_IS) -> str:
+def explanation_body(dept_key: str, stage: str = STAGE_WHAT_IS, language_code: str = "en") -> str:
     key = (dept_key or "").strip().lower()
+    code = (language_code or "en").strip().lower() or "en"
+    from backend.services.content.department_explanation_i18n import explanation_body_localized
+
+    localized = explanation_body_localized(key, stage, code)
+    if localized:
+        return localized
     return (_STAGES_EN.get(key) or {}).get(stage, "")
 
 
@@ -379,7 +385,13 @@ def explanation_display_name(dept_key: str) -> str:
     return _DEPT_DISPLAY_NAMES.get(key, key.replace("_", " ").upper())
 
 
-def stage_heading(stage: str) -> str:
+def stage_heading(stage: str, language_code: str = "en") -> str:
+    code = (language_code or "en").strip().lower() or "en"
+    from backend.services.content.department_explanation_i18n import stage_heading_localized
+
+    localized = stage_heading_localized(stage, code)
+    if localized:
+        return localized
     return _STAGE_HEADINGS.get(stage, stage)
 
 
@@ -406,12 +418,15 @@ def parse_explanation_unit_id(unit_id: str) -> tuple[str, str] | None:
     return (rest, STAGE_WHAT_IS)
 
 
-def build_parent_friendly_difference(dept_a: str, dept_b: str) -> str:
+def build_parent_friendly_difference(dept_a: str, dept_b: str, language_code: str = "en") -> str:
     a = (dept_a or "").strip().lower()
     b = (dept_b or "").strip().lower()
     pair = frozenset({a, b})
     if pair == frozenset({"cse_ds", "cse_aiml"}):
-        return _DIFFERENCE_DS_AIML
+        from backend.services.content.department_explanation_i18n import difference_localized
+
+        localized = difference_localized(language_code)
+        return localized or _DIFFERENCE_DS_AIML
     name_a = explanation_display_name(a)
     name_b = explanation_display_name(b)
     return (

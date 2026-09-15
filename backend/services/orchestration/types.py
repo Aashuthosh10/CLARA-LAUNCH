@@ -55,6 +55,7 @@ class ConversationResolution:
     response_mode: str | None = None
     authority_domain: str = "unknown"
     clarification_target: str | None = None
+    choice_options: list[str] = field(default_factory=list)
     # Milestone 4.1 — backend-only canonical identity (never emitted on WS)
     canonical_surface: str | None = None
     canonical_content_id: str | None = None

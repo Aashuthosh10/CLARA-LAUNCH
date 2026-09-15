@@ -52,15 +52,26 @@ class TestPhase2DRegistryForensics(unittest.TestCase):
             HOSTEL_UNIT_IDS,
             NCC_UNIT_IDS,
         )
+        from backend.services.content.placement_units import PLACEMENT_UNIT_IDS
 
-        official = set(HOSTEL_UNIT_IDS) | set(NCC_UNIT_IDS) | set(EVENT_UNIT_IDS)
+        official = (
+            set(HOSTEL_UNIT_IDS)
+            | set(NCC_UNIT_IDS)
+            | set(EVENT_UNIT_IDS)
+            | set(PLACEMENT_UNIT_IDS)
+        )
         for uid in CAMPUS_UNIT_IDS:
             unit = resolve_unit(unit_id=uid, language="en", language_code="en")
             assert unit is not None
             self.assertNotIn(SAMPLE_STATUS, unit.body)
             if uid in official:
                 self.assertTrue(unit.title)
-                self.assertTrue(unit.body)
+                # Image-led placement cards may ship with empty body copy.
+                if not uid.startswith("placement.") or uid in {
+                    "placement.introduction",
+                    "placement.head",
+                }:
+                    self.assertTrue(unit.body)
             else:
                 self.assertIn("officially confirmed", unit.body)
 

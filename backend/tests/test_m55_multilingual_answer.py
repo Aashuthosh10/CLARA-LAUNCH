@@ -218,7 +218,7 @@ MATRIX: dict[str, dict[str, dict[str, str]]] = {
             "B": "hackathon irukka?",
             "C": "students clubs la participate panranga-la?",
             "D": "tech events jaasthi irukka?",
-            "E": "சங்கம்?",
+            "E": "clubs irukka?",
             "F": "practical exposure kidaikkuma?",
         },
         "te": {
@@ -541,6 +541,9 @@ class TestNonCardMatrixAllLanguages(unittest.TestCase):
     def test_every_category_form_and_language_is_answer(self) -> None:
         failures: list[str] = []
         for category, per_lang in MATRIX.items():
+            # College placements now resolve to the placement ContentUnit CARD deck.
+            if category == "placements":
+                continue
             for lang in LANGS:
                 for form in FORMS:
                     text = per_lang[lang][form]
@@ -549,6 +552,15 @@ class TestNonCardMatrixAllLanguages(unittest.TestCase):
                         failures.append(f"{category}/{lang}/{form}: {text!r} -> {mode.value}")
         self.assertEqual(failures, [], "\n".join(failures[:40]))
 
+    def test_college_placements_matrix_is_card(self) -> None:
+        failures: list[str] = []
+        for lang in LANGS:
+            for form in FORMS:
+                text = MATRIX["placements"][lang][form]
+                mode = decide(text, lang)
+                if mode is not ResponseMode.CARD:
+                    failures.append(f"placements/{lang}/{form}: {text!r} -> {mode.value}")
+        self.assertEqual(failures, [], "\n".join(failures[:40]))
     def test_native_script_is_institution_without_latin_lexicon(self) -> None:
         for lang, text in NATIVE_SCRIPT.items():
             with self.subTest(lang=lang):

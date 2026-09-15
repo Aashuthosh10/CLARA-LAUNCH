@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -87,6 +88,7 @@ NON_UNIT_CARD_INTENTS: frozenset[str] = frozenset(
     {
         INTENT_ADMISSIONS,
         INTENT_BUS_ROUTES,
+        INTENT_CAMPUS_NAVIGATION,
         INTENT_COLLEGE_OVERVIEW,
         INTENT_COURSE_MENU,
         INTENT_DEPARTMENT_COMPARISON,
@@ -413,6 +415,8 @@ def is_external_comparison(text: str) -> bool:
     return any(p.search(raw) for p in _EXTERNAL_INSTITUTION_CUES)
 
 
+# Slot-specific cues only. Generic "tell me" verbs (batao/heli/sollunga/cheppandi/parayu)
+# and vague info words (details/information/jankari) must NOT skip admissions clarification.
 _ADMISSIONS_SPECIFIC_CUES: tuple[str, ...] = (
     "documents",
     "document",
@@ -438,26 +442,12 @@ _ADMISSIONS_SPECIFIC_CUES: tuple[str, ...] = (
     "deadline",
     "office",
     "admission block",
-    # Explicit information cues — user is asking for info, not just expressing intent.
-    "details",
-    "detail",
-    "information",
-    # Romanized / code-switch info cues
-    "jankari",
-    "jaankari",
-    "bataiye",
-    "batao",
-    "बताइये",
-    "जानकारी",
-    "जानकारि",
-    "ಮಾಹಿತಿ",
-    "telviyai",
-    "vivaram",
-    # Existing script cues
+    # Script / regional slot cues (documents, eligibility, fees, steps/process)
     "ದಾಖಲೆ",
     "ಅರ್ಹತೆ",
     "ಶುಲ್ಕ",
     "ಪ್ರಕ್ರಿಯೆ",
+    "ಹಂತ",
     "दस्तावेज",
     "दस्तावेज़",
     "पात्रता",
@@ -467,14 +457,17 @@ _ADMISSIONS_SPECIFIC_CUES: tuple[str, ...] = (
     "தகுதி",
     "கட்டணம்",
     "செயல்முறை",
+    "படிகள்",
     "పత్ర",
     "అర్హత",
     "ఫీజు",
     "ప్రక్రియ",
+    "దశలు",
     "രേഖ",
     "യോഗ്യത",
     "ഫീസ്",
     "പ്രക്രിയ",
+    "ഘട്ടങ്ങൾ",
 )
 
 
@@ -491,7 +484,7 @@ def is_ambiguous_admissions_request(
     Topic=admissions is clear, but the information slot is not.
 
     Bare 'I want to do admissions' must CLARIFY, not open a card.
-    Requests with explicit info cues (details/batao/jankari/etc.) pass through to CARD.
+    Generic tell-me verbs alone do not count as a specific information slot.
     """
     if has_specific_admissions_slot(text):
         return False
@@ -640,6 +633,7 @@ def resolve_response_decision(
     validated_proposal: SemanticProposal | None = None,
     proposal_diagnostics: dict[str, Any] | None = None,
     contextual_follow_up: bool = False,
+    context_department_keys: tuple[str, ...] | None = None,
 ) -> ResponseDecision:
     """
     Decide the response mode for one turn.
@@ -787,8 +781,10 @@ def resolve_response_decision(
     # Explicit destination in the latest utterance outranks prior department context
     # (handled inside resolve_campus_navigation). Must run before receptionist ANSWER
     # demotion and semantic department overview CARD paths.
-    ctx_keys = tuple(getattr(semantic_request, "entities", ()) or ()) if semantic_request is not None else ()
-    nav = resolve_campus_navigation(raw, context_department_keys=ctx_keys or None)
+    ctx_keys = context_department_keys
+    if not ctx_keys and semantic_request is not None:
+        ctx_keys = tuple(semantic_request.entities or ())
+    nav = resolve_campus_navigation(raw, context_department_keys=ctx_keys)
     if nav.status == "resolved" and nav.room:
         return _done(
             ResponseDecision(
@@ -914,14 +910,9 @@ def resolve_response_decision(
         )
 
     # A named faculty entity plus an evaluative modifier asks about teaching
-    # quality. A bare/qualitative college-wide placement question likewise asks
-    # for an answer; explicit show/details actions still open canonical cards.
+    # quality. College-wide placement questions open the placement ContentUnit deck.
     if semantic_request is not None and (
-        (request_topics == {TOPIC_FACULTY} and qualitative_request)
-        or (
-            semantic_request.unit_items == (("college", TOPIC_PLACEMENTS),)
-            and not explicit_card_action
-        )
+        request_topics == {TOPIC_FACULTY} and qualitative_request
     ):
         return _done(
             ResponseDecision(

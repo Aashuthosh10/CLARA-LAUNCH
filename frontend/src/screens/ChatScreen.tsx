@@ -273,7 +273,7 @@ const DEPARTMENT_UNIT_CARD_TYPES = new Set([
 ]);
 
 const CAMPUS_UNIT_CARD_TYPES = new Set([
-  'hostel', 'canteen', 'ncc', 'event', 'faculty', 'location', 'global_placements', 'admissions',
+  'hostel', 'canteen', 'ncc', 'event', 'placement', 'faculty', 'location', 'global_placements', 'admissions',
 ]);
 
 const INFO_STAGE_CHIPS: Record<Language, { placements: string }> = {
@@ -3958,7 +3958,10 @@ export default function ChatScreen({
           return;
         }
 
-        const campusOnly = models.every((m) => CAMPUS_UNIT_CARD_TYPES.has(m.cardType));
+        const campusOnly = models.every(
+          (m) =>
+            CAMPUS_UNIT_CARD_TYPES.has(m.cardType) || m.cardType === 'placement_head',
+        );
         if (campusOnly) {
           setIsDepartmentOverviewStage(false);
           setActiveDepartmentId(null);
@@ -5981,6 +5984,14 @@ export default function ChatScreen({
                   />
                 ) : currentUnitCard && CAMPUS_UNIT_CARD_TYPES.has(currentUnitCard.cardType) ? (
                   <CampusUnitCard card={currentUnitCard} language={presentationLanguage} />
+                ) : currentUnitCard?.cardType === 'placement_head' ? (
+                  <LeadershipOverview
+                    cards={[]}
+                    currentCardIdx={0}
+                    targetDepartment={null}
+                    targetDepartments={[]}
+                    unitCards={currentUnitCard ? [currentUnitCard] : null}
+                  />
                 ) : currentUnitCard?.cardType === 'principal' || (executiveLeadershipKind === 'principal' && !currentUnitCard) ? (
                   <PremiumPrincipalCard language={presentationLanguage} />
                 ) : currentUnitCard?.cardType === 'vice_principal' || (executiveLeadershipKind === 'vice_principal' && !currentUnitCard) ? (
@@ -6074,7 +6085,9 @@ export default function ChatScreen({
                 ) : courseMenuOptions.length > 0 ? (
                   <CourseMenuComponent options={courseMenuOptions} onSelect={handleCourseMenuSelect} />
                 ) : isDocumentsStage ? (
-                  <DocumentsBlock />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <DocumentsBlock />
+                  </div>
                 ) : isInfoSlideStage && infoSlides.length > 0 ? (
                   <DepartmentCardStage
                     departmentLabel=""

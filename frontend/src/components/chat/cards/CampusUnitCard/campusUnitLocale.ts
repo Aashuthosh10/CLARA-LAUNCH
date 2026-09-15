@@ -4,6 +4,7 @@ import type { CampusUnitRecord } from '../../../../types/collegeData';
 import { SAMPLE_CONTENT_STATUS, uiText } from '../../../../localization/uiCopy';
 import { festImageForUnit } from './festCardImages';
 import { nccImageForUnit } from './nccCardImages';
+import { placementImageForUnit } from './placementCardImages';
 
 export function campusUnitFromLocale(
   unitId: string,
@@ -17,7 +18,8 @@ export function campusUnitFromLocale(
   );
   const row = data.campus_units?.[unitId];
   if (!row || typeof row !== 'object') return null;
-  const bundledImage = nccImageForUnit(unitId) || festImageForUnit(unitId);
+  const bundledImage =
+    nccImageForUnit(unitId) || festImageForUnit(unitId) || placementImageForUnit(unitId);
   if (row.content_status === SAMPLE_CONTENT_STATUS) {
     return {
       ...row,

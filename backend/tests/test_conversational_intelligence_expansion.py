@@ -180,7 +180,8 @@ def test_general_and_college_adjacent_questions_use_general_authority(text: str)
 
 def test_svit_placement_question_remains_official() -> None:
     decision = _decision("How are placements at SVIT?")
-    assert decision.mode is ResponseMode.ANSWER
+    # College placements surface as the official placement ContentUnit deck.
+    assert decision.mode is ResponseMode.CARD
     assert decision.authority_domain == "official_svit"
 
 
@@ -202,7 +203,7 @@ def test_general_turn_disables_rag_but_keeps_groq() -> None:
 def test_official_turn_enables_grounded_rag_and_groq() -> None:
     result = asyncio.run(
         ConversationOrchestrator().run(
-            "How are placements at SVIT?",
+            "What is special about this college?",
             {"language_code_key": "en", "language_name": "English"},
             groq_client=None,
             model=None,

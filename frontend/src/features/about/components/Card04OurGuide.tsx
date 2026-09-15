@@ -1,6 +1,6 @@
 import React from 'react';
 import { PROJECT_GUIDE } from '../data/aboutData';
-import { Sparkles, GraduationCap, Building2, ArrowRight } from 'lucide-react';
+import { Sparkles, Building2, ArrowRight } from 'lucide-react';
 import { playHoverChime } from '../utils/audio';
 
 interface Card04Props {
@@ -57,21 +57,25 @@ export const Card04OurGuide: React.FC<Card04Props> = ({
           onMouseEnter={playHoverChime}
           className="bg-white/95 backdrop-blur-md rounded-3xl p-7 sm:p-11 lg:p-14 border-2 border-[#DDD6FE] shadow-2xl shadow-purple-600/15 flex flex-col md:flex-row items-center gap-8 lg:gap-14"
         >
-          {/* Large Dignified Portrait */}
+          {/* Portrait — same card treatment as creator profile tiles */}
           <div className="relative shrink-0">
-            <div className="w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56 rounded-3xl bg-gradient-to-tr from-[#7C3AED] via-[#9333EA] to-[#C084FC] p-1 shadow-2xl shadow-purple-500/30 flex items-center justify-center">
-              <div className="w-full h-full rounded-3xl bg-[#FAF9FF] flex flex-col items-center justify-center overflow-hidden relative">
-                <GraduationCap className="w-20 h-20 sm:w-24 sm:h-24 text-[#7C3AED] mb-1" />
-                <span className="font-display font-black text-sm sm:text-base text-[#49358F]">
-                  FACULTY MENTOR
-                </span>
-                <span className="absolute bottom-2 text-xs font-mono text-[#71717A] uppercase tracking-widest font-bold">
-                  PROJECT GUIDE
-                </span>
+            <div
+              className="relative w-44 sm:w-52 lg:w-60 aspect-[0.64] rounded-[22px] border border-[#E9D5FF] shadow-[0_8px_22px_rgba(76,29,149,0.12)] overflow-hidden"
+              data-testid="guide-portrait"
+            >
+              <img
+                src={PROJECT_GUIDE.image}
+                alt={`${PROJECT_GUIDE.name} portrait`}
+                className="absolute inset-0 w-full h-full object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent pointer-events-none" />
+              <div className="absolute inset-x-3 bottom-4 px-2 text-center text-white">
+                <p className="font-mono text-[10px] sm:text-xs font-bold tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  Project Guide
+                </p>
               </div>
             </div>
 
-            {/* Verification Shield Pill */}
             <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-[#7C3AED] text-white text-xs sm:text-sm font-mono font-black tracking-wider uppercase shadow-lg flex items-center gap-2 whitespace-nowrap">
               <Sparkles className="w-4 h-4 text-white" />
               <span>ACADEMIC GUIDE</span>
@@ -104,7 +108,6 @@ export const Card04OurGuide: React.FC<Card04Props> = ({
               </div>
             </div>
 
-            {/* Description */}
             <p
               data-testid="guide-description"
               className="text-base sm:text-lg lg:text-xl text-[#27272A] font-medium leading-relaxed"

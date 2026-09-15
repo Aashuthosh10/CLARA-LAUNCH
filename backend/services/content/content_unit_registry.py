@@ -389,6 +389,22 @@ def _campus_descriptor(unit_id: str) -> ContentUnitDescriptor:
             adapter_key="campus_unit",
             presentation_role=suffix,
         )
+    if uid.startswith("placement."):
+        suffix = uid.split(".", 1)[1]
+        return ContentUnitDescriptor(
+            unit_id=uid,
+            surface=SURFACE_PLACEMENTS,
+            content_type=ContentType.PLACEMENTS.value,
+            entity_type="placement",
+            entity_id="placement",
+            context="placement",
+            context_id="placement",
+            section_id=suffix,
+            unit_suffix=suffix,
+            canonical_source=_CAMPUS_CANONICAL_SOURCE,
+            adapter_key="campus_unit",
+            presentation_role=suffix,
+        )
     suffix = uid.split(".", 1)[1] if "." in uid else uid
     return ContentUnitDescriptor(
         unit_id=uid,

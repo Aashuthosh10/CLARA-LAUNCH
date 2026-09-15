@@ -2,7 +2,8 @@ import { Capability, PipelineStage, TechLayer, EcosystemRole, Creator, QuerySimu
 import aashuthoshImage from '../assets/images/creators/a-n-aashuthosh.png';
 import dhanushImage from '../assets/images/creators/dhanush-s-babu.png';
 import naveenImage from '../assets/images/creators/m-naveen-kumar.png';
-import adithyaImage from '../assets/images/creators/adithya-nc.png';
+import adithyaImage from '../assets/images/creators/adithya-nc.jpg';
+import nagashreeGuideImage from '../assets/images/creators/dr-nagashree-n.png';
 
 export const CAPABILITIES: Capability[] = [
   {
@@ -439,6 +440,8 @@ export interface ProjectGuide {
   description: string;
   quote: string;
   avatarSeed: string;
+  /** Portrait shown on the Our Guide card (same visual treatment as creator cards). */
+  image: string;
 }
 
 export interface CreatorMember {
@@ -502,6 +505,7 @@ export const PROJECT_GUIDE: ProjectGuide = {
     'Provided foundational academic guidance and rigorous architectural review for CLARA, her institutional insight was pivotal in transforming this conceptual intelligence platform into a fully realized campus assistant.',
   quote: '',
   avatarSeed: 'nagashree',
+  image: nagashreeGuideImage,
 };
 
 export const CREATORS: Creator[] = [

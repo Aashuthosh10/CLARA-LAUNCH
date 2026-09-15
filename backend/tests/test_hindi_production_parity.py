@@ -196,21 +196,37 @@ def test_global_and_department_cards_preserve_order_without_cross_product() -> N
 
 
 @pytest.mark.parametrize(
-    ("text", "unit_id"),
+    ("text", "unit_ids"),
     (
-        ("डेटा साइंस विभाग के प्रमुख कौन हैं?", "cse_ds.hod"),
-        ("कंप्यूटर साइंस के विभागाध्यक्ष कौन हैं?", "cse.hod"),
-        ("प्लेसमेंट की जानकारी दिखाइए", "college.placements"),
-        ("प्रवेश की जानकारी बताइए", "college.admissions"),
-        ("placements के बारे में बताओ", "college.placements"),
-        ("admission details बताओ", "college.admissions"),
+        ("डेटा साइंस विभाग के प्रमुख कौन हैं?", ("cse_ds.hod",)),
+        ("कंप्यूटर साइंस के विभागाध्यक्ष कौन हैं?", ("cse.hod",)),
+        (
+            "प्लेसमेंट की जानकारी दिखाइए",
+            (
+                "placement.introduction",
+                "placement.head",
+                "placement.companies",
+                "placement.analytics",
+            ),
+        ),
+        ("प्रवेश की जानकारी बताइए", ("college.admissions",)),
+        (
+            "placements के बारे में बताओ",
+            (
+                "placement.introduction",
+                "placement.head",
+                "placement.companies",
+                "placement.analytics",
+            ),
+        ),
+        ("admission details बताओ", ("college.admissions",)),
     ),
 )
-def test_natural_hindi_and_global_cards_use_canonical_units(text: str, unit_id: str) -> None:
+def test_natural_hindi_and_global_cards_use_canonical_units(text: str, unit_ids: tuple[str, ...]) -> None:
     request = _request(text)
     plan = select_content_units(request)
     assert plan is not None
-    assert plan.units == (unit_id,)
+    assert plan.units == unit_ids
 
 
 def _leaf_paths(node: object, prefix: str = "") -> set[str]:
@@ -277,7 +293,7 @@ def test_departmentless_hod_reports_missing_department_and_hindi_clarification()
         ("प्रिंसिपल कौन हैं?", "leadership.principal", "principal_profile"),
         ("कॉलेज कहाँ है?", "college.location", "location"),
         ("प्रवेश की जानकारी बताइए", "college.admissions", "admissions"),
-        ("प्लेसमेंट की जानकारी दिखाइए", "college.placements", "placements"),
+        ("प्लेसमेंट की जानकारी दिखाइए", "placement.introduction", "placement"),
         ("लड़कियों के हॉस्टल के कमरे बताओ", "hostel.girls.overview", "hostel"),
         ("कैंटीन का समय बताओ", "canteen.timings", "canteen"),
     ),
@@ -290,8 +306,24 @@ def test_resolved_hindi_cards_and_narration_are_localized(
     plan = select_content_units(_request(text))
     assert plan is not None
     units = resolve_units_for_plan(plan)
-    assert [unit.unit_id for unit in units] == [unit_id]
+    if unit_id == "placement.introduction":
+        assert [unit.unit_id for unit in units] == [
+            "placement.introduction",
+            "placement.head",
+            "placement.companies",
+            "placement.analytics",
+        ]
+    else:
+        assert [unit.unit_id for unit in units] == [unit_id]
     assert units[0].language_code == "hi"
+    if unit_id == "placement.introduction":
+        assert "SAMPLE_REPLACE_WITH_OFFICIAL" not in units[0].title
+        assert "SAMPLE_REPLACE_WITH_OFFICIAL" not in units[0].body
+        segments = map_content_units_to_segments(units, lang_key="hi")
+        assert len(segments) == 4
+        assert segments[0].canonical_card_id == card_id
+        assert segments[0].unit_id == "placement.introduction"
+        return
     assert any("\u0900" <= char <= "\u097f" for char in units[0].title)
     assert any("\u0900" <= char <= "\u097f" for char in units[0].body)
     assert "SAMPLE_REPLACE_WITH_OFFICIAL" not in units[0].title

@@ -1,5 +1,6 @@
-"""M5.6 runtime phase: routing of the required ANSWER matrix must stay ANSWER.
+"""M5.6 runtime phase: qualitative campus questions stay ANSWER.
 
+College placement overview requests are CARD (placement deck) — excluded here.
 Does not change ResponseDecision ownership. Does not add vocabulary.
 """
 
@@ -16,7 +17,6 @@ MATRIX = (
     ("en", "How is campus life?"),
     ("en", "Are there good labs?"),
     ("en", "Do students get internship opportunities?"),
-    ("en", "How are placements?"),
     ("en", "What is special about this college?"),
     ("kn", "teachers hegiddare?"),
     ("kn", "campus life hegide?"),
@@ -24,6 +24,12 @@ MATRIX = (
     ("ta", "campus life eppadi irukku?"),
     ("te", "teachers ela unnaru?"),
     ("ml", "campus engane aanu?"),
+)
+
+# Bare college placements now route to the 4-unit placement ContentUnit deck.
+PLACEMENT_CARD_MATRIX = (
+    ("en", "How are placements?"),
+    ("en", "Tell me about placements."),
 )
 
 
@@ -46,3 +52,8 @@ class TestM56AnswerMatrixRouting(unittest.TestCase):
             if mode is not ResponseMode.ANSWER:
                 failures.append(f"{lang}: {text!r} -> {mode.value}")
         self.assertEqual(failures, [])
+
+    def test_college_placements_route_to_card_deck(self) -> None:
+        for lang, text in PLACEMENT_CARD_MATRIX:
+            with self.subTest(text=text):
+                self.assertIs(decide(text, lang), ResponseMode.CARD)

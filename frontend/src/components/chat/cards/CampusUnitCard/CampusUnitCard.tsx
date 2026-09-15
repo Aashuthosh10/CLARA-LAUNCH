@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import type { PresentationCardModel } from '../../../../features/chat/presentation/PresentationCardModel';
 import { SAMPLE_CONTENT_STATUS, uiText } from '../../../../localization/uiCopy';
 import { campusUnitFromLocale } from './campusUnitLocale';
+import { isPlacementImageFirstUnit } from './placementCardImages';
 
 type CampusUnitCardProps = {
   card: PresentationCardModel;
@@ -18,21 +19,30 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
   const sample = (locale?.content_status || '').trim();
   const showStatus = Boolean(sample && sample !== SAMPLE_CONTENT_STATUS);
   const imageSrc = (locale?.imageSrc ?? locale?.image ?? null) || null;
-  const showTypeChip = !['faculty', 'location', 'global_placements', 'admissions'].includes(card.cardType);
-  const typeChip = ['hostel', 'canteen', 'ncc', 'event'].includes(card.cardType)
-    ? uiText(language, `cards.${card.cardType}`)
+  const imageFirst = isPlacementImageFirstUnit(card.unitId);
+  const showTypeChip = !['faculty', 'location', 'global_placements', 'admissions', 'placement'].includes(
+    card.cardType,
+  );
+  const typeChip = ['hostel', 'canteen', 'ncc', 'event', 'placement'].includes(card.cardType)
+    ? uiText(language, `cards.${card.cardType === 'placement' ? 'placements_training' : card.cardType}`)
     : card.cardType;
-  const narrative = body.trim();
+  const narrative = imageFirst ? '' : body.trim();
 
   return (
     <div
-      className="premium-stage-container campus-unit-card"
+      className={[
+        'premium-stage-container campus-unit-card',
+        imageFirst ? 'campus-unit-card--image-first' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       data-testid="campus-unit-card"
       data-unit-id={card.unitId}
       data-card-type={card.cardType}
       data-card-language={language || ''}
       data-content-status={sample}
       data-has-image={imageSrc ? '1' : '0'}
+      data-layout={imageFirst ? 'image_first' : 'split'}
     >
       <div className="premium-stage-border-outer" />
       <div className="premium-stage-border-inner" />
@@ -50,12 +60,12 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
           {showTypeChip ? <div className="premium-stage-chip">{typeChip}</div> : null}
           {showStatus ? <div className="premium-stage-chip mt-2">{sample}</div> : null}
           <h2 className="premium-stage-title campus-unit-card__title">{title}</h2>
-          {supportingLine ? (
+          {!imageFirst && supportingLine ? (
             <p className="campus-unit-card__tagline" data-testid="campus-unit-tagline">
               {supportingLine}
             </p>
           ) : null}
-          {points.length > 0 ? (
+          {!imageFirst && points.length > 0 ? (
             <ul className="campus-unit-card__facts" data-testid="campus-unit-facts">
               {points.map((point) => (
                 <li key={point} className="campus-unit-card__fact">
@@ -76,7 +86,16 @@ export default function CampusUnitCard({ card, language }: CampusUnitCardProps) 
           aria-hidden={imageSrc ? undefined : true}
         >
           {imageSrc ? (
-            <img src={imageSrc} alt="" className="campus-unit-card__image-el" />
+            <img
+              src={imageSrc}
+              alt=""
+              className={[
+                'campus-unit-card__image-el',
+                imageFirst ? 'campus-unit-card__image-el--contain' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            />
           ) : null}
         </div>
       </motion.div>

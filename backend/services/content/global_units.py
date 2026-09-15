@@ -55,6 +55,10 @@ _GLOBAL_TOPIC_CUES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "admissions",
             "admission",
             "admit",
+            # Romanized native / code-switch (controlled stems — not a second parser)
+            "pravesh",
+            "pravesha",
+            "pravēś",
             "प्रवेश की जानकारी",
             "प्रवेश",
             "एडमिशन",
@@ -68,7 +72,9 @@ _GLOBAL_TOPIC_CUES: tuple[tuple[str, tuple[str, ...]], ...] = (
             "ప్రవేశ",
             "ప్రవేశాల",
             "ప్రవేశాల వివరాలు",
+            # Malayalam: chillu-N form + agglutinated stem (അഡ്മിഷനെക്കുറിച്ച്)
             "അഡ്മിഷൻ",
+            "അഡ്മിഷന",
             "പ്രവേശന",
             "പ്രവേശന വിവരങ്ങൾ",
         ),

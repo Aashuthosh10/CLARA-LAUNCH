@@ -198,13 +198,15 @@ def _with_sparse_guest_name(spoken: str, guest_name: str | None, unit: ContentUn
 
 def _campus_unit_spoken(unit: ContentUnit, lang_key: str) -> str:
     """Speak the same locale tts_summary shown on the campus unit card."""
-    if (unit.entity_type or "") not in {"hostel", "canteen", "event"}:
+    if (unit.entity_type or "") not in {"hostel", "canteen", "event", "ncc", "placement"}:
         return ""
     if lang_key == "kn" and str((unit.metadata or {}).get("content_status") or "") == _SAMPLE_CONTENT_STATUS:
         return ui_text(lang_key, "availability.official_fact_blocked").replace("\n", " ")
     spoken = str((unit.metadata or {}).get("tts_summary") or "").strip()
     if spoken:
-        return _clip_caption(spoken, 280)
+        # Placement intros need the full concise paragraph (not the short card clip).
+        limit = 520 if (unit.entity_type or "") == "placement" else 280
+        return _clip_caption(spoken, limit)
     data = load_locale_data_for_lang_key(lang_key)
     block = data.get("campus_units") if isinstance(data, dict) else None
     row = block.get(unit.unit_id) if isinstance(block, dict) else None

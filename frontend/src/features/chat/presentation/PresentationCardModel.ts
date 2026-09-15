@@ -34,6 +34,8 @@ export type PresentationCardType =
   | 'canteen'
   | 'ncc'
   | 'event'
+  | 'placement'
+  | 'placement_head'
   | 'faculty'
   | 'location'
   | 'global_placements'
@@ -89,6 +91,7 @@ export function cardTypeFromCanonicalCardId(cardId: string): PresentationCardTyp
     case 'canteen': return 'canteen';
     case 'ncc': return 'ncc';
     case 'event': return 'event';
+    case 'placement': return 'placement';
     case 'faculty_list': return 'faculty';
     case 'location': return 'location';
     case 'admissions': return 'admissions';
@@ -159,6 +162,8 @@ export function cardTypeFromUnitId(unitId: string): PresentationCardType {
   if (uid.startsWith('canteen.')) return 'canteen';
   if (uid.startsWith('ncc.')) return 'ncc';
   if (uid.startsWith('events.')) return 'event';
+  if (uid === 'placement.head') return 'placement_head';
+  if (uid.startsWith('placement.')) return 'placement';
   if (uid === 'college.location') return 'location';
   if (uid === 'college.placements') return 'global_placements';
   if (uid === 'college.admissions') return 'admissions';
@@ -215,11 +220,13 @@ export function presentationCardsFromNarrationSegments(
     seen.add(unitId);
 
     const cardId = typeof seg?.canonicalCardId === 'string' ? seg.canonicalCardId.trim() : '';
-    const cardType = unitId.startsWith('college.')
-      ? cardTypeFromUnitId(unitId)
-      : cardId
-        ? cardTypeFromCanonicalCardId(cardId)
-        : cardTypeFromUnitId(unitId);
+    const fromUnit = cardTypeFromUnitId(unitId);
+    const cardType =
+      fromUnit !== 'unsupported'
+        ? fromUnit
+        : cardId
+          ? cardTypeFromCanonicalCardId(cardId)
+          : 'unsupported';
     const departmentId = departmentIdFromUnitId(unitId);
     const { title, content } = splitDisplay(seg.displayText);
     const cardIndex =
@@ -280,12 +287,16 @@ export function hasDepartmentPlacementUnit(models: PresentationCardModel[]): boo
 
 /**
  * College-wide placement slides are a legacy `showCard=placements` surface.
- * They must not replace a selected `{dept}.placements` unit.
+ * Prefer unit-backed `placement.*` decks and `{dept}.placements` over the legacy 3-slide deck.
  */
 export function shouldUseCollegeWidePlacementDeck(
   cardTrigger: string | null | undefined,
   models: PresentationCardModel[],
 ): boolean {
   if ((cardTrigger || '').trim() !== 'placements') return false;
+  if (models.some((m) => (m.unitId || '').startsWith('placement.'))) return false;
+  if (models.some((m) => m.cardType === 'placement' || m.cardType === 'placement_head')) {
+    return false;
+  }
   return !hasDepartmentPlacementUnit(models);
 }

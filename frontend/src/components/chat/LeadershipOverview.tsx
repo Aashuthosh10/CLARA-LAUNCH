@@ -10,6 +10,7 @@ import { buildDepartmentSlideForUnit } from '../../lib/collegeLocaleUtils';
 import { departmentExplanationVideoSrc } from '../../lib/departmentExplanationVideos';
 import { CREATORS_FIVE, PROJECT_GUIDE } from '../../features/about/data/aboutData';
 import claraPortrait from '../../features/about/assets/images/clara_robot_head.jpg';
+import placementHeadPortrait from '../../assets/placement_head.jpeg';
 import hodCseImg from '../../assets/hod_cse.jpg';
 import hodAimlImg from '../../assets/hod_aiml.jpg';
 import hodEceImg from '../../assets/hod_ece.jpg';
@@ -298,7 +299,27 @@ export default function LeadershipOverview({
             title={PROJECT_GUIDE.role}
             bio={(model.content || PROJECT_GUIDE.description || '').trim()}
             label="Project Guide"
-            portrait={HOD_PORTRAITS.cse_ds ?? placeholderImg}
+            portrait={PROJECT_GUIDE.image || HOD_PORTRAITS.cse_ds || placeholderImg}
+            mediaActive
+          />
+        </div>
+      );
+    }
+
+    if (model.cardType === 'placement_head' || model.unitId === 'placement.head') {
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          data-testid="placement-head-card"
+          data-unit-id={model.unitId}
+          data-card-index={safeIdx}
+        >
+          <PremiumHODCard
+            name="Prof. Anand Kumar V"
+            title="Head of Placement"
+            bio={(model.content || 'He leads the central placement team, overseeing career support, training strategy, and campus recruitment drives.').trim()}
+            label="HEAD OF PLACEMENT"
+            portrait={placementHeadPortrait}
             mediaActive
           />
         </div>

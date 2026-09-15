@@ -249,6 +249,37 @@
   -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
 }
 
+.campus-unit-card--image-first .campus-unit-card__layout {
+  flex-direction: column;
+}
+
+.campus-unit-card--image-first .campus-unit-card__text {
+  width: 100%;
+  height: auto;
+  padding: 1.35rem 2rem 0.75rem;
+  justify-content: flex-start;
+}
+
+.campus-unit-card--image-first .campus-unit-card__title {
+  font-size: clamp(1.45rem, 2.4vw, 2rem) !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.campus-unit-card--image-first .campus-unit-card__image {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #ffffff;
+}
+
+.campus-unit-card__image-el--contain {
+  object-fit: contain;
+  object-position: center;
+  mask-image: none;
+  -webkit-mask-image: none;
+  padding: 0.75rem 1.25rem 1.5rem;
+}
+
 @media (max-width: 1280px) {
   .campus-unit-card.premium-stage-container {
     height: 520px;
@@ -2647,6 +2678,140 @@
   background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
   filter: blur(40px);
   z-index: 1;
+}
+
+/* Documents — same premium HOD shell, list + side panel */
+.documents-premium__content {
+  align-items: stretch;
+}
+
+.documents-premium__left {
+  padding-top: 2.75rem;
+  padding-bottom: 2.75rem;
+}
+
+.documents-premium__text-box {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.documents-premium__title {
+  font-size: clamp(2.2rem, 3.4vw, 3.2rem) !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.documents-premium .premium-hod-title {
+  margin-bottom: 1.15rem;
+}
+
+.documents-premium__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.85rem;
+  overflow: auto;
+  max-height: calc(100% - 8.5rem);
+  padding-right: 0.35rem;
+}
+
+.documents-premium__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(46, 16, 101, 0.12);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.documents-premium__item-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  margin-top: 0.12rem;
+  color: #7c3aed;
+}
+
+.documents-premium__item-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(0.88rem, 1.15vw, 1.02rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1e293b;
+}
+
+.documents-premium__right {
+  background:
+    radial-gradient(circle at 70% 20%, rgba(124, 58, 237, 0.18), transparent 55%),
+    linear-gradient(160deg, #f5f3ff 0%, #ede9fe 45%, #e0e7ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.documents-premium__panel {
+  width: min(100%, 280px);
+  text-align: center;
+  color: #2a115c;
+}
+
+.documents-premium__panel-icon {
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0 auto 1.1rem;
+  color: #7c3aed;
+  stroke-width: 1.5;
+}
+
+.documents-premium__panel-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 0.75rem;
+  color: #4c1d95;
+}
+
+.documents-premium__panel-copy {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: #475569;
+  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .documents-premium__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .documents-premium .premium-hod-content {
+    flex-direction: column;
+  }
+
+  .documents-premium__left,
+  .documents-premium__right {
+    width: 100%;
+  }
+
+  .documents-premium__right {
+    min-height: 160px;
+    padding: 1.25rem;
+  }
+
+  .documents-premium__list {
+    max-height: none;
+  }
 }
 
 /* Full-card department explanation: video covers the entire outer card;

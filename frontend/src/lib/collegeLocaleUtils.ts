@@ -455,13 +455,9 @@ export function buildAdmissionsCardsFromLocale(data: CollegeLocaleData, language
   }
   if (!pgBody.trim()) pgBody = 'See Admission Block for MBA fee details and payment plans.';
 
-  // The audit found contradictory fee figures across Kannada sources. Keep
-  // the stored evidence unchanged, but fail closed on the user-facing deck.
-  if (language === 'Kannada') {
-    const blocked = uiText(language, 'availability.official_fact_blocked');
-    ugBody = blocked;
-    pgBody = blocked;
-  }
+  // Locale departments.*.fees is the SSOT for this department-deck path (same as
+  // hi/ta/te/ml). The department_fees table card uses MANAGEMENT_QUOTA_FEE_BY_KEY
+  // separately — do not suppress Kannada locale prose here.
 
   const scholLines: string[] = [];
   const s = clean(rec.scholarships);

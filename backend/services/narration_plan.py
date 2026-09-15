@@ -1107,6 +1107,7 @@ def build_department_explanation_compare_segments(
     )
 
     _ = locale_id
+    lang_code = (locale_id or "en").strip().lower() or "en"
     if not department_ids:
         return []
 
@@ -1114,8 +1115,8 @@ def build_department_explanation_compare_segments(
     for did in department_ids:
         dept_name = explanation_display_name(did)
         for stage in EXPLANATION_STAGES:
-            heading = stage_heading(stage)
-            body = explanation_body(did, stage) or dept_name
+            heading = stage_heading(stage, lang_code)
+            body = explanation_body(did, stage, lang_code) or dept_name
             segs.append(
                 NarrationSegment(
                     display_text=f"{dept_name}\n{heading}\n{_clip_caption(body, 360)}",
@@ -1129,7 +1130,9 @@ def build_department_explanation_compare_segments(
             )
 
     if len(department_ids) >= 2:
-        diff_body = build_parent_friendly_difference(department_ids[0], department_ids[1])
+        diff_body = build_parent_friendly_difference(
+            department_ids[0], department_ids[1], language_code=lang_code
+        )
         segs.append(
             NarrationSegment(
                 display_text=f"Key difference\n{_clip_caption(diff_body, 480)}",

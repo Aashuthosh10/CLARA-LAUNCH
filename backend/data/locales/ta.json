@@ -726,6 +726,50 @@
       "body": "",
       "tts_summary": "பிராஜெக்ட் எக்ஸ்போவில் இறுதி ஆண்டு மாணவர்கள் கேப்ஸ்டோன் திட்டங்களை காட்சிப்படுத்துகின்றனர். தொழில் மற்றும் கல்வி நிபுணர்கள் அவற்றை மதிப்பிட்டு சிறந்த பணிகளை அங்கீகரிக்கின்றனர்.",
       "image": null
+    },
+    "placement.introduction": {
+      "title": "PLACEMENT & CAREER DEVELOPMENT",
+      "supporting_line": "Career guidance • Training • Industry interface • Campus recruitment",
+      "points": [
+        "100% placement assistance and professional career support",
+        "Aptitude, communication, technical skills, interviews & resume building",
+        "Industry–institution partnerships for internships and campus drives",
+        "Guidance for higher studies, entrepreneurship and competitive exams",
+        "Year-round skill development workshops and expert sessions"
+      ],
+      "body": "Vision: Centre of Excellence developing innovative engineers and business administrators. Mission: career awareness, skill upskilling, and a strong industry–institution platform for student success.",
+      "tts_summary": "The Placement and Career Development department supports students through career guidance, skill development, industry interaction, and campus recruitment. It provides training in aptitude, communication, technical skills, interviews, and resume development while supporting students in placements, internships, higher studies, entrepreneurship, and competitive exams.",
+      "image": null
+    },
+    "placement.head": {
+      "title": "HEAD OF PLACEMENT",
+      "supporting_line": "Prof. Anand Kumar V",
+      "points": [
+        "Leads the central placement team",
+        "Oversees career support and training strategy",
+        "Guides campus recruitment drives"
+      ],
+      "body": "He leads the central placement team, overseeing career support, training strategy, and campus recruitment drives.",
+      "tts_summary": "Prof. Anand Kumar V leads the central placement team, overseeing career support, training strategy, and campus recruitment drives.",
+      "image": null
+    },
+    "placement.companies": {
+      "title": "COMPANIES VISITING OUR CAMPUS",
+      "supporting_line": "",
+      "points": [],
+      "body": "",
+      "tts_summary": "These are the companies that visit our campus.",
+      "image": null,
+      "layout": "image_first"
+    },
+    "placement.analytics": {
+      "title": "PLACEMENT ANALYTICS",
+      "supporting_line": "",
+      "points": [],
+      "body": "",
+      "tts_summary": "These are the analytics of the past years' placement.",
+      "image": null,
+      "layout": "image_first"
     }
   }
 }

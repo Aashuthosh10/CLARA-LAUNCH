@@ -109,11 +109,11 @@ class TestBAnswer(unittest.TestCase):
                 self.assertIs(decide(text), ResponseMode.ANSWER)
 
     def test_lexicon_miss_becomes_answer_with_institution_proposal(self) -> None:
-        # NCC is now a registered campus card family.
+        # NCC is now a registered campus card family (4-card deck including leadership).
         self.assertIs(decide("Is there an NCC wing?"), ResponseMode.CARD)
         self.assertEqual(
             plan_units("Is there an NCC wing on campus for cadets?"),
-            ("ncc.overview", "ncc.training", "ncc.benefits"),
+            ("ncc.overview", "ncc.leadership", "ncc.training", "ncc.benefits"),
         )
 
     def test_hackathons_are_institutional_answers(self) -> None:

@@ -22,6 +22,7 @@ from backend.services.content.campus_units import (
     hostel_followup_items_from_sticky,
     ncc_followup_items_from_sticky,
 )
+from backend.services.content.placement_units import placement_items_from_text
 from backend.services.content.leadership_units import (
     LEADERSHIP_ENTITY,
     detect_leadership_spans,
@@ -229,6 +230,13 @@ def parse_semantic_request(
         allowed_global_topics = {span.topic for span in global_spans}
         global_items = tuple(item for item in global_items if item.topic in allowed_global_topics)
 
+    # College-wide placement deck (prefer over legacy college.placements global item).
+    # Never steal department-scoped "{dept}.placements" requests.
+    placement_items = () if entity_spans else placement_items_from_text(raw_text)
+    if placement_items:
+        global_items = tuple(item for item in global_items if item.topic != "placements")
+        campus_items = tuple(campus_items) + tuple(placement_items)
+
     if not entity_spans and not leadership_items and not campus_items and not global_items:
         person_item = _person_followup_item(
             raw_text=raw_text,
@@ -362,6 +370,7 @@ def parse_semantic_request(
     has_campus = any(
         item.entity == "canteen"
         or item.entity == "ncc"
+        or item.entity == "placement"
         or item.entity.startswith("hostel.")
         or item.entity.startswith("events.")
         for item in items

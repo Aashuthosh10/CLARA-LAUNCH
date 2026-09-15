@@ -544,8 +544,11 @@ def _resolve_explanation_unit(
     display_name = getattr(descriptor, "display_name", dept_key.upper())
     video_src = getattr(descriptor, "video_src", "") or ""
     stage = getattr(descriptor, "stage", "") or getattr(descriptor, "section_id", "what_is")
-    heading = getattr(descriptor, "stage_heading", None) or stage_heading(stage)
-    body = (getattr(descriptor, "explanation", None) or explanation_body(dept_key, stage) or "").strip()
+    lang_code = (language_code or "en").strip().lower() or "en"
+    heading = stage_heading(stage, lang_code)
+    body = explanation_body(dept_key, stage, lang_code).strip()
+    if not body:
+        body = (getattr(descriptor, "explanation", None) or "").strip()
     if not body:
         body = (
             f"{display_name} teaches students in this field of study. "

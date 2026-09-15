@@ -16,6 +16,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from backend.services.content.placement_units import (
+    PLACEMENT_ENTITY,
+    PLACEMENT_UNIT_IDS,
+    unit_id_for_placement_item,
+)
 from backend.services.content.semantic_composition import SemanticItem
 from backend.services.content.unicode_text import casefold_keep_scripts, latin_token_boundaries_ok
 
@@ -77,13 +82,17 @@ EVENT_UNIT_IDS: tuple[str, ...] = tuple(f"events.{eid}" for eid in EVENT_IDS)
 FEST_DECK_UNIT_IDS: tuple[str, ...] = EVENT_UNIT_IDS
 CANTEEN_UNIT_IDS: tuple[str, ...] = tuple(f"canteen.{topic}" for topic in CANTEEN_TOPICS)
 CAMPUS_UNIT_IDS: tuple[str, ...] = (
-    HOSTEL_UNIT_IDS + CANTEEN_UNIT_IDS + NCC_UNIT_IDS + EVENT_UNIT_IDS
+    HOSTEL_UNIT_IDS
+    + CANTEEN_UNIT_IDS
+    + NCC_UNIT_IDS
+    + EVENT_UNIT_IDS
+    + PLACEMENT_UNIT_IDS
 )
 
 HOSTEL_ENTITIES = frozenset({HOSTEL_GIRLS, HOSTEL_BOYS})
 CAMPUS_ENTITIES = (
     HOSTEL_ENTITIES
-    | {CANTEEN_ENTITY, NCC_ENTITY, EVENTS_ENTITY}
+    | {CANTEEN_ENTITY, NCC_ENTITY, EVENTS_ENTITY, PLACEMENT_ENTITY}
     | frozenset(EVENT_UNIT_IDS)
 )
 
@@ -199,6 +208,8 @@ def unit_id_for_campus_item(entity: str, topic: str) -> str | None:
         if top not in NCC_CARD_TOPICS:
             return None
         return f"ncc.{top}"
+    if ent == PLACEMENT_ENTITY:
+        return unit_id_for_placement_item(ent, top)
     if is_fest_deck_entity(ent):
         # Placeholder first card; unit_selector expands to the fixed fest deck.
         return FEST_DECK_UNIT_IDS[0]

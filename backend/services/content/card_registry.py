@@ -97,6 +97,8 @@ def card_id_for_unit_id(unit_id: str) -> str | None:
         return "canteen"
     if uid.startswith("ncc."):
         return "ncc"
+    if uid.startswith("placement."):
+        return "placement"
     if uid.startswith("events."):
         return "event"
     return card_id_for_topic(uid.split(".", 1)[1]) or None
@@ -123,6 +125,6 @@ def department_id_for_unit_id(unit_id: str) -> str | None:
             return "hostel"
         # Gendered: hostel.boys.overview → hostel.boys
         return ".".join(parts[:2]) if len(parts) >= 2 else None
-    if uid.startswith(("leadership.", "college.", "canteen.", "ncc.", "events.", "fees.", "documents.", "admission.")):
+    if uid.startswith(("leadership.", "college.", "canteen.", "ncc.", "events.", "fees.", "documents.", "admission.", "placement.")):
         return None
     return uid.split(".", 1)[0]

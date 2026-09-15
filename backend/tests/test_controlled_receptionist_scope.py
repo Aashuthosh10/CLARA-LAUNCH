@@ -30,7 +30,7 @@ def decide(text: str, language: str = "en"):
         ("Who is the Data Science HOD?", ResponseMode.CARD),
         ("Data Science fees.", ResponseMode.CARD),
         ("Tell me about Data Science.", ResponseMode.CARD),
-        ("How are placements at SVIT?", ResponseMode.ANSWER),
+        ("How are placements at SVIT?", ResponseMode.CARD),
         ("Tell me about admissions.", ResponseMode.CARD),
     ],
 )

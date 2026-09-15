@@ -195,6 +195,7 @@ class TestPhase2CLocalizationAndNarration(unittest.TestCase):
             if uid not in HOSTEL_UNIT_IDS
             and uid not in NCC_UNIT_IDS
             and uid not in EVENT_UNIT_IDS
+            and not uid.startswith("placement.")
         ]
         for lang in LANGS:
             for uid in sample_ids:

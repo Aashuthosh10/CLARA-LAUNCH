@@ -149,7 +149,9 @@ def map_content_units_to_segments(
                 explanation_dept_keys
             ) >= 2:
                 spoken = build_parent_friendly_difference(
-                    explanation_dept_keys[0], explanation_dept_keys[1]
+                    explanation_dept_keys[0],
+                    explanation_dept_keys[1],
+                    language_code=lk,
                 )
                 raw_line = f"Key difference\n{_clip_caption(spoken, 480)}"
         else:
@@ -169,7 +171,9 @@ def map_content_units_to_segments(
     # Fallback: append difference only when multi-dept explanation had no difference unit.
     if len(explanation_dept_keys) >= 2 and not has_difference_unit:
         diff_body = build_parent_friendly_difference(
-            explanation_dept_keys[0], explanation_dept_keys[1]
+            explanation_dept_keys[0],
+            explanation_dept_keys[1],
+            language_code=lk,
         )
         segments.append(
             NarrationSegment(

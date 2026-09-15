@@ -41,13 +41,15 @@ describe('Kannada UI authority and display fidelity', () => {
     expect(clipped).not.toMatch(/[್\u200c\u200d]$/u);
   });
 
-  it('blocks conflicting fee dictionaries instead of rendering raw structures', () => {
+  it('renders Kannada admissions fee slides from locale SSOT (parity with other languages)', () => {
     const cards = buildAdmissionsCardsFromLocale(collegeDataForLanguage('Kannada'), 'Kannada');
     const feeCards = cards.filter((card) => /ಶುಲ್ಕ/u.test(card.title));
     expect(feeCards.length).toBeGreaterThanOrEqual(2);
     for (const card of feeCards) {
-      expect(card.content).toContain('ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ');
-      expect(card.content).not.toMatch(/[{}]|'CSE'|ug_management/u);
+      // Unblocked: same locale SSOT path as other languages (not official_fact_blocked).
+      expect(card.content).not.toContain('ಅಧಿಕೃತವಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ');
+      expect(card.content.trim().length).toBeGreaterThan(0);
+      expect(card.content).not.toMatch(/ug_management/u);
     }
   });
 

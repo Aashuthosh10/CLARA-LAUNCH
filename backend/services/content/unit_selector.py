@@ -24,6 +24,10 @@ from backend.services.content.campus_units import (
     ncc_deck_unit_ids,
     unit_id_for_campus_item,
 )
+from backend.services.content.placement_units import (
+    is_placement_introduction_unit_id,
+    placement_deck_unit_ids,
+)
 from backend.services.content.leadership_units import (
     LEADERSHIP_ENTITY,
     is_leadership_topic,
@@ -162,6 +166,7 @@ def select_content_units(
         hostel_deck_expanded = False
         ncc_deck_expanded = False
         fest_deck_expanded = False
+        placement_deck_expanded = False
         explanation_depts: list[str] = []
         for entity, topic in items:
             # Progressive department explanation: expand one topic → three stage units.
@@ -245,6 +250,22 @@ def select_content_units(
                     seen.add(deck_uid)
                     unit_ids.append(deck_uid)
                 ncc_deck_expanded = True
+                continue
+            if (
+                not placement_deck_expanded
+                and is_placement_introduction_unit_id(uid)
+                and (topic or "").strip().lower()
+                in {"introduction", "overview", "placements", "placement", ""}
+                and len(items) == 1
+            ):
+                for deck_uid in placement_deck_unit_ids():
+                    if deck_uid in seen:
+                        continue
+                    if get_unit_descriptor(deck_uid) is None:
+                        continue
+                    seen.add(deck_uid)
+                    unit_ids.append(deck_uid)
+                placement_deck_expanded = True
                 continue
             if uid in seen:
                 continue

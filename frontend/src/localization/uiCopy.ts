@@ -2,12 +2,13 @@ import uiCopy from '@college-locales/ui.json';
 
 import type { Language } from '../context/LanguageContext';
 
-type UiLocale = 'en' | 'hi' | 'kn' | 'te' | 'ml';
+type UiLocale = 'en' | 'hi' | 'kn' | 'ta' | 'te' | 'ml';
 
 const languageToUiLocale = (language: Language | string | undefined): UiLocale => {
   const normalized = String(language ?? '').trim().toLowerCase().split(/[-_]/, 1)[0];
   if (normalized === 'kannada' || normalized === 'kn') return 'kn';
   if (normalized === 'hindi' || normalized === 'hi') return 'hi';
+  if (normalized === 'tamil' || normalized === 'ta') return 'ta';
   if (normalized === 'telugu' || normalized === 'te') return 'te';
   if (normalized === 'malayalam' || normalized === 'ml') return 'ml';
   return 'en';

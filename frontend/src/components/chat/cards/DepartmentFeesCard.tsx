@@ -1,7 +1,12 @@
 import React from 'react';
 import { useLanguage, type Language } from '../../../context/LanguageContext';
-import { uiText } from '../../../localization/uiCopy';
 
+/**
+ * Canonical management-quota amounts for the department fees table card.
+ * Must stay aligned with backend `narration_plan._FEES_AMOUNT_BY_KEY`.
+ * Locale `departments.*.fees` prose is a separate spoken/deck source and may differ;
+ * this table is the approved UI card source already shown for en/hi/ta/te/ml.
+ */
 const DEPT_ALIAS: Record<string, string> = {
   cse: 'cse',
   'computer science': 'cse',
@@ -115,6 +120,19 @@ const DEPARTMENT_DISPLAY_BY_LANGUAGE: Partial<Record<Language, Record<string, st
     mba: 'എംബിഎ (MBA)',
     basic_sciences: 'ബേസിക് സയൻസസ്',
   },
+  Kannada: {
+    cse: 'ಕಂಪ್ಯೂಟರ್ ಸೈನ್ಸ್ (CSE)',
+    ise: 'ಐಎಸ್‌ಇ (ISE)',
+    cse_aiml: 'CSE (AI & ML)',
+    cse_ds: 'CSE (ಡೇಟಾ ಸೈನ್ಸ್)',
+    cse_cysec: 'CSE (ಸೈಬರ್ ಸೆಕ್ಯುರಿಟಿ)',
+    cse_bs: 'CSE (ಬಿಸಿನೆಸ್ ಸಿಸ್ಟಮ್ಸ್)',
+    ece: 'ಇಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ (ECE)',
+    civil: 'ಸಿವಿಲ್',
+    mechanical: 'ಮೆಕ್ಯಾನಿಕಲ್',
+    mba: 'ಎಂಬಿಎ (MBA)',
+    basic_sciences: 'ಬೇಸಿಕ್ ಸೈನ್ಸಸ್',
+  },
 };
 
 type FeesCopy = {
@@ -173,6 +191,17 @@ const FEES_COPY_BY_LANGUAGE: Partial<Record<Language, FeesCopy>> = {
     otherQuotas: 'മറ്റ് ക്വോട്ടകൾ',
     officeContact: 'കൃത്യമായ വിവരങ്ങൾക്ക് അഡ്മിഷൻ ഓഫീസുമായി ബന്ധപ്പെടുക.',
   },
+  // Labels only — amounts come from MANAGEMENT_QUOTA_FEE_BY_KEY (same table as other languages /
+  // backend narration_plan._FEES_AMOUNT_BY_KEY). Do not invent language-specific amounts.
+  Kannada: {
+    title: 'ಶುಲ್ಕ',
+    description: 'ಪ್ರಸ್ತುತ ಪ್ರವೇಶ ಅವಧಿಯ ವಿಭಾಗವಾರು ವಾರ್ಷಿಕ ಶುಲ್ಕದ ಮಾಹಿತಿ.',
+    selectedDepartment: 'ಆಯ್ಕೆಮಾಡಿದ ವಿಭಾಗ',
+    department: 'ವಿಭಾಗ',
+    managementQuotaFee: 'ಮ್ಯಾನೇಜ್‌ಮೆಂಟ್ ಕೋಟಾ ಶುಲ್ಕ',
+    otherQuotas: 'ಇತರೆ ಕೋಟಾಗಳು',
+    officeContact: 'ನಿಖರವಾದ ಮಾಹಿತಿಗಾಗಿ ಪ್ರವೇಶಾತಿ ಕಚೇರಿಯನ್ನು ಸಂಪರ್ಕಿಸಿ.',
+  },
 };
 
 interface DepartmentFeesCardProps {
@@ -193,15 +222,6 @@ function formatInr(value: number | undefined): string {
 export default function DepartmentFeesCard({ departmentId, language: languageProp }: DepartmentFeesCardProps) {
   const { language: contextLanguage } = useLanguage();
   const language = languageProp || contextLanguage;
-  if (language === 'Kannada') {
-    return (
-      <div className="w-full max-w-5xl premium-glass-card p-10" data-testid="department-fees-card">
-        <p className="whitespace-pre-line text-[20px] leading-relaxed text-slate-800">
-          {uiText('Kannada', 'availability.official_fact_blocked')}
-        </p>
-      </div>
-    );
-  }
 
   const copy = (FEES_COPY_BY_LANGUAGE[language] ?? FEES_COPY_BY_LANGUAGE.English) as FeesCopy;
   const labelsByLanguage = (DEPARTMENT_DISPLAY_BY_LANGUAGE[language] ?? DEPARTMENT_DISPLAY_BY_LANGUAGE.English) as Record<string, string>;
