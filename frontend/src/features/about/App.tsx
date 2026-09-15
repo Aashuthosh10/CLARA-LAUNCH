@@ -6,7 +6,7 @@ import { Card02CapabilitiesMindMap } from './components/Card02CapabilitiesMindMa
 import { Card03Creators } from './components/Card03Creators';
 import { Card04OurGuide } from './components/Card04OurGuide';
 import { CreatorModal } from './components/CreatorModal';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { playNodeSelectChime } from './utils/audio';
 import { CreatorMember, CREATORS_FIVE } from './data/aboutData';
 
@@ -260,7 +260,6 @@ export default function App({
           }
         >
           <ClaraHero
-            onOpenLiveDemo={() => onEnterClara?.()}
             onExploreCapabilities={() => goToCard(1)}
             showSwipeHint={!hasInteracted && currentCardIndex === 0}
           />
@@ -320,22 +319,7 @@ export default function App({
             : 'fixed bottom-7 left-1/2 -translate-x-1/2 z-40 flex items-center gap-5 px-7 py-3.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#DDD6FE] shadow-xl shadow-purple-600/15'
         }
       >
-        {/* Previous Button */}
-        <button
-          type="button"
-          onClick={prevCard}
-          disabled={currentCardIndex === 0}
-          className={`p-2.5 rounded-full transition-all cursor-pointer ${
-            currentCardIndex === 0
-              ? 'text-[#D4D4D8] cursor-not-allowed opacity-40'
-              : 'text-[#52525B] hover:text-[#7C3AED] hover:bg-[#F5F3FF]'
-          }`}
-          title="Previous Card (Left Arrow)"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        {/* 01 — 04 Indicator */}
+        {/* Next-only section control (Previous removed) */}
         <div className="flex items-center gap-2 font-mono text-base sm:text-lg font-black tracking-widest text-[#09090B]">
           <span className="text-[#7C3AED]">0{currentCardIndex + 1}</span>
           <span className="text-[#A1A1AA]">—</span>

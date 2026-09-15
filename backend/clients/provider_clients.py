@@ -141,6 +141,7 @@ async def sarvam_tts_to_base64(text: str, target_language_code: str) -> str | No
         "text": sanitized_tts_text,
         "model": _SARVAM_TTS_MODEL,
         "target_language_code": target_language_code,
+        "language_code": target_language_code,
         "speaker": SARVAM_TTS_SPEAKER,
         "pace": SARVAM_TTS_PACE,
     }
@@ -174,10 +175,11 @@ async def sarvam_tts_to_base64(text: str, target_language_code: str) -> str | No
 
         def _sync_call() -> str | None:
             sdk = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+            # Current Sarvam SDK uses `language_code` (not `target_language_code`).
             result = sdk.text_to_speech.convert(
                 text=sanitized_tts_text,
                 model=_SARVAM_TTS_MODEL,
-                target_language_code=target_language_code,
+                language_code=target_language_code,
                 speaker=SARVAM_TTS_SPEAKER,
                 pace=SARVAM_TTS_PACE,
             )

@@ -234,12 +234,12 @@ export default function RobotFace({
           }
           const yOffset = !isSpeaking ? Math.max(isLeft ? macroDriftY * 1.02 : macroDriftY * 0.98, -12) : 0;
 
-          const curiousScale = !isSpeaking && idleVariant === 'curious' ? (isLeft ? 1 : 0.9) : 1;
+          const curiousScale = 1;
 
           return (
             <motion.div
               key={side}
-              className={`absolute top-[1.5vh] ${isLeft ? 'left-[0.2vw]' : 'right-[0.2vw]'} w-[calc(min(46vw,52vh)+6cm)] h-[calc(min(46vw,52vh)+6cm)] overflow-visible`}
+              className={`absolute top-[1.5vh] ${isLeft ? 'left-[0.2vw]' : 'right-[0.2vw]'} w-[calc(min(46vw,52vh)+5cm)] h-[calc(min(46vw,52vh)+5cm)] overflow-visible`}
               animate={{
                 x: xOffset,
                 y: yOffset,

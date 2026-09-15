@@ -203,6 +203,7 @@ from backend.services.runtime.diagnostics import log_runtime_event
 from backend.services.answer_generation import (
     INTENT_ADMISSIONS,
     INTENT_BUS_ROUTES,
+    INTENT_CAMPUS_NAVIGATION,
     INTENT_COLLEGE_OVERVIEW,
     INTENT_COURSE_MENU,
     INTENT_DEPARTMENT_COMPARISON,
@@ -544,7 +545,22 @@ def _apply_response_decision_to_intent(
     comparison, FAQ, policy), but it may no longer convert an ANSWER turn into a card
     or a card turn into a fallback.
     """
-    mode = getattr(conversation_resolution, "response_mode", None) if conversation_resolution else None
+    if conversation_resolution is None:
+        return intent
+
+    # Campus navigation is sealed by the orchestrator diagnostics / surface.
+    nav_status = getattr(conversation_resolution, "campus_nav_status", None)
+    show_card = getattr(conversation_resolution, "show_card", None) or getattr(
+        conversation_resolution, "card_surface", None
+    )
+    if (
+        nav_status in {"resolved", "ambiguous", "unknown"}
+        or show_card in {"campus_navigation", "campus_nav", "navigation"}
+        or getattr(conversation_resolution, "campus_destination", None)
+    ):
+        return INTENT_CAMPUS_NAVIGATION
+
+    mode = getattr(conversation_resolution, "response_mode", None)
     if not mode:
         return intent
 
@@ -2714,6 +2730,7 @@ async def process_user_text_and_reply(
         if (not faq_direct_reply) and intent in (
             INTENT_COURSE_MENU,
             INTENT_BUS_ROUTES,
+            INTENT_CAMPUS_NAVIGATION,
             INTENT_DOCUMENTS,
             INTENT_DEPARTMENT_OVERVIEW,
             INTENT_DEPARTMENT_FEES,
@@ -2728,6 +2745,9 @@ async def process_user_text_and_reply(
         show_card = None
         department_id = None
         course_menu_options = None
+        campus_destination_payload = None
+        if conversation_resolution is not None:
+            campus_destination_payload = getattr(conversation_resolution, "campus_destination", None)
         if faq_direct_reply:
             show_card = None
         elif conversation_resolution is not None and conversation_resolution.show_card:
@@ -2759,6 +2779,17 @@ async def process_user_text_and_reply(
                 reply_text = get_bus_routes_spoken_prompt(lang_name)
                 assistant_msg["text"] = reply_text
                 assistant_msg["isHidden"] = True
+        elif intent == INTENT_CAMPUS_NAVIGATION or show_card == "campus_navigation":
+            from backend.services.campus_navigation_intent import campus_navigation_spoken_prompt
+
+            reply_text = campus_navigation_spoken_prompt(
+                lang_name,
+                campus_destination_payload,
+                status=getattr(conversation_resolution, "campus_nav_status", None) or "resolved",
+                candidates=tuple(getattr(conversation_resolution, "campus_nav_candidates", None) or ()),
+            )
+            assistant_msg["text"] = reply_text
+            assistant_msg["isHidden"] = True
 
         # Fallback only when orch did not select a card (SurfaceSelector only — no parallel map).
         # A turn qualifies when the response decision said CARD, or when there is no decision
@@ -2786,6 +2817,21 @@ async def process_user_text_and_reply(
 
         if show_card is not None and department_id is None and entity_map.get("department"):
             department_id = entity_map.get("department")
+
+        # Seal outbound presentation: campus destination always wins; principal/VP never
+        # leak as department_overview when intent is already executive profile.
+        _nav_status = getattr(conversation_resolution, "campus_nav_status", None) if conversation_resolution else None
+        if (
+            campus_destination_payload
+            or _nav_status in {"resolved", "ambiguous", "unknown"}
+            or show_card in {"campus_navigation", "campus_nav", "navigation"}
+        ):
+            intent = INTENT_CAMPUS_NAVIGATION
+            show_card = "campus_navigation"
+        elif intent == INTENT_PRINCIPAL_PROFILE:
+            show_card = "principal_profile"
+        elif intent == INTENT_VICE_PRINCIPAL_PROFILE:
+            show_card = "vice_principal_profile"
 
         if show_card is not None:
             assistant_msg["isCardData"] = True
@@ -2828,6 +2874,15 @@ async def process_user_text_and_reply(
             visible_payload["departmentId"] = department_id
         if course_menu_options and not defer_card_until_tts_ready:
             visible_payload["options"] = course_menu_options
+        if (
+            campus_destination_payload
+            and isinstance(campus_destination_payload, dict)
+            and not defer_card_until_tts_ready
+        ):
+            visible_payload["campusDestination"] = campus_destination_payload
+            visible_payload["campusNavStatus"] = getattr(
+                conversation_resolution, "campus_nav_status", None
+            )
         if LOW_LATENCY_VOICE_MODE and not KIOSK_COMPLETE_RESPONSE_TTS and not KIOSK_HOLD_THINKING_UNTIL_FIRST_AUDIO:
             timing.mark("visible_answer")
             timing.mark("turn_end")
@@ -2900,6 +2955,13 @@ async def process_user_text_and_reply(
                 )
                 if presentation_bundle.card_surface:
                     show_card = presentation_bundle.card_surface
+                # Bundle surface must not demote sealed executive / campus cards.
+                if intent == INTENT_CAMPUS_NAVIGATION or campus_destination_payload:
+                    show_card = "campus_navigation"
+                elif intent == INTENT_PRINCIPAL_PROFILE:
+                    show_card = "principal_profile"
+                elif intent == INTENT_VICE_PRINCIPAL_PROFILE:
+                    show_card = "vice_principal_profile"
                 used_bundle_plan = True
                 used_orch_attach = True
                 narration_segments = None
@@ -2975,6 +3037,11 @@ async def process_user_text_and_reply(
                 merged["type"] = "assistant_audio_update"
             if department_id:
                 merged["departmentId"] = department_id
+            if campus_destination_payload and isinstance(campus_destination_payload, dict):
+                merged["campusDestination"] = campus_destination_payload
+                merged["campusNavStatus"] = getattr(
+                    conversation_resolution, "campus_nav_status", None
+                )
             if intent == INTENT_DEPARTMENT_COMPARISON and comparison_dept_ids:
                 merged["comparisonDepartments"] = list(comparison_dept_ids)
                 merged["comparisonRecommendFocus"] = comparison_recommend_focus

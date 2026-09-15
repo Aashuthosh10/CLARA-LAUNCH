@@ -13,6 +13,10 @@ VocabCategory = Literal[
     "ROMANIZED",
     "CODE-SWITCH",
     "UNSUPPORTED",
+    "NAVIGATION_INTENT",
+    "CAMPUS_DESTINATION",
+    "CAMPUS_TERM",
+    "CAMPUS_FLOOR",
 ]
 
 SUPPORTED_LANG = Literal["*", "en", "kn", "hi", "ta", "te", "ml"]

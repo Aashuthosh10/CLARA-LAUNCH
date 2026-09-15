@@ -8,10 +8,17 @@ export function normalizeCampusDestinationTranscript(transcript: string): string
   const raw = transcript.trim().toLowerCase();
   if (!raw) return '';
   // Keep letters, marks (Indic matras), and numbers — never ASCII-strip regional speech.
-  return raw
+  let normalized = raw
     .replace(/[^\p{L}\p{M}\p{N}\s/-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  // Common STT / typing slips for English location questions.
+  normalized = normalized
+    .replace(/\bwhere si\b/g, 'where is')
+    .replace(/\bwher is\b/g, 'where is')
+    .replace(/\bware is\b/g, 'where is')
+    .replace(/\bprinciple\b/g, 'principal');
+  return normalized;
 }
 
 /**
@@ -31,7 +38,7 @@ export function matchCampusDestinationIndex(
   let bestScore = 0;
 
   directions.forEach((d, i) => {
-    const dest = d.to.toLowerCase();
+    const dest = d.to.toLowerCase().replace(/\bprinciple\b/g, 'principal');
     let score = 0;
 
     if (normalized.includes(dest)) {
@@ -59,6 +66,15 @@ export function matchCampusDestinationIndex(
     const tail = dest.includes(' - ') ? dest.split(' - ').slice(1).join(' ') : dest;
     if (tail.length >= 4 && (normalized === tail || normalized.includes(tail))) {
       score += 100;
+    }
+    // Prefer place destinations ("principal chamber") over bare role words.
+    if (
+      /\b(chamber|cabin|office|room)\b/.test(normalized) &&
+      /\b(chamber|cabin|office|room)\b/.test(tail) &&
+      /\bprincipal\b/.test(normalized) &&
+      /\bprincipal\b/.test(tail)
+    ) {
+      score += 80;
     }
     const keywords = tail.split(/\s+/).filter((w) => w.length > 2);
     for (const w of keywords) {

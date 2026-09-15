@@ -15,4 +15,10 @@ export CLARA_ROOT="$ROOT"
 exec bash "$BIN/clara-kiosk-start.sh" "\$@"
 EOF
 chmod 0755 "$BIN/clara-kiosk-start"
+cat > "$BIN/clara-services-start" <<EOF
+#!/usr/bin/env bash
+export CLARA_ROOT="$ROOT"
+exec bash "$BIN/clara-services-start.sh" "\$@"
+EOF
+chmod 0755 "$BIN/clara-services-start"
 echo "Synced launchers to $BIN"

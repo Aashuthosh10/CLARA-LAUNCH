@@ -3,7 +3,21 @@
 # Idempotent: skips launch if the port is already listening.
 set -euo pipefail
 
-ROOT="${CLARA_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Prefer explicit CLARA_ROOT. When this script is copied into ~/.local/bin,
+# dirname/../.. is $HOME — never treat that as the repo.
+if [[ -n "${CLARA_ROOT:-}" && -d "${CLARA_ROOT}" ]]; then
+  ROOT="$CLARA_ROOT"
+elif [[ "$SCRIPT_DIR" == */scripts/kiosk ]]; then
+  ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+elif [[ -x "$HOME/CLARA_LAUNCH/CLARA-LAUNCH/.venv/bin/python" ]]; then
+  ROOT="$HOME/CLARA_LAUNCH/CLARA-LAUNCH"
+elif [[ -x "/home/clara/CLARA_LAUNCH/CLARA-LAUNCH/.venv/bin/python" ]]; then
+  ROOT="/home/clara/CLARA_LAUNCH/CLARA-LAUNCH"
+else
+  ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/clara-kiosk"
 mkdir -p "$LOG_DIR"
 
@@ -38,7 +52,9 @@ wait_http() {
 }
 
 export PATH="$ROOT/.node/bin:${PATH:-}"
+export CLARA_ROOT="$ROOT"
 cd "$ROOT"
+log "CLARA_ROOT=$ROOT"
 
 # Backend
 if port_open 6969; then
@@ -71,7 +87,8 @@ else
   echo $! >"$LOG_DIR/facial.pid"
 fi
 
-wait_http "http://127.0.0.1:6969/health" "backend" 90 || true
+# Backend must be healthy before we treat the kiosk as ready.
+wait_http "http://127.0.0.1:6969/health" "backend" 90
 wait_http "http://127.0.0.1:5176/" "frontend" 90
 wait_http "http://127.0.0.1:5177/" "facial" 90
 log "services start complete"

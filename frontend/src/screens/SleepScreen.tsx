@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CalendarDays, Clock, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { agentLog, auditPointerInteraction } from '../debug/interactionDebug';
 import { collegeLogoMark } from '../assets/logo';
 import { getDailyThought, getThoughtDayKey } from '../data/dailyThoughts';
@@ -24,15 +24,18 @@ const CAMPUS_IMAGES = [
 ];
 
 function formatSleepClock(now: Date): { time: string; date: string } {
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(now);
   const date = now.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  return { time: `${hours}:${minutes}`, date };
+  return { time, date };
 }
 
 /** Local wall-clock for SleepScreen — updates on the minute. */
@@ -70,16 +73,6 @@ export default function SleepScreen({
   const { time, date } = useMemo(() => formatSleepClock(now), [now]);
   const dailyThought = getDailyThought(now);
   const thoughtDayKey = getThoughtDayKey(now);
-  const dateLabel = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-  }).format(now);
-  const timeLabel = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  }).format(now);
   const requestWake = () => {
     if (wakeRequestedRef.current) return;
     wakeRequestedRef.current = true;
@@ -149,16 +142,22 @@ export default function SleepScreen({
         </motion.div>
       </AnimatePresence>
 
+      {/* Uniform contrast layer for legible kiosk content. */}
+      <div
+        className="absolute inset-0 z-10 pointer-events-none bg-black/40"
+        data-testid="sleep-dark-overlay"
+      />
+
       {/* Light cinematic edge only — keep campus photo near full opacity */}
       <div
-        className="absolute inset-0 z-10 pointer-events-none"
+        className="absolute inset-0 z-20 pointer-events-none"
         style={{
           background:
             'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.18) 82%, rgba(0,0,0,0.38) 100%)',
         }}
         data-testid="sleep-vignette"
       />
-      <div className="absolute inset-x-0 bottom-0 h-[28%] z-10 pointer-events-none bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[28%] z-20 pointer-events-none bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
 
       {/* Top-left: SVIT branding — lower + ~10% larger for kiosk */}
       <div className="absolute top-[min(8.5vh,4.75rem)] left-[min(4vw,3.5rem)] z-30 pointer-events-none">
@@ -278,21 +277,6 @@ export default function SleepScreen({
           </motion.p>
         </AnimatePresence>
 
-        <div
-          className="mt-5 flex items-center justify-center gap-3 text-[clamp(0.72rem,1.3vw,0.95rem)] font-light tracking-[0.05em] text-white/90"
-          style={{ textShadow: '0 1px 10px rgba(0,0,0,0.65)' }}
-          data-testid="sleep-date-time"
-        >
-          <span className="inline-flex items-center gap-2 whitespace-nowrap" data-testid="sleep-date">
-            <CalendarDays className="h-[1.05em] w-[1.05em]" strokeWidth={1.5} aria-hidden />
-            {dateLabel}
-          </span>
-          <span className="h-5 w-px bg-white/45" aria-hidden />
-          <span className="inline-flex items-center gap-2 whitespace-nowrap" data-testid="sleep-time">
-            <Clock className="h-[1.05em] w-[1.05em]" strokeWidth={1.5} aria-hidden />
-            {timeLabel}
-          </span>
-        </div>
       </motion.div>
 
       {/* Bottom-center start prompt */}
@@ -316,7 +300,7 @@ export default function SleepScreen({
         <span className="hidden sm:block h-px w-12 md:w-16 bg-[#D4AF37]/70" aria-hidden />
       </motion.div>
 
-      {/* Bottom-right: compact About Me utility — text left of icon */}
+      {/* Bottom-right: aligned with the start prompt — text left of icon */}
       <motion.button
         type="button"
         initial={{ opacity: 0 }}
@@ -329,7 +313,7 @@ export default function SleepScreen({
         }}
         data-testid="about-me-entry"
         aria-label="About Me"
-        className="group absolute bottom-[min(11vh,5.5rem)] right-[min(3.5vw,2.75rem)] z-40 inline-flex items-center gap-2.5 bg-transparent border-0 p-3 min-h-[52px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 rounded-md"
+        className="group absolute bottom-[min(7vh,3.75rem)] right-[min(3.5vw,2.75rem)] z-40 inline-flex items-center gap-2.5 bg-transparent border-0 p-3 min-h-[52px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F26522]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 rounded-md"
       >
         <span
           className="text-[clamp(0.72rem,1.15vw,0.95rem)] tracking-[0.1em] uppercase text-white/90 font-semibold transition-colors group-hover:text-white"

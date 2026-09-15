@@ -62,3 +62,7 @@ class ConversationResolution:
     # Backend-only immutable understanding contract. It is created once by
     # Conversation Intelligence and consumed by presentation/narration.
     semantic_request: Any | None = None
+    # Campus navigation destination payload (public room dict) when resolved.
+    campus_destination: dict[str, Any] | None = None
+    campus_nav_status: str | None = None
+    campus_nav_candidates: list[dict[str, Any]] | None = None

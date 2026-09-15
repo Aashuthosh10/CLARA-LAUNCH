@@ -78,7 +78,15 @@ export default function ChatOrbControl({
           style={{ pointerEvents: 'none' }}
         >
           <SiriOrb
-            state={isListening ? 'listening' : isProcessing ? 'processing' : 'idle'}
+            state={
+              isListening
+                ? 'listening'
+                : orbState === 'speaking'
+                  ? 'processing'
+                  : isProcessing
+                    ? 'processing'
+                    : 'idle'
+            }
             amplitude={amplitude}
           />
         </motion.div>
@@ -110,7 +118,7 @@ export default function ChatOrbControl({
           type="button"
           tabIndex={0}
           data-testid="chat-orb"
-          data-orb-state={isProcessing ? 'processing' : orbState}
+          data-orb-state={orbState}
           aria-label={aria}
           initial={false}
           animate={{

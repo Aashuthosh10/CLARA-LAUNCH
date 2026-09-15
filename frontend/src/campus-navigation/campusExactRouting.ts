@@ -4,6 +4,7 @@ import type {
   CampusMapData,
   CampusNavigationRouteMode,
   CampusRoom,
+  CampusRouteResult,
   CampusRouteSegment,
 } from './campusMapTypes';
 import { findRoomOnFloor, isExactImageMappedRoom } from './campusMapGeometry';
@@ -189,6 +190,32 @@ export function buildCampusExactRoutePlan(
 export function routePolylineForFloor(plan: CampusExactRoutePlan | null, floor: CampusFloorId): [number, number][] | null {
   const segment = plan?.floorSegments.find((s) => s.floor_id === floor);
   return segment?.polyline && segment.polyline.length >= 2 ? segment.polyline : null;
+}
+
+/**
+ * Prefer exact-image corridor polylines (same coordinate space as room highlights)
+ * over backend graph polylines, which can disagree by hundreds of pixels.
+ * When `suppressApiFallback` is set (exact-image room with no corridor art),
+ * return null so the map shows highlight/door only — never a wrong graph path.
+ */
+export function resolveCampusRoutePolyline(opts: {
+  exactPlan: CampusExactRoutePlan | null;
+  routeResult?: CampusRouteResult | null;
+  floorId: CampusFloorId;
+  suppressApiFallback?: boolean;
+}): [number, number][] | null {
+  const exact = routePolylineForFloor(opts.exactPlan, opts.floorId);
+  if (exact) return exact;
+  if (opts.suppressApiFallback) return null;
+
+  const result = opts.routeResult;
+  if (result?.status === 'ok') {
+    const segment = result.floor_segments.find((s) => s.floor_id === opts.floorId);
+    if (segment?.polyline && segment.polyline.length >= 2) {
+      return segment.polyline as [number, number][];
+    }
+  }
+  return null;
 }
 
 export function routeHighlightsForFloor(

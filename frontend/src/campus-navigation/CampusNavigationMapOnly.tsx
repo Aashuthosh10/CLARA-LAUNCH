@@ -4,8 +4,13 @@ import type { CampusDirection } from './campusDirections';
 import { campusLabels } from './campusDirections';
 import type { Language } from '../context/LanguageContext';
 import CampusMap2D from './CampusMap2D';
-import { findRoomByCodeOrId, parseRoomCodeFromDestinationLabel } from './campusMapGeometry';
-import { buildCampusExactRoutePlan, routeHighlightsForFloor, routePolylineForFloor } from './campusExactRouting';
+import { findRoomByCodeOrId, isExactImageMappedRoom, parseRoomCodeFromDestinationLabel } from './campusMapGeometry';
+import {
+  buildCampusExactRoutePlan,
+  resolveCampusRoutePolyline,
+  routeHighlightsForFloor,
+  routePolylineForFloor,
+} from './campusExactRouting';
 import { useCampusMapData } from './useCampusMapData';
 import type { CampusFloorId, CampusMatchApiRoom, CampusNavigationRouteMode, CampusRouteResult } from './campusMapTypes';
 
@@ -40,16 +45,16 @@ export default function CampusNavigationMapOnly({
   );
 
   const routePolyline = useMemo(
-    () => {
-      if (routeResult?.status === 'ok') {
-        const segment = routeResult.floor_segments.find((s) => s.floor_id === viewFloorId);
-        if (segment?.polyline && segment.polyline.length >= 2) {
-          return segment.polyline;
-        }
-      }
-      return routePolylineForFloor(exactRoutePlan, viewFloorId);
-    },
-    [exactRoutePlan, routeResult, viewFloorId],
+    () =>
+      resolveCampusRoutePolyline({
+        exactPlan: exactRoutePlan,
+        routeResult,
+        floorId: viewFloorId,
+        suppressApiFallback:
+          isExactImageMappedRoom(selectedRoomLookup.room) &&
+          !routePolylineForFloor(exactRoutePlan, viewFloorId),
+      }),
+    [exactRoutePlan, routeResult, selectedRoomLookup.room, viewFloorId],
   );
 
   const routeHighlightPoints = useMemo(

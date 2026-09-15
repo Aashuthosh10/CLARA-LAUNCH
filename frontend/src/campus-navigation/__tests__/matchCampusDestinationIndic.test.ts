@@ -54,4 +54,13 @@ describe('matchCampusDestination Indic-safe normalize', () => {
     const idx = matchCampusDestinationIndex('library', sampleDirections);
     expect(idx).toBe(2);
   });
+
+  it('routes principal/principle chamber questions to B-004, not a profile-only phrase', () => {
+    expect(
+      normalizeCampusDestinationTranscript('Where si the principle chamber'),
+    ).toBe('where is the principal chamber');
+    expect(matchCampusDestinationIndex('Where si the principle chamber', sampleDirections)).toBe(0);
+    expect(matchCampusDestinationIndex('where is the principal chamber', sampleDirections)).toBe(0);
+    expect(matchCampusDestinationIndex('where is principal cabin', sampleDirections)).toBe(0);
+  });
 });

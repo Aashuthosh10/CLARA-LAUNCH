@@ -42,17 +42,20 @@ async def handle_face_bridge(websocket: WebSocket, role: str) -> None:
         old, _face = _face, websocket
     if old is not None and old is not websocket:
         try:
-            await old.close()
+            await old.close(code=1000)
         except Exception:
             pass
 
     logger.info("face-bridge connected role=%s", role)
 
-    # Ask face to announce readiness when main joins (or re-joins).
+    # Re-pair both sides whenever either role (re)connects so lip-sync survives
+    # one-sided Chrome reloads.
     if role == "main":
         await _safe_send(_face, {"type": "clara_face_ping"})
     else:
         await _safe_send(_main, {"type": "face_ready"})
+        if _main is not None:
+            await _safe_send(_face, {"type": "clara_face_ping"})
 
     try:
         while True:
@@ -78,5 +81,7 @@ async def handle_face_bridge(websocket: WebSocket, role: str) -> None:
     finally:
         if role == "main" and _main is websocket:
             _main = None
+            await _safe_send(_face, {"type": "main_disconnected"})
         if role == "face" and _face is websocket:
             _face = None
+            await _safe_send(_main, {"type": "face_disconnected"})

@@ -3,11 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PROJECT_GUIDE } from '../data/aboutData';
 
 /**
- * Documents the App-level contract: Sleep wake and About Enter CLARA
- * share one startClaraSession callback (verified via prop wiring shape).
+ * Documents the App-level contract: the About Me guide card can enter the
+ * same CLARA session started from the sleep screen.
  */
 describe('canonical startClaraSession contract', () => {
-  it('AboutMeScreen requires onEnterClara distinct from onExit', async () => {
+  it('AboutMeScreen keeps its guide-card entry distinct from onExit', async () => {
     const AboutMeScreen = (await import('../AboutMeScreen')).default;
     const onExit = vi.fn();
     const onEnterClara = vi.fn();
@@ -22,6 +22,14 @@ describe('canonical startClaraSession contract', () => {
     expect(markup).not.toContain('NEXT:');
     expect(onExit).not.toHaveBeenCalled();
     expect(onEnterClara).not.toHaveBeenCalled();
+  });
+
+  it('does not render an Enter CLARA action in the overview card', async () => {
+    const ClaraHero = (await import('../components/ClaraHero')).ClaraHero;
+    const markup = renderToStaticMarkup(<ClaraHero />);
+
+    expect(markup).not.toContain('data-testid="enter-clara"');
+    expect(markup).not.toContain('>ENTER CLARA<');
   });
 
   it('Overview body uses the exact supplied CLARA paragraph', async () => {

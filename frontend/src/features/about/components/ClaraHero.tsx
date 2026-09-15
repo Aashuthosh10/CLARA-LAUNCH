@@ -4,25 +4,20 @@ import { HeroThreeBackground } from './HeroThreeBackground';
 import { ClaraRoboticFace } from './ClaraRoboticFace';
 import { CornerTelemetryAnimations } from './CornerTelemetryAnimations';
 import {
-  Sparkles,
   ArrowDown,
 } from 'lucide-react';
-import { playHoverChime } from '../utils/audio';
 
 interface ClaraHeroProps {
-  onOpenLiveDemo: () => void;
   onExploreCapabilities?: () => void;
   showSwipeHint?: boolean;
 }
 
 export const ClaraHero: React.FC<ClaraHeroProps> = ({
-  onOpenLiveDemo,
   onExploreCapabilities,
   showSwipeHint = true,
 }) => {
   const titleLettersRef = useRef<HTMLHeadingElement>(null);
   const rightSideRef = useRef<HTMLDivElement>(null);
-  const actionBtnsRef = useRef<HTMLDivElement>(null);
   const [mouseOffset, setMouseOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -75,21 +70,6 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
       '-=600'
     );
 
-    // 4. Action Buttons Pop
-    if (actionBtnsRef.current) {
-      const buttons = actionBtnsRef.current.querySelectorAll('.hero-btn');
-      timeline.add(
-        buttons,
-        {
-          opacity: [0, 1],
-          scale: [0.95, 1],
-          delay: stagger(80),
-          duration: 700,
-          ease: 'outElastic(1, .6)',
-        },
-        '-=400'
-      );
-    }
   }, []);
 
   // Parallax Mouse Tracker
@@ -203,23 +183,6 @@ export const ClaraHero: React.FC<ClaraHeroProps> = ({
               departments, CLARA helps you navigate the campus and connects you
               directly with faculty and staff online in real time.
             </p>
-
-            {/* HERO CTA BUTTONS: Height 72px */}
-            <div
-              ref={actionBtnsRef}
-              className="flex items-center gap-4 w-full sm:w-auto"
-            >
-              {/* PRIMARY BUTTON: ENTER CLARA */}
-              <button
-                onClick={onOpenLiveDemo}
-                onMouseEnter={playHoverChime}
-                data-testid="enter-clara"
-                className="hero-btn w-full sm:w-[320px] h-[84px] rounded-full font-black text-[22px] sm:text-[26px] text-white bg-[#7C3AED] hover:bg-[#6D28D9] shadow-2xl shadow-purple-600/40 hover:shadow-purple-600/60 transition-all duration-300 hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-3 cursor-pointer border-2 border-[#6D28D9]"
-              >
-                <Sparkles className="w-7 h-7 text-white" />
-                <span>ENTER CLARA</span>
-              </button>
-            </div>
 
           </div>
 

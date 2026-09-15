@@ -210,7 +210,7 @@ wait_url() {
   log "ERROR: $name not ready: $url"
   return 1
 }
-wait_url "http://127.0.0.1:6969/health" "backend" || true
+wait_url "http://127.0.0.1:6969/health" "backend"
 wait_url "http://127.0.0.1:5176/" "frontend"
 wait_url "http://127.0.0.1:5177/" "facial"
 
